@@ -5,5 +5,16 @@
   "compatibility_date": "2026-08-09",
   "version_metadata": {
     "binding": "CF_VERSION_METADATA"
+  },
+  "vars": {
+    "ENVIRONMENT": "production"
+  },
+  "env": {
+    "staging": {
+      "workers_dev": true,
+      "vars": {
+        "ENVIRONMENT": "staging"
+      }
+    }
   }
 }
