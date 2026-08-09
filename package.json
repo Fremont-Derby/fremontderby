@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "lint": "node scripts/lint.mjs",
     "test": "node --test",
     "check": "node --check src/index.js && node --check domain/schedule.js && node --check domain/match.js",
+    "build": "npx wrangler deploy --dry-run --outdir dist",
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy"
   }
