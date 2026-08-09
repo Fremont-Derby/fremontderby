@@ -37,27 +37,30 @@ create table public.teams (
   name text not null check (char_length(name) between 1 and 80),
   created_by uuid not null references auth.users(id),
   created_at timestamptz not null default now(),
-  unique (season_id, name)
+  unique (season_id, name),
+  unique (id, season_id)
 );
 
 create table public.team_memberships (
   id uuid primary key default gen_random_uuid(),
-  team_id uuid not null references public.teams(id) on delete cascade,
+  season_id uuid not null references public.seasons(id) on delete cascade,
+  team_id uuid not null,
   player_id uuid not null references public.players(id) on delete cascade,
   role text not null default 'player' check (role in ('player', 'captain')),
   starts_at timestamptz not null default now(),
   ends_at timestamptz,
-  check (ends_at is null or ends_at >= starts_at)
+  check (ends_at is null or ends_at >= starts_at),
+  foreign key (team_id, season_id)
+    references public.teams(id, season_id)
+    on delete cascade
 );
 
-create unique index one_active_team_membership_per_player
-  on public.team_memberships (player_id)
+create unique index one_active_team_membership_per_season
+  on public.team_memberships (season_id, player_id)
   where ends_at is null;
 
 create index team_memberships_team_active_idx
   on public.team_memberships (team_id, ends_at);
-
-create index players_user_id_idx on public.players (user_id);
 
 create or replace function private.current_player_id()
 returns uuid
@@ -102,9 +105,10 @@ alter table public.teams enable row level security;
 alter table public.team_memberships enable row level security;
 
 grant select on public.players, public.player_ratings, public.seasons, public.teams, public.team_memberships to anon, authenticated;
-grant insert, update on public.players to authenticated;
-grant insert, update on public.teams to authenticated;
-grant insert on public.team_memberships to authenticated;
+grant insert (user_id, display_name) on public.players to authenticated;
+grant update (display_name) on public.players to authenticated;
+grant insert (season_id, name, created_by) on public.teams to authenticated;
+grant insert (season_id, team_id, player_id, role) on public.team_memberships to authenticated;
 grant all on public.players, public.player_ratings, public.seasons, public.teams, public.team_memberships to service_role;
 
 create policy "Players are publicly readable"
@@ -143,12 +147,6 @@ on public.teams for insert
 to authenticated
 with check ((select auth.uid()) is not null and (select auth.uid()) = created_by);
 
-create policy "Captains can update their team"
-on public.teams for update
-to authenticated
-using ((select private.is_team_captain(id)))
-with check ((select private.is_team_captain(id)));
-
 create policy "Memberships are publicly readable"
 on public.team_memberships for select
 to anon, authenticated
@@ -164,6 +162,7 @@ with check (
     select 1
     from public.teams t
     where t.id = team_id
+      and t.season_id = season_id
       and t.created_by = (select auth.uid())
   )
 );
