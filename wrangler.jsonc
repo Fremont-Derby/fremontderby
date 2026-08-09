@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "fremontderby",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-09",
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA"
+  }
+}
