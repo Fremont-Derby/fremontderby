@@ -33,6 +33,20 @@ test('browser roles cannot directly mutate ratings', () => {
   assert.match(sql, /grant select on[\s\S]*player_ratings[\s\S]*to anon, authenticated;/i);
 });
 
+test('player self-service grants are column scoped', () => {
+  assert.match(sql, /grant insert \(user_id, display_name\) on public\.players to authenticated;/i);
+  assert.match(sql, /grant update \(display_name\) on public\.players to authenticated;/i);
+  assert.doesNotMatch(sql, /grant (?:insert|update) on public\.players to authenticated;/i);
+});
+
+test('active team membership is unique per season rather than globally', () => {
+  assert.match(
+    sql,
+    /create unique index one_active_team_membership_per_season[\s\S]*\(season_id, player_id\)[\s\S]*where ends_at is null;/i,
+  );
+  assert.match(sql, /foreign key \(team_id, season_id\)[\s\S]*references public\.teams\(id, season_id\)/i);
+});
+
 test('ownership policies use authenticated identity and avoid user metadata for authorization', () => {
   assert.match(sql, /auth\.uid\(\)/);
   assert.doesNotMatch(sql, /raw_user_meta_data|user_metadata/i);
