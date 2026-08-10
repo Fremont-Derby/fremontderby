@@ -565,6 +565,28 @@ test('rack recording RPC advances score, discipline, and winner state', () => {
   );
 });
 
+test('rack undo RPC removes only the latest unfinalized rack and writes an audit event', () => {
+  assert.match(sql, /create or replace function public\.undo_player_match_rack\(/i);
+  assert.match(sql, /Player match is finalized/i);
+  assert.match(sql, /Only match players or active team captains can undo racks/i);
+  assert.match(sql, /order by pmr\.rack_number desc[\s\S]*limit 1[\s\S]*for update/i);
+  assert.match(sql, /Player match has no racks to undo/i);
+  assert.match(sql, /delete from public\.player_match_racks/i);
+  assert.match(sql, /current_discipline = next_discipline/i);
+  assert.match(sql, /winner_side = null/i);
+  assert.match(sql, /insert into private\.audit_events/i);
+  assert.match(sql, /'player_match\.rack_undo'/i);
+  assert.match(sql, /'removedRack', to_jsonb\(undone_rack\)/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.undo_player_match_rack\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.undo_player_match_rack\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
 test('player match finalization requires completed race state and writes an audit event', () => {
   assert.match(sql, /alter table public\.player_matches[\s\S]*finalized_at timestamptz/i);
   assert.match(sql, /alter table public\.player_matches[\s\S]*finalized_by uuid references auth\.users/i);
