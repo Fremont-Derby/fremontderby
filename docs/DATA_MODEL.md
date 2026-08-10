@@ -22,7 +22,7 @@
 - **trades** — proposed/accepted/approved roster movement and audit state.
 
 ### Season and schedule
-- **seasons** — dates, status, configuration/version references.
+- **seasons** — dates, status, league night, publication defaults, roster lock, opening block, race-chart version, and playoff settings.
 - **rounds** — seven regular-season rounds plus postseason rounds.
 - **team_matches** — two teams paired in one round/table assignment.
 - **lineups** — submitted lineup slots and whether each slot is rostered, substitute, or forfeit.

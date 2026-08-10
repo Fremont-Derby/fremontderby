@@ -1,0 +1,450 @@
+export function renderSeasonSetupPage() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fremont Derby Season Setup</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: #111316;
+      color: #f5f1e9;
+      --panel: #191d22;
+      --line: #343c45;
+      --muted: #aab3bb;
+      --green: #2fa972;
+      --gold: #d8ad3f;
+      --blue: #4e83d6;
+      --red: #d45b50;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #111316; }
+    button, input { font: inherit; }
+    button {
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    input {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1013;
+      color: #f5f1e9;
+      padding: 0 12px;
+    }
+    input[type="checkbox"] {
+      width: 22px;
+      min-height: 22px;
+      accent-color: var(--green);
+    }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: .78rem; font-weight: 850; }
+    .app { width: min(1180px, 100%); margin: 0 auto; padding: 16px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 950; }
+    .mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #0d1511;
+      background: var(--green);
+      font-weight: 950;
+    }
+    .status { min-height: 32px; color: var(--muted); text-align: right; }
+    .status[data-tone="error"] { color: #ffb1aa; }
+    .status[data-tone="ok"] { color: #9ee5bd; }
+    .setup {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .span-2 { grid-column: span 2; }
+    .span-4 { grid-column: span 4; }
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      color: #f5f1e9;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    .primary { background: var(--green); color: #06120d; }
+    .secondary { background: var(--gold); color: #12100a; }
+    .ghost { background: transparent; color: #f5f1e9; border-color: var(--line); }
+    .danger { background: var(--red); color: #1a0604; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 0;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      min-height: 78px;
+      padding: 12px;
+      display: grid;
+      align-content: space-between;
+      gap: 8px;
+    }
+    .metric span { color: var(--muted); font-size: .78rem; font-weight: 850; text-transform: uppercase; }
+    .metric strong { font-size: 1.25rem; line-height: 1.1; overflow-wrap: anywhere; }
+    .grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 14px; }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+    .panel-head {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 900;
+    }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-size: .75rem; text-transform: uppercase; }
+    td { overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: 0; }
+    .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+    .empty { padding: 16px; color: var(--muted); }
+    @media (max-width: 900px) {
+      .app { padding: 12px; }
+      .topbar { align-items: flex-start; }
+      .setup, .summary, .grid { grid-template-columns: 1fr; }
+      .span-2, .span-4 { grid-column: auto; }
+      .status { text-align: left; }
+      .panel { overflow-x: auto; }
+      table { min-width: 620px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><span class="mark">S</span><span>Fremont Derby Season Setup</span></div>
+      <div class="status" data-status>Ready</div>
+    </header>
+
+    <form class="setup" data-season-setup-form>
+      <label class="span-2">Season ID
+        <input name="seasonId" data-season-id autocomplete="off" />
+      </label>
+      <label class="span-2">Access token
+        <input name="token" data-token type="password" autocomplete="current-password" />
+      </label>
+      <label class="span-2">Season name
+        <input name="seasonName" data-season-name maxlength="80" value="Fremont Derby Season 1" />
+      </label>
+      <label>League night
+        <input name="leagueNight" data-league-night maxlength="40" value="Thursday" />
+      </label>
+      <label>First round
+        <input name="firstRoundDate" data-first-round-date type="date" />
+      </label>
+      <label>Roster lock round
+        <input name="rosterLockRound" data-roster-lock-round type="number" min="1" step="1" value="5" />
+      </label>
+      <label>Opening block
+        <input name="openingBlockLength" data-opening-block-length type="number" min="1" step="1" value="3" />
+      </label>
+      <label>Prize match minimum
+        <input name="individualMinMatches" data-individual-min-matches type="number" min="1" step="1" value="5" />
+      </label>
+      <label>Round interval days
+        <input name="roundIntervalDays" data-round-interval-days type="number" min="1" step="1" value="7" />
+      </label>
+      <label>Tables
+        <input name="tableNumbers" data-table-numbers value="1,2,3,4" />
+      </label>
+      <label>Race chart
+        <input name="raceChartVersion" data-race-chart-version maxlength="80" value="season-1-default" />
+      </label>
+      <label>Playoff teams
+        <input name="playoffTeamCount" data-playoff-team-count type="number" min="2" step="1" value="4" />
+      </label>
+      <label class="span-2">
+        <span>Championship tiebreaker</span>
+        <span class="check-row"><input name="playoffAnchorTiebreaker" data-playoff-anchor-tiebreaker type="checkbox" checked /> Anchor match</span>
+      </label>
+      <div class="actions span-4">
+        <button class="primary" data-save type="submit">Save setup</button>
+        <button class="secondary" data-publish type="button">Publish schedule</button>
+        <button class="ghost" data-load type="button">Load setup</button>
+      </div>
+    </form>
+
+    <section class="summary" aria-label="Season setup summary">
+      <div class="metric"><span>Status</span><strong data-season-status>-</strong></div>
+      <div class="metric"><span>Teams</span><strong data-team-count>-</strong></div>
+      <div class="metric"><span>Rounds</span><strong data-round-count>-</strong></div>
+      <div class="metric"><span>Tables</span><strong data-table-summary>-</strong></div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head"><span>Teams</span></div>
+        <table>
+          <thead><tr><th>Team</th><th class="numeric">Roster</th></tr></thead>
+          <tbody data-teams-body></tbody>
+        </table>
+        <div class="empty" data-teams-empty>No teams loaded.</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><span>Published rounds</span></div>
+        <table>
+          <thead><tr><th>Round</th><th>Date</th><th class="numeric">Table</th><th>Matchup</th></tr></thead>
+          <tbody data-rounds-body></tbody>
+        </table>
+        <div class="empty" data-rounds-empty>No published rounds loaded.</div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const form = document.querySelector('[data-season-setup-form]');
+    const statusEl = document.querySelector('[data-status]');
+    const seasonIdInput = document.querySelector('[data-season-id]');
+    const tokenInput = document.querySelector('[data-token]');
+    const teamsBody = document.querySelector('[data-teams-body]');
+    const roundsBody = document.querySelector('[data-rounds-body]');
+    const teamsEmpty = document.querySelector('[data-teams-empty]');
+    const roundsEmpty = document.querySelector('[data-rounds-empty]');
+    const fields = {
+      seasonName: document.querySelector('[data-season-name]'),
+      leagueNight: document.querySelector('[data-league-night]'),
+      firstRoundDate: document.querySelector('[data-first-round-date]'),
+      rosterLockRound: document.querySelector('[data-roster-lock-round]'),
+      openingBlockLength: document.querySelector('[data-opening-block-length]'),
+      individualMinMatches: document.querySelector('[data-individual-min-matches]'),
+      roundIntervalDays: document.querySelector('[data-round-interval-days]'),
+      tableNumbers: document.querySelector('[data-table-numbers]'),
+      raceChartVersion: document.querySelector('[data-race-chart-version]'),
+      playoffTeamCount: document.querySelector('[data-playoff-team-count]'),
+      playoffAnchorTiebreaker: document.querySelector('[data-playoff-anchor-tiebreaker]'),
+      seasonStatus: document.querySelector('[data-season-status]'),
+      teamCount: document.querySelector('[data-team-count]'),
+      roundCount: document.querySelector('[data-round-count]'),
+      tableSummary: document.querySelector('[data-table-summary]'),
+    };
+
+    const params = new URLSearchParams(location.search);
+    seasonIdInput.value = params.get('season') || localStorage.getItem('fd.setupSeasonId') || '';
+    tokenInput.value = sessionStorage.getItem('fd.accessToken') || '';
+
+    function setStatus(message, tone) {
+      statusEl.textContent = message;
+      statusEl.dataset.tone = tone || 'muted';
+    }
+
+    function token() {
+      const value = tokenInput.value.trim();
+      if (!value) throw new Error('Access token is required');
+      sessionStorage.setItem('fd.accessToken', value);
+      return value;
+    }
+
+    async function parseJson(response) {
+      const text = await response.text();
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { error: text };
+      }
+    }
+
+    async function api(path, options) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          authorization: 'Bearer ' + token(),
+          'content-type': 'application/json',
+        },
+      });
+      const body = await parseJson(response);
+      if (!response.ok) {
+        throw new Error(body.error || 'Request failed');
+      }
+      return body;
+    }
+
+    function integer(input) {
+      return Number(input.value);
+    }
+
+    function tableNumbers() {
+      return fields.tableNumbers.value
+        .split(',')
+        .map((part) => Number(part.trim()))
+        .filter((value) => Number.isInteger(value));
+    }
+
+    function setupPayload() {
+      return {
+        seasonName: fields.seasonName.value,
+        leagueNight: fields.leagueNight.value,
+        firstRoundDate: fields.firstRoundDate.value,
+        rosterLockRound: integer(fields.rosterLockRound),
+        openingBlockLength: integer(fields.openingBlockLength),
+        individualMinMatches: integer(fields.individualMinMatches),
+        roundIntervalDays: integer(fields.roundIntervalDays),
+        tableNumbers: tableNumbers(),
+        raceChartVersion: fields.raceChartVersion.value,
+        playoffTeamCount: integer(fields.playoffTeamCount),
+        playoffAnchorTiebreaker: fields.playoffAnchorTiebreaker.checked,
+      };
+    }
+
+    function cell(value, className) {
+      const td = document.createElement('td');
+      if (className) td.className = className;
+      td.textContent = value == null || value === '' ? '-' : String(value);
+      return td;
+    }
+
+    function fillSetup(setup) {
+      seasonIdInput.value = setup.id || seasonIdInput.value;
+      if (setup.id) localStorage.setItem('fd.setupSeasonId', setup.id);
+      fields.seasonName.value = setup.name || fields.seasonName.value;
+      fields.leagueNight.value = setup.league_night || fields.leagueNight.value;
+      fields.firstRoundDate.value = setup.first_round_date || fields.firstRoundDate.value;
+      fields.rosterLockRound.value = setup.roster_lock_round || fields.rosterLockRound.value;
+      fields.openingBlockLength.value = setup.opening_block_length || fields.openingBlockLength.value;
+      fields.individualMinMatches.value = setup.individual_min_matches || fields.individualMinMatches.value;
+      fields.roundIntervalDays.value = setup.round_interval_days || fields.roundIntervalDays.value;
+      fields.tableNumbers.value = Array.isArray(setup.default_table_numbers)
+        ? setup.default_table_numbers.join(',')
+        : fields.tableNumbers.value;
+      fields.raceChartVersion.value = setup.race_chart_version || fields.raceChartVersion.value;
+      fields.playoffTeamCount.value = setup.playoff_team_count || fields.playoffTeamCount.value;
+      fields.playoffAnchorTiebreaker.checked = setup.playoff_anchor_tiebreaker !== false;
+      fields.seasonStatus.textContent = setup.status || '-';
+      fields.teamCount.textContent = String((setup.teams || []).length);
+      fields.roundCount.textContent = String((setup.rounds || []).length);
+      fields.tableSummary.textContent = fields.tableNumbers.value || '-';
+      renderTeams(setup.teams || []);
+      renderRounds(setup.rounds || []);
+    }
+
+    function renderTeams(teams) {
+      teamsBody.replaceChildren();
+      teamsEmpty.hidden = teams.length > 0;
+      for (const team of teams) {
+        const tr = document.createElement('tr');
+        tr.append(
+          cell(team.teamName),
+          cell(team.activeRosterCount, 'numeric'),
+        );
+        teamsBody.append(tr);
+      }
+    }
+
+    function renderRounds(rounds) {
+      roundsBody.replaceChildren();
+      let rowCount = 0;
+      for (const round of rounds) {
+        for (const match of round.matches || []) {
+          const tr = document.createElement('tr');
+          tr.append(
+            cell(round.roundNumber),
+            cell(round.scheduledOn),
+            cell(match.tableNumber, 'numeric'),
+            cell((match.teamAName || match.teamAId) + ' vs ' + (match.teamBName || match.teamBId)),
+          );
+          roundsBody.append(tr);
+          rowCount += 1;
+        }
+      }
+      roundsEmpty.hidden = rowCount > 0;
+    }
+
+    async function loadSetup() {
+      const seasonId = seasonIdInput.value.trim();
+      if (!seasonId) throw new Error('Season ID is required');
+      localStorage.setItem('fd.setupSeasonId', seasonId);
+      setStatus('Loading...');
+      const body = await api('/api/admin/seasons/' + encodeURIComponent(seasonId) + '/setup', {
+        method: 'GET',
+      });
+      fillSetup(body.setup || {});
+      setStatus('Setup loaded', 'ok');
+    }
+
+    async function saveSetup() {
+      const seasonId = seasonIdInput.value.trim();
+      setStatus('Saving...');
+      const body = await api(
+        seasonId
+          ? '/api/admin/seasons/' + encodeURIComponent(seasonId) + '/setup'
+          : '/api/admin/seasons',
+        {
+          method: seasonId ? 'PUT' : 'POST',
+          body: JSON.stringify(setupPayload()),
+        },
+      );
+      fillSetup(body.setup || {});
+      setStatus('Setup saved', 'ok');
+    }
+
+    async function publishSchedule() {
+      const seasonId = seasonIdInput.value.trim();
+      if (!seasonId) throw new Error('Season ID is required');
+      localStorage.setItem('fd.setupSeasonId', seasonId);
+      setStatus('Publishing...');
+      await api('/api/admin/seasons/' + encodeURIComponent(seasonId) + '/publish-schedule', {
+        method: 'POST',
+        body: '{}',
+      });
+      await loadSetup();
+      setStatus('Schedule published', 'ok');
+    }
+
+    async function run(action) {
+      try {
+        await action();
+      } catch (error) {
+        setStatus(error.message, 'error');
+      }
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      run(saveSetup);
+    });
+    document.querySelector('[data-load]').addEventListener('click', () => run(loadSetup));
+    document.querySelector('[data-publish]').addEventListener('click', () => run(publishSchedule));
+
+    renderTeams([]);
+    renderRounds([]);
+    if (seasonIdInput.value && tokenInput.value) {
+      run(loadSetup);
+    }
+  </script>
+</body>
+</html>`;
+}

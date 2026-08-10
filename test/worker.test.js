@@ -15,9 +15,12 @@ import worker, {
   handleListOwnTeamManagementRequest,
   handleListVisibleTeamLineupsRequest,
   handleConfigureSeasonPrizesRequest,
+  handleCreateSeasonSetupRequest,
   handleFinalizeSeasonPrizePayoutsRequest,
+  handleGetSeasonSetupRequest,
   handleGetSeasonPrizeSummaryRequest,
   handlePublishScheduleRequest,
+  handleUpdateSeasonSetupRequest,
   handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
   handleRespondToTeamInvitationRequest,
@@ -195,6 +198,31 @@ test("prizes page route returns the public prize-purse UI", async () => {
 test("prizes page route allows only GET", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/prizes", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("season setup page route returns the director setup UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/season-setup?season=season-1"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Season Setup/);
+  assert.match(html, /data-season-setup-form/);
+  assert.match(html, /publish-schedule/);
+});
+
+test("season setup page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/season-setup", { method: "POST" }),
     publishEnv,
   );
 
@@ -384,6 +412,196 @@ test("publish schedule route requires POST", async () => {
 
   assert.equal(response.status, 405);
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("publish schedule handler can use saved season setup defaults", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        id: "season-1",
+        status: "registration",
+        first_round_date: "2026-09-03",
+        round_interval_days: 14,
+        default_table_numbers: [5, 6, 7, 8],
+      }],
+    },
+    { body: seasonTeams },
+    { body: [{ round_count: 7, team_match_count: 28 }] },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/admin/seasons/season-1/publish-schedule",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer admin-token" },
+      body: "{}",
+    },
+  );
+
+  const response = await handlePublishScheduleRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  const rpcBody = JSON.parse(calls[3].init.body);
+  assert.deepEqual(
+    rpcBody.rounds_payload[0].matches.map((match) => match.tableNumber),
+    [5, 6, 7, 8],
+  );
+  assert.deepEqual(
+    rpcBody.rounds_payload.slice(0, 2).map((round) => round.scheduledOn),
+    ["2026-09-03", "2026-09-17"],
+  );
+});
+
+test("season setup create handler authenticates and saves setup", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        id: "season-1",
+        name: "Fremont Derby Season 1",
+        status: "registration",
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons", {
+    method: "POST",
+    headers: { authorization: "Bearer admin-token" },
+    body: JSON.stringify({
+      seasonName: "Fremont Derby Season 1",
+      leagueNight: "Thursday",
+      firstRoundDate: "2026-09-03",
+      rosterLockRound: 5,
+      openingBlockLength: 3,
+      individualMinMatches: 5,
+      roundIntervalDays: 7,
+      tableNumbers: [1, 2, 3, 4],
+      raceChartVersion: "season-1-default",
+      playoffTeamCount: 4,
+      playoffAnchorTiebreaker: true,
+    }),
+  });
+
+  const response = await handleCreateSeasonSetupRequest(
+    request,
+    publishEnv,
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).setup.id, "season-1");
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/configure_season_setup");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "admin-user-1",
+    target_season_id: null,
+    configured_season_name: "Fremont Derby Season 1",
+    configured_league_night: "Thursday",
+    configured_first_round_date: "2026-09-03",
+    configured_roster_lock_round: 5,
+    configured_opening_block_length: 3,
+    configured_individual_min_matches: 5,
+    configured_round_interval_days: 7,
+    configured_table_numbers: [1, 2, 3, 4],
+    configured_race_chart_version: "season-1-default",
+    configured_playoff_team_count: 4,
+    configured_playoff_anchor_tiebreaker: true,
+  });
+});
+
+test("season setup read handler returns teams and published rounds", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        id: "season-1",
+        name: "Fremont Derby Season 1",
+        teams: [{ teamName: "Breakers", activeRosterCount: 4 }],
+        rounds: [{ roundNumber: 1, matches: [{ tableNumber: 1 }] }],
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons/season-1/setup", {
+    headers: { authorization: "Bearer admin-token" },
+  });
+
+  const response = await handleGetSeasonSetupRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.setup.teams[0].teamName, "Breakers");
+  assert.equal(body.setup.rounds[0].roundNumber, 1);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/get_season_setup");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "admin-user-1",
+    target_season_id: "season-1",
+  });
+});
+
+test("season setup update handler authenticates and updates setup", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        id: "season-1",
+        name: "Fremont Derby Season 1",
+        league_night: "Wednesday",
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons/season-1/setup", {
+    method: "PUT",
+    headers: { authorization: "Bearer admin-token" },
+    body: JSON.stringify({
+      seasonName: "Fremont Derby Season 1",
+      leagueNight: "Wednesday",
+      firstRoundDate: "2026-09-03",
+      rosterLockRound: 5,
+      openingBlockLength: 3,
+      individualMinMatches: 5,
+      roundIntervalDays: 7,
+      tableNumbers: [1, 2, 3, 4],
+      raceChartVersion: "season-1-default",
+      playoffTeamCount: 4,
+      playoffAnchorTiebreaker: false,
+    }),
+  });
+
+  const response = await handleUpdateSeasonSetupRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).setup.league_night, "Wednesday");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/configure_season_setup");
+  assert.equal(JSON.parse(calls[1].init.body).target_season_id, "season-1");
+  assert.equal(JSON.parse(calls[1].init.body).configured_playoff_anchor_tiebreaker, false);
+});
+
+test("season setup routes enforce supported methods", async () => {
+  const createResponse = await worker.fetch(
+    new Request("https://fremontderby.com/api/admin/seasons"),
+    publishEnv,
+  );
+  const setupResponse = await worker.fetch(
+    new Request("https://fremontderby.com/api/admin/seasons/season-1/setup", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(createResponse.status, 405);
+  assert.equal(setupResponse.status, 405);
 });
 
 test("own profile handler returns the authenticated player's profile", async () => {

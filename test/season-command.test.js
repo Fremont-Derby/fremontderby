@@ -79,6 +79,37 @@ test('trusted command can publish a registration season', async () => {
   assert.equal(repository.calls.at(-1)[0], 'savePublishedSchedule');
 });
 
+test('trusted command can publish from saved season setup defaults', async () => {
+  const repository = createRepository({
+    season: {
+      id: 'season-1',
+      status: 'registration',
+      first_round_date: '2026-09-03',
+      round_interval_days: 14,
+      default_table_numbers: [5, 6, 7, 8],
+    },
+  });
+
+  const result = await publishSeasonScheduleCommand(
+    {
+      seasonId: 'season-1',
+      actorUserId: 'admin-user-1',
+    },
+    repository,
+  );
+
+  assert.equal(result.status, 'active');
+  const saveCall = repository.calls.find(([name]) => name === 'savePublishedSchedule');
+  assert.deepEqual(
+    saveCall[1].rounds[0].matches.map((match) => match.tableNumber),
+    [5, 6, 7, 8],
+  );
+  assert.deepEqual(
+    saveCall[1].rounds.slice(0, 2).map((round) => round.scheduledOn),
+    ['2026-09-03', '2026-09-17'],
+  );
+});
+
 test('trusted command rejects already-published seasons before writing', async () => {
   const repository = createRepository({
     season: { id: 'season-1', status: 'active' },

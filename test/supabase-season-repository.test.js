@@ -27,16 +27,30 @@ const env = {
 
 test('Supabase season repository fetches one season by id', async () => {
   const { fetch, calls } = createFetch([
-    { body: [{ id: 'season-1', status: 'draft' }] },
+    {
+      body: [{
+        id: 'season-1',
+        status: 'draft',
+        first_round_date: '2026-09-03',
+        round_interval_days: 7,
+        default_table_numbers: [1, 2, 3, 4],
+      }],
+    },
   ]);
   const repository = createSupabaseSeasonRepository(env, { fetch });
 
   const season = await repository.getSeason('season-1');
 
-  assert.deepEqual(season, { id: 'season-1', status: 'draft' });
+  assert.deepEqual(season, {
+    id: 'season-1',
+    status: 'draft',
+    first_round_date: '2026-09-03',
+    round_interval_days: 7,
+    default_table_numbers: [1, 2, 3, 4],
+  });
   assert.equal(
     calls[0].url,
-    'https://project.supabase.co/rest/v1/seasons?id=eq.season-1&select=id,status',
+    'https://project.supabase.co/rest/v1/seasons?id=eq.season-1&select=id,status,first_round_date,round_interval_days,default_table_numbers',
   );
   assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
   assert.equal(calls[0].init.headers.authorization, 'Bearer service-role-secret');
@@ -62,6 +76,79 @@ test('Supabase season repository lists season team ids', async () => {
     calls[0].url,
     'https://project.supabase.co/rest/v1/teams?season_id=eq.season-1&select=id&order=name.asc',
   );
+});
+
+test('Supabase season repository loads admin setup through the setup RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'season-1',
+        name: 'Fremont Derby Season 1',
+        teams: [{ teamName: 'Breakers' }],
+        rounds: [],
+      }],
+    },
+  ]);
+  const repository = createSupabaseSeasonRepository(env, { fetch });
+
+  const setup = await repository.getSeasonSetup({
+    actorUserId: 'admin-user-1',
+    seasonId: 'season-1',
+  });
+
+  assert.equal(setup.name, 'Fremont Derby Season 1');
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_season_setup');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'admin-user-1',
+    target_season_id: 'season-1',
+  });
+});
+
+test('Supabase season repository saves setup through the setup RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'season-1',
+        name: 'Fremont Derby Season 1',
+        first_round_date: '2026-09-03',
+      }],
+    },
+  ]);
+  const repository = createSupabaseSeasonRepository(env, { fetch });
+
+  const setup = await repository.saveSeasonSetup({
+    actorUserId: 'admin-user-1',
+    seasonId: 'season-1',
+    seasonName: 'Fremont Derby Season 1',
+    leagueNight: 'Thursday',
+    firstRoundDate: '2026-09-03',
+    rosterLockRound: 5,
+    openingBlockLength: 3,
+    individualMinMatches: 5,
+    roundIntervalDays: 7,
+    tableNumbers: [1, 2, 3, 4],
+    raceChartVersion: 'season-1-default',
+    playoffTeamCount: 4,
+    playoffAnchorTiebreaker: true,
+  });
+
+  assert.equal(setup.id, 'season-1');
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/configure_season_setup');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'admin-user-1',
+    target_season_id: 'season-1',
+    configured_season_name: 'Fremont Derby Season 1',
+    configured_league_night: 'Thursday',
+    configured_first_round_date: '2026-09-03',
+    configured_roster_lock_round: 5,
+    configured_opening_block_length: 3,
+    configured_individual_min_matches: 5,
+    configured_round_interval_days: 7,
+    configured_table_numbers: [1, 2, 3, 4],
+    configured_race_chart_version: 'season-1-default',
+    configured_playoff_team_count: 4,
+    configured_playoff_anchor_tiebreaker: true,
+  });
 });
 
 test('Supabase season repository saves a published schedule through the RPC', async () => {

@@ -36,8 +36,8 @@ export async function publishSeasonScheduleCommand(
     seasonId,
     actorUserId,
     firstRoundDate,
-    intervalDays = 7,
-    tableNumbers = [1, 2, 3, 4],
+    intervalDays,
+    tableNumbers,
   },
   repository,
 ) {
@@ -58,13 +58,18 @@ export async function publishSeasonScheduleCommand(
     throw new Error('Season must be draft or registration to publish');
   }
 
+  const resolvedFirstRoundDate = firstRoundDate ?? season.first_round_date;
+  if (!resolvedFirstRoundDate) {
+    throw new Error('firstRoundDate is required');
+  }
+
   const teams = await repository.listSeasonTeams(seasonId);
   const schedule = publishRegularSeasonSchedule({
     seasonId,
     teamIds: activeTeamIds(teams),
-    firstRoundDate,
-    intervalDays,
-    tableNumbers,
+    firstRoundDate: resolvedFirstRoundDate,
+    intervalDays: intervalDays ?? season.round_interval_days ?? 7,
+    tableNumbers: tableNumbers ?? season.default_table_numbers ?? [1, 2, 3, 4],
   });
 
   const saved = await repository.savePublishedSchedule({

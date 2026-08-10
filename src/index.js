@@ -41,6 +41,11 @@ import { createScoringRepository } from './scoringRepository.js';
 import { renderScorecardPage } from './scorecardPage.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import {
+  getSeasonSetupCommand,
+  saveSeasonSetupCommand,
+} from './seasonSetupCommands.js';
+import { renderSeasonSetupPage } from './seasonSetupPage.js';
+import {
   listIndividualStandingsCommand,
   listTeamStandingsCommand,
 } from './standingsCommands.js';
@@ -116,7 +121,12 @@ function jsonResponse(body, status = 200) {
 
 async function readJsonBody(request) {
   try {
-    const body = await request.json();
+    const text = await request.text();
+    if (!text.trim()) {
+      return {};
+    }
+
+    const body = JSON.parse(text);
     if (!body || Array.isArray(body) || typeof body !== "object") {
       throw new Error("Request body must be a JSON object");
     }
@@ -150,6 +160,7 @@ function statusForError(error) {
   if (error.message.includes("rack history must match")) return 409;
   if (error.message.includes("Race targets are required")) return 409;
   if (error.message.includes("prize payouts are already finalized")) return 409;
+  if (error.message.includes("Season setup can only change before publication")) return 409;
   if (error.message === "Player match not found") return 404;
   return 400;
 }
@@ -163,9 +174,6 @@ export async function handlePublishScheduleRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    if (!body.firstRoundDate) {
-      throw new Error("firstRoundDate is required");
-    }
 
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
     const result = await publishSeasonScheduleCommand(
@@ -180,6 +188,99 @@ export async function handlePublishScheduleRequest(
     );
 
     return jsonResponse(result, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleCreateSeasonSetupRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    const setup = await saveSeasonSetupCommand(
+      {
+        actorUserId: actor.id,
+        seasonName: body.seasonName ?? body.season_name,
+        leagueNight: body.leagueNight ?? body.league_night,
+        firstRoundDate: body.firstRoundDate ?? body.first_round_date,
+        rosterLockRound: body.rosterLockRound ?? body.roster_lock_round,
+        openingBlockLength: body.openingBlockLength ?? body.opening_block_length,
+        individualMinMatches: body.individualMinMatches ?? body.individual_min_matches,
+        roundIntervalDays: body.roundIntervalDays ?? body.round_interval_days,
+        tableNumbers: body.tableNumbers ?? body.table_numbers,
+        raceChartVersion: body.raceChartVersion ?? body.race_chart_version,
+        playoffTeamCount: body.playoffTeamCount ?? body.playoff_team_count,
+        playoffAnchorTiebreaker: body.playoffAnchorTiebreaker
+          ?? body.playoff_anchor_tiebreaker,
+      },
+      repository,
+    );
+
+    return jsonResponse({ setup }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleGetSeasonSetupRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    const setup = await getSeasonSetupCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ setup });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleUpdateSeasonSetupRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    const setup = await saveSeasonSetupCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+        seasonName: body.seasonName ?? body.season_name,
+        leagueNight: body.leagueNight ?? body.league_night,
+        firstRoundDate: body.firstRoundDate ?? body.first_round_date,
+        rosterLockRound: body.rosterLockRound ?? body.roster_lock_round,
+        openingBlockLength: body.openingBlockLength ?? body.opening_block_length,
+        individualMinMatches: body.individualMinMatches ?? body.individual_min_matches,
+        roundIntervalDays: body.roundIntervalDays ?? body.round_interval_days,
+        tableNumbers: body.tableNumbers ?? body.table_numbers,
+        raceChartVersion: body.raceChartVersion ?? body.race_chart_version,
+        playoffTeamCount: body.playoffTeamCount ?? body.playoff_team_count,
+        playoffAnchorTiebreaker: body.playoffAnchorTiebreaker
+          ?? body.playoff_anchor_tiebreaker,
+      },
+      repository,
+    );
+
+    return jsonResponse({ setup });
   } catch (error) {
     return jsonResponse({ error: error.message }, statusForError(error));
   }
@@ -780,6 +881,12 @@ export default {
     const publishScheduleMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
     );
+    const adminSeasonsMatch = url.pathname.match(
+      /^\/api\/admin\/seasons$/,
+    );
+    const adminSeasonSetupMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/setup$/,
+    );
     const adminSeasonPrizesMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/prizes$/,
     );
@@ -910,6 +1017,19 @@ export default {
       });
     }
 
+    if (url.pathname === "/season-setup") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderSeasonSetupPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (url.pathname === "/lineup") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -972,6 +1092,33 @@ export default {
         env,
         decodeURIComponent(publishScheduleMatch[1]),
       );
+    }
+
+    if (adminSeasonsMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleCreateSeasonSetupRequest(request, env);
+    }
+
+    if (adminSeasonSetupMatch) {
+      if (request.method === "GET") {
+        return handleGetSeasonSetupRequest(
+          request,
+          env,
+          decodeURIComponent(adminSeasonSetupMatch[1]),
+        );
+      }
+      if (request.method === "PUT") {
+        return handleUpdateSeasonSetupRequest(
+          request,
+          env,
+          decodeURIComponent(adminSeasonSetupMatch[1]),
+        );
+      }
+
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (adminSeasonPrizesMatch) {
