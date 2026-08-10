@@ -12,7 +12,7 @@ Fremont Derby uses three isolated environments.
 - Deploy with `npx wrangler deploy --env staging`.
 - Supabase project ref: `oqkkvqkerusepyokzbmt`.
 - Supabase URL: `https://oqkkvqkerusepyokzbmt.supabase.co`.
-- This is the hosted project currently carrying the Fremont Derby migrations and is the target for authorization/E2E verification.
+- This is the hosted project used for authorization/E2E verification.
 - Intended for end-to-end tests and manual QA before production.
 - May use the generated `*.workers.dev` hostname until a custom staging hostname is added.
 
@@ -61,6 +61,7 @@ The endpoint does not return credential values. It returns HTTP 200 only when al
 
 ## Provisioning status
 - Distinct hosted Supabase projects exist for staging and production.
-- Staging currently carries the Fremont Derby migration set used for hosted authorization verification.
-- Production is intentionally kept separate; production schema promotion and Worker secret wiring must be verified before #35 is closed.
+- Staging and production are both current through the repository migration `admin_override_reconciled_player_match` (35/35 as verified 2026-08-10).
+- Fresh Supabase security advisors report zero security lints in both projects.
+- Schema promotion is complete; the remaining environment blocker is Cloudflare Worker variable/secret wiring and successful `GET /health/environment` verification in both environments.
 - Never copy staging service-role credentials into the production Worker, or vice versa.
