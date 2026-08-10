@@ -9,6 +9,8 @@ import {
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
 import { createFreeAgentRepository } from './freeAgentRepository.js';
+import { submitTeamLineupCommand } from './lineupCommands.js';
+import { createLineupRepository } from './lineupRepository.js';
 import {
   getOwnPlayerProfileCommand,
   saveOwnPlayerProfileCommand,
@@ -105,6 +107,7 @@ function statusForError(error) {
   if (error.message.includes("Active roster membership is required")) return 403;
   if (error.message.startsWith("Supabase request failed with 401")) return 401;
   if (error.message.startsWith("Supabase request failed with 403")) return 403;
+  if (error.message.includes("Player is already scheduled")) return 409;
   return 400;
 }
 
@@ -423,6 +426,32 @@ export async function handleListTeamRoundAvailabilityRequest(
   }
 }
 
+export async function handleSubmitTeamLineupRequest(
+  request,
+  env,
+  { teamId, roundId },
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createLineupRepository(env, { fetch: fetchImpl });
+    const lineup = await submitTeamLineupCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        roundId,
+        slots: body.slots ?? body.lineupSlots,
+      },
+      repository,
+    );
+
+    return jsonResponse({ lineup });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -459,6 +488,9 @@ export default {
     );
     const teamRoundAvailabilityMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/availability$/,
+    );
+    const teamLineupMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
     );
 
     if (url.pathname === "/health") {
@@ -619,6 +651,21 @@ export default {
         {
           teamId: decodeURIComponent(teamRoundAvailabilityMatch[1]),
           roundId: decodeURIComponent(teamRoundAvailabilityMatch[2]),
+        },
+      );
+    }
+
+    if (teamLineupMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleSubmitTeamLineupRequest(
+        request,
+        env,
+        {
+          teamId: decodeURIComponent(teamLineupMatch[1]),
+          roundId: decodeURIComponent(teamLineupMatch[2]),
         },
       );
     }

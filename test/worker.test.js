@@ -14,6 +14,7 @@ import worker, {
   handleSaveOwnProfileRequest,
   handleSetFreeAgentAvailabilityRequest,
   handleSetRosterAvailabilityRequest,
+  handleSubmitTeamLineupRequest,
   renderLandingPage,
 } from "../src/index.js";
 
@@ -700,6 +701,113 @@ test("team round availability route allows only GET", async () => {
       "https://fremontderby.com/api/teams/team-1/rounds/round-1/availability",
       { method: "POST" },
     ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("team lineup handler authenticates the captain and submits slots", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [
+        {
+          lineup_id: "lineup-1",
+          season_id: "season-1",
+          round_id: "round-1",
+          team_match_id: "team-match-1",
+          team_id: "team-1",
+          slot_number: 1,
+          player_id: "player-1",
+          participation_type: "roster",
+        },
+        {
+          lineup_id: "lineup-1",
+          season_id: "season-1",
+          round_id: "round-1",
+          team_match_id: "team-match-1",
+          team_id: "team-1",
+          slot_number: 2,
+          player_id: "player-2",
+          participation_type: "free_agent",
+        },
+      ],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer captain-token" },
+      body: JSON.stringify({
+        slots: [
+          { slotNumber: 1, playerId: "player-1" },
+          { slotNumber: 2, playerId: "player-2" },
+        ],
+      }),
+    },
+  );
+
+  const response = await handleSubmitTeamLineupRequest(
+    request,
+    publishEnv,
+    { teamId: "team-1", roundId: "round-1" },
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    (await response.json()).lineup.map((slot) => slot.participation_type),
+    ["roster", "free_agent"],
+  );
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/submit_team_lineup");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_team_id: "team-1",
+    target_round_id: "round-1",
+    lineup_slots: [
+      { slotNumber: 1, playerId: "player-1" },
+      { slotNumber: 2, playerId: "player-2" },
+    ],
+  });
+});
+
+test("team lineup handler treats duplicate round scheduling as a conflict", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      status: 400,
+      body: { message: "Player is already scheduled for another team in this round" },
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer captain-token" },
+      body: JSON.stringify({ slots: [{ slotNumber: 1, playerId: "player-1" }] }),
+    },
+  );
+
+  const response = await handleSubmitTeamLineupRequest(
+    request,
+    publishEnv,
+    { teamId: "team-1", roundId: "round-1" },
+    { fetch },
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Player is already scheduled for another team in this round",
+  });
+});
+
+test("team lineup route allows only POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup"),
     publishEnv,
   );
 
