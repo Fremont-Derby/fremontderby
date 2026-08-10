@@ -1,6 +1,7 @@
 import app from './index.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
+import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 
 function htmlResponse(html) {
@@ -63,6 +64,11 @@ export default {
     if (url.pathname === '/demo') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderDemoSeasonPage());
+    }
+
+    if (url.pathname === '/sandbox/player') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderPlayerSandboxPage());
     }
 
     if (adminDualScoreOverrideMatch) {
