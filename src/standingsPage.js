@@ -139,7 +139,7 @@ export function renderStandingsPage() {
             <th>Team</th>
             <th class="numeric">GP</th>
             <th class="numeric">Max</th>
-            <th class="numeric">W-D-L</th>
+            <th class="numeric">W-L</th>
             <th class="numeric">Pts</th>
             <th class="numeric">Match</th>
             <th class="numeric">Diff</th>
@@ -217,7 +217,7 @@ export function renderStandingsPage() {
           cell(row.team_name),
           cell(row.games_played, 'numeric'),
           cell(row.maximum_matches, 'numeric'),
-          cell([row.team_wins, row.team_draws, row.team_losses].join('-'), 'numeric'),
+          cell([row.team_wins, row.team_losses].join('-'), 'numeric'),
           cell(row.standing_points, 'numeric'),
           cell(row.match_points + '-' + row.match_points_against, 'numeric'),
           cell(row.point_differential, 'numeric'),
