@@ -6,6 +6,7 @@ Seasonal in-house pool league software for Fremont Derby.
 
 - `/` shows the Fremont Derby deployment page and Cloudflare Worker version ID.
 - `/health` returns deployment/version metadata as JSON.
+- `/health/environment` returns non-secret Supabase environment readiness diagnostics.
 - `/lineup` serves the captain lineup UI for round availability, four-slot lineup submission, and visible lineup review.
 - `/profile` serves the sign-in/profile UI for player display name, rating, team, and season summaries.
 - `/scorecard` serves the phone scorecard UI for loading a player match, recording racks, undoing the latest unfinalized rack, and finalizing a completed race.

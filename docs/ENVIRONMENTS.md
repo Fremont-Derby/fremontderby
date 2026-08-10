@@ -43,6 +43,22 @@ Real credentials are configured outside Git. `SUPABASE_SERVICE_ROLE_KEY` must ne
 ## Safety invariant
 Staging and production have different Supabase project URLs/IDs. Any startup or test tooling that sees the same project configured for both environments should fail loudly.
 
+## Readiness check
+`GET /health/environment` returns non-secret readiness diagnostics for the Worker environment. It includes:
+
+- the Worker `ENVIRONMENT`;
+- the expected Supabase project ref for that environment;
+- the configured Supabase URL and derived project ref;
+- booleans for publishable-key and service-role-key presence;
+- pass/fail checks for environment/project matching and key separation.
+
+The endpoint does not return credential values. It returns HTTP 200 only when all readiness checks pass; otherwise it returns HTTP 503 with the failing checks. Use it after wiring Cloudflare variables/secrets to confirm:
+
+- production points at `cpiucsxlkicmlbvdvhww`;
+- staging points at `oqkkvqkerusepyokzbmt`;
+- both publishable and service-role bindings are present;
+- the publishable key and service-role key are not the same value.
+
 ## Provisioning status
 - Distinct hosted Supabase projects exist for staging and production.
 - Staging currently carries the Fremont Derby migration set used for hosted authorization verification.
