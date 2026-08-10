@@ -80,6 +80,45 @@ test('free-agent repository sets round availability through the availability RPC
   assert.equal(availability.status, 'available');
 });
 
+test('free-agent repository lists eligible free agents through the captain read RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        season_id: 'season-1',
+        round_id: 'round-1',
+        player_id: 'player-2',
+        display_name: 'Morgan',
+        fargo_rating: 525,
+        rating_status: 'established',
+        availability_status: 'available',
+      }],
+    },
+  ]);
+  const repository = createFreeAgentRepository(env, { fetch });
+
+  const freeAgents = await repository.listEligibleFreeAgents({
+    actorUserId: 'captain-user-1',
+    teamId: 'team-1',
+    roundId: 'round-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/list_eligible_free_agents');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_team_id: 'team-1',
+    target_round_id: 'round-1',
+  });
+  assert.deepEqual(freeAgents, [{
+    season_id: 'season-1',
+    round_id: 'round-1',
+    player_id: 'player-2',
+    display_name: 'Morgan',
+    fargo_rating: 525,
+    rating_status: 'established',
+    availability_status: 'available',
+  }]);
+});
+
 test('free-agent repository surfaces Supabase failures', async () => {
   const { fetch } = createFetch([
     { status: 400, body: { message: 'Rostered players cannot register as free agents' } },

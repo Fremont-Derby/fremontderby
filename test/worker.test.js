@@ -5,6 +5,7 @@ import worker, {
   handleCreateTeamRequest,
   handleGetOwnProfileRequest,
   handleInvitePlayerToTeamRequest,
+  handleListEligibleFreeAgentsRequest,
   handlePublishScheduleRequest,
   handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
@@ -471,4 +472,82 @@ test("free-agent availability handler authenticates and saves round availability
     target_round_id: "round-1",
     availability_status: "available",
   });
+});
+
+test("eligible free agents handler authenticates the captain and lists candidates", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [{
+        season_id: "season-1",
+        round_id: "round-1",
+        player_id: "player-2",
+        display_name: "Morgan",
+        fargo_rating: 525,
+        rating_status: "established",
+        availability_status: "available",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/teams/team-1/rounds/round-1/eligible-free-agents",
+    {
+      headers: { authorization: "Bearer captain-token" },
+    },
+  );
+
+  const response = await handleListEligibleFreeAgentsRequest(
+    request,
+    publishEnv,
+    { teamId: "team-1", roundId: "round-1" },
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).freeAgents[0].display_name, "Morgan");
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_eligible_free_agents");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_team_id: "team-1",
+    target_round_id: "round-1",
+  });
+});
+
+test("eligible free agents handler treats non-captain access as forbidden", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    { status: 400, body: { message: "Only the active captain can view eligible free agents" } },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/teams/team-1/rounds/round-1/eligible-free-agents",
+    {
+      headers: { authorization: "Bearer player-token" },
+    },
+  );
+
+  const response = await handleListEligibleFreeAgentsRequest(
+    request,
+    publishEnv,
+    { teamId: "team-1", roundId: "round-1" },
+    { fetch },
+  );
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Only the active captain can view eligible free agents",
+  });
+});
+
+test("eligible free agents route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://fremontderby.com/api/teams/team-1/rounds/round-1/eligible-free-agents",
+      { method: "POST" },
+    ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
 });
