@@ -37,6 +37,16 @@ export async function listOwnTeamManagementCommand({ actorUserId }, repository) 
   return repository.listOwnTeamManagement({ actorUserId });
 }
 
+export async function listOwnTeamTradesCommand({ actorUserId }, repository) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+
+  assertRepositoryMethod(repository, 'listOwnTeamTrades');
+
+  return repository.listOwnTeamTrades({ actorUserId });
+}
+
 export async function createTeamWithCaptainCommand(
   { actorUserId, seasonId, teamName },
   repository,
@@ -80,6 +90,68 @@ export async function invitePlayerToTeamCommand(
   });
 }
 
+export async function proposeTeamTradeCommand(
+  { actorUserId, teamId, offeredPlayerId, requestedTeamId, requestedPlayerId },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!teamId) {
+    throw new Error('teamId is required');
+  }
+  if (!offeredPlayerId) {
+    throw new Error('offeredPlayerId is required');
+  }
+  if (!requestedTeamId) {
+    throw new Error('requestedTeamId is required');
+  }
+  if (!requestedPlayerId) {
+    throw new Error('requestedPlayerId is required');
+  }
+
+  assertRepositoryMethod(repository, 'proposeTeamTrade');
+
+  return repository.proposeTeamTrade({
+    actorUserId,
+    teamId,
+    offeredPlayerId,
+    requestedTeamId,
+    requestedPlayerId,
+  });
+}
+
+export async function adminProposeTeamTradeExceptionCommand(
+  { actorUserId, teamId, offeredPlayerId, requestedTeamId, requestedPlayerId },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!teamId) {
+    throw new Error('teamId is required');
+  }
+  if (!offeredPlayerId) {
+    throw new Error('offeredPlayerId is required');
+  }
+  if (!requestedTeamId) {
+    throw new Error('requestedTeamId is required');
+  }
+  if (!requestedPlayerId) {
+    throw new Error('requestedPlayerId is required');
+  }
+
+  assertRepositoryMethod(repository, 'adminProposeTeamTradeException');
+
+  return repository.adminProposeTeamTradeException({
+    actorUserId,
+    teamId,
+    offeredPlayerId,
+    requestedTeamId,
+    requestedPlayerId,
+  });
+}
+
 export async function respondToTeamInvitationCommand(
   { actorUserId, invitationId, response },
   repository,
@@ -99,6 +171,52 @@ export async function respondToTeamInvitationCommand(
   return repository.respondToTeamInvitation({
     actorUserId,
     invitationId,
+    response,
+  });
+}
+
+export async function respondToTeamTradePlayerCommand(
+  { actorUserId, tradeId, response },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!tradeId) {
+    throw new Error('tradeId is required');
+  }
+  if (!['accepted', 'declined'].includes(response)) {
+    throw new Error('response must be accepted or declined');
+  }
+
+  assertRepositoryMethod(repository, 'respondToTeamTradePlayer');
+
+  return repository.respondToTeamTradePlayer({
+    actorUserId,
+    tradeId,
+    response,
+  });
+}
+
+export async function approveTeamTradeCaptainCommand(
+  { actorUserId, tradeId, response },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!tradeId) {
+    throw new Error('tradeId is required');
+  }
+  if (!['approved', 'declined'].includes(response)) {
+    throw new Error('response must be approved or declined');
+  }
+
+  assertRepositoryMethod(repository, 'approveTeamTradeCaptain');
+
+  return repository.approveTeamTradeCaptain({
+    actorUserId,
+    tradeId,
     response,
   });
 }

@@ -66,6 +66,20 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         : result;
     },
 
+    async listOwnTeamTrades({ actorUserId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/get_own_team_trades`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+        }),
+      });
+
+      return Array.isArray(result)
+        ? (result[0] ?? { player_id: null, trades: [] })
+        : result;
+    },
+
     async createTeamWithCaptain({ actorUserId, seasonId, teamName }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/create_team_with_captain`, {
         method: 'POST',
@@ -94,6 +108,50 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       return Array.isArray(result) ? result[0] : result;
     },
 
+    async proposeTeamTrade({
+      actorUserId,
+      teamId,
+      offeredPlayerId,
+      requestedTeamId,
+      requestedPlayerId,
+    }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/propose_team_trade`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          actor_team_id: teamId,
+          offered_roster_player_id: offeredPlayerId,
+          requested_roster_team_id: requestedTeamId,
+          requested_roster_player_id: requestedPlayerId,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async adminProposeTeamTradeException({
+      actorUserId,
+      teamId,
+      offeredPlayerId,
+      requestedTeamId,
+      requestedPlayerId,
+    }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/admin_propose_team_trade_exception`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          actor_team_id: teamId,
+          offered_roster_player_id: offeredPlayerId,
+          requested_roster_team_id: requestedTeamId,
+          requested_roster_player_id: requestedPlayerId,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
+
     async respondToTeamInvitation({ actorUserId, invitationId, response }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/respond_to_team_invitation`, {
         method: 'POST',
@@ -101,6 +159,34 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         body: JSON.stringify({
           actor_user_id: actorUserId,
           target_invitation_id: invitationId,
+          response_status: response,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async respondToTeamTradePlayer({ actorUserId, tradeId, response }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/respond_to_team_trade_player`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_trade_id: tradeId,
+          response_status: response,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async approveTeamTradeCaptain({ actorUserId, tradeId, response }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/approve_team_trade_captain`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_trade_id: tradeId,
           response_status: response,
         }),
       });
