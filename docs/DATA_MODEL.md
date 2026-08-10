@@ -36,7 +36,7 @@
 ### Money and audit
 - **prize_configurations** — entry fee, administration share, team pool, individual pool, payout version.
 - **payment_status** — private per-player payment state.
-- **audit_events** — actor, action, entity, timestamp, reason, before/after metadata for privileged changes.
+- **audit_events** — private actor, action, entity, timestamp, reason, before/after metadata for privileged changes.
 
 ## Important relationships
 
@@ -62,7 +62,7 @@ erDiagram
 4. A finalized `player_match` stores the rating snapshots, race-chart version, race targets, and rack sequence used at the time.
 5. Correcting a finalized result creates an audit event and preserves recoverable prior state.
 6. Team and individual standings are derived from finalized matches.
-7. Player contact and payment status stay in private tables; public pages use aggregate or explicitly public read models.
+7. Player contact, payment status, and privileged audit details stay in private tables; public pages use aggregate or explicitly public read models.
 
 ## Migration strategy
 - Schema changes live in `supabase/migrations/`.

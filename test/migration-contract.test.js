@@ -99,8 +99,8 @@ test('normal authenticated users cannot publish seasons directly', () => {
   );
 });
 
-test('private contact and payment data are not browser-readable', () => {
-  for (const table of ['player_contacts', 'payment_status']) {
+test('private protected data tables are not browser-readable', () => {
+  for (const table of ['player_contacts', 'payment_status', 'audit_events']) {
     assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
     assert.match(
       sql,
@@ -154,4 +154,16 @@ test('season publication RPC is service-role only and transactional', () => {
   assert.match(sql, /Season schedule already exists/i);
   assert.match(sql, /inserted_round_count <> 7/i);
   assert.match(sql, /inserted_match_count <> 28/i);
+});
+
+test('season publication RPC writes an audit event in the same transaction', () => {
+  assert.match(sql, /create table private\.audit_events/i);
+  assert.match(sql, /actor_user_id uuid references auth\.users\(id\) on delete set null/i);
+  assert.match(sql, /before_state jsonb/i);
+  assert.match(sql, /after_state jsonb/i);
+  assert.match(sql, /insert into private\.audit_events/i);
+  assert.match(sql, /'season\.publish_schedule'/i);
+  assert.match(sql, /jsonb_build_object\('status', current_status\)/i);
+  assert.match(sql, /'roundCount', inserted_round_count/i);
+  assert.match(sql, /'teamMatchCount', inserted_match_count/i);
 });
