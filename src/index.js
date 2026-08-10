@@ -1,4 +1,9 @@
 import {
+  registerFreeAgentCommand,
+  setFreeAgentAvailabilityCommand,
+} from './freeAgentCommands.js';
+import { createFreeAgentRepository } from './freeAgentRepository.js';
+import {
   getOwnPlayerProfileCommand,
   saveOwnPlayerProfileCommand,
 } from './playerProfileCommands.js';
@@ -289,6 +294,54 @@ export async function handleRemoveTeamMemberRequest(
   }
 }
 
+export async function handleRegisterFreeAgentRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    const freeAgent = await registerFreeAgentCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ freeAgent }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleSetFreeAgentAvailabilityRequest(
+  request,
+  env,
+  roundId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    const availability = await setFreeAgentAvailabilityCommand(
+      {
+        actorUserId: actor.id,
+        roundId,
+        availabilityStatus: body.status ?? body.availabilityStatus,
+      },
+      repository,
+    );
+
+    return jsonResponse({ availability });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -310,6 +363,12 @@ export default {
     );
     const teamMemberRemoveMatch = url.pathname.match(
       /^\/api\/team-memberships\/([^/]+)\/remove$/,
+    );
+    const registerFreeAgentMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/free-agents\/me$/,
+    );
+    const freeAgentAvailabilityMatch = url.pathname.match(
+      /^\/api\/rounds\/([^/]+)\/free-agent-availability\/me$/,
     );
 
     if (url.pathname === "/health") {
@@ -405,6 +464,30 @@ export default {
         request,
         env,
         decodeURIComponent(teamMemberRemoveMatch[1]),
+      );
+    }
+
+    if (registerFreeAgentMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleRegisterFreeAgentRequest(
+        request,
+        env,
+        decodeURIComponent(registerFreeAgentMatch[1]),
+      );
+    }
+
+    if (freeAgentAvailabilityMatch) {
+      if (request.method !== "PUT") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleSetFreeAgentAvailabilityRequest(
+        request,
+        env,
+        decodeURIComponent(freeAgentAvailabilityMatch[1]),
       );
     }
 

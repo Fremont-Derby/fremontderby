@@ -16,6 +16,7 @@ const publicTables = [
   'team_memberships',
   'rounds',
   'team_matches',
+  'season_players',
 ];
 
 test('every exposed public table enables row level security', () => {
@@ -108,7 +109,13 @@ test('normal authenticated users cannot publish seasons directly', () => {
 });
 
 test('private protected data tables are not browser-readable', () => {
-  for (const table of ['player_contacts', 'payment_status', 'audit_events', 'team_invitations']) {
+  for (const table of [
+    'player_contacts',
+    'payment_status',
+    'audit_events',
+    'team_invitations',
+    'free_agent_availability',
+  ]) {
     assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
     assert.match(
       sql,
@@ -279,5 +286,43 @@ test('roster management RPCs enforce captain boundaries and are service-role onl
   assert.match(
     sql,
     /grant execute on function public\.remove_team_member\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('free-agent participation and availability storage have the expected visibility', () => {
+  assert.match(sql, /create table public\.season_players/i);
+  assert.match(sql, /participation_type text not null[\s\S]*'free_agent'/i);
+  assert.match(sql, /alter table public\.season_players enable row level security;/i);
+  assert.match(sql, /grant select on public\.season_players to anon, authenticated;/i);
+  assert.match(sql, /create table private\.free_agent_availability/i);
+  assert.match(
+    sql,
+    /revoke all on table private\.free_agent_availability from public, anon, authenticated;/i,
+  );
+});
+
+test('free-agent RPCs are service-role only and actor-scoped', () => {
+  assert.match(sql, /create or replace function public\.register_free_agent\(/i);
+  assert.match(sql, /where p\.user_id = actor_user_id/i);
+  assert.match(sql, /Rostered players cannot register as free agents for the same season/i);
+  assert.match(sql, /on conflict \(season_id, player_id\) do update/i);
+  assert.match(sql, /create or replace function public\.set_free_agent_availability\(/i);
+  assert.match(sql, /availability_status must be available, unavailable, or unsure/i);
+  assert.match(sql, /Active free-agent registration is required before setting availability/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.register_free_agent\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.register_free_agent\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.set_free_agent_availability\(uuid, uuid, text\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.set_free_agent_availability\(uuid, uuid, text\)[\s\S]*to service_role;/i,
   );
 });

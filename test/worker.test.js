@@ -6,9 +6,11 @@ import worker, {
   handleGetOwnProfileRequest,
   handleInvitePlayerToTeamRequest,
   handlePublishScheduleRequest,
+  handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
   handleRespondToTeamInvitationRequest,
   handleSaveOwnProfileRequest,
+  handleSetFreeAgentAvailabilityRequest,
   renderLandingPage,
 } from "../src/index.js";
 
@@ -397,5 +399,76 @@ test("team member removal handler authenticates and removes a roster player", as
   assert.deepEqual(JSON.parse(calls[1].init.body), {
     actor_user_id: "captain-user-1",
     target_membership_id: "membership-1",
+  });
+});
+
+test("free-agent registration handler authenticates and registers the actor", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    {
+      body: [{
+        season_id: "season-1",
+        player_id: "player-1",
+        participation_type: "free_agent",
+        status: "active",
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/seasons/season-1/free-agents/me", {
+    method: "POST",
+    headers: { authorization: "Bearer player-token" },
+  });
+
+  const response = await handleRegisterFreeAgentRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).freeAgent.participation_type, "free_agent");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/register_free_agent");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+    target_season_id: "season-1",
+  });
+});
+
+test("free-agent availability handler authenticates and saves round availability", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    {
+      body: [{
+        season_id: "season-1",
+        round_id: "round-1",
+        player_id: "player-1",
+        status: "available",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/rounds/round-1/free-agent-availability/me",
+    {
+      method: "PUT",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ status: "available" }),
+    },
+  );
+
+  const response = await handleSetFreeAgentAvailabilityRequest(
+    request,
+    publishEnv,
+    "round-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).availability.status, "available");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/set_free_agent_availability");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+    target_round_id: "round-1",
+    availability_status: "available",
   });
 });
