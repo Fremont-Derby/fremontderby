@@ -89,5 +89,14 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
         target_player_match_id: playerMatchId,
       });
     },
+
+    adminOverrideReconciledPlayerMatch({ actorUserId, playerMatchId, reason, resolvedRacks }) {
+      return callRpc('admin_override_reconciled_player_match', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
+        resolution_reason_text: reason,
+        resolved_racks: resolvedRacks,
+      });
+    },
   };
 }

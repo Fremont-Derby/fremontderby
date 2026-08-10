@@ -59,6 +59,25 @@ test('actor-scoped dual score actions call their service RPCs', async () => {
   }
 });
 
+test('admin score override sends reason and resolved rack history to trusted RPC', async () => {
+  const fake = fakeFetch('admin_override_reconciled_player_match', [{ status: 'finalized' }]);
+  const repository = createDualScoringRepository(env, { fetch: fake.fetchImpl });
+  const resolvedRacks = [{ rackNumber: 1, discipline: '8-ball', winnerSide: 'A' }];
+  const result = await repository.adminOverrideReconciledPlayerMatch({
+    actorUserId: 'admin-1',
+    playerMatchId: 'm1',
+    reason: 'table ruling',
+    resolvedRacks,
+  });
+  assert.equal(result.status, 'finalized');
+  assert.deepEqual(JSON.parse(fake.calls[0].init.body), {
+    actor_user_id: 'admin-1',
+    target_player_match_id: 'm1',
+    resolution_reason_text: 'table ruling',
+    resolved_racks: resolvedRacks,
+  });
+});
+
 test('repository requires server Supabase bindings', () => {
   assert.throws(
     () => createDualScoringRepository({ SUPABASE_URL: 'https://example.supabase.co' }),

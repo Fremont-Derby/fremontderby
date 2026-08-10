@@ -1,4 +1,5 @@
 import {
+  adminOverrideReconciledPlayerMatchCommand,
   confirmPlayerMatchScoreCommand,
   finalizeReconciledPlayerMatchCommand,
   getPlayerMatchScoreComparisonCommand,
@@ -14,6 +15,7 @@ function jsonResponse(body, status = 200) {
 
 function statusForError(error) {
   const message = error?.message || 'Request failed';
+  if (message.includes('Actor is not a league admin')) return 403;
   if (message.includes('Only match players')) return 403;
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
@@ -25,6 +27,7 @@ function statusForError(error) {
     || message.includes('Both player score records are required')
     || message.includes('Race target')
     || message.includes('Score record')
+    || message.includes('Resolved rack history')
   ) return 409;
   return 400;
 }
@@ -103,6 +106,22 @@ export function createDualScoringHttpHandlers({
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const match = await finalizeReconciledPlayerMatchCommand(
           { actorUserId: actor.id, playerMatchId },
+          repository,
+        );
+        return jsonResponse({ match });
+      });
+    },
+
+    adminOverride(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+      return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJsonBody(request);
+        const match = await adminOverrideReconciledPlayerMatchCommand(
+          {
+            actorUserId: actor.id,
+            playerMatchId,
+            reason: body.reason,
+            resolvedRacks: body.resolvedRacks ?? body.resolved_racks,
+          },
           repository,
         );
         return jsonResponse({ match });

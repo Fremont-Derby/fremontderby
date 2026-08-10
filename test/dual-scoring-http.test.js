@@ -10,6 +10,7 @@ function harness() {
     async undoPlayerMatchScoreRack(input) { calls.push(['undo', input]); return { undone_rack_number: 1 }; },
     async confirmPlayerMatchScore(input) { calls.push(['confirm', input]); return { both_confirmed: false }; },
     async finalizeReconciledPlayerMatch(input) { calls.push(['finalize', input]); return { status: 'finalized' }; },
+    async adminOverrideReconciledPlayerMatch(input) { calls.push(['adminOverride', input]); return { status: 'finalized' }; },
   };
   const handlers = createDualScoringHttpHandlers({
     authenticate: async () => ({ id: 'user-1' }),
@@ -53,11 +54,39 @@ test('dual-score HTTP handlers forward actor-scoped actions', async () => {
   ]);
 });
 
+test('admin score override HTTP handler requires and forwards dispute resolution evidence', async () => {
+  const { calls, handlers } = harness();
+  const resolvedRacks = [{ rackNumber: 1, discipline: '8-ball', winnerSide: 'A' }];
+  const response = await handlers.adminOverride(request({
+    reason: 'captain and players agreed after review',
+    resolvedRacks,
+  }), {}, 'match-1');
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { match: { status: 'finalized' } });
+  assert.deepEqual(calls, [[
+    'adminOverride',
+    {
+      actorUserId: 'user-1',
+      playerMatchId: 'match-1',
+      reason: 'captain and players agreed after review',
+      resolvedRacks,
+    },
+  ]]);
+});
+
 test('dual-score HTTP handlers reject invalid rack input without repository mutation', async () => {
   const { calls, handlers } = harness();
   const response = await handlers.record(request({ winnerSide: 'X' }), {}, 'match-1');
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /winnerSide must be A or B/);
+  assert.deepEqual(calls, []);
+});
+
+test('admin override rejects blank reason without repository mutation', async () => {
+  const { calls, handlers } = harness();
+  const response = await handlers.adminOverride(request({ reason: ' ', resolvedRacks: [{}] }), {}, 'match-1');
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /reason is required/);
   assert.deepEqual(calls, []);
 });
 
@@ -72,4 +101,20 @@ test('dual-score HTTP handlers surface reconciliation conflicts as 409', async (
   });
   const response = await handlers.finalize(request(), {}, 'match-1');
   assert.equal(response.status, 409);
+});
+
+test('admin override maps non-admin authorization failure to 403', async () => {
+  const handlers = createDualScoringHttpHandlers({
+    authenticate: async () => ({ id: 'user-1' }),
+    createRepository: () => ({
+      async adminOverrideReconciledPlayerMatch() {
+        throw new Error('Actor is not a league admin');
+      },
+    }),
+  });
+  const response = await handlers.adminOverride(request({
+    reason: 'resolution',
+    resolvedRacks: [{ rackNumber: 1, discipline: '8-ball', winnerSide: 'A' }],
+  }), {}, 'match-1');
+  assert.equal(response.status, 403);
 });
