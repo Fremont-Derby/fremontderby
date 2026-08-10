@@ -2,12 +2,11 @@
 
 Seasonal in-house pool league software for Fremont Derby.
 
-## Deployment smoke test
+## Worker surfaces
 
-This first application intentionally has no external services or build step. It exists to verify the GitHub → Cloudflare Worker → `fremontderby.com` production path before feature development begins.
-
-- `/` shows a minimal Fremont Derby deployment page and Cloudflare Worker version ID.
+- `/` shows the Fremont Derby deployment page and Cloudflare Worker version ID.
 - `/health` returns deployment/version metadata as JSON.
+- `/scorecard` serves the phone scorecard UI for loading a player match, recording racks, undoing the latest unfinalized rack, and finalizing a completed race.
 
 ## Local validation
 

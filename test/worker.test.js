@@ -82,6 +82,31 @@ test("health endpoint reports service and Worker version", async () => {
   });
 });
 
+test("scorecard page route returns the phone scorecard UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/scorecard?match=player-match-1"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Scorecard/);
+  assert.match(html, /data-rack-a/);
+  assert.match(html, /data-finalize/);
+});
+
+test("scorecard page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/scorecard", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
 test("publish schedule handler authenticates and calls the trusted repository path", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "admin-user-1", email: "admin@example.com" } },
