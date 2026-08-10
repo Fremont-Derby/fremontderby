@@ -27,18 +27,37 @@ const env = {
 
 test('player profile repository fetches the actor profile by user id', async () => {
   const { fetch, calls } = createFetch([
-    { body: [{ id: 'player-1', user_id: 'user-1', display_name: 'Kai' }] },
+    {
+      body: [{
+        id: 'player-1',
+        user_id: 'user-1',
+        display_name: 'Kai',
+        fargo_rating: 531,
+        rating_status: 'established',
+        teams: [{ teamName: 'Breakers' }],
+        seasons: [{ seasonName: 'Fall 2026' }],
+      }],
+    },
   ]);
   const repository = createPlayerProfileRepository(env, { fetch });
 
   const profile = await repository.getProfileByUserId('user-1');
 
-  assert.deepEqual(profile, { id: 'player-1', user_id: 'user-1', display_name: 'Kai' });
-  assert.equal(
-    calls[0].url,
-    'https://project.supabase.co/rest/v1/players?user_id=eq.user-1&select=id,user_id,display_name',
-  );
+  assert.deepEqual(profile, {
+    id: 'player-1',
+    user_id: 'user-1',
+    display_name: 'Kai',
+    fargo_rating: 531,
+    rating_status: 'established',
+    teams: [{ teamName: 'Breakers' }],
+    seasons: [{ seasonName: 'Fall 2026' }],
+  });
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_player_profile');
+  assert.equal(calls[0].init.method, 'POST');
   assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+  });
 });
 
 test('player profile repository returns null for a missing profile', async () => {
