@@ -44,7 +44,7 @@ test('submit lineup command normalizes ordered lineup slots', async () => {
       slots: [
         { playerId: 'player-1' },
         { playerId: 'player-2' },
-        { slotNumber: 4, playerId: null },
+        { slotNumber: 3, playerId: null },
       ],
     },
     repository,
@@ -68,7 +68,7 @@ test('submit lineup command normalizes ordered lineup slots', async () => {
     {
       round_id: 'round-1',
       team_id: 'team-1',
-      slot_number: 4,
+      slot_number: 3,
       player_id: null,
       participation_type: 'forfeit',
     },
@@ -81,7 +81,7 @@ test('submit lineup command normalizes ordered lineup slots', async () => {
       slots: [
         { slotNumber: 1, playerId: 'player-1' },
         { slotNumber: 2, playerId: 'player-2' },
-        { slotNumber: 4, playerId: null },
+        { slotNumber: 3, playerId: null },
       ],
     }],
   ]);
@@ -96,11 +96,11 @@ test('submit lineup command rejects invalid slot input before writing', async ()
         actorUserId: 'captain-user-1',
         teamId: 'team-1',
         roundId: 'round-1',
-        slots: [{ slotNumber: 5, playerId: 'player-1' }],
+        slots: [{ slotNumber: 4, playerId: 'player-1' }],
       },
       repository,
     ),
-    /between 1 and 4/,
+    /between 1 and 3/,
   );
   await assert.rejects(
     () => submitTeamLineupCommand(
@@ -108,11 +108,11 @@ test('submit lineup command rejects invalid slot input before writing', async ()
         actorUserId: 'captain-user-1',
         teamId: 'team-1',
         roundId: 'round-1',
-        slots: [{}, {}, {}, {}, {}],
+        slots: [{}, {}, {}, {}],
       },
       repository,
     ),
-    /more than four slots/,
+    /more than three slots/,
   );
   assert.deepEqual(repository.calls, []);
 });
