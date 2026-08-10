@@ -157,6 +157,33 @@ test("lineup page route allows only GET", async () => {
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
 });
 
+test("profile page route returns the sign-in profile UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/profile"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Profile/);
+  assert.match(html, /data-auth-form/);
+  assert.match(html, /\/api\/me\/profile/);
+  assert.match(html, /publishable-key/);
+  assert.doesNotMatch(html, /service-role-key/);
+});
+
+test("profile page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/profile", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
 test("publish schedule handler authenticates and calls the trusted repository path", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "admin-user-1", email: "admin@example.com" } },
@@ -241,7 +268,17 @@ test("publish schedule route requires POST", async () => {
 test("own profile handler returns the authenticated player's profile", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "user-1", email: "player@example.com" } },
-    { body: [{ id: "player-1", user_id: "user-1", display_name: "Kai" }] },
+    {
+      body: [{
+        id: "player-1",
+        user_id: "user-1",
+        display_name: "Kai",
+        fargo_rating: 531,
+        rating_status: "established",
+        teams: [{ seasonName: "Fall 2026", teamName: "Breakers", role: "captain" }],
+        seasons: [{ seasonName: "Fall 2026", participationType: "team", status: "active" }],
+      }],
+    },
   ]);
   const request = new Request("https://fremontderby.com/api/me/profile", {
     headers: { authorization: "Bearer user-token" },
@@ -251,13 +288,21 @@ test("own profile handler returns the authenticated player's profile", async () 
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    profile: { id: "player-1", user_id: "user-1", display_name: "Kai" },
+    profile: {
+      id: "player-1",
+      user_id: "user-1",
+      display_name: "Kai",
+      fargo_rating: 531,
+      rating_status: "established",
+      teams: [{ seasonName: "Fall 2026", teamName: "Breakers", role: "captain" }],
+      seasons: [{ seasonName: "Fall 2026", participationType: "team", status: "active" }],
+    },
   });
   assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
-  assert.equal(
-    calls[1].url,
-    "https://project.supabase.co/rest/v1/players?user_id=eq.user-1&select=id,user_id,display_name",
-  );
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/get_own_player_profile");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+  });
 });
 
 test("own profile handler saves the authenticated player's display name", async () => {

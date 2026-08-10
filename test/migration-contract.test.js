@@ -215,6 +215,28 @@ test('player profile RPC is service-role only and actor-scoped', () => {
   );
 });
 
+test('own player profile read model includes rating, teams, and season participation', () => {
+  assert.match(sql, /create or replace function public\.get_own_player_profile\(/i);
+  assert.match(sql, /actor_user_id uuid/i);
+  assert.match(sql, /returns table \([\s\S]*fargo_rating integer[\s\S]*rating_status text[\s\S]*teams jsonb[\s\S]*seasons jsonb/i);
+  assert.match(sql, /from public\.players p/i);
+  assert.match(sql, /left join public\.player_ratings pr[\s\S]*on pr\.player_id = p\.id/i);
+  assert.match(sql, /from public\.team_memberships tm/i);
+  assert.match(sql, /join public\.teams t[\s\S]*on t\.id = tm\.team_id[\s\S]*t\.season_id = tm\.season_id/i);
+  assert.match(sql, /from public\.season_players sp/i);
+  assert.match(sql, /jsonb_agg\([\s\S]*'teamName', t\.name/i);
+  assert.match(sql, /jsonb_agg\([\s\S]*'participationType', sp\.participation_type/i);
+  assert.match(sql, /where p\.user_id = actor_user_id/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.get_own_player_profile\(uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.get_own_player_profile\(uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
 test('team creation RPC creates captain membership and is service-role only', () => {
   assert.match(sql, /create or replace function public\.create_team_with_captain\(/i);
   assert.match(sql, /actor_user_id uuid/i);

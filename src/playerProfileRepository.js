@@ -42,10 +42,6 @@ async function requestJson(fetchImpl, url, init) {
   return body;
 }
 
-function encodeFilterValue(value) {
-  return encodeURIComponent(value);
-}
-
 export function createPlayerProfileRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') {
     throw new Error('fetch implementation is required');
@@ -57,13 +53,15 @@ export function createPlayerProfileRepository(env, { fetch: fetchImpl = globalTh
 
   return {
     async getProfileByUserId(actorUserId) {
-      const url = `${supabaseUrl}/rest/v1/players?user_id=eq.${encodeFilterValue(actorUserId)}&select=id,user_id,display_name`;
-      const rows = await requestJson(fetchImpl, url, {
-        method: 'GET',
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/get_own_player_profile`, {
+        method: 'POST',
         headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+        }),
       });
 
-      return rows?.[0] ?? null;
+      return Array.isArray(result) ? (result[0] ?? null) : result;
     },
 
     async saveProfile({ actorUserId, displayName }) {

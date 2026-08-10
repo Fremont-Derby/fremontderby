@@ -19,6 +19,7 @@ import {
   getOwnPlayerProfileCommand,
   saveOwnPlayerProfileCommand,
 } from './playerProfileCommands.js';
+import { renderProfilePage } from './profilePage.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import {
   correctPlayerMatchCommand,
@@ -772,6 +773,19 @@ export default {
       }
 
       return new Response(renderLineupPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (url.pathname === "/profile") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderProfilePage(env), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
