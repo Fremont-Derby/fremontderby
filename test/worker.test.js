@@ -6,12 +6,14 @@ import worker, {
   handleGetOwnProfileRequest,
   handleInvitePlayerToTeamRequest,
   handleListEligibleFreeAgentsRequest,
+  handleListTeamRoundAvailabilityRequest,
   handlePublishScheduleRequest,
   handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
   handleRespondToTeamInvitationRequest,
   handleSaveOwnProfileRequest,
   handleSetFreeAgentAvailabilityRequest,
+  handleSetRosterAvailabilityRequest,
   renderLandingPage,
 } from "../src/index.js";
 
@@ -543,6 +545,159 @@ test("eligible free agents route allows only GET", async () => {
   const response = await worker.fetch(
     new Request(
       "https://fremontderby.com/api/teams/team-1/rounds/round-1/eligible-free-agents",
+      { method: "POST" },
+    ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("roster availability handler authenticates and saves round availability", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    {
+      body: [{
+        season_id: "season-1",
+        round_id: "round-1",
+        team_id: "team-1",
+        player_id: "player-1",
+        status: "available",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/rounds/round-1/availability/me",
+    {
+      method: "PUT",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ status: "available" }),
+    },
+  );
+
+  const response = await handleSetRosterAvailabilityRequest(
+    request,
+    publishEnv,
+    "round-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).availability.status, "available");
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/set_roster_availability");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+    target_round_id: "round-1",
+    availability_status: "available",
+  });
+});
+
+test("roster availability route allows only PUT", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/rounds/round-1/availability/me"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("roster availability handler treats non-roster access as forbidden", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    {
+      status: 400,
+      body: { message: "Active roster membership is required before setting availability" },
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/rounds/round-1/availability/me",
+    {
+      method: "PUT",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ status: "available" }),
+    },
+  );
+
+  const response = await handleSetRosterAvailabilityRequest(
+    request,
+    publishEnv,
+    "round-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Active roster membership is required before setting availability",
+  });
+});
+
+test("team round availability handler returns roster rows plus eligible free agents", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [
+        {
+          season_id: "season-1",
+          round_id: "round-1",
+          team_id: "team-1",
+          player_id: "player-1",
+          display_name: "Kai",
+          role: "captain",
+          participation_type: "roster",
+          fargo_rating: 530,
+          rating_status: "established",
+          availability_status: "available",
+        },
+        {
+          season_id: "season-1",
+          round_id: "round-1",
+          team_id: "team-1",
+          player_id: "player-2",
+          display_name: "Morgan",
+          role: null,
+          participation_type: "free_agent",
+          fargo_rating: 525,
+          rating_status: "established",
+          availability_status: "available",
+        },
+      ],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/teams/team-1/rounds/round-1/availability",
+    {
+      headers: { authorization: "Bearer captain-token" },
+    },
+  );
+
+  const response = await handleListTeamRoundAvailabilityRequest(
+    request,
+    publishEnv,
+    { teamId: "team-1", roundId: "round-1" },
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(
+    body.availability.map((row) => row.participation_type),
+    ["roster", "free_agent"],
+  );
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_team_round_availability");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_team_id: "team-1",
+    target_round_id: "round-1",
+  });
+});
+
+test("team round availability route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://fremontderby.com/api/teams/team-1/rounds/round-1/availability",
       { method: "POST" },
     ),
     publishEnv,

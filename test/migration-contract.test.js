@@ -115,6 +115,7 @@ test('private protected data tables are not browser-readable', () => {
     'audit_events',
     'team_invitations',
     'free_agent_availability',
+    'roster_availability',
   ]) {
     assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
     assert.match(
@@ -345,5 +346,44 @@ test('eligible free-agent read model is captain-scoped and service-role only', (
   assert.match(
     sql,
     /grant execute on function public\.list_eligible_free_agents\(uuid, uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('roster availability storage is private and roster-member scoped', () => {
+  assert.match(sql, /create table private\.roster_availability/i);
+  assert.match(sql, /status text not null[\s\S]*'available'[\s\S]*'unavailable'[\s\S]*'unsure'/i);
+  assert.match(
+    sql,
+    /revoke all on table private\.roster_availability from public, anon, authenticated;/i,
+  );
+  assert.match(sql, /create or replace function public\.set_roster_availability\(/i);
+  assert.match(sql, /where p\.user_id = actor_user_id/i);
+  assert.match(sql, /Active roster membership is required before setting availability/i);
+  assert.match(sql, /on conflict \(round_id, player_id\) do update/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.set_roster_availability\(uuid, uuid, text\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.set_roster_availability\(uuid, uuid, text\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('team round availability read model is captain-scoped and includes eligible free agents', () => {
+  assert.match(sql, /create or replace function public\.list_team_round_availability\(/i);
+  assert.match(sql, /Only the active captain can view team round availability/i);
+  assert.match(sql, /Team is not scheduled for target round/i);
+  assert.match(sql, /from public\.team_memberships tm[\s\S]*'roster'::text as participation_type/i);
+  assert.match(sql, /from private\.free_agent_availability fa[\s\S]*'free_agent'::text as participation_type/i);
+  assert.match(sql, /where active_roster_count < 4/i);
+  assert.match(sql, /fa\.status = 'available'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.list_team_round_availability\(uuid, uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.list_team_round_availability\(uuid, uuid, uuid\)[\s\S]*to service_role;/i,
   );
 });
