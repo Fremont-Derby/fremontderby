@@ -1,4 +1,5 @@
 import app from './index.js';
+import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 
 function htmlResponse(html) {
@@ -20,9 +21,28 @@ function faviconResponse() {
   });
 }
 
+function methodNotAllowed() {
+  return Response.json({ error: 'Method not allowed' }, { status: 405 });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const dualScoreCompareMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/score-comparison$/,
+    );
+    const dualScoreRackMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/score-racks$/,
+    );
+    const dualScoreUndoMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/score-racks\/undo$/,
+    );
+    const dualScoreConfirmMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/score-confirm$/,
+    );
+    const dualScoreFinalizeMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/finalize-reconciled$/,
+    );
 
     if (request.method === 'GET' && url.pathname === '/favicon.svg') {
       return faviconResponse();
@@ -34,6 +54,51 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/rules') {
       return htmlResponse(renderRulesPage());
+    }
+
+    if (dualScoreCompareMatch) {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return dualScoringHttpHandlers.compare(
+        request,
+        env,
+        decodeURIComponent(dualScoreCompareMatch[1]),
+      );
+    }
+
+    if (dualScoreRackMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return dualScoringHttpHandlers.record(
+        request,
+        env,
+        decodeURIComponent(dualScoreRackMatch[1]),
+      );
+    }
+
+    if (dualScoreUndoMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return dualScoringHttpHandlers.undo(
+        request,
+        env,
+        decodeURIComponent(dualScoreUndoMatch[1]),
+      );
+    }
+
+    if (dualScoreConfirmMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return dualScoringHttpHandlers.confirm(
+        request,
+        env,
+        decodeURIComponent(dualScoreConfirmMatch[1]),
+      );
+    }
+
+    if (dualScoreFinalizeMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return dualScoringHttpHandlers.finalize(
+        request,
+        env,
+        decodeURIComponent(dualScoreFinalizeMatch[1]),
+      );
     }
 
     return app.fetch(request, env, ctx);
