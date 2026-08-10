@@ -32,6 +32,7 @@ function pageShell(title, body) {
     .eyebrow::before { content: ''; width: 12px; height: 12px; border: 3px solid #e7f2eb; border-radius: 50%; box-shadow: inset 0 0 0 3px #173f2a; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
     .button.primary { background: #e7f2eb; color: #07150f; border-color: #e7f2eb; font-weight: 700; }
+    .button.demo { background: #e9bd45; color: #17120a; border-color: #e9bd45; font-weight: 800; }
     .note { margin-top: 34px; padding-top: 18px; border-top: 1px solid #315d45; font-size: .95rem; color: #9fb2a6; }
   </style>
 </head>
@@ -39,6 +40,7 @@ function pageShell(title, body) {
   <main>
     <nav aria-label="Main navigation">
       <a href="/">Intro</a>
+      <a href="/demo">Demo Season</a>
       <a href="/rules">Rules</a>
       <a href="/standings">Standings</a>
       <a href="/scorecard">Scorecard</a>
@@ -70,6 +72,7 @@ export function renderIntroPage() {
 
     <p>The goal is simple: show up, play pool, keep your own score, and let the league mostly run itself.</p>
     <div class="actions">
+      <a class="button demo" href="/demo">Explore the demo season</a>
       <a class="button primary" href="/rules">Read the rules</a>
       <a class="button" href="/standings">View standings</a>
     </div>
