@@ -52,6 +52,20 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
   const headers = jsonHeaders(serviceRoleKey);
 
   return {
+    async listOwnTeamManagement({ actorUserId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/get_own_team_management`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+        }),
+      });
+
+      return Array.isArray(result)
+        ? (result[0] ?? { player_id: null, captain_teams: [], invitations: [] })
+        : result;
+    },
+
     async createTeamWithCaptain({ actorUserId, seasonId, teamName }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/create_team_with_captain`, {
         method: 'POST',

@@ -27,6 +27,16 @@ function normalizeTeamName(value) {
   return teamName;
 }
 
+export async function listOwnTeamManagementCommand({ actorUserId }, repository) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+
+  assertRepositoryMethod(repository, 'listOwnTeamManagement');
+
+  return repository.listOwnTeamManagement({ actorUserId });
+}
+
 export async function createTeamWithCaptainCommand(
   { actorUserId, seasonId, teamName },
   repository,

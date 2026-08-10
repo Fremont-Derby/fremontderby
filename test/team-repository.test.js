@@ -25,6 +25,34 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-secret',
 };
 
+test('team repository loads the actor team-management view', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_id: 'player-1',
+        captain_teams: [{ teamName: 'Breakers' }],
+        invitations: [{ teamName: 'Rack Pack' }],
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const teamManagement = await repository.listOwnTeamManagement({
+    actorUserId: 'user-1',
+  });
+
+  assert.deepEqual(teamManagement, {
+    player_id: 'player-1',
+    captain_teams: [{ teamName: 'Breakers' }],
+    invitations: [{ teamName: 'Rack Pack' }],
+  });
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_management');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+  });
+  assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+});
+
 test('team repository creates a team through the captain RPC', async () => {
   const { fetch, calls } = createFetch([
     {

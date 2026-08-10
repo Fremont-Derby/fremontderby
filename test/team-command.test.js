@@ -4,6 +4,7 @@ import {
   cancelTeamInvitationCommand,
   createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
+  listOwnTeamManagementCommand,
   removeTeamMemberCommand,
   respondToTeamInvitationCommand,
 } from '../src/teamCommands.js';
@@ -20,6 +21,14 @@ function createRepository() {
         season_id: payload.seasonId,
         name: payload.teamName,
         captain_player_id: 'player-1',
+      };
+    },
+    async listOwnTeamManagement(payload) {
+      calls.push(['listOwnTeamManagement', payload]);
+      return {
+        player_id: 'player-1',
+        captain_teams: [],
+        invitations: [],
       };
     },
     async invitePlayerToTeam(payload) {
@@ -79,6 +88,24 @@ test('team creation command creates a team for the authenticated actor', async (
       seasonId: 'season-1',
       teamName: 'Breakers',
     }],
+  ]);
+});
+
+test('team management command loads the authenticated actor team view', async () => {
+  const repository = createRepository();
+
+  const teamManagement = await listOwnTeamManagementCommand(
+    { actorUserId: 'user-1' },
+    repository,
+  );
+
+  assert.deepEqual(teamManagement, {
+    player_id: 'player-1',
+    captain_teams: [],
+    invitations: [],
+  });
+  assert.deepEqual(repository.calls, [
+    ['listOwnTeamManagement', { actorUserId: 'user-1' }],
   ]);
 });
 

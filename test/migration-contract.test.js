@@ -322,6 +322,26 @@ test('roster management RPCs enforce captain boundaries and are service-role onl
   );
 });
 
+test('team management read model is actor-scoped and service-role only', () => {
+  assert.match(sql, /create or replace function public\.get_own_team_management\(/i);
+  assert.match(sql, /actor_user_id uuid/i);
+  assert.match(sql, /returns table \([\s\S]*captain_teams jsonb[\s\S]*invitations jsonb/i);
+  assert.match(sql, /where p\.user_id = actor_user_id/i);
+  assert.match(sql, /captain\.player_id = ap\.id[\s\S]*captain\.role = 'captain'/i);
+  assert.match(sql, /from private\.team_invitations ti[\s\S]*where ti\.team_id = t\.id[\s\S]*ti\.status = 'pending'/i);
+  assert.match(sql, /where ti\.invited_player_id = ap\.id[\s\S]*ti\.status = 'pending'/i);
+  assert.match(sql, /jsonb_build_object\([\s\S]*'roster', coalesce\(roster_rows\.roster/i);
+  assert.match(sql, /jsonb_build_object\([\s\S]*'pendingInvitations', coalesce\(pending_rows\.pending_invitations/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.get_own_team_management\(uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.get_own_team_management\(uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
 test('free-agent participation and availability storage have the expected visibility', () => {
   assert.match(sql, /create table public\.season_players/i);
   assert.match(sql, /participation_type text not null[\s\S]*'free_agent'/i);
