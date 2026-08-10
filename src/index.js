@@ -13,6 +13,7 @@ import {
   listVisibleTeamLineupsCommand,
   submitTeamLineupCommand,
 } from './lineupCommands.js';
+import { renderLineupPage } from './lineupPage.js';
 import { createLineupRepository } from './lineupRepository.js';
 import {
   getOwnPlayerProfileCommand,
@@ -758,6 +759,19 @@ export default {
       }
 
       return new Response(renderStandingsPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (url.pathname === "/lineup") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderLineupPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",

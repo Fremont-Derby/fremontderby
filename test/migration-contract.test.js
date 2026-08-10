@@ -437,6 +437,7 @@ test('lineup submit RPC is captain-scoped and service-role only', () => {
 });
 
 test('visible lineup read model hides opponents until reveal rules allow it', () => {
+  assert.match(sql, /drop function if exists public\.list_visible_team_lineups\(uuid, uuid, uuid\);/i);
   assert.match(sql, /create or replace function public\.list_visible_team_lineups\(/i);
   assert.match(sql, /Only the active captain can view team lineups/i);
   assert.match(sql, /opponent_visible := \(/i);
@@ -444,6 +445,9 @@ test('visible lineup read model hides opponents until reveal rules allow it', ()
   assert.match(sql, /away_lineup\.team_id = target_match\.team_b_id/i);
   assert.match(sql, /target_round\.lineup_deadline_at is not null[\s\S]*now\(\) > target_round\.lineup_deadline_at/i);
   assert.match(sql, /tl\.team_id = target_team_id[\s\S]*or opponent_visible/i);
+  assert.match(sql, /p\.display_name/i);
+  assert.match(sql, /pr\.fargo_rating/i);
+  assert.match(sql, /pr\.rating_status/i);
   assert.match(
     sql,
     /revoke all on function public\.list_visible_team_lineups\(uuid, uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
