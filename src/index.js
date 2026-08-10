@@ -1,3 +1,8 @@
+import {
+  getOwnPlayerProfileCommand,
+  saveOwnPlayerProfileCommand,
+} from './playerProfileCommands.js';
+import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
@@ -113,6 +118,48 @@ export async function handlePublishScheduleRequest(
   }
 }
 
+export async function handleGetOwnProfileRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
+    const profile = await getOwnPlayerProfileCommand(
+      { actorUserId: actor.id },
+      repository,
+    );
+
+    return jsonResponse({ profile });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleSaveOwnProfileRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
+    const profile = await saveOwnPlayerProfileCommand(
+      {
+        actorUserId: actor.id,
+        displayName: body.displayName,
+      },
+      repository,
+    );
+
+    return jsonResponse({ profile });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -144,6 +191,17 @@ export default {
         env,
         decodeURIComponent(publishScheduleMatch[1]),
       );
+    }
+
+    if (url.pathname === "/api/me/profile") {
+      if (request.method === "GET") {
+        return handleGetOwnProfileRequest(request, env);
+      }
+      if (request.method === "PUT") {
+        return handleSaveOwnProfileRequest(request, env);
+      }
+
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (url.pathname.startsWith("/api/")) {
