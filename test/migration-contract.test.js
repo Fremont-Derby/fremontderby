@@ -131,3 +131,25 @@ test('published schedule tables are public read and trusted write only', () => {
   assert.match(sql, /unique \(season_id, stage, round_number\)/i);
   assert.match(sql, /unique \(round_id, table_number\)/i);
 });
+
+test('season publication RPC is service-role only and transactional', () => {
+  assert.match(sql, /create or replace function public\.publish_season_schedule\(/i);
+  assert.match(sql, /language plpgsql/i);
+  assert.match(sql, /security definer/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.publish_season_schedule\(uuid, uuid, text, jsonb\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.publish_season_schedule\(uuid, uuid, text, jsonb\)[\s\S]*to service_role;/i,
+  );
+  assert.doesNotMatch(
+    sql,
+    /grant execute on function public\.publish_season_schedule\(uuid, uuid, text, jsonb\)[\s\S]*to (?:anon|authenticated);/i,
+  );
+  assert.match(sql, /for update;/i);
+  assert.match(sql, /Season schedule already exists/i);
+  assert.match(sql, /inserted_round_count <> 7/i);
+  assert.match(sql, /inserted_match_count <> 28/i);
+});
