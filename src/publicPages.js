@@ -49,6 +49,7 @@ export function renderIntroPage() {
     <h2>Teams and singles</h2>
     <p>You do not need to join a permanent team to participate. You can play as a free agent or substitute for teams that need a player, and those matches still count toward your individual singles record and eligibility.</p>
     <p>The regular season is intentionally flexible. A team can play with three players, players can move between teams, and free agents can fill open spots. Team results stay with the team represented in that matchup, while each player's individual history follows the player.</p>
+    <p>To qualify for a team's playoff roster, a player must have played at least three regular-season rounds for that team. To qualify for singles, a player must have played in at least five of the seven regular-season rounds anywhere in the league.</p>
     <p>The playoffs tighten up: qualifying teams lock in four-player playoff rosters for the championship run.</p>
 
     <h2>Cash payouts</h2>
@@ -86,7 +87,6 @@ export function renderRulesPage() {
       <li>Captains submit the players used for each matchup.</li>
       <li>A player cannot play for two teams in the same scheduled round.</li>
       <li>There is no team-strength or Fargo cap.</li>
-      <li>Playoff teams lock a four-player roster for the playoff run; regular-season switching and pickup flexibility ends for the playoffs.</li>
     </ul>
 
     <h2>Matches and handicaps</h2>
@@ -113,7 +113,7 @@ export function renderRulesPage() {
       <li>The playoff champion earns a larger championship payout.</li>
       <li>Individual standings include every eligible match a player actually plays, whether as a rostered player, free agent, or substitute; missing a week is neither a win nor a loss.</li>
       <li>Individual ranking uses win percentage, with total wins as the first tiebreaker.</li>
-      <li>Season 1 individual prize eligibility defaults to at least five matches played.</li>
+      <li>Singles qualification requires playing in at least five of the seven regular-season rounds anywhere in the league.</li>
       <li>Singles also award cash for regular-season performance, with a larger payout attached to the singles championship.</li>
       <li>Exact season payouts are based on the available prize pool and are published separately.</li>
     </ul>
@@ -121,7 +121,8 @@ export function renderRulesPage() {
     <h2>Playoffs</h2>
     <ul>
       <li>The top four teams advance after the regular season.</li>
-      <li>Qualifying teams lock four-player playoff rosters before playoff competition begins.</li>
+      <li>Every player on a team's playoff roster must have played at least three regular-season rounds for that team.</li>
+      <li>Qualifying teams lock four-player playoff rosters before playoff competition begins; regular-season switching and pickup flexibility ends for the playoffs.</li>
       <li>Semifinals are #1 vs #4 and #2 vs #3.</li>
       <li>If the championship team score is tied, each captain selects an eligible anchor player for the deciding handicapped match.</li>
     </ul>
