@@ -78,5 +78,19 @@ export function createFreeAgentRepository(env, { fetch: fetchImpl = globalThis.f
 
       return Array.isArray(result) ? result[0] : result;
     },
+
+    async listEligibleFreeAgents({ actorUserId, teamId, roundId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_eligible_free_agents`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_id: teamId,
+          target_round_id: roundId,
+        }),
+      });
+
+      return Array.isArray(result) ? result : [];
+    },
   };
 }

@@ -49,3 +49,24 @@ export async function setFreeAgentAvailabilityCommand(
     availabilityStatus: normalizeAvailabilityStatus(availabilityStatus),
   });
 }
+
+export async function listEligibleFreeAgentsCommand(
+  { actorUserId, teamId, roundId },
+  repository,
+) {
+  assertActor(actorUserId);
+  if (!teamId) {
+    throw new Error('teamId is required');
+  }
+  if (!roundId) {
+    throw new Error('roundId is required');
+  }
+
+  assertRepository(repository, 'listEligibleFreeAgents');
+
+  return repository.listEligibleFreeAgents({
+    actorUserId,
+    teamId,
+    roundId,
+  });
+}

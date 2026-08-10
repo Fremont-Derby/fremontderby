@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  listEligibleFreeAgentsCommand,
   registerFreeAgentCommand,
   setFreeAgentAvailabilityCommand,
 } from '../src/freeAgentCommands.js';
@@ -26,6 +27,15 @@ function createRepository() {
         player_id: 'player-1',
         status: payload.availabilityStatus,
       };
+    },
+    async listEligibleFreeAgents(payload) {
+      calls.push(['listEligibleFreeAgents', payload]);
+      return [{
+        round_id: payload.roundId,
+        player_id: 'player-2',
+        display_name: 'Morgan',
+        availability_status: 'available',
+      }];
     },
   };
 }
@@ -82,5 +92,48 @@ test('availability command rejects invalid status before writing', async () => {
     /available, unavailable, or unsure/,
   );
 
+  assert.deepEqual(repository.calls, []);
+});
+
+test('eligible free agents command lists captain-scoped candidates for a team round', async () => {
+  const repository = createRepository();
+
+  const freeAgents = await listEligibleFreeAgentsCommand(
+    { actorUserId: 'captain-user-1', teamId: 'team-1', roundId: 'round-1' },
+    repository,
+  );
+
+  assert.deepEqual(freeAgents, [{
+    round_id: 'round-1',
+    player_id: 'player-2',
+    display_name: 'Morgan',
+    availability_status: 'available',
+  }]);
+  assert.deepEqual(repository.calls, [
+    ['listEligibleFreeAgents', {
+      actorUserId: 'captain-user-1',
+      teamId: 'team-1',
+      roundId: 'round-1',
+    }],
+  ]);
+});
+
+test('eligible free agents command requires team and round ids', async () => {
+  const repository = createRepository();
+
+  await assert.rejects(
+    () => listEligibleFreeAgentsCommand(
+      { actorUserId: 'captain-user-1', teamId: '', roundId: 'round-1' },
+      repository,
+    ),
+    /teamId is required/,
+  );
+  await assert.rejects(
+    () => listEligibleFreeAgentsCommand(
+      { actorUserId: 'captain-user-1', teamId: 'team-1', roundId: '' },
+      repository,
+    ),
+    /roundId is required/,
+  );
   assert.deepEqual(repository.calls, []);
 });

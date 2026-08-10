@@ -326,3 +326,24 @@ test('free-agent RPCs are service-role only and actor-scoped', () => {
     /grant execute on function public\.set_free_agent_availability\(uuid, uuid, text\)[\s\S]*to service_role;/i,
   );
 });
+
+test('eligible free-agent read model is captain-scoped and service-role only', () => {
+  assert.match(sql, /create or replace function public\.list_eligible_free_agents\(/i);
+  assert.match(sql, /actor_user_id uuid/i);
+  assert.match(sql, /target_team_id uuid/i);
+  assert.match(sql, /target_round_id uuid/i);
+  assert.match(sql, /Only the active captain can view eligible free agents/i);
+  assert.match(sql, /Team is not scheduled for target round/i);
+  assert.match(sql, /private\.active_team_roster_count\(target_team_id\)/i);
+  assert.match(sql, /if active_roster_count >= 4 then[\s\S]*return;/i);
+  assert.match(sql, /from private\.free_agent_availability fa/i);
+  assert.match(sql, /fa\.status = 'available'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.list_eligible_free_agents\(uuid, uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.list_eligible_free_agents\(uuid, uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});

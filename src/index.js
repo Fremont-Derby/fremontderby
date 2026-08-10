@@ -1,4 +1,5 @@
 import {
+  listEligibleFreeAgentsCommand,
   registerFreeAgentCommand,
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
@@ -95,6 +96,7 @@ function statusForError(error) {
   if (error.message === "Season not found") return 404;
   if (error.message === "Actor is not a league admin") return 403;
   if (error.message.includes("Actor is not a league admin")) return 403;
+  if (error.message.includes("Only the active captain")) return 403;
   if (error.message.startsWith("Supabase request failed with 401")) return 401;
   if (error.message.startsWith("Supabase request failed with 403")) return 403;
   return 400;
@@ -342,6 +344,30 @@ export async function handleSetFreeAgentAvailabilityRequest(
   }
 }
 
+export async function handleListEligibleFreeAgentsRequest(
+  request,
+  env,
+  { teamId, roundId },
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    const freeAgents = await listEligibleFreeAgentsCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        roundId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ freeAgents });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -369,6 +395,9 @@ export default {
     );
     const freeAgentAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/free-agent-availability\/me$/,
+    );
+    const eligibleFreeAgentsMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/eligible-free-agents$/,
     );
 
     if (url.pathname === "/health") {
@@ -488,6 +517,21 @@ export default {
         request,
         env,
         decodeURIComponent(freeAgentAvailabilityMatch[1]),
+      );
+    }
+
+    if (eligibleFreeAgentsMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListEligibleFreeAgentsRequest(
+        request,
+        env,
+        {
+          teamId: decodeURIComponent(eligibleFreeAgentsMatch[1]),
+          roundId: decodeURIComponent(eligibleFreeAgentsMatch[2]),
+        },
       );
     }
 
