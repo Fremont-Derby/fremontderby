@@ -18,15 +18,18 @@ function normalizeWinnerSide(value) {
   return value;
 }
 
+function assertPlayerMatchId(playerMatchId) {
+  if (!playerMatchId) {
+    throw new Error('playerMatchId is required');
+  }
+}
+
 export async function getPlayerMatchScorecardCommand(
   { actorUserId, playerMatchId },
   repository,
 ) {
   assertActor(actorUserId);
-  if (!playerMatchId) {
-    throw new Error('playerMatchId is required');
-  }
-
+  assertPlayerMatchId(playerMatchId);
   assertRepository(repository, 'getPlayerMatchScorecard');
 
   return repository.getPlayerMatchScorecard({
@@ -40,10 +43,7 @@ export async function recordPlayerMatchRackCommand(
   repository,
 ) {
   assertActor(actorUserId);
-  if (!playerMatchId) {
-    throw new Error('playerMatchId is required');
-  }
-
+  assertPlayerMatchId(playerMatchId);
   assertRepository(repository, 'recordPlayerMatchRack');
 
   return repository.recordPlayerMatchRack({
@@ -53,15 +53,26 @@ export async function recordPlayerMatchRackCommand(
   });
 }
 
+export async function undoPlayerMatchRackCommand(
+  { actorUserId, playerMatchId },
+  repository,
+) {
+  assertActor(actorUserId);
+  assertPlayerMatchId(playerMatchId);
+  assertRepository(repository, 'undoPlayerMatchRack');
+
+  return repository.undoPlayerMatchRack({
+    actorUserId,
+    playerMatchId,
+  });
+}
+
 export async function finalizePlayerMatchCommand(
   { actorUserId, playerMatchId },
   repository,
 ) {
   assertActor(actorUserId);
-  if (!playerMatchId) {
-    throw new Error('playerMatchId is required');
-  }
-
+  assertPlayerMatchId(playerMatchId);
   assertRepository(repository, 'finalizePlayerMatch');
 
   return repository.finalizePlayerMatch({
