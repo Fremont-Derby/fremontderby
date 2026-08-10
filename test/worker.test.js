@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import worker, {
+  handleCreateTeamRequest,
   handleGetOwnProfileRequest,
   handlePublishScheduleRequest,
   handleSaveOwnProfileRequest,
@@ -194,6 +195,59 @@ test("own profile handler saves the authenticated player's display name", async 
 test("own profile route allows only GET and PUT", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/api/me/profile", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("team creation handler authenticates and creates a captain team", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    {
+      body: [{
+        id: "team-1",
+        season_id: "season-1",
+        name: "Breakers",
+        captain_player_id: "player-1",
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/seasons/season-1/teams", {
+    method: "POST",
+    headers: { authorization: "Bearer user-token" },
+    body: JSON.stringify({ teamName: "  Breakers  " }),
+  });
+
+  const response = await handleCreateTeamRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), {
+    team: {
+      id: "team-1",
+      season_id: "season-1",
+      name: "Breakers",
+      captain_player_id: "player-1",
+    },
+  });
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/create_team_with_captain");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+    target_season_id: "season-1",
+    team_name: "Breakers",
+  });
+});
+
+test("team creation route requires POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/seasons/season-1/teams"),
     publishEnv,
   );
 

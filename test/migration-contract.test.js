@@ -188,3 +188,27 @@ test('player profile RPC is service-role only and actor-scoped', () => {
     /grant execute on function public\.upsert_player_profile\(uuid, text\)[\s\S]*to (?:anon|authenticated);/i,
   );
 });
+
+test('team creation RPC creates captain membership and is service-role only', () => {
+  assert.match(sql, /create or replace function public\.create_team_with_captain\(/i);
+  assert.match(sql, /actor_user_id uuid/i);
+  assert.match(sql, /target_season_id uuid/i);
+  assert.match(sql, /team_name text/i);
+  assert.match(sql, /from public\.players p[\s\S]*where p\.user_id = actor_user_id;/i);
+  assert.match(sql, /Player profile is required before creating a team/i);
+  assert.match(sql, /insert into public\.teams/i);
+  assert.match(sql, /insert into public\.team_memberships/i);
+  assert.match(sql, /'captain'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.create_team_with_captain\(uuid, uuid, text\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.create_team_with_captain\(uuid, uuid, text\)[\s\S]*to service_role;/i,
+  );
+  assert.doesNotMatch(
+    sql,
+    /grant execute on function public\.create_team_with_captain\(uuid, uuid, text\)[\s\S]*to (?:anon|authenticated);/i,
+  );
+});
