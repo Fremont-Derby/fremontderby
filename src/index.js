@@ -45,10 +45,12 @@ import {
   cancelTeamInvitationCommand,
   createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
+  listOwnTeamManagementCommand,
   removeTeamMemberCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
 import { createTeamRepository } from './teamRepository.js';
+import { renderTeamsPage } from './teamsPage.js';
 
 const serviceName = "fremontderby";
 
@@ -237,6 +239,25 @@ export async function handleCreateTeamRequest(
     );
 
     return jsonResponse({ team }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleListOwnTeamManagementRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teamManagement = await listOwnTeamManagementCommand(
+      { actorUserId: actor.id },
+      repository,
+    );
+
+    return jsonResponse({ teamManagement });
   } catch (error) {
     return jsonResponse({ error: error.message }, statusForError(error));
   }
@@ -822,6 +843,19 @@ export default {
       });
     }
 
+    if (url.pathname === "/teams") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderTeamsPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (publishScheduleMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -843,6 +877,14 @@ export default {
       }
 
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (url.pathname === "/api/me/teams") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListOwnTeamManagementRequest(request, env);
     }
 
     if (createTeamMatch) {

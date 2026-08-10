@@ -12,6 +12,7 @@ import worker, {
   handleListIndividualStandingsRequest,
   handleListTeamRoundAvailabilityRequest,
   handleListTeamStandingsRequest,
+  handleListOwnTeamManagementRequest,
   handleListVisibleTeamLineupsRequest,
   handlePublishScheduleRequest,
   handleRegisterFreeAgentRequest,
@@ -251,6 +252,31 @@ test("availability page route allows only GET", async () => {
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
 });
 
+test("teams page route returns the team management UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/teams?season=season-1"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Teams/);
+  assert.match(html, /data-captain-teams/);
+  assert.match(html, /data-invitations/);
+});
+
+test("teams page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/teams", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
 test("publish schedule handler authenticates and calls the trusted repository path", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "admin-user-1", email: "admin@example.com" } },
@@ -400,6 +426,48 @@ test("own profile handler saves the authenticated player's display name", async 
 test("own profile route allows only GET and PUT", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/api/me/profile", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("own team management handler returns captained teams and invitations", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "captain@example.com" } },
+    {
+      body: [{
+        player_id: "player-1",
+        captain_teams: [{ teamName: "Breakers" }],
+        invitations: [{ teamName: "Rack Pack" }],
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/me/teams", {
+    headers: { authorization: "Bearer user-token" },
+  });
+
+  const response = await handleListOwnTeamManagementRequest(request, publishEnv, { fetch });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    teamManagement: {
+      player_id: "player-1",
+      captain_teams: [{ teamName: "Breakers" }],
+      invitations: [{ teamName: "Rack Pack" }],
+    },
+  });
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/get_own_team_management");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+  });
+});
+
+test("own team management route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/me/teams", { method: "POST" }),
     publishEnv,
   );
 
