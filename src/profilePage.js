@@ -100,7 +100,7 @@ export function renderProfilePage(env = {}) {
     <section class="grid">
       <article class="panel">
         <div class="panel-head"><span>Session</span><span class="badge" data-session-state>Signed out</span></div>
-        <div class="stack">
+        <div class="stack" data-auth-form>
           <button class="google" data-google-sign-in type="button">Continue with Google</button>
           <div class="hint">Fremont Derby does not manage passwords. Players and captains use the same Google sign-in.</div>
           <button class="ghost" data-load type="button">Refresh profile</button>
