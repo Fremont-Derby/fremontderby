@@ -4,20 +4,32 @@ function pageShell(title, body) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#07150f" />
   <title>${title} · Fremont Derby</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; background: #07150f; color: #f4f7f5; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 90% 6%, rgba(231,242,235,.09) 0 9px, transparent 10px),
+        radial-gradient(circle at 84% 10%, rgba(49,93,69,.32) 0 24px, transparent 25px),
+        linear-gradient(180deg, #081a12 0%, #07150f 38%, #06110d 100%);
+      color: #f4f7f5;
+      min-height: 100vh;
+    }
     main { width: min(720px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 56px; }
-    nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; }
+    nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; padding-bottom: 18px; border-bottom: 1px solid #234b36; }
     nav a, .button { display: inline-block; min-height: 44px; padding: 11px 15px; border: 1px solid #315d45; border-radius: 12px; color: #f4f7f5; text-decoration: none; background: #0b2418; }
     nav a:focus-visible, .button:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
     h1 { margin: 0 0 14px; font-size: clamp(2rem, 9vw, 4rem); line-height: 1; letter-spacing: -.035em; }
     h2 { margin: 30px 0 10px; font-size: 1.35rem; }
     p, li { color: #c5d2ca; line-height: 1.6; }
     ul { padding-left: 22px; }
-    .lead { font-size: 1.1rem; color: #edf4ef; }
+    .lead { font-size: 1.1rem; color: #edf4ef; max-width: 62ch; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #9ad6ae; font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .eyebrow::before { content: ''; width: 12px; height: 12px; border: 3px solid #e7f2eb; border-radius: 50%; box-shadow: inset 0 0 0 3px #173f2a; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
     .button.primary { background: #e7f2eb; color: #07150f; border-color: #e7f2eb; font-weight: 700; }
     .note { margin-top: 34px; padding-top: 18px; border-top: 1px solid #315d45; font-size: .95rem; color: #9fb2a6; }
@@ -39,6 +51,7 @@ function pageShell(title, body) {
 
 export function renderIntroPage() {
   return pageShell('Welcome', `
+    <div class="eyebrow">8 teams · 7 rounds · one table at a time</div>
     <h1>Fremont Derby</h1>
     <p class="lead">A flexible, Fargo-handicapped 8-ball / 9-ball round-robin league with team and singles competition, cash payouts, and very little paperwork.</p>
 
@@ -65,6 +78,7 @@ export function renderIntroPage() {
 
 export function renderRulesPage() {
   return pageShell('League Rules', `
+    <div class="eyebrow">Fremont Derby</div>
     <h1>League Rules</h1>
     <p class="lead">Keep it simple, get the matches played, and make the results easy to verify.</p>
 
