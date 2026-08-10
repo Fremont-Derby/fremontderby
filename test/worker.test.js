@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import worker, {
   handleCancelTeamInvitationRequest,
   handleCreateTeamRequest,
+  handleFinalizePlayerMatchRequest,
   handleGetOwnProfileRequest,
   handleGetPlayerMatchScorecardRequest,
   handleInvitePlayerToTeamRequest,
@@ -997,6 +998,80 @@ test("player match scorecard route allows only GET", async () => {
 test("player match racks route allows only POST", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/api/player-matches/player-match-1/racks"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("finalize player match handler authenticates and finalizes completed races", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    {
+      body: [{
+        player_match_id: "player-match-1",
+        status: "finalized",
+        winner_side: "A",
+        winner_player_id: "player-1",
+        score_a: 5,
+        score_b: 3,
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/finalize",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+    },
+  );
+
+  const response = await handleFinalizePlayerMatchRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).match.status, "finalized");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/finalize_player_match");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "player-user-1",
+    target_player_match_id: "player-match-1",
+  });
+});
+
+test("finalize player match handler rejects incomplete races as conflicts", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    { status: 400, body: { message: "Race target must be reached before finalization" } },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/finalize",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+    },
+  );
+
+  const response = await handleFinalizePlayerMatchRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Race target must be reached before finalization",
+  });
+});
+
+test("finalize player match route allows only POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/player-matches/player-match-1/finalize"),
     publishEnv,
   );
 

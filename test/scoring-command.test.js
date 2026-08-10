@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  finalizePlayerMatchCommand,
   getPlayerMatchScorecardCommand,
   recordPlayerMatchRackCommand,
 } from '../src/scoringCommands.js';
@@ -26,6 +27,13 @@ function createRepository() {
         player_match_id: payload.playerMatchId,
         rack_number: 1,
         winner_side: payload.winnerSide,
+      };
+    },
+    async finalizePlayerMatch(payload) {
+      calls.push(['finalizePlayerMatch', payload]);
+      return {
+        player_match_id: payload.playerMatchId,
+        status: 'finalized',
       };
     },
   };
@@ -78,4 +86,21 @@ test('record rack command rejects invalid winner sides before writing', async ()
   );
 
   assert.deepEqual(repository.calls, []);
+});
+
+test('finalize match command finalizes the authenticated actor match', async () => {
+  const repository = createRepository();
+
+  const match = await finalizePlayerMatchCommand(
+    { actorUserId: 'user-1', playerMatchId: 'player-match-1' },
+    repository,
+  );
+
+  assert.equal(match.status, 'finalized');
+  assert.deepEqual(repository.calls, [
+    ['finalizePlayerMatch', {
+      actorUserId: 'user-1',
+      playerMatchId: 'player-match-1',
+    }],
+  ]);
 });

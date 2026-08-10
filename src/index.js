@@ -20,6 +20,7 @@ import {
 } from './playerProfileCommands.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import {
+  finalizePlayerMatchCommand,
   getPlayerMatchScorecardCommand,
   recordPlayerMatchRackCommand,
 } from './scoringCommands.js';
@@ -119,6 +120,8 @@ function statusForError(error) {
   if (error.message.includes("Only match players or active team captains")) return 403;
   if (error.message.includes("already complete")) return 409;
   if (error.message.includes("is finalized")) return 409;
+  if (error.message.includes("before finalization")) return 409;
+  if (error.message.includes("valid completed race state")) return 409;
   if (error.message.includes("Race targets are required")) return 409;
   return 400;
 }
@@ -536,6 +539,29 @@ export async function handleRecordPlayerMatchRackRequest(
   }
 }
 
+export async function handleFinalizePlayerMatchRequest(
+  request,
+  env,
+  playerMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createScoringRepository(env, { fetch: fetchImpl });
+    const match = await finalizePlayerMatchCommand(
+      {
+        actorUserId: actor.id,
+        playerMatchId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ match });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -581,6 +607,9 @@ export default {
     );
     const playerMatchRackMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/racks$/,
+    );
+    const playerMatchFinalizeMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/finalize$/,
     );
 
     if (url.pathname === "/health") {
@@ -791,6 +820,18 @@ export default {
         request,
         env,
         decodeURIComponent(playerMatchRackMatch[1]),
+      );
+    }
+
+    if (playerMatchFinalizeMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleFinalizePlayerMatchRequest(
+        request,
+        env,
+        decodeURIComponent(playerMatchFinalizeMatch[1]),
       );
     }
 

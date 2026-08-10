@@ -82,6 +82,33 @@ test('scoring repository records racks through the rack RPC', async () => {
   assert.equal(rack.winner_side, 'A');
 });
 
+test('scoring repository finalizes matches through the finalization RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_match_id: 'player-match-1',
+        status: 'finalized',
+        winner_side: 'A',
+        score_a: 5,
+        score_b: 3,
+      }],
+    },
+  ]);
+  const repository = createScoringRepository(env, { fetch });
+
+  const match = await repository.finalizePlayerMatch({
+    actorUserId: 'user-1',
+    playerMatchId: 'player-match-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/finalize_player_match');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+    target_player_match_id: 'player-match-1',
+  });
+  assert.equal(match.status, 'finalized');
+});
+
 test('scoring repository surfaces Supabase failures', async () => {
   const { fetch } = createFetch([
     { status: 400, body: { message: 'Player match is already complete' } },
