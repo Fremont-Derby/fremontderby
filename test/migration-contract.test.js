@@ -609,3 +609,24 @@ test('player match finalization requires completed race state and writes an audi
     /grant execute on function public\.finalize_player_match\(uuid, uuid\)[\s\S]*to service_role;/i,
   );
 });
+
+test('team standings read model derives regular-season records from finalized results', () => {
+  assert.match(sql, /create or replace function public\.list_team_standings\(/i);
+  assert.match(sql, /r\.stage = 'regular'/i);
+  assert.match(sql, /pm\.status in \('finalized', 'corrected'\)/i);
+  assert.match(sql, /public\.team_match_forfeits/i);
+  assert.match(sql, /count\(distinct sr\.slot_number\) = 4/i);
+  assert.match(sql, /team_wins \* 2 \+ tmr\.team_draws/i);
+  assert.match(sql, /dense_rank\(\) over/i);
+  assert.match(sql, /standings\.standing_points desc[\s\S]*standings\.match_points desc[\s\S]*standings\.point_differential desc/i);
+  assert.match(sql, /forfeits_won/i);
+  assert.match(sql, /forfeits_lost/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.list_team_standings\(uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.list_team_standings\(uuid\)[\s\S]*to service_role;/i,
+  );
+});

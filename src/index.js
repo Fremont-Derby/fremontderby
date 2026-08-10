@@ -27,6 +27,8 @@ import {
 } from './scoringCommands.js';
 import { createScoringRepository } from './scoringRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
+import { listTeamStandingsCommand } from './standingsCommands.js';
+import { createStandingsRepository } from './standingsRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
 import {
@@ -494,6 +496,24 @@ export async function handleListVisibleTeamLineupsRequest(
   }
 }
 
+export async function handleListTeamStandingsRequest(
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const standings = await listTeamStandingsCommand(
+      { seasonId },
+      repository,
+    );
+
+    return jsonResponse({ standings });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleGetPlayerMatchScorecardRequest(
   request,
   env,
@@ -627,6 +647,9 @@ export default {
     );
     const teamLineupMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
+    );
+    const teamStandingsMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/team-standings$/,
     );
     const playerMatchScorecardMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/scorecard$/,
@@ -826,6 +849,17 @@ export default {
       }
 
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (teamStandingsMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListTeamStandingsRequest(
+        env,
+        decodeURIComponent(teamStandingsMatch[1]),
+      );
     }
 
     if (playerMatchScorecardMatch) {
