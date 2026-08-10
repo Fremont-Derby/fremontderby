@@ -1,4 +1,9 @@
 import {
+  listTeamRoundAvailabilityCommand,
+  setRosterAvailabilityCommand,
+} from './availabilityCommands.js';
+import { createAvailabilityRepository } from './availabilityRepository.js';
+import {
   listEligibleFreeAgentsCommand,
   registerFreeAgentCommand,
   setFreeAgentAvailabilityCommand,
@@ -97,6 +102,7 @@ function statusForError(error) {
   if (error.message === "Actor is not a league admin") return 403;
   if (error.message.includes("Actor is not a league admin")) return 403;
   if (error.message.includes("Only the active captain")) return 403;
+  if (error.message.includes("Active roster membership is required")) return 403;
   if (error.message.startsWith("Supabase request failed with 401")) return 401;
   if (error.message.startsWith("Supabase request failed with 403")) return 403;
   return 400;
@@ -368,6 +374,55 @@ export async function handleListEligibleFreeAgentsRequest(
   }
 }
 
+export async function handleSetRosterAvailabilityRequest(
+  request,
+  env,
+  roundId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createAvailabilityRepository(env, { fetch: fetchImpl });
+    const availability = await setRosterAvailabilityCommand(
+      {
+        actorUserId: actor.id,
+        roundId,
+        availabilityStatus: body.status ?? body.availabilityStatus,
+      },
+      repository,
+    );
+
+    return jsonResponse({ availability });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleListTeamRoundAvailabilityRequest(
+  request,
+  env,
+  { teamId, roundId },
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createAvailabilityRepository(env, { fetch: fetchImpl });
+    const availability = await listTeamRoundAvailabilityCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        roundId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ availability });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -396,8 +451,14 @@ export default {
     const freeAgentAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/free-agent-availability\/me$/,
     );
+    const rosterAvailabilityMatch = url.pathname.match(
+      /^\/api\/rounds\/([^/]+)\/availability\/me$/,
+    );
     const eligibleFreeAgentsMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/eligible-free-agents$/,
+    );
+    const teamRoundAvailabilityMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/availability$/,
     );
 
     if (url.pathname === "/health") {
@@ -520,6 +581,18 @@ export default {
       );
     }
 
+    if (rosterAvailabilityMatch) {
+      if (request.method !== "PUT") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleSetRosterAvailabilityRequest(
+        request,
+        env,
+        decodeURIComponent(rosterAvailabilityMatch[1]),
+      );
+    }
+
     if (eligibleFreeAgentsMatch) {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -531,6 +604,21 @@ export default {
         {
           teamId: decodeURIComponent(eligibleFreeAgentsMatch[1]),
           roundId: decodeURIComponent(eligibleFreeAgentsMatch[2]),
+        },
+      );
+    }
+
+    if (teamRoundAvailabilityMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListTeamRoundAvailabilityRequest(
+        request,
+        env,
+        {
+          teamId: decodeURIComponent(teamRoundAvailabilityMatch[1]),
+          roundId: decodeURIComponent(teamRoundAvailabilityMatch[2]),
         },
       );
     }
