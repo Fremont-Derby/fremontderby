@@ -225,6 +225,32 @@ test("profile page route allows only GET", async () => {
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
 });
 
+test("availability page route returns the player availability UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/availability?season=season-1&round=round-1"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Availability/);
+  assert.match(html, /data-register/);
+  assert.match(html, /data-roster-status/);
+  assert.match(html, /data-free-agent-status/);
+});
+
+test("availability page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/availability", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
 test("publish schedule handler authenticates and calls the trusted repository path", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "admin-user-1", email: "admin@example.com" } },
