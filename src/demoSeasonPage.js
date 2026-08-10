@@ -10,14 +10,14 @@ const teams = [
 ];
 
 const teamStandings = [
-  ['Break Room Bandits', 6, 1, 0, 19, 18],
-  ['Golden Rail', 5, 1, 1, 16, 11],
-  ['Nine Ball Neighbors', 4, 1, 2, 13, 7],
-  ['Corner Pocket Club', 4, 0, 3, 12, 3],
-  ['Side Pocket Society', 3, 1, 3, 10, 0],
-  ['The Kick Shots', 2, 1, 4, 7, -6],
-  ['Table Eight', 1, 0, 6, 3, -14],
-  ['Three Cushion Crew', 0, 1, 6, 1, -19],
+  ['Break Room Bandits', 7, 0, 14, 14],
+  ['Golden Rail', 6, 1, 12, 10],
+  ['Nine Ball Neighbors', 5, 2, 10, 6],
+  ['Corner Pocket Club', 4, 3, 8, 2],
+  ['Side Pocket Society', 3, 4, 6, -2],
+  ['The Kick Shots', 2, 5, 4, -6],
+  ['Table Eight', 1, 6, 2, -10],
+  ['Three Cushion Crew', 0, 7, 0, -14],
 ];
 
 const playerStandings = [
@@ -48,8 +48,8 @@ function buildRoundRobin(teamNames) {
     for (let index = 0; index < rotation.length / 2; index += 1) {
       const home = rotation[index];
       const away = rotation[rotation.length - 1 - index];
-      const homeScore = 3 - ((round + index) % 3 === 0 ? 1 : 0);
-      const awayScore = 4 - homeScore;
+      const homeScore = (round + index) % 2 === 0 ? 2 : 1;
+      const awayScore = 3 - homeScore;
       pairings.push({ home, away, homeScore, awayScore });
     }
     rounds.push(pairings);
@@ -76,7 +76,7 @@ function renderSchedule() {
 function renderTeamRows() {
   return teamStandings.map((row, index) => `
     <tr>
-      <td>${index + 1}</td><td>${escapeHtml(row[0])}</td><td>${row[1]}-${row[2]}-${row[3]}</td><td>${row[4]}</td><td>${row[5] > 0 ? '+' : ''}${row[5]}</td>
+      <td>${index + 1}</td><td>${escapeHtml(row[0])}</td><td>${row[1]}-${row[2]}</td><td>${row[3]}</td><td>${row[4] > 0 ? '+' : ''}${row[4]}</td>
     </tr>
   `).join('');
 }
@@ -135,11 +135,11 @@ export function renderDemoSeasonPage() {
       <a href="/">← Fremont Derby</a>
       <h1>Season 1 Demo</h1>
       <p>Explore a complete seven-round example season using fake players, teams, scores, standings, lineups, and rack history. This is an early testing surface; nothing on this page writes to Supabase or production league records.</p>
-      <div class="chips"><span class="chip">8 teams</span><span class="chip">7 rounds</span><span class="chip">28 team matchups</span><span class="chip">8/9 scoring example</span></div>
+      <div class="chips"><span class="chip">8 teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 scoring example</span></div>
     </section>
 
     <h2>Team standings</h2>
-    <section class="card scroll"><table><thead><tr><th>#</th><th>Team</th><th>W-D-L</th><th>Pts</th><th>Diff</th></tr></thead><tbody>${renderTeamRows()}</tbody></table></section>
+    <section class="card scroll"><table><thead><tr><th>#</th><th>Team</th><th>W-L</th><th>Pts</th><th>Diff</th></tr></thead><tbody>${renderTeamRows()}</tbody></table></section>
 
     <h2>Individual standings</h2>
     <section class="card scroll"><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>Record</th><th>Win %</th><th>Game diff</th></tr></thead><tbody>${renderPlayerRows()}</tbody></table></section>
@@ -150,10 +150,10 @@ export function renderDemoSeasonPage() {
     <h2>Example opposing lineups</h2>
     <section class="card">
       <div class="lineup">
-        <div><strong>Break Room Bandits</strong><p>Maya Banks<br>Theo Martin<br>Alex Monroe<br>Jamie Park (sub)</p></div>
-        <div><strong>Golden Rail</strong><p>Eli Torres<br>Dana Brooks<br>Owen Wells<br>Quinn Foster</p></div>
+        <div><strong>Break Room Bandits</strong><p>Maya Banks<br>Theo Martin<br>Jamie Park (sub)</p></div>
+        <div><strong>Golden Rail</strong><p>Eli Torres<br>Dana Brooks<br>Owen Wells</p></div>
       </div>
-      <p class="note">Jamie Park is a fictional free-agent substitute, demonstrating how a pickup can appear in a submitted lineup without becoming permanent demo roster history.</p>
+      <p class="note">Jamie Park is a fictional free-agent substitute, demonstrating how a pickup can fill one of the three active weekly spots without becoming permanent demo roster history.</p>
     </section>
 
     <h2>Example 8/9 race</h2>
