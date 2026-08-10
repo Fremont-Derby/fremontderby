@@ -34,8 +34,10 @@
 - **racks** — ordered rack result with discipline and winner.
 
 ### Money and audit
-- **prize_configurations** — entry fee, administration share, team pool, individual pool, payout version.
-- **payment_status** — private per-player payment state.
+- **season_prize_configurations** — versioned entry fee, administration amount, projected field size, and team/individual allocation.
+- **season_prize_payout_templates** — projected payout percentages for each prize pool and place.
+- **season_final_prize_payouts** — immutable public payout snapshots once a payout is finalized.
+- **payment_status** — private per-player payment state; public pages only expose aggregate collected/committed totals.
 - **audit_events** — private actor, action, entity, timestamp, reason, before/after metadata for privileged changes.
 
 ## Important relationships

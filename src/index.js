@@ -24,6 +24,13 @@ import {
 import { renderProfilePage } from './profilePage.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import {
+  configureSeasonPrizesCommand,
+  finalizeSeasonPrizePayoutsCommand,
+  getSeasonPrizeSummaryCommand,
+} from './prizeCommands.js';
+import { renderPrizesPage } from './prizesPage.js';
+import { createPrizeRepository } from './prizeRepository.js';
+import {
   correctPlayerMatchCommand,
   finalizePlayerMatchCommand,
   getPlayerMatchScorecardCommand,
@@ -142,6 +149,7 @@ function statusForError(error) {
   if (error.message.includes("valid corrected race state")) return 409;
   if (error.message.includes("rack history must match")) return 409;
   if (error.message.includes("Race targets are required")) return 409;
+  if (error.message.includes("prize payouts are already finalized")) return 409;
   if (error.message === "Player match not found") return 404;
   return 400;
 }
@@ -566,6 +574,82 @@ export async function handleListIndividualStandingsRequest(
   }
 }
 
+export async function handleGetSeasonPrizeSummaryRequest(
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const repository = createPrizeRepository(env, { fetch: fetchImpl });
+    const summary = await getSeasonPrizeSummaryCommand(
+      { seasonId },
+      repository,
+    );
+
+    return jsonResponse({ summary });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleConfigureSeasonPrizesRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createPrizeRepository(env, { fetch: fetchImpl });
+    const configuration = await configureSeasonPrizesCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+        entryFeeCents: body.entryFeeCents ?? body.entry_fee_cents,
+        administrationAmountCents: body.administrationAmountCents
+          ?? body.administration_amount_cents,
+        teamAllocationBasisPoints: body.teamAllocationBasisPoints
+          ?? body.team_allocation_basis_points,
+        individualAllocationBasisPoints: body.individualAllocationBasisPoints
+          ?? body.individual_allocation_basis_points,
+        projectedFieldSize: body.projectedFieldSize ?? body.projected_field_size,
+        payoutTemplates: body.payoutTemplates ?? body.payout_templates,
+      },
+      repository,
+    );
+
+    return jsonResponse({ configuration }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleFinalizeSeasonPrizePayoutsRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createPrizeRepository(env, { fetch: fetchImpl });
+    const payouts = await finalizeSeasonPrizePayoutsCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+        finalizedPayouts: body.finalizedPayouts ?? body.finalized_payouts,
+      },
+      repository,
+    );
+
+    return jsonResponse({ payouts }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleGetPlayerMatchScorecardRequest(
   request,
   env,
@@ -696,6 +780,12 @@ export default {
     const publishScheduleMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
     );
+    const adminSeasonPrizesMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/prizes$/,
+    );
+    const adminSeasonPrizeFinalizeMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/prizes\/finalize$/,
+    );
     const createTeamMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/teams$/,
     );
@@ -734,6 +824,9 @@ export default {
     );
     const individualStandingsMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/individual-standings$/,
+    );
+    const seasonPrizesMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/prizes$/,
     );
     const playerMatchScorecardMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/scorecard$/,
@@ -804,6 +897,19 @@ export default {
       });
     }
 
+    if (url.pathname === "/prizes") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderPrizesPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (url.pathname === "/lineup") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -865,6 +971,30 @@ export default {
         request,
         env,
         decodeURIComponent(publishScheduleMatch[1]),
+      );
+    }
+
+    if (adminSeasonPrizesMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleConfigureSeasonPrizesRequest(
+        request,
+        env,
+        decodeURIComponent(adminSeasonPrizesMatch[1]),
+      );
+    }
+
+    if (adminSeasonPrizeFinalizeMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleFinalizeSeasonPrizePayoutsRequest(
+        request,
+        env,
+        decodeURIComponent(adminSeasonPrizeFinalizeMatch[1]),
       );
     }
 
@@ -1057,6 +1187,17 @@ export default {
       return handleListIndividualStandingsRequest(
         env,
         decodeURIComponent(individualStandingsMatch[1]),
+      );
+    }
+
+    if (seasonPrizesMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleGetSeasonPrizeSummaryRequest(
+        env,
+        decodeURIComponent(seasonPrizesMatch[1]),
       );
     }
 
