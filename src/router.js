@@ -28,6 +28,9 @@ function methodNotAllowed() {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const adminDualScoreOverrideMatch = url.pathname.match(
+      /^\/api\/admin\/player-matches\/([^/]+)\/finalize-override$/,
+    );
     const dualScoreCompareMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/score-comparison$/,
     );
@@ -54,6 +57,15 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/rules') {
       return htmlResponse(renderRulesPage());
+    }
+
+    if (adminDualScoreOverrideMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return dualScoringHttpHandlers.adminOverride(
+        request,
+        env,
+        decodeURIComponent(adminDualScoreOverrideMatch[1]),
+      );
     }
 
     if (dualScoreCompareMatch) {
