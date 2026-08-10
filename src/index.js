@@ -33,6 +33,7 @@ import {
   listIndividualStandingsCommand,
   listTeamStandingsCommand,
 } from './standingsCommands.js';
+import { renderStandingsPage } from './standingsPage.js';
 import { createStandingsRepository } from './standingsRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
@@ -744,6 +745,19 @@ export default {
       }
 
       return new Response(renderScorecardPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (url.pathname === "/standings") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderStandingsPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
