@@ -14,6 +14,9 @@ import worker, {
   handleListTeamStandingsRequest,
   handleListOwnTeamManagementRequest,
   handleListVisibleTeamLineupsRequest,
+  handleConfigureSeasonPrizesRequest,
+  handleFinalizeSeasonPrizePayoutsRequest,
+  handleGetSeasonPrizeSummaryRequest,
   handlePublishScheduleRequest,
   handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
@@ -167,6 +170,31 @@ test("standings page route returns the public standings UI", async () => {
 test("standings page route allows only GET", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/standings", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("prizes page route returns the public prize-purse UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/prizes?season=season-1"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Prizes/);
+  assert.match(html, /data-player-count/);
+  assert.match(html, /data-projected-body/);
+});
+
+test("prizes page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/prizes", { method: "POST" }),
     publishEnv,
   );
 
@@ -1215,6 +1243,192 @@ test("individual standings route allows only GET", async () => {
 
   assert.equal(response.status, 405);
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("season prize summary handler returns public aggregate purse information", async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        season_id: "season-1",
+        season_name: "Fall 2026",
+        player_count: 32,
+        paid_amount_cents: 120000,
+        committed_amount_cents: 160000,
+        entry_fee_cents: 5000,
+        administration_amount_cents: 10000,
+        projected_prize_pool_cents: 150000,
+        team_prize_pool_cents: 90000,
+        individual_prize_pool_cents: 60000,
+        projected_payouts: [{ pool: "team", place: 1, amountCents: 63000 }],
+        finalized_payouts: [],
+      }],
+    },
+  ]);
+
+  const response = await handleGetSeasonPrizeSummaryRequest(
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.summary.player_count, 32);
+  assert.equal(body.summary.paid_amount_cents, 120000);
+  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/get_season_prize_summary");
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    target_season_id: "season-1",
+  });
+});
+
+test("season prize summary route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://fremontderby.com/api/seasons/season-1/prizes",
+      { method: "POST" },
+    ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("configure season prizes handler authenticates an admin configuration", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        configuration_id: "configuration-1",
+        season_id: "season-1",
+        version: 1,
+        projected_prize_pool_cents: 150000,
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons/season-1/prizes", {
+    method: "POST",
+    headers: { authorization: "Bearer admin-token" },
+    body: JSON.stringify({
+      entryFeeCents: 5000,
+      administrationAmountCents: 10000,
+      teamAllocationBasisPoints: 6000,
+      individualAllocationBasisPoints: 4000,
+      projectedFieldSize: 32,
+      payoutTemplates: [
+        { pool: "team", place: 1, label: "Team champion", allocationBasisPoints: 7000 },
+        { pool: "team", place: 2, label: "Team runner-up", allocationBasisPoints: 3000 },
+        { pool: "individual", place: 1, label: "Individual champion", allocationBasisPoints: 10000 },
+      ],
+    }),
+  });
+
+  const response = await handleConfigureSeasonPrizesRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).configuration.version, 1);
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/configure_season_prizes");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "admin-user-1",
+    target_season_id: "season-1",
+    configured_entry_fee_cents: 5000,
+    configured_administration_amount_cents: 10000,
+    configured_team_allocation_basis_points: 6000,
+    configured_individual_allocation_basis_points: 4000,
+    configured_projected_field_size: 32,
+    payout_templates: [
+      { pool: "team", place: 1, label: "Team champion", allocationBasisPoints: 7000 },
+      { pool: "team", place: 2, label: "Team runner-up", allocationBasisPoints: 3000 },
+      { pool: "individual", place: 1, label: "Individual champion", allocationBasisPoints: 10000 },
+    ],
+  });
+});
+
+test("configure season prizes route requires POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/admin/seasons/season-1/prizes"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("finalize season prize payouts handler writes immutable payout rows", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        season_id: "season-1",
+        pool: "team",
+        place: 1,
+        label: "Team champion",
+        amount_cents: 100000,
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons/season-1/prizes/finalize", {
+    method: "POST",
+    headers: { authorization: "Bearer admin-token" },
+    body: JSON.stringify({
+      finalizedPayouts: [
+        { pool: "team", place: 1, label: "Team champion", amountCents: 100000 },
+      ],
+    }),
+  });
+
+  const response = await handleFinalizeSeasonPrizePayoutsRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).payouts[0].amount_cents, 100000);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/finalize_season_prize_payouts");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "admin-user-1",
+    target_season_id: "season-1",
+    finalized_payouts: [
+      { pool: "team", place: 1, label: "Team champion", amountCents: 100000 },
+    ],
+  });
+});
+
+test("finalize season prize payouts handler treats previous finalization as a conflict", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    { status: 400, body: { message: "Season prize payouts are already finalized" } },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons/season-1/prizes/finalize", {
+    method: "POST",
+    headers: { authorization: "Bearer admin-token" },
+    body: JSON.stringify({
+      finalizedPayouts: [
+        { pool: "team", place: 1, amountCents: 100000 },
+        { pool: "individual", place: 1, amountCents: 50000 },
+      ],
+    }),
+  });
+
+  const response = await handleFinalizeSeasonPrizePayoutsRequest(
+    request,
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Season prize payouts are already finalized",
+  });
 });
 
 test("player match scorecard handler authenticates and loads current scorecard state", async () => {

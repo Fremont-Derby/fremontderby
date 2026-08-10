@@ -64,7 +64,7 @@ Safe public reads and narrowly scoped user-owned writes may go directly to Supab
 | Publish season | trusted Worker command |
 | Finalize/correct match | trusted Worker command |
 | Generate playoffs | trusted Worker command |
-| Change payout configuration | trusted Worker command |
+| Change payout configuration | trusted Worker command with public aggregate read model |
 
 ## Engineering principles
 1. Tests define league behavior before UI.

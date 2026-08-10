@@ -17,6 +17,9 @@ const publicTables = [
   'rounds',
   'team_matches',
   'season_players',
+  'season_prize_configurations',
+  'season_prize_payout_templates',
+  'season_final_prize_payouts',
   'player_matches',
   'team_match_forfeits',
   'season_race_chart_bands',
@@ -730,5 +733,101 @@ test('individual standings read model ranks actual played matches with prize eli
   assert.match(
     sql,
     /grant execute on function public\.list_individual_standings\(uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('season prize configuration is public read and trusted write only', () => {
+  for (const table of [
+    'season_prize_configurations',
+    'season_prize_payout_templates',
+    'season_final_prize_payouts',
+  ]) {
+    assert.match(sql, new RegExp(`create table public\\.${table}`, 'i'));
+    assert.match(
+      sql,
+      new RegExp(`create policy "[^"]+"\\s+on public\\.${table} for select[\\s\\S]*using \\(true\\);`, 'i'),
+    );
+    assert.doesNotMatch(
+      sql,
+      new RegExp(`grant\\s+(?:insert|update|delete|all)[^;]*public\\.${table}[^;]*to\\s+(?:anon|authenticated)`, 'i'),
+    );
+  }
+
+  assert.match(
+    sql,
+    /grant select on public\.season_prize_configurations, public\.season_prize_payout_templates, public\.season_final_prize_payouts[\s\S]*to anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant all on public\.season_prize_configurations, public\.season_prize_payout_templates, public\.season_final_prize_payouts[\s\S]*to service_role;/i,
+  );
+  assert.match(
+    sql,
+    /check \(team_allocation_basis_points \+ individual_allocation_basis_points = 10000\)/i,
+  );
+});
+
+test('season prize admin RPC appends versions and audits changes', () => {
+  assert.match(sql, /create or replace function public\.configure_season_prizes\(/i);
+  assert.match(sql, /from private\.league_admins la[\s\S]*where la\.user_id = actor_user_id/i);
+  assert.match(sql, /Actor is not a league admin/i);
+  assert.match(sql, /select coalesce\(max\(spc\.version\), 0\) \+ 1/i);
+  assert.match(sql, /insert into public\.season_prize_configurations/i);
+  assert.match(sql, /insert into public\.season_prize_payout_templates/i);
+  assert.match(sql, /Team payout templates must total 10000 basis points/i);
+  assert.match(sql, /Individual payout templates must total 10000 basis points/i);
+  assert.match(sql, /insert into private\.audit_events/i);
+  assert.match(sql, /'season\.configure_prizes'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.configure_season_prizes\(uuid, uuid, integer, integer, integer, integer, integer, jsonb\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.configure_season_prizes\(uuid, uuid, integer, integer, integer, integer, integer, jsonb\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('finalized prize payouts are immutable and separate from projections', () => {
+  assert.match(sql, /create table public\.season_final_prize_payouts/i);
+  assert.match(sql, /unique \(season_id, pool, place\)/i);
+  assert.match(sql, /create or replace function private\.prevent_final_prize_payout_mutation\(\)/i);
+  assert.match(sql, /raise exception 'Finalized prize payouts are immutable'/i);
+  assert.match(
+    sql,
+    /create trigger prevent_final_prize_payout_update[\s\S]*before update or delete on public\.season_final_prize_payouts/i,
+  );
+  assert.match(sql, /create or replace function public\.finalize_season_prize_payouts\(/i);
+  assert.match(sql, /Season prize payouts are already finalized/i);
+  assert.match(sql, /'season\.finalize_prize_payouts'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.finalize_season_prize_payouts\(uuid, uuid, jsonb\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.finalize_season_prize_payouts\(uuid, uuid, jsonb\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('season prize summary exposes aggregate purse data without payment status rows', () => {
+  assert.match(sql, /create or replace function public\.get_season_prize_summary\(/i);
+  assert.match(sql, /from public\.team_memberships tm[\s\S]*where tm\.ends_at is null[\s\S]*union[\s\S]*from public\.season_players sp/i);
+  assert.match(sql, /from private\.payment_status ps/i);
+  assert.match(sql, /sum\(ps\.amount_paid_cents\)/i);
+  assert.match(sql, /committed_amount_cents/i);
+  assert.match(sql, /projected_payouts jsonb/i);
+  assert.match(sql, /finalized_payouts jsonb/i);
+  assert.doesNotMatch(
+    sql,
+    /get_season_prize_summary[\s\S]*jsonb_build_object\([\s\S]*'playerId'[\s\S]*comment on function public\.get_season_prize_summary/i,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.get_season_prize_summary\(uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.get_season_prize_summary\(uuid\)[\s\S]*to service_role;/i,
   );
 });
