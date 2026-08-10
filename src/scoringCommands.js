@@ -24,6 +24,33 @@ function assertPlayerMatchId(playerMatchId) {
   }
 }
 
+function normalizeScore(value, name) {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative integer`);
+  }
+
+  return value;
+}
+
+function normalizeReason(value) {
+  const reason = typeof value === 'string' ? value.trim() : '';
+  if (!reason) {
+    throw new Error('reason is required');
+  }
+
+  return reason;
+}
+
+function normalizeCorrectedRacks(racks) {
+  if (!Array.isArray(racks) || racks.length === 0) {
+    throw new Error('racks must be a non-empty array');
+  }
+
+  return racks.map((rack) => ({
+    winnerSide: normalizeWinnerSide(rack?.winnerSide ?? rack?.winner_side),
+  }));
+}
+
 export async function getPlayerMatchScorecardCommand(
   { actorUserId, playerMatchId },
   repository,
@@ -78,5 +105,24 @@ export async function finalizePlayerMatchCommand(
   return repository.finalizePlayerMatch({
     actorUserId,
     playerMatchId,
+  });
+}
+
+export async function correctPlayerMatchCommand(
+  { actorUserId, playerMatchId, winnerSide, scoreA, scoreB, reason, racks },
+  repository,
+) {
+  assertActor(actorUserId);
+  assertPlayerMatchId(playerMatchId);
+  assertRepository(repository, 'correctPlayerMatch');
+
+  return repository.correctPlayerMatch({
+    actorUserId,
+    playerMatchId,
+    winnerSide: normalizeWinnerSide(winnerSide),
+    scoreA: normalizeScore(scoreA, 'scoreA'),
+    scoreB: normalizeScore(scoreB, 'scoreB'),
+    reason: normalizeReason(reason),
+    racks: normalizeCorrectedRacks(racks),
   });
 }

@@ -109,6 +109,44 @@ test('scoring repository finalizes matches through the finalization RPC', async 
   assert.equal(match.status, 'finalized');
 });
 
+test('scoring repository corrects finalized matches through the correction RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_match_id: 'player-match-1',
+        status: 'corrected',
+        winner_side: 'B',
+        score_a: 3,
+        score_b: 5,
+        correction_reason: 'Wrong winner was entered',
+      }],
+    },
+  ]);
+  const repository = createScoringRepository(env, { fetch });
+
+  const match = await repository.correctPlayerMatch({
+    actorUserId: 'admin-user-1',
+    playerMatchId: 'player-match-1',
+    winnerSide: 'B',
+    scoreA: 3,
+    scoreB: 5,
+    reason: 'Wrong winner was entered',
+    racks: [{ winnerSide: 'B' }],
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/correct_player_match');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'admin-user-1',
+    target_player_match_id: 'player-match-1',
+    corrected_winner_side: 'B',
+    corrected_score_a: 3,
+    corrected_score_b: 5,
+    correction_reason_text: 'Wrong winner was entered',
+    corrected_racks: [{ winnerSide: 'B' }],
+  });
+  assert.equal(match.status, 'corrected');
+});
+
 test('scoring repository surfaces Supabase failures', async () => {
   const { fetch } = createFetch([
     { status: 400, body: { message: 'Player match is already complete' } },
