@@ -1,6 +1,7 @@
 import app from './index.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
+import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 
@@ -30,6 +31,9 @@ function methodNotAllowed() {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const adminStartPlayoffsMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/start-playoffs$/,
+    );
     const adminDualScoreOverrideMatch = url.pathname.match(
       /^\/api\/admin\/player-matches\/([^/]+)\/finalize-override$/,
     );
@@ -69,6 +73,15 @@ export default {
     if (url.pathname === '/sandbox/player') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderPlayerSandboxPage());
+    }
+
+    if (adminStartPlayoffsMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return playoffHttpHandlers.start(
+        request,
+        env,
+        decodeURIComponent(adminStartPlayoffsMatch[1]),
+      );
     }
 
     if (adminDualScoreOverrideMatch) {
