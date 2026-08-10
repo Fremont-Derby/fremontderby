@@ -19,6 +19,11 @@ import {
   saveOwnPlayerProfileCommand,
 } from './playerProfileCommands.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
+import {
+  getPlayerMatchScorecardCommand,
+  recordPlayerMatchRackCommand,
+} from './scoringCommands.js';
+import { createScoringRepository } from './scoringRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
@@ -111,6 +116,10 @@ function statusForError(error) {
   if (error.message.startsWith("Supabase request failed with 401")) return 401;
   if (error.message.startsWith("Supabase request failed with 403")) return 403;
   if (error.message.includes("Player is already scheduled")) return 409;
+  if (error.message.includes("Only match players or active team captains")) return 403;
+  if (error.message.includes("already complete")) return 409;
+  if (error.message.includes("is finalized")) return 409;
+  if (error.message.includes("Race targets are required")) return 409;
   return 400;
 }
 
@@ -479,6 +488,54 @@ export async function handleListVisibleTeamLineupsRequest(
   }
 }
 
+export async function handleGetPlayerMatchScorecardRequest(
+  request,
+  env,
+  playerMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createScoringRepository(env, { fetch: fetchImpl });
+    const scorecard = await getPlayerMatchScorecardCommand(
+      {
+        actorUserId: actor.id,
+        playerMatchId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ scorecard });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRecordPlayerMatchRackRequest(
+  request,
+  env,
+  playerMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createScoringRepository(env, { fetch: fetchImpl });
+    const rack = await recordPlayerMatchRackCommand(
+      {
+        actorUserId: actor.id,
+        playerMatchId,
+        winnerSide: body.winnerSide ?? body.winner,
+      },
+      repository,
+    );
+
+    return jsonResponse({ rack }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -518,6 +575,12 @@ export default {
     );
     const teamLineupMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
+    );
+    const playerMatchScorecardMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/scorecard$/,
+    );
+    const playerMatchRackMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/racks$/,
     );
 
     if (url.pathname === "/health") {
@@ -705,6 +768,30 @@ export default {
       }
 
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (playerMatchScorecardMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleGetPlayerMatchScorecardRequest(
+        request,
+        env,
+        decodeURIComponent(playerMatchScorecardMatch[1]),
+      );
+    }
+
+    if (playerMatchRackMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleRecordPlayerMatchRackRequest(
+        request,
+        env,
+        decodeURIComponent(playerMatchRackMatch[1]),
+      );
     }
 
     if (url.pathname.startsWith("/api/")) {

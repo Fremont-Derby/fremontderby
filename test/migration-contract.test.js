@@ -20,6 +20,7 @@ const publicTables = [
   'player_matches',
   'team_match_forfeits',
   'season_race_chart_bands',
+  'player_match_racks',
 ];
 
 test('every exposed public table enables row level security', () => {
@@ -135,7 +136,7 @@ test('private protected data tables are not browser-readable', () => {
 });
 
 test('published schedule tables are public read and trusted write only', () => {
-  for (const table of ['rounds', 'team_matches', 'player_matches', 'team_match_forfeits']) {
+  for (const table of ['rounds', 'team_matches', 'player_matches', 'team_match_forfeits', 'player_match_racks']) {
     assert.match(sql, new RegExp(`create table public\\.${table}`, 'i'));
     assert.match(
       sql,
@@ -151,6 +152,8 @@ test('published schedule tables are public read and trusted write only', () => {
   assert.match(sql, /grant all on public\.rounds, public\.team_matches to service_role;/i);
   assert.match(sql, /grant select on public\.player_matches, public\.team_match_forfeits to anon, authenticated;/i);
   assert.match(sql, /grant all on public\.player_matches, public\.team_match_forfeits to service_role;/i);
+  assert.match(sql, /grant select on public\.player_match_racks to anon, authenticated;/i);
+  assert.match(sql, /grant all on public\.player_match_racks to service_role;/i);
   assert.match(sql, /unique \(season_id, stage, round_number\)/i);
   assert.match(sql, /unique \(round_id, table_number\)/i);
 });
@@ -509,4 +512,55 @@ test('generated player matches lock race targets from the season chart', () => {
   assert.match(sql, /new\.race_to_b := rating_band\.weaker_race_to/i);
   assert.match(sql, /new\.race_to_a := rating_band\.weaker_race_to/i);
   assert.match(sql, /new\.race_to_b := rating_band\.stronger_race_to/i);
+});
+
+test('scorecard rack storage is public read and trusted write only', () => {
+  assert.match(sql, /create table public\.player_match_racks/i);
+  assert.match(sql, /rack_number integer not null check \(rack_number > 0\)/i);
+  assert.match(sql, /discipline text not null check \(discipline in \('8-ball', '9-ball'\)\)/i);
+  assert.match(sql, /winner_side text not null check \(winner_side in \('A', 'B'\)\)/i);
+  assert.match(sql, /unique \(player_match_id, rack_number\)/i);
+  assert.doesNotMatch(
+    sql,
+    /grant\s+(?:insert|update|delete|all)[^;]*public\.player_match_racks[^;]*to\s+(?:anon|authenticated)/i,
+  );
+});
+
+test('scorecard RPC is service-role only and scorer-scoped', () => {
+  assert.match(sql, /create or replace function private\.can_score_player_match\(/i);
+  assert.match(sql, /p\.id in \(target_match\.player_a_id, target_match\.player_b_id\)/i);
+  assert.match(sql, /tm\.team_id in \(target_match\.team_a_id, target_match\.team_b_id\)/i);
+  assert.match(sql, /create or replace function public\.get_player_match_scorecard\(/i);
+  assert.match(sql, /Only match players or active team captains can view the scorecard/i);
+  assert.match(sql, /jsonb_agg\([\s\S]*'rackNumber'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.get_player_match_scorecard\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.get_player_match_scorecard\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('rack recording RPC advances score, discipline, and winner state', () => {
+  assert.match(sql, /create or replace function public\.record_player_match_rack\(/i);
+  assert.match(sql, /rack_winner_side must be A or B/i);
+  assert.match(sql, /Player match is already complete/i);
+  assert.match(sql, /Race targets are required before recording racks/i);
+  assert.match(sql, /Only match players or active team captains can record racks/i);
+  assert.match(sql, /next_score_a := target_match\.score_a \+ case when rack_winner_side = 'A'/i);
+  assert.match(sql, /next_rack_number = target_match\.opening_block_length/i);
+  assert.match(sql, /when target_match\.opening_discipline = '8-ball' then '9-ball'/i);
+  assert.match(sql, /next_score_a >= target_match\.race_to_a/i);
+  assert.match(sql, /insert into public\.player_match_racks/i);
+  assert.match(sql, /update public\.player_matches[\s\S]*score_a = next_score_a[\s\S]*winner_side = next_winner_side/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.record_player_match_rack\(uuid, uuid, text\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.record_player_match_rack\(uuid, uuid, text\)[\s\S]*to service_role;/i,
+  );
 });
