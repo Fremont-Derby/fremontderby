@@ -20,7 +20,9 @@ function walk(directory) {
 
     const relative = path.relative(root, fullPath);
     const text = fs.readFileSync(fullPath, 'utf8');
-    const lines = text.split('\n');
+    const lines = text
+      .split('\n')
+      .map((line) => line.endsWith('\r') ? line.slice(0, -1) : line);
 
     lines.forEach((line, index) => {
       if (/\s+$/.test(line) && line.length > 0) {
