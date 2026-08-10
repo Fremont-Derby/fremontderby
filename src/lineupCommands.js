@@ -56,3 +56,24 @@ export async function submitTeamLineupCommand(
     slots: normalizeLineupSlots(slots),
   });
 }
+
+export async function listVisibleTeamLineupsCommand(
+  { actorUserId, teamId, roundId },
+  repository,
+) {
+  assertActor(actorUserId);
+  if (!teamId) {
+    throw new Error('teamId is required');
+  }
+  if (!roundId) {
+    throw new Error('roundId is required');
+  }
+
+  assertRepository(repository, 'listVisibleTeamLineups');
+
+  return repository.listVisibleTeamLineups({
+    actorUserId,
+    teamId,
+    roundId,
+  });
+}

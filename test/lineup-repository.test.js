@@ -74,6 +74,49 @@ test('lineup repository submits lineup slots through the lineup RPC', async () =
   assert.deepEqual(lineup.map((slot) => slot.participation_type), ['roster', 'forfeit']);
 });
 
+test('lineup repository lists visible lineups through the reveal-aware RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [
+        {
+          lineup_id: 'lineup-1',
+          round_id: 'round-1',
+          team_id: 'team-1',
+          is_own_team: true,
+          opponent_lineup_visible: false,
+          slot_number: 1,
+          player_id: 'player-1',
+          participation_type: 'roster',
+        },
+      ],
+    },
+  ]);
+  const repository = createLineupRepository(env, { fetch });
+
+  const lineups = await repository.listVisibleTeamLineups({
+    actorUserId: 'captain-user-1',
+    teamId: 'team-1',
+    roundId: 'round-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/list_visible_team_lineups');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_team_id: 'team-1',
+    target_round_id: 'round-1',
+  });
+  assert.deepEqual(lineups, [{
+    lineup_id: 'lineup-1',
+    round_id: 'round-1',
+    team_id: 'team-1',
+    is_own_team: true,
+    opponent_lineup_visible: false,
+    slot_number: 1,
+    player_id: 'player-1',
+    participation_type: 'roster',
+  }]);
+});
+
 test('lineup repository surfaces Supabase failures', async () => {
   const { fetch } = createFetch([
     { status: 400, body: { message: 'Player is already scheduled for another team in this round' } },

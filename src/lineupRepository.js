@@ -66,5 +66,19 @@ export function createLineupRepository(env, { fetch: fetchImpl = globalThis.fetc
 
       return Array.isArray(lineup) ? lineup : [];
     },
+
+    async listVisibleTeamLineups({ actorUserId, teamId, roundId }) {
+      const lineups = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_visible_team_lineups`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_id: teamId,
+          target_round_id: roundId,
+        }),
+      });
+
+      return Array.isArray(lineups) ? lineups : [];
+    },
   };
 }
