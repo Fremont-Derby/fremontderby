@@ -1,6 +1,3 @@
-alter table public.season_players
-  add constraint season_players_season_player_key unique (season_id, player_id);
-
 create or replace function public.register_for_season(
   actor_user_id uuid,
   target_season_id uuid,
@@ -25,6 +22,7 @@ declare
   target_season public.seasons%rowtype;
   registration public.season_players%rowtype;
   fee_cents integer;
+  has_active_team boolean;
 begin
   if actor_user_id is null then raise exception 'actor_user_id is required'; end if;
   if target_season_id is null then raise exception 'target_season_id is required'; end if;
@@ -43,10 +41,26 @@ begin
   if not found then raise exception 'Season not found'; end if;
   if target_season.status <> 'registration' then raise exception 'Season registration is not open'; end if;
 
+  select exists (
+    select 1
+    from public.team_memberships tm
+    where tm.season_id = target_season_id
+      and tm.player_id = target_player.id
+      and tm.ends_at is null
+  ) into has_active_team;
+
+  if registration_participation_type = 'rostered' and not has_active_team then
+    raise exception 'Active team membership is required for rostered registration';
+  end if;
+  if registration_participation_type = 'free_agent' and has_active_team then
+    raise exception 'Rostered players cannot register as free agents for the same season';
+  end if;
+
   insert into public.season_players(season_id, player_id, participation_type, status)
   values (target_season_id, target_player.id, registration_participation_type, 'active')
   on conflict (season_id, player_id) do update
-    set status = 'active'
+    set participation_type = excluded.participation_type,
+        status = 'active'
   returning * into registration;
 
   select coalesce(spc.entry_fee_cents, 0)
