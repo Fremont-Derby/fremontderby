@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import worker, {
+  handleCancelTeamInvitationRequest,
   handleCreateTeamRequest,
   handleGetOwnProfileRequest,
   handleInvitePlayerToTeamRequest,
   handlePublishScheduleRequest,
+  handleRemoveTeamMemberRequest,
   handleRespondToTeamInvitationRequest,
   handleSaveOwnProfileRequest,
   renderLandingPage,
@@ -329,5 +331,71 @@ test("team invitation response handler authenticates and responds", async () => 
     actor_user_id: "user-2",
     target_invitation_id: "invitation-1",
     response_status: "accepted",
+  });
+});
+
+test("team invitation cancellation handler authenticates and cancels", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    { body: [{ id: "invitation-1", status: "canceled" }] },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/team-invitations/invitation-1/cancel",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer captain-token" },
+    },
+  );
+
+  const response = await handleCancelTeamInvitationRequest(
+    request,
+    publishEnv,
+    "invitation-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).invitation.status, "canceled");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/cancel_team_invitation");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_invitation_id: "invitation-1",
+  });
+});
+
+test("team member removal handler authenticates and removes a roster player", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [{
+        id: "membership-1",
+        team_id: "team-1",
+        player_id: "player-2",
+        role: "player",
+        ends_at: "2026-09-01T00:00:00Z",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/team-memberships/membership-1/remove",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer captain-token" },
+    },
+  );
+
+  const response = await handleRemoveTeamMemberRequest(
+    request,
+    publishEnv,
+    "membership-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).membership.ends_at, "2026-09-01T00:00:00Z");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/remove_team_member");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_membership_id: "membership-1",
   });
 });

@@ -246,3 +246,30 @@ test('team invitation RPCs enforce captain and invited-player boundaries', () =>
     /grant execute on function public\.respond_to_team_invitation\(uuid, uuid, text\)[\s\S]*to service_role;/i,
   );
 });
+
+test('roster management RPCs enforce captain boundaries and are service-role only', () => {
+  assert.match(sql, /create or replace function public\.cancel_team_invitation\(/i);
+  assert.match(sql, /Only pending invitations can be canceled/i);
+  assert.match(sql, /Only the active captain can cancel invitations/i);
+  assert.match(sql, /set status = 'canceled'/i);
+  assert.match(sql, /create or replace function public\.remove_team_member\(/i);
+  assert.match(sql, /Captain memberships cannot be removed through this path/i);
+  assert.match(sql, /Only the active captain can remove team members/i);
+  assert.match(sql, /set ends_at = now\(\)/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.cancel_team_invitation\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.cancel_team_invitation\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.remove_team_member\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.remove_team_member\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});

@@ -92,3 +92,41 @@ export async function respondToTeamInvitationCommand(
     response,
   });
 }
+
+export async function cancelTeamInvitationCommand(
+  { actorUserId, invitationId },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!invitationId) {
+    throw new Error('invitationId is required');
+  }
+
+  assertRepositoryMethod(repository, 'cancelTeamInvitation');
+
+  return repository.cancelTeamInvitation({
+    actorUserId,
+    invitationId,
+  });
+}
+
+export async function removeTeamMemberCommand(
+  { actorUserId, membershipId },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!membershipId) {
+    throw new Error('membershipId is required');
+  }
+
+  assertRepositoryMethod(repository, 'removeTeamMember');
+
+  return repository.removeTeamMember({
+    actorUserId,
+    membershipId,
+  });
+}

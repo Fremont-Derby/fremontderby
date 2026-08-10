@@ -7,8 +7,10 @@ import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
 import {
+  cancelTeamInvitationCommand,
   createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
+  removeTeamMemberCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
 import { createTeamRepository } from './teamRepository.js';
@@ -241,6 +243,52 @@ export async function handleRespondToTeamInvitationRequest(
   }
 }
 
+export async function handleCancelTeamInvitationRequest(
+  request,
+  env,
+  invitationId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const invitation = await cancelTeamInvitationCommand(
+      {
+        actorUserId: actor.id,
+        invitationId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ invitation });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRemoveTeamMemberRequest(
+  request,
+  env,
+  membershipId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const membership = await removeTeamMemberCommand(
+      {
+        actorUserId: actor.id,
+        membershipId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ membership });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -256,6 +304,12 @@ export default {
     );
     const invitationResponseMatch = url.pathname.match(
       /^\/api\/team-invitations\/([^/]+)\/respond$/,
+    );
+    const invitationCancelMatch = url.pathname.match(
+      /^\/api\/team-invitations\/([^/]+)\/cancel$/,
+    );
+    const teamMemberRemoveMatch = url.pathname.match(
+      /^\/api\/team-memberships\/([^/]+)\/remove$/,
     );
 
     if (url.pathname === "/health") {
@@ -327,6 +381,30 @@ export default {
         request,
         env,
         decodeURIComponent(invitationResponseMatch[1]),
+      );
+    }
+
+    if (invitationCancelMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleCancelTeamInvitationRequest(
+        request,
+        env,
+        decodeURIComponent(invitationCancelMatch[1]),
+      );
+    }
+
+    if (teamMemberRemoveMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleRemoveTeamMemberRequest(
+        request,
+        env,
+        decodeURIComponent(teamMemberRemoveMatch[1]),
       );
     }
 
