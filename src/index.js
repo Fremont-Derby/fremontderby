@@ -23,6 +23,7 @@ import {
   finalizePlayerMatchCommand,
   getPlayerMatchScorecardCommand,
   recordPlayerMatchRackCommand,
+  undoPlayerMatchRackCommand,
 } from './scoringCommands.js';
 import { createScoringRepository } from './scoringRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
@@ -120,9 +121,11 @@ function statusForError(error) {
   if (error.message.includes("Only match players or active team captains")) return 403;
   if (error.message.includes("already complete")) return 409;
   if (error.message.includes("is finalized")) return 409;
+  if (error.message.includes("no racks to undo")) return 409;
   if (error.message.includes("before finalization")) return 409;
   if (error.message.includes("valid completed race state")) return 409;
   if (error.message.includes("Race targets are required")) return 409;
+  if (error.message === "Player match not found") return 404;
   return 400;
 }
 
@@ -539,6 +542,29 @@ export async function handleRecordPlayerMatchRackRequest(
   }
 }
 
+export async function handleUndoPlayerMatchRackRequest(
+  request,
+  env,
+  playerMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createScoringRepository(env, { fetch: fetchImpl });
+    const undo = await undoPlayerMatchRackCommand(
+      {
+        actorUserId: actor.id,
+        playerMatchId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ undo });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleFinalizePlayerMatchRequest(
   request,
   env,
@@ -607,6 +633,9 @@ export default {
     );
     const playerMatchRackMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/racks$/,
+    );
+    const playerMatchRackUndoMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/racks\/undo$/,
     );
     const playerMatchFinalizeMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/finalize$/,
@@ -820,6 +849,18 @@ export default {
         request,
         env,
         decodeURIComponent(playerMatchRackMatch[1]),
+      );
+    }
+
+    if (playerMatchRackUndoMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleUndoPlayerMatchRackRequest(
+        request,
+        env,
+        decodeURIComponent(playerMatchRackUndoMatch[1]),
       );
     }
 

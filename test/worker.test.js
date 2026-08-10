@@ -19,6 +19,7 @@ import worker, {
   handleSetRosterAvailabilityRequest,
   handleSubmitTeamLineupRequest,
   handleRecordPlayerMatchRackRequest,
+  handleUndoPlayerMatchRackRequest,
   renderLandingPage,
 } from "../src/index.js";
 
@@ -982,6 +983,73 @@ test("record rack handler treats complete matches as conflicts", async () => {
   });
 });
 
+test("undo rack handler authenticates and removes the latest unfinalized rack", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    {
+      body: [{
+        player_match_id: "player-match-1",
+        undone_rack_number: 2,
+        undone_winner_side: "B",
+        score_a: 1,
+        score_b: 0,
+        current_discipline: "8-ball",
+        winner_side: null,
+        winner_player_id: null,
+        status: "in_progress",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/racks/undo",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+    },
+  );
+
+  const response = await handleUndoPlayerMatchRackRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).undo.undone_rack_number, 2);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/undo_player_match_rack");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "player-user-1",
+    target_player_match_id: "player-match-1",
+  });
+});
+
+test("undo rack handler treats missing rack history as a conflict", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    { status: 400, body: { message: "Player match has no racks to undo" } },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/racks/undo",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+    },
+  );
+
+  const response = await handleUndoPlayerMatchRackRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Player match has no racks to undo",
+  });
+});
+
 test("player match scorecard route allows only GET", async () => {
   const response = await worker.fetch(
     new Request(
@@ -998,6 +1066,16 @@ test("player match scorecard route allows only GET", async () => {
 test("player match racks route allows only POST", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/api/player-matches/player-match-1/racks"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("player match rack undo route allows only POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/player-matches/player-match-1/racks/undo"),
     publishEnv,
   );
 
