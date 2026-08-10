@@ -52,3 +52,20 @@ export async function recordPlayerMatchRackCommand(
     winnerSide: normalizeWinnerSide(winnerSide),
   });
 }
+
+export async function finalizePlayerMatchCommand(
+  { actorUserId, playerMatchId },
+  repository,
+) {
+  assertActor(actorUserId);
+  if (!playerMatchId) {
+    throw new Error('playerMatchId is required');
+  }
+
+  assertRepository(repository, 'finalizePlayerMatch');
+
+  return repository.finalizePlayerMatch({
+    actorUserId,
+    playerMatchId,
+  });
+}

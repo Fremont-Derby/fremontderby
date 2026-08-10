@@ -564,3 +564,26 @@ test('rack recording RPC advances score, discipline, and winner state', () => {
     /grant execute on function public\.record_player_match_rack\(uuid, uuid, text\)[\s\S]*to service_role;/i,
   );
 });
+
+test('player match finalization requires completed race state and writes an audit event', () => {
+  assert.match(sql, /alter table public\.player_matches[\s\S]*finalized_at timestamptz/i);
+  assert.match(sql, /alter table public\.player_matches[\s\S]*finalized_by uuid references auth\.users/i);
+  assert.match(sql, /create or replace function public\.finalize_player_match\(/i);
+  assert.match(sql, /Only match players or active team captains can finalize matches/i);
+  assert.match(sql, /Race target must be reached before finalization/i);
+  assert.match(sql, /Race targets are required before finalization/i);
+  assert.match(sql, /Player match is not in a valid completed race state/i);
+  assert.match(sql, /set status = 'finalized'/i);
+  assert.match(sql, /insert into private\.audit_events/i);
+  assert.match(sql, /'player_match\.finalize'/i);
+  assert.match(sql, /to_jsonb\(target_match\)/i);
+  assert.match(sql, /to_jsonb\(finalized_match\)/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.finalize_player_match\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.finalize_player_match\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
