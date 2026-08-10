@@ -46,8 +46,9 @@ export function renderIntroPage() {
     <p>Teams play through the regular-season schedule, but the calendar is flexible. League nights will have scheduled matchups and reserved tables for convenience and for everyone who wants the regular league-night atmosphere. Teams can also agree to play early, late, out of order, or somewhere else.</p>
     <p>Players score from their phones, both sides confirm the same rack history, and the site keeps standings and player stats automatically.</p>
 
-    <h2>Teams</h2>
-    <p>The regular season is intentionally flexible. A team can play with three players and players can move between teams during the season, so missing a week or changing teams does not have to derail anyone's season. Match and team history stays attached to the player.</p>
+    <h2>Teams and singles</h2>
+    <p>You do not need to join a permanent team to participate. You can play as a free agent or substitute for teams that need a player, and those matches still count toward your individual singles record and eligibility.</p>
+    <p>The regular season is intentionally flexible. A team can play with three players, players can move between teams, and free agents can fill open spots. Team results stay with the team represented in that matchup, while each player's individual history follows the player.</p>
     <p>The playoffs tighten up: qualifying teams lock in four-player playoff rosters for the championship run.</p>
 
     <h2>Cash payouts</h2>
@@ -78,10 +79,11 @@ export function renderRulesPage() {
 
     <h2>Players and lineups</h2>
     <ul>
+      <li>A player does not need a permanent team to participate in the regular season.</li>
+      <li>Free agents/substitutes may play for teams that need an eligible player, and those matches count toward the player's individual standings and singles eligibility.</li>
       <li>Regular-season teams may operate with three players and add or use another eligible player as needed.</li>
       <li>Players may switch teams during the regular season; all prior results remain with the team and matchup where they were earned, and the player's full team history is preserved.</li>
       <li>Captains submit the players used for each matchup.</li>
-      <li>Eligible free agents/substitutes may fill an open lineup spot without permanently joining that team.</li>
       <li>A player cannot play for two teams in the same scheduled round.</li>
       <li>There is no team-strength or Fargo cap.</li>
       <li>Playoff teams lock a four-player roster for the playoff run; regular-season switching and pickup flexibility ends for the playoffs.</li>
@@ -109,7 +111,7 @@ export function renderRulesPage() {
       <li>Team standings are calculated from finalized match results.</li>
       <li>The regular-season team champion earns a cash payout.</li>
       <li>The playoff champion earns a larger championship payout.</li>
-      <li>Individual standings include only matches actually played; missing a week is neither a win nor a loss.</li>
+      <li>Individual standings include every eligible match a player actually plays, whether as a rostered player, free agent, or substitute; missing a week is neither a win nor a loss.</li>
       <li>Individual ranking uses win percentage, with total wins as the first tiebreaker.</li>
       <li>Season 1 individual prize eligibility defaults to at least five matches played.</li>
       <li>Singles also award cash for regular-season performance, with a larger payout attached to the singles championship.</li>
