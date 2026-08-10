@@ -2,6 +2,7 @@ import {
   listTeamRoundAvailabilityCommand,
   setRosterAvailabilityCommand,
 } from './availabilityCommands.js';
+import { renderAvailabilityPage } from './availabilityPage.js';
 import { createAvailabilityRepository } from './availabilityRepository.js';
 import {
   listEligibleFreeAgentsCommand,
@@ -801,6 +802,19 @@ export default {
       }
 
       return new Response(renderProfilePage(env), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (url.pathname === "/availability") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderAvailabilityPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
