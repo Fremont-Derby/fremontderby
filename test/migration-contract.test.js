@@ -469,3 +469,16 @@ test('submitted lineups generate player matches and explicit team forfeits', () 
   assert.match(sql, /create trigger refresh_generated_team_match_results_after_slot_update/i);
   assert.match(sql, /create trigger refresh_generated_team_match_results_after_slot_delete/i);
 });
+
+test('generated player matches lock player ratings at insert time', () => {
+  assert.match(sql, /alter table public\.player_matches[\s\S]*player_a_fargo_rating integer/i);
+  assert.match(sql, /alter table public\.player_matches[\s\S]*player_b_fargo_rating integer/i);
+  assert.match(sql, /player_a_rating_status text[\s\S]*'unverified'[\s\S]*'provisional'[\s\S]*'established'/i);
+  assert.match(sql, /player_b_rating_status text[\s\S]*'unverified'[\s\S]*'provisional'[\s\S]*'established'/i);
+  assert.match(sql, /create or replace function private\.lock_player_match_ratings\(\)/i);
+  assert.match(sql, /where pr\.player_id = new\.player_a_id/i);
+  assert.match(sql, /where pr\.player_id = new\.player_b_id/i);
+  assert.match(sql, /new\.player_a_fargo_rating := rating_a\.fargo_rating/i);
+  assert.match(sql, /new\.player_b_fargo_rating := rating_b\.fargo_rating/i);
+  assert.match(sql, /create trigger lock_player_match_ratings_before_insert/i);
+});
