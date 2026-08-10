@@ -1,4 +1,5 @@
 import app from './index.js';
+import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { playoffHttpHandlers } from './playoffHttp.js';
@@ -73,6 +74,11 @@ export default {
     if (url.pathname === '/sandbox/player') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderPlayerSandboxPage());
+    }
+
+    if (url.pathname === '/sandbox/captain') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderCaptainSandboxPage());
     }
 
     if (adminStartPlayoffsMatch) {
