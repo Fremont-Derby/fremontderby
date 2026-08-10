@@ -82,5 +82,12 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
         target_player_match_id: playerMatchId,
       });
     },
+
+    finalizeReconciledPlayerMatch({ actorUserId, playerMatchId }) {
+      return callRpc('finalize_reconciled_player_match', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
+      });
+    },
   };
 }
