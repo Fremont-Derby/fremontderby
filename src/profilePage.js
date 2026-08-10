@@ -6,7 +6,7 @@ function browserConfig(env = {}) {
 }
 
 function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, '\u003c');
+  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
 }
 
 export function renderProfilePage(env = {}) {
