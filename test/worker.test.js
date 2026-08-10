@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker, { handlePublishScheduleRequest, renderLandingPage } from "../src/index.js";
+import worker, {
+  handleGetOwnProfileRequest,
+  handlePublishScheduleRequest,
+  handleSaveOwnProfileRequest,
+  renderLandingPage,
+} from "../src/index.js";
 
 const env = {
   CF_VERSION_METADATA: {
@@ -132,6 +137,63 @@ test("publish schedule handler rejects missing bearer token before Supabase call
 test("publish schedule route requires POST", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/api/admin/seasons/season-1/publish-schedule"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("own profile handler returns the authenticated player's profile", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    { body: [{ id: "player-1", user_id: "user-1", display_name: "Kai" }] },
+  ]);
+  const request = new Request("https://fremontderby.com/api/me/profile", {
+    headers: { authorization: "Bearer user-token" },
+  });
+
+  const response = await handleGetOwnProfileRequest(request, publishEnv, { fetch });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    profile: { id: "player-1", user_id: "user-1", display_name: "Kai" },
+  });
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(
+    calls[1].url,
+    "https://project.supabase.co/rest/v1/players?user_id=eq.user-1&select=id,user_id,display_name",
+  );
+});
+
+test("own profile handler saves the authenticated player's display name", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "player@example.com" } },
+    { body: [{ id: "player-1", user_id: "user-1", display_name: "Kai B" }] },
+  ]);
+  const request = new Request("https://fremontderby.com/api/me/profile", {
+    method: "PUT",
+    headers: { authorization: "Bearer user-token" },
+    body: JSON.stringify({ displayName: "  Kai B  " }),
+  });
+
+  const response = await handleSaveOwnProfileRequest(request, publishEnv, { fetch });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    profile: { id: "player-1", user_id: "user-1", display_name: "Kai B" },
+  });
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/upsert_player_profile");
+  assert.equal(calls[1].init.headers.apikey, "service-role-key");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+    profile_display_name: "Kai B",
+  });
+});
+
+test("own profile route allows only GET and PUT", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/me/profile", { method: "POST" }),
     publishEnv,
   );
 

@@ -167,3 +167,24 @@ test('season publication RPC writes an audit event in the same transaction', () 
   assert.match(sql, /'roundCount', inserted_round_count/i);
   assert.match(sql, /'teamMatchCount', inserted_match_count/i);
 });
+
+test('player profile RPC is service-role only and actor-scoped', () => {
+  assert.match(sql, /create or replace function public\.upsert_player_profile\(/i);
+  assert.match(sql, /actor_user_id uuid/i);
+  assert.match(sql, /profile_display_name text/i);
+  assert.match(sql, /normalized_display_name := btrim\(profile_display_name\);/i);
+  assert.match(sql, /on conflict \(user_id\) do update/i);
+  assert.match(sql, /set display_name = excluded\.display_name/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.upsert_player_profile\(uuid, text\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.upsert_player_profile\(uuid, text\)[\s\S]*to service_role;/i,
+  );
+  assert.doesNotMatch(
+    sql,
+    /grant execute on function public\.upsert_player_profile\(uuid, text\)[\s\S]*to (?:anon|authenticated);/i,
+  );
+});
