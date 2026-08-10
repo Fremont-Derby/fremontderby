@@ -41,6 +41,14 @@ const publishEnv = {
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
 };
 
+const productionReadyEnv = {
+  ...env,
+  ENVIRONMENT: "production",
+  SUPABASE_URL: "https://cpiucsxlkicmlbvdvhww.supabase.co",
+  SUPABASE_PUBLISHABLE_KEY: "publishable-key",
+  SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+};
+
 const seasonTeams = Array.from({ length: 8 }, (_, index) => ({
   id: `00000000-0000-0000-0000-${String(index + 1).padStart(12, "0")}`,
 }));
@@ -80,6 +88,39 @@ test("health endpoint reports service and Worker version", async () => {
     versionTag: "test",
     deployedAt: "2026-08-09T23:40:00Z",
   });
+});
+
+test("environment health endpoint reports ready production Supabase bindings", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/health/environment"),
+    productionReadyEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const body = await response.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.environment, "production");
+  assert.equal(body.expectedSupabaseProjectRef, "cpiucsxlkicmlbvdvhww");
+  assert.equal(body.supabase.projectRef, "cpiucsxlkicmlbvdvhww");
+  assert.equal(body.supabase.hasPublishableKey, true);
+  assert.equal(body.supabase.hasServiceRoleKey, true);
+  assert.doesNotMatch(JSON.stringify(body), /service-role-key/);
+});
+
+test("environment health endpoint fails when production Supabase bindings are missing", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/health/environment"),
+    env,
+  );
+
+  assert.equal(response.status, 503);
+  const body = await response.json();
+  assert.equal(body.ok, false);
+  assert.equal(body.environment, "production");
+  assert.equal(body.supabase.url, null);
+  assert.equal(body.supabase.hasPublishableKey, false);
+  assert.equal(body.supabase.hasServiceRoleKey, false);
 });
 
 test("scorecard page route returns the phone scorecard UI", async () => {

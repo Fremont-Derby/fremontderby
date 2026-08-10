@@ -9,6 +9,7 @@ import {
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
 import { createFreeAgentRepository } from './freeAgentRepository.js';
+import { environmentReadiness } from './environmentReadiness.js';
 import {
   listVisibleTeamLineupsCommand,
   submitTeamLineupCommand,
@@ -738,6 +739,20 @@ export default {
           deployedAt: version.timestamp,
         },
         { headers: { "cache-control": "no-store" } },
+      );
+    }
+
+    if (url.pathname === "/health/environment") {
+      const readiness = environmentReadiness(env);
+      return jsonResponse(
+        {
+          service: serviceName,
+          version: version.id,
+          versionTag: version.tag,
+          deployedAt: version.timestamp,
+          ...readiness,
+        },
+        readiness.ok ? 200 : 503,
       );
     }
 
