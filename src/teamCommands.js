@@ -1,6 +1,13 @@
 function assertRepository(repository) {
-  if (!repository || typeof repository.createTeamWithCaptain !== 'function') {
-    throw new Error('team repository must implement createTeamWithCaptain');
+  if (!repository || typeof repository !== 'object') {
+    throw new Error('team repository is required');
+  }
+}
+
+function assertRepositoryMethod(repository, method) {
+  assertRepository(repository);
+  if (typeof repository[method] !== 'function') {
+    throw new Error(`team repository must implement ${method}`);
   }
 }
 
@@ -31,11 +38,57 @@ export async function createTeamWithCaptainCommand(
     throw new Error('seasonId is required');
   }
 
-  assertRepository(repository);
+  assertRepositoryMethod(repository, 'createTeamWithCaptain');
 
   return repository.createTeamWithCaptain({
     actorUserId,
     seasonId,
     teamName: normalizeTeamName(teamName),
+  });
+}
+
+export async function invitePlayerToTeamCommand(
+  { actorUserId, teamId, playerId },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!teamId) {
+    throw new Error('teamId is required');
+  }
+  if (!playerId) {
+    throw new Error('playerId is required');
+  }
+
+  assertRepositoryMethod(repository, 'invitePlayerToTeam');
+
+  return repository.invitePlayerToTeam({
+    actorUserId,
+    teamId,
+    playerId,
+  });
+}
+
+export async function respondToTeamInvitationCommand(
+  { actorUserId, invitationId, response },
+  repository,
+) {
+  if (!actorUserId) {
+    throw new Error('actorUserId is required');
+  }
+  if (!invitationId) {
+    throw new Error('invitationId is required');
+  }
+  if (!['accepted', 'declined'].includes(response)) {
+    throw new Error('response must be accepted or declined');
+  }
+
+  assertRepositoryMethod(repository, 'respondToTeamInvitation');
+
+  return repository.respondToTeamInvitation({
+    actorUserId,
+    invitationId,
+    response,
   });
 }

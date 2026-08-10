@@ -74,3 +74,61 @@ test('team repository surfaces Supabase failures', async () => {
     /Player profile is required/,
   );
 });
+
+test('team repository invites a player through the invitation RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'invitation-1',
+        season_id: 'season-1',
+        team_id: 'team-1',
+        invited_player_id: 'player-2',
+        status: 'pending',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const invitation = await repository.invitePlayerToTeam({
+    actorUserId: 'captain-user-1',
+    teamId: 'team-1',
+    playerId: 'player-2',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/invite_player_to_team');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_team_id: 'team-1',
+    target_player_id: 'player-2',
+  });
+  assert.equal(invitation.status, 'pending');
+});
+
+test('team repository responds to an invitation through the response RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'invitation-1',
+        season_id: 'season-1',
+        team_id: 'team-1',
+        invited_player_id: 'player-2',
+        status: 'accepted',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const invitation = await repository.respondToTeamInvitation({
+    actorUserId: 'user-2',
+    invitationId: 'invitation-1',
+    response: 'accepted',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/respond_to_team_invitation');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-2',
+    target_invitation_id: 'invitation-1',
+    response_status: 'accepted',
+  });
+  assert.equal(invitation.status, 'accepted');
+});

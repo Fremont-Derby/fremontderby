@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTeamWithCaptainCommand } from '../src/teamCommands.js';
+import {
+  createTeamWithCaptainCommand,
+  invitePlayerToTeamCommand,
+  respondToTeamInvitationCommand,
+} from '../src/teamCommands.js';
 
 function createRepository() {
   const calls = [];
@@ -14,6 +18,22 @@ function createRepository() {
         season_id: payload.seasonId,
         name: payload.teamName,
         captain_player_id: 'player-1',
+      };
+    },
+    async invitePlayerToTeam(payload) {
+      calls.push(['invitePlayerToTeam', payload]);
+      return {
+        id: 'invitation-1',
+        team_id: payload.teamId,
+        invited_player_id: payload.playerId,
+        status: 'pending',
+      };
+    },
+    async respondToTeamInvitation(payload) {
+      calls.push(['respondToTeamInvitation', payload]);
+      return {
+        id: payload.invitationId,
+        status: payload.response,
       };
     },
   };
@@ -65,4 +85,47 @@ test('team creation command rejects invalid team names before writing', async ()
   );
 
   assert.deepEqual(repository.calls, []);
+});
+
+test('invite command sends a captain invitation request', async () => {
+  const repository = createRepository();
+
+  const invitation = await invitePlayerToTeamCommand(
+    { actorUserId: 'captain-user-1', teamId: 'team-1', playerId: 'player-2' },
+    repository,
+  );
+
+  assert.deepEqual(invitation, {
+    id: 'invitation-1',
+    team_id: 'team-1',
+    invited_player_id: 'player-2',
+    status: 'pending',
+  });
+  assert.deepEqual(repository.calls, [
+    ['invitePlayerToTeam', {
+      actorUserId: 'captain-user-1',
+      teamId: 'team-1',
+      playerId: 'player-2',
+    }],
+  ]);
+});
+
+test('respond command allows only accepted or declined responses', async () => {
+  const repository = createRepository();
+
+  assert.deepEqual(
+    await respondToTeamInvitationCommand(
+      { actorUserId: 'user-2', invitationId: 'invitation-1', response: 'accepted' },
+      repository,
+    ),
+    { id: 'invitation-1', status: 'accepted' },
+  );
+
+  await assert.rejects(
+    () => respondToTeamInvitationCommand(
+      { actorUserId: 'user-2', invitationId: 'invitation-1', response: 'maybe' },
+      repository,
+    ),
+    /accepted or declined/,
+  );
 });
