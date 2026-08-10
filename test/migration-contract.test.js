@@ -630,3 +630,31 @@ test('team standings read model derives regular-season records from finalized re
     /grant execute on function public\.list_team_standings\(uuid\)[\s\S]*to service_role;/i,
   );
 });
+
+test('individual standings read model ranks actual played matches with prize eligibility', () => {
+  assert.match(sql, /create or replace function public\.list_individual_standings\(/i);
+  assert.match(sql, /s\.individual_min_matches/i);
+  assert.match(sql, /pm\.player_a_id as player_id[\s\S]*union all[\s\S]*pm\.player_b_id as player_id/i);
+  assert.match(sql, /r\.stage = 'regular'/i);
+  assert.match(sql, /pm\.status in \('finalized', 'corrected'\)/i);
+  assert.match(sql, /pm\.winner_side in \('A', 'B'\)/i);
+  assert.match(sql, /from public\.team_memberships tm/i);
+  assert.match(sql, /from public\.season_players sp/i);
+  assert.match(sql, /coalesce\(sum\(rpr\.wins \+ rpr\.losses\), 0\)::integer as matches_played/i);
+  assert.match(sql, /pt\.matches_played >= ts\.individual_min_matches/i);
+  assert.match(sql, /where standings\.is_prize_eligible/i);
+  assert.match(sql, /standings\.win_percentage desc[\s\S]*standings\.wins desc/i);
+  assert.match(sql, /eligible_standings\.prize_rank/i);
+  assert.doesNotMatch(
+    sql,
+    /list_individual_standings[\s\S]*public\.team_match_forfeits[\s\S]*comment on function public\.list_individual_standings/i,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.list_individual_standings\(uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.list_individual_standings\(uuid\)[\s\S]*to service_role;/i,
+  );
+});
