@@ -6,6 +6,8 @@ import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
+import { createTeamWithCaptainCommand } from './teamCommands.js';
+import { createTeamRepository } from './teamRepository.js';
 
 const serviceName = "fremontderby";
 
@@ -160,12 +162,40 @@ export async function handleSaveOwnProfileRequest(
   }
 }
 
+export async function handleCreateTeamRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const team = await createTeamWithCaptainCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+        teamName: body.teamName ?? body.name,
+      },
+      repository,
+    );
+
+    return jsonResponse({ team }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const version = versionMetadata(env);
     const publishScheduleMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
+    );
+    const createTeamMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/teams$/,
     );
 
     if (url.pathname === "/health") {
@@ -202,6 +232,18 @@ export default {
       }
 
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (createTeamMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleCreateTeamRequest(
+        request,
+        env,
+        decodeURIComponent(createTeamMatch[1]),
+      );
     }
 
     if (url.pathname.startsWith("/api/")) {

@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "node scripts/lint.mjs",
     "test": "node --test",
-    "check": "node --check src/index.js && node --check src/playerProfileCommands.js && node --check src/playerProfileRepository.js && node --check src/seasonCommands.js && node --check src/supabaseAuth.js && node --check src/supabaseSeasonRepository.js && node --check domain/schedule.js && node --check domain/match.js && node --check domain/season.js",
+    "check": "node --check src/index.js && node --check src/playerProfileCommands.js && node --check src/playerProfileRepository.js && node --check src/seasonCommands.js && node --check src/supabaseAuth.js && node --check src/supabaseSeasonRepository.js && node --check src/teamCommands.js && node --check src/teamRepository.js && node --check domain/schedule.js && node --check domain/match.js && node --check domain/season.js",
     "build": "npx wrangler deploy --dry-run --env=\"\" --outdir dist",
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy"
