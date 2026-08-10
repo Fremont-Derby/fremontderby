@@ -40,9 +40,21 @@ function pageShell(title, body) {
 export function renderIntroPage() {
   return pageShell('Welcome', `
     <h1>Fremont Derby</h1>
-    <p class="lead">A simple, player-run pool league built to be flexible and fun.</p>
-    <p>Teams play each opponent once. Matches are Fargo-handicapped, players and captains handle their own lineups and scoring, and teams can play their matchup early, late, or at another agreed location.</p>
-    <p>The website keeps the schedule, scores, standings, and league history in one place so the league mostly runs itself.</p>
+    <p class="lead">A flexible, Fargo-handicapped 8-ball / 9-ball league with team and singles competition, cash payouts, and very little paperwork.</p>
+
+    <h2>How it works</h2>
+    <p>Teams play through the regular-season schedule, but the calendar is flexible. League nights will have scheduled matchups and reserved tables for convenience and for everyone who wants the regular league-night atmosphere. Teams can also agree to play early, late, out of order, or somewhere else.</p>
+    <p>Players score from their phones, both sides confirm the same rack history, and the site keeps standings and player stats automatically.</p>
+
+    <h2>Teams</h2>
+    <p>The regular season is intentionally flexible. A team can play with three players and players can move between teams during the season, so missing a week or changing teams does not have to derail anyone's season. Match and team history stays attached to the player.</p>
+    <p>The playoffs tighten up: qualifying teams lock in four-player playoff rosters for the championship run.</p>
+
+    <h2>Cash payouts</h2>
+    <p>There are separate team and singles prizes. Regular-season team champions get paid, and the playoff champions earn a larger championship payout. Singles follow the same idea: regular-season individual performance earns a payout, followed by a higher-value singles championship prize.</p>
+    <p>Exact payouts depend on the season's entries and prize pool and will be published for that season rather than promised in advance.</p>
+
+    <p>The goal is simple: show up, play pool, keep your own score, and let the league mostly run itself.</p>
     <div class="actions">
       <a class="button primary" href="/rules">Read the rules</a>
       <a class="button" href="/standings">View standings</a>
@@ -66,12 +78,13 @@ export function renderRulesPage() {
 
     <h2>Players and lineups</h2>
     <ul>
-      <li>Teams have up to four primary roster players for Season 1.</li>
-      <li>Captains submit up to four players for each matchup.</li>
+      <li>Regular-season teams may operate with three players and add or use another eligible player as needed.</li>
+      <li>Players may switch teams during the regular season; all prior results remain with the team and matchup where they were earned, and the player's full team history is preserved.</li>
+      <li>Captains submit the players used for each matchup.</li>
       <li>Eligible free agents/substitutes may fill an open lineup spot without permanently joining that team.</li>
       <li>A player cannot play for two teams in the same scheduled round.</li>
-      <li>Player team changes preserve all prior match and team history.</li>
       <li>There is no team-strength or Fargo cap.</li>
+      <li>Playoff teams lock a four-player roster for the playoff run; regular-season switching and pickup flexibility ends for the playoffs.</li>
     </ul>
 
     <h2>Matches and handicaps</h2>
@@ -91,17 +104,22 @@ export function renderRulesPage() {
       <li>Finalized results may only be corrected through the audited admin correction process.</li>
     </ul>
 
-    <h2>Standings</h2>
+    <h2>Standings and payouts</h2>
     <ul>
       <li>Team standings are calculated from finalized match results.</li>
+      <li>The regular-season team champion earns a cash payout.</li>
+      <li>The playoff champion earns a larger championship payout.</li>
       <li>Individual standings include only matches actually played; missing a week is neither a win nor a loss.</li>
       <li>Individual ranking uses win percentage, with total wins as the first tiebreaker.</li>
       <li>Season 1 individual prize eligibility defaults to at least five matches played.</li>
+      <li>Singles also award cash for regular-season performance, with a larger payout attached to the singles championship.</li>
+      <li>Exact season payouts are based on the available prize pool and are published separately.</li>
     </ul>
 
     <h2>Playoffs</h2>
     <ul>
       <li>The top four teams advance after the regular season.</li>
+      <li>Qualifying teams lock four-player playoff rosters before playoff competition begins.</li>
       <li>Semifinals are #1 vs #4 and #2 vs #3.</li>
       <li>If the championship team score is tied, each captain selects an eligible anchor player for the deciding handicapped match.</li>
     </ul>
