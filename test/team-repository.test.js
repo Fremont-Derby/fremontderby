@@ -132,3 +132,54 @@ test('team repository responds to an invitation through the response RPC', async
   });
   assert.equal(invitation.status, 'accepted');
 });
+
+test('team repository cancels an invitation through the cancellation RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'invitation-1',
+        status: 'canceled',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const invitation = await repository.cancelTeamInvitation({
+    actorUserId: 'captain-user-1',
+    invitationId: 'invitation-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/cancel_team_invitation');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_invitation_id: 'invitation-1',
+  });
+  assert.equal(invitation.status, 'canceled');
+});
+
+test('team repository removes a team member through the removal RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'membership-1',
+        team_id: 'team-1',
+        player_id: 'player-2',
+        role: 'player',
+        ends_at: '2026-09-01T00:00:00Z',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const membership = await repository.removeTeamMember({
+    actorUserId: 'captain-user-1',
+    membershipId: 'membership-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/remove_team_member');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_membership_id: 'membership-1',
+  });
+  assert.equal(membership.ends_at, '2026-09-01T00:00:00Z');
+});

@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  cancelTeamInvitationCommand,
   createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
+  removeTeamMemberCommand,
   respondToTeamInvitationCommand,
 } from '../src/teamCommands.js';
 
@@ -34,6 +36,20 @@ function createRepository() {
       return {
         id: payload.invitationId,
         status: payload.response,
+      };
+    },
+    async cancelTeamInvitation(payload) {
+      calls.push(['cancelTeamInvitation', payload]);
+      return {
+        id: payload.invitationId,
+        status: 'canceled',
+      };
+    },
+    async removeTeamMember(payload) {
+      calls.push(['removeTeamMember', payload]);
+      return {
+        id: payload.membershipId,
+        ends_at: '2026-09-01T00:00:00Z',
       };
     },
   };
@@ -128,4 +144,40 @@ test('respond command allows only accepted or declined responses', async () => {
     ),
     /accepted or declined/,
   );
+});
+
+test('cancel invitation command sends a captain cancellation request', async () => {
+  const repository = createRepository();
+
+  assert.deepEqual(
+    await cancelTeamInvitationCommand(
+      { actorUserId: 'captain-user-1', invitationId: 'invitation-1' },
+      repository,
+    ),
+    { id: 'invitation-1', status: 'canceled' },
+  );
+  assert.deepEqual(repository.calls, [
+    ['cancelTeamInvitation', {
+      actorUserId: 'captain-user-1',
+      invitationId: 'invitation-1',
+    }],
+  ]);
+});
+
+test('remove team member command sends a captain removal request', async () => {
+  const repository = createRepository();
+
+  assert.deepEqual(
+    await removeTeamMemberCommand(
+      { actorUserId: 'captain-user-1', membershipId: 'membership-1' },
+      repository,
+    ),
+    { id: 'membership-1', ends_at: '2026-09-01T00:00:00Z' },
+  );
+  assert.deepEqual(repository.calls, [
+    ['removeTeamMember', {
+      actorUserId: 'captain-user-1',
+      membershipId: 'membership-1',
+    }],
+  ]);
 });

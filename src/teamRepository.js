@@ -93,5 +93,31 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
 
       return Array.isArray(result) ? result[0] : result;
     },
+
+    async cancelTeamInvitation({ actorUserId, invitationId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/cancel_team_invitation`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_invitation_id: invitationId,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async removeTeamMember({ actorUserId, membershipId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/remove_team_member`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_membership_id: membershipId,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
   };
 }
