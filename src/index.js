@@ -1,3 +1,7 @@
+import { publishSeasonScheduleCommand } from './seasonCommands.js';
+import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
+
 const serviceName = "fremontderby";
 
 function versionMetadata(env = {}) {
@@ -44,10 +48,78 @@ export function renderLandingPage(env = {}) {
 </html>`;
 }
 
+function jsonResponse(body, status = 200) {
+  return Response.json(body, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+    },
+  });
+}
+
+async function readJsonBody(request) {
+  try {
+    const body = await request.json();
+    if (!body || Array.isArray(body) || typeof body !== "object") {
+      throw new Error("Request body must be a JSON object");
+    }
+    return body;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error("Request body must be valid JSON");
+    }
+    throw error;
+  }
+}
+
+function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
+  if (error.message === "Season not found") return 404;
+  if (error.message === "Actor is not a league admin") return 403;
+  if (error.message.includes("Actor is not a league admin")) return 403;
+  if (error.message.startsWith("Supabase request failed with 401")) return 401;
+  if (error.message.startsWith("Supabase request failed with 403")) return 403;
+  return 400;
+}
+
+export async function handlePublishScheduleRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    if (!body.firstRoundDate) {
+      throw new Error("firstRoundDate is required");
+    }
+
+    const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    const result = await publishSeasonScheduleCommand(
+      {
+        seasonId,
+        actorUserId: actor.id,
+        firstRoundDate: body.firstRoundDate,
+        intervalDays: body.intervalDays,
+        tableNumbers: body.tableNumbers,
+      },
+      repository,
+    );
+
+    return jsonResponse(result, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const version = versionMetadata(env);
+    const publishScheduleMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
+    );
 
     if (url.pathname === "/health") {
       return Response.json(
@@ -60,6 +132,22 @@ export default {
         },
         { headers: { "cache-control": "no-store" } },
       );
+    }
+
+    if (publishScheduleMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handlePublishScheduleRequest(
+        request,
+        env,
+        decodeURIComponent(publishScheduleMatch[1]),
+      );
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      return jsonResponse({ error: "Not found" }, 404);
     }
 
     return new Response(renderLandingPage(env), {

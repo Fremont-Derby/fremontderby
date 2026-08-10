@@ -149,6 +149,8 @@ test('season publication RPC is service-role only and transactional', () => {
     /grant execute on function public\.publish_season_schedule\(uuid, uuid, text, jsonb\)[\s\S]*to (?:anon|authenticated);/i,
   );
   assert.match(sql, /for update;/i);
+  assert.match(sql, /from private\.league_admins la/i);
+  assert.match(sql, /Actor is not a league admin/i);
   assert.match(sql, /Season schedule already exists/i);
   assert.match(sql, /inserted_round_count <> 7/i);
   assert.match(sql, /inserted_match_count <> 28/i);
