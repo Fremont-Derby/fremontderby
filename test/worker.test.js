@@ -9,6 +9,7 @@ import worker, {
   handleInvitePlayerToTeamRequest,
   handleListEligibleFreeAgentsRequest,
   handleListTeamRoundAvailabilityRequest,
+  handleListTeamStandingsRequest,
   handleListVisibleTeamLineupsRequest,
   handlePublishScheduleRequest,
   handleRegisterFreeAgentRequest,
@@ -861,6 +862,50 @@ test("team lineup route allows only GET and POST", async () => {
     new Request(
       "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
       { method: "PUT" },
+    ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("team standings handler returns public season standings", async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        season_id: "season-1",
+        team_id: "team-1",
+        team_name: "Breakers",
+        standings_rank: 1,
+        games_played: 1,
+        maximum_matches: 7,
+        standing_points: 2,
+        team_wins: 1,
+        match_points: 3,
+      }],
+    },
+  ]);
+
+  const response = await handleListTeamStandingsRequest(
+    publishEnv,
+    "season-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).standings[0].team_name, "Breakers");
+  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_team_standings");
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    target_season_id: "season-1",
+  });
+});
+
+test("team standings route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://fremontderby.com/api/seasons/season-1/team-standings",
+      { method: "POST" },
     ),
     publishEnv,
   );
