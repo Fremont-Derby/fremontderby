@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import worker, {
   handleCreateTeamRequest,
   handleGetOwnProfileRequest,
+  handleInvitePlayerToTeamRequest,
   handlePublishScheduleRequest,
+  handleRespondToTeamInvitationRequest,
   handleSaveOwnProfileRequest,
   renderLandingPage,
 } from "../src/index.js";
@@ -253,4 +255,79 @@ test("team creation route requires POST", async () => {
 
   assert.equal(response.status, 405);
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("team invitation handler authenticates and invites a player", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [{
+        id: "invitation-1",
+        season_id: "season-1",
+        team_id: "team-1",
+        invited_player_id: "player-2",
+        status: "pending",
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/teams/team-1/invitations", {
+    method: "POST",
+    headers: { authorization: "Bearer captain-token" },
+    body: JSON.stringify({ playerId: "player-2" }),
+  });
+
+  const response = await handleInvitePlayerToTeamRequest(
+    request,
+    publishEnv,
+    "team-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).invitation.status, "pending");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/invite_player_to_team");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_team_id: "team-1",
+    target_player_id: "player-2",
+  });
+});
+
+test("team invitation response handler authenticates and responds", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-2", email: "player@example.com" } },
+    {
+      body: [{
+        id: "invitation-1",
+        season_id: "season-1",
+        team_id: "team-1",
+        invited_player_id: "player-2",
+        status: "accepted",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/team-invitations/invitation-1/respond",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ response: "accepted" }),
+    },
+  );
+
+  const response = await handleRespondToTeamInvitationRequest(
+    request,
+    publishEnv,
+    "invitation-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).invitation.status, "accepted");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/respond_to_team_invitation");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-2",
+    target_invitation_id: "invitation-1",
+    response_status: "accepted",
+  });
 });

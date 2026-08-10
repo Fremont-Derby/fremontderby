@@ -6,7 +6,11 @@ import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
-import { createTeamWithCaptainCommand } from './teamCommands.js';
+import {
+  createTeamWithCaptainCommand,
+  invitePlayerToTeamCommand,
+  respondToTeamInvitationCommand,
+} from './teamCommands.js';
 import { createTeamRepository } from './teamRepository.js';
 
 const serviceName = "fremontderby";
@@ -187,6 +191,56 @@ export async function handleCreateTeamRequest(
   }
 }
 
+export async function handleInvitePlayerToTeamRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const invitation = await invitePlayerToTeamCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        playerId: body.playerId ?? body.invitedPlayerId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ invitation }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRespondToTeamInvitationRequest(
+  request,
+  env,
+  invitationId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const invitation = await respondToTeamInvitationCommand(
+      {
+        actorUserId: actor.id,
+        invitationId,
+        response: body.response,
+      },
+      repository,
+    );
+
+    return jsonResponse({ invitation });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -196,6 +250,12 @@ export default {
     );
     const createTeamMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/teams$/,
+    );
+    const teamInvitationMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/invitations$/,
+    );
+    const invitationResponseMatch = url.pathname.match(
+      /^\/api\/team-invitations\/([^/]+)\/respond$/,
     );
 
     if (url.pathname === "/health") {
@@ -243,6 +303,30 @@ export default {
         request,
         env,
         decodeURIComponent(createTeamMatch[1]),
+      );
+    }
+
+    if (teamInvitationMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleInvitePlayerToTeamRequest(
+        request,
+        env,
+        decodeURIComponent(teamInvitationMatch[1]),
+      );
+    }
+
+    if (invitationResponseMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleRespondToTeamInvitationRequest(
+        request,
+        env,
+        decodeURIComponent(invitationResponseMatch[1]),
       );
     }
 

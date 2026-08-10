@@ -100,7 +100,7 @@ test('normal authenticated users cannot publish seasons directly', () => {
 });
 
 test('private protected data tables are not browser-readable', () => {
-  for (const table of ['player_contacts', 'payment_status', 'audit_events']) {
+  for (const table of ['player_contacts', 'payment_status', 'audit_events', 'team_invitations']) {
     assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
     assert.match(
       sql,
@@ -210,5 +210,39 @@ test('team creation RPC creates captain membership and is service-role only', ()
   assert.doesNotMatch(
     sql,
     /grant execute on function public\.create_team_with_captain\(uuid, uuid, text\)[\s\S]*to (?:anon|authenticated);/i,
+  );
+});
+
+test('team invitations are private and service-role controlled', () => {
+  assert.match(sql, /create table private\.team_invitations/i);
+  assert.match(sql, /status text not null default 'pending'/i);
+  assert.match(sql, /one_pending_team_invitation_per_player/i);
+  assert.match(sql, /revoke all on table private\.team_invitations from public, anon, authenticated;/i);
+  assert.match(sql, /grant all on table private\.team_invitations to service_role;/i);
+});
+
+test('team invitation RPCs enforce captain and invited-player boundaries', () => {
+  assert.match(sql, /create or replace function public\.invite_player_to_team\(/i);
+  assert.match(sql, /Only the active captain can invite players/i);
+  assert.match(sql, /Team roster has no open primary spots/i);
+  assert.match(sql, /create or replace function public\.respond_to_team_invitation\(/i);
+  assert.match(sql, /Only the invited player can respond/i);
+  assert.match(sql, /insert into public\.team_memberships/i);
+  assert.match(sql, /response_status must be accepted or declined/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.invite_player_to_team\(uuid, uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.invite_player_to_team\(uuid, uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+  assert.match(
+    sql,
+    /revoke all on function public\.respond_to_team_invitation\(uuid, uuid, text\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.respond_to_team_invitation\(uuid, uuid, text\)[\s\S]*to service_role;/i,
   );
 });
