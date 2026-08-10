@@ -11,6 +11,9 @@ test('standings page renders team and individual standings controls', () => {
   assert.match(html, /data-tab="individuals"/);
   assert.match(html, /data-team-body/);
   assert.match(html, /data-player-body/);
+  assert.match(html, /<th class="numeric">W-L<\/th>/);
+  assert.doesNotMatch(html, /W-D-L/);
+  assert.doesNotMatch(html, /row\.team_draws/);
   assert.match(html, /team-standings/);
   assert.match(html, /individual-standings/);
 });

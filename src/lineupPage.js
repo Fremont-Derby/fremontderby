@@ -177,7 +177,7 @@ export function renderLineupPage() {
       </article>
 
       <article class="panel">
-        <div class="panel-head"><span>Lineup</span><span class="badge">4 slots</span></div>
+        <div class="panel-head"><span>Lineup</span><span class="badge">3 slots</span></div>
         <div class="slots" data-slots></div>
         <div class="stack-actions">
           <button class="submit" data-submit type="button">Submit lineup</button>
@@ -311,7 +311,7 @@ export function renderLineupPage() {
     function renderSlots() {
       const previous = Array.from(slotsEl.querySelectorAll('select')).map((select) => select.value);
       slotsEl.replaceChildren();
-      for (let index = 0; index < 4; index += 1) {
+      for (let index = 0; index < 3; index += 1) {
         const row = document.createElement('div');
         row.className = 'slot-grid';
         const number = document.createElement('div');
