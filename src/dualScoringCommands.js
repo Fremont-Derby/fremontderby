@@ -19,6 +19,19 @@ function normalizeWinnerSide(value) {
   return value;
 }
 
+function normalizeReason(value) {
+  const reason = typeof value === 'string' ? value.trim() : '';
+  if (!reason) throw new Error('reason is required');
+  return reason;
+}
+
+function normalizeResolvedRacks(value) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error('resolvedRacks must be a non-empty array');
+  }
+  return value;
+}
+
 export async function getPlayerMatchScoreComparisonCommand(
   { actorUserId, playerMatchId },
   repository,
@@ -71,4 +84,19 @@ export async function finalizeReconciledPlayerMatchCommand(
   assertPlayerMatchId(playerMatchId);
   assertRepository(repository, 'finalizeReconciledPlayerMatch');
   return repository.finalizeReconciledPlayerMatch({ actorUserId, playerMatchId });
+}
+
+export async function adminOverrideReconciledPlayerMatchCommand(
+  { actorUserId, playerMatchId, reason, resolvedRacks },
+  repository,
+) {
+  assertActor(actorUserId);
+  assertPlayerMatchId(playerMatchId);
+  assertRepository(repository, 'adminOverrideReconciledPlayerMatch');
+  return repository.adminOverrideReconciledPlayerMatch({
+    actorUserId,
+    playerMatchId,
+    reason: normalizeReason(reason),
+    resolvedRacks: normalizeResolvedRacks(resolvedRacks),
+  });
 }
