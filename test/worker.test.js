@@ -4,6 +4,7 @@ import worker, {
   handleCancelTeamInvitationRequest,
   handleCreateTeamRequest,
   handleGetOwnProfileRequest,
+  handleGetPlayerMatchScorecardRequest,
   handleInvitePlayerToTeamRequest,
   handleListEligibleFreeAgentsRequest,
   handleListTeamRoundAvailabilityRequest,
@@ -16,6 +17,7 @@ import worker, {
   handleSetFreeAgentAvailabilityRequest,
   handleSetRosterAvailabilityRequest,
   handleSubmitTeamLineupRequest,
+  handleRecordPlayerMatchRackRequest,
   renderLandingPage,
 } from "../src/index.js";
 
@@ -858,6 +860,143 @@ test("team lineup route allows only GET and POST", async () => {
       "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
       { method: "PUT" },
     ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("player match scorecard handler authenticates and loads current scorecard state", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    {
+      body: [{
+        player_match_id: "player-match-1",
+        player_a_display_name: "Kai",
+        player_b_display_name: "Morgan",
+        player_a_fargo_rating: 530,
+        player_b_fargo_rating: 510,
+        race_to_a: 5,
+        race_to_b: 4,
+        current_discipline: "8-ball",
+        score_a: 1,
+        score_b: 0,
+        racks: [{ rackNumber: 1, winnerSide: "A" }],
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/scorecard",
+    {
+      headers: { authorization: "Bearer player-token" },
+    },
+  );
+
+  const response = await handleGetPlayerMatchScorecardRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.scorecard.current_discipline, "8-ball");
+  assert.equal(body.scorecard.racks[0].winnerSide, "A");
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/get_player_match_scorecard");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "player-user-1",
+    target_player_match_id: "player-match-1",
+  });
+});
+
+test("record rack handler authenticates and records one winner-side action", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    {
+      body: [{
+        player_match_id: "player-match-1",
+        rack_number: 2,
+        discipline: "8-ball",
+        winner_side: "B",
+        score_a: 1,
+        score_b: 1,
+        current_discipline: "8-ball",
+        match_winner_side: null,
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/racks",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ winnerSide: "B" }),
+    },
+  );
+
+  const response = await handleRecordPlayerMatchRackRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).rack.winner_side, "B");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/record_player_match_rack");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "player-user-1",
+    target_player_match_id: "player-match-1",
+    rack_winner_side: "B",
+  });
+});
+
+test("record rack handler treats complete matches as conflicts", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    { status: 400, body: { message: "Player match is already complete" } },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/player-matches/player-match-1/racks",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ winnerSide: "A" }),
+    },
+  );
+
+  const response = await handleRecordPlayerMatchRackRequest(
+    request,
+    publishEnv,
+    "player-match-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Player match is already complete",
+  });
+});
+
+test("player match scorecard route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request(
+      "https://fremontderby.com/api/player-matches/player-match-1/scorecard",
+      { method: "POST" },
+    ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("player match racks route allows only POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/player-matches/player-match-1/racks"),
     publishEnv,
   );
 
