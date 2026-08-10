@@ -17,6 +17,8 @@ const publicTables = [
   'rounds',
   'team_matches',
   'season_players',
+  'player_matches',
+  'team_match_forfeits',
 ];
 
 test('every exposed public table enables row level security', () => {
@@ -132,7 +134,7 @@ test('private protected data tables are not browser-readable', () => {
 });
 
 test('published schedule tables are public read and trusted write only', () => {
-  for (const table of ['rounds', 'team_matches']) {
+  for (const table of ['rounds', 'team_matches', 'player_matches', 'team_match_forfeits']) {
     assert.match(sql, new RegExp(`create table public\\.${table}`, 'i'));
     assert.match(
       sql,
@@ -146,6 +148,8 @@ test('published schedule tables are public read and trusted write only', () => {
 
   assert.match(sql, /grant select on public\.rounds, public\.team_matches to anon, authenticated;/i);
   assert.match(sql, /grant all on public\.rounds, public\.team_matches to service_role;/i);
+  assert.match(sql, /grant select on public\.player_matches, public\.team_match_forfeits to anon, authenticated;/i);
+  assert.match(sql, /grant all on public\.player_matches, public\.team_match_forfeits to service_role;/i);
   assert.match(sql, /unique \(season_id, stage, round_number\)/i);
   assert.match(sql, /unique \(round_id, table_number\)/i);
 });
@@ -444,4 +448,24 @@ test('visible lineup read model hides opponents until reveal rules allow it', ()
     sql,
     /grant execute on function public\.list_visible_team_lineups\(uuid, uuid, uuid\)[\s\S]*to service_role;/i,
   );
+});
+
+test('submitted lineups generate player matches and explicit team forfeits', () => {
+  assert.match(sql, /create table public\.player_matches/i);
+  assert.match(sql, /player_a_id uuid not null references public\.players/i);
+  assert.match(sql, /player_b_id uuid not null references public\.players/i);
+  assert.match(sql, /unique \(team_match_id, slot_number\)/i);
+  assert.match(sql, /create table public\.team_match_forfeits/i);
+  assert.match(sql, /reason text not null default 'empty_lineup_slot'/i);
+  assert.match(sql, /unique \(team_match_id, slot_number, forfeiting_team_id\)/i);
+  assert.match(sql, /create or replace function private\.rebuild_generated_team_match_results\(/i);
+  assert.match(sql, /delete from public\.player_matches/i);
+  assert.match(sql, /delete from public\.team_match_forfeits/i);
+  assert.match(sql, /where a_slots\.lineup_id = team_a_lineup_id[\s\S]*a_slots\.player_id is not null[\s\S]*b_slots\.player_id is not null/i);
+  assert.match(sql, /where a_slots\.lineup_id = team_a_lineup_id[\s\S]*a_slots\.player_id is null/i);
+  assert.match(sql, /where b_slots\.lineup_id = team_b_lineup_id[\s\S]*b_slots\.player_id is null/i);
+  assert.match(sql, /set status = 'in_progress'/i);
+  assert.match(sql, /create trigger refresh_generated_team_match_results_after_slot_insert/i);
+  assert.match(sql, /create trigger refresh_generated_team_match_results_after_slot_update/i);
+  assert.match(sql, /create trigger refresh_generated_team_match_results_after_slot_delete/i);
 });
