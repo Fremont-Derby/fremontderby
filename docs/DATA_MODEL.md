@@ -11,7 +11,9 @@
 ### Identity and players
 - **users** — Supabase auth identity.
 - **players** — public league identity, display name, Fargo reference/status.
+- **player_contacts** — private player contact details, separate from public profile data.
 - **season_players** — participation in a specific season and eligibility state.
+- **league_admins** — private league-admin authority list for trusted commands.
 
 ### Teams and roster history
 - **teams** — team identity within a season.
@@ -33,7 +35,7 @@
 
 ### Money and audit
 - **prize_configurations** — entry fee, administration share, team pool, individual pool, payout version.
-- **payment_status** — private player payment state.
+- **payment_status** — private per-player payment state.
 - **audit_events** — actor, action, entity, timestamp, reason, before/after metadata for privileged changes.
 
 ## Important relationships
@@ -60,6 +62,7 @@ erDiagram
 4. A finalized `player_match` stores the rating snapshots, race-chart version, race targets, and rack sequence used at the time.
 5. Correcting a finalized result creates an audit event and preserves recoverable prior state.
 6. Team and individual standings are derived from finalized matches.
+7. Player contact and payment status stay in private tables; public pages use aggregate or explicitly public read models.
 
 ## Migration strategy
 - Schema changes live in `supabase/migrations/`.

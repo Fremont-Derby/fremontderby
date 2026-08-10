@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const sql = fs.readFileSync(
-  'supabase/migrations/20260809235600_identity_and_rosters.sql',
-  'utf8',
-);
+const sql = fs.readdirSync('supabase/migrations')
+  .filter((file) => file.endsWith('.sql'))
+  .sort()
+  .map((file) => fs.readFileSync(`supabase/migrations/${file}`, 'utf8'))
+  .join('\n');
 
 const publicTables = [
   'players',
@@ -56,4 +57,56 @@ test('ownership policies use authenticated identity and avoid user metadata for 
 test('service role is explicitly server-side database authority', () => {
   assert.match(sql, /grant all on[\s\S]*to service_role;/i);
   assert.match(sql, /trusted server\/service-role operations own rating changes/i);
+});
+
+test('league-admin authority is private and checked through a definer helper', () => {
+  assert.match(sql, /create table private\.league_admins/i);
+  assert.match(
+    sql,
+    /revoke all on table private\.league_admins from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant all on table private\.league_admins, private\.player_contacts, private\.payment_status to service_role;/i,
+  );
+  assert.match(sql, /create or replace function private\.is_league_admin\(\)/i);
+  assert.match(sql, /security definer/i);
+  assert.doesNotMatch(
+    sql,
+    /grant\s+select\s+on\s+private\.league_admins\s+to\s+(?:anon|authenticated)/i,
+  );
+});
+
+test('captain roster writes stay scoped to captained teams and roster cap', () => {
+  assert.match(sql, /grant update \(ends_at\) on public\.team_memberships to authenticated;/i);
+  assert.match(sql, /create or replace function private\.active_team_roster_count\(target_team_id uuid\)/i);
+  assert.match(
+    sql,
+    /create policy "Captains can add roster players to own team"[\s\S]*role = 'player'[\s\S]*private\.is_team_captain\(team_id\)[\s\S]*private\.active_team_roster_count\(team_id\)\) < 4/i,
+  );
+  assert.match(
+    sql,
+    /create policy "Captains can end roster player memberships on own team"[\s\S]*role = 'player'[\s\S]*ends_at is null[\s\S]*private\.is_team_captain\(team_id\)[\s\S]*ends_at is not null/i,
+  );
+});
+
+test('normal authenticated users cannot publish seasons directly', () => {
+  assert.doesNotMatch(
+    sql,
+    /grant\s+(?:insert|update|delete|all)[^;]*public\.seasons[^;]*to\s+authenticated/i,
+  );
+});
+
+test('private contact and payment data are not browser-readable', () => {
+  for (const table of ['player_contacts', 'payment_status']) {
+    assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
+    assert.match(
+      sql,
+      new RegExp(`revoke all on table private\\.${table} from public, anon, authenticated;`, 'i'),
+    );
+    assert.doesNotMatch(
+      sql,
+      new RegExp(`grant\\s+select\\s+on\\s+private\\.${table}\\s+to\\s+(?:anon|authenticated)`, 'i'),
+    );
+  }
 });
