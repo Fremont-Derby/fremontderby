@@ -19,6 +19,7 @@ const publicTables = [
   'season_players',
   'player_matches',
   'team_match_forfeits',
+  'season_race_chart_bands',
 ];
 
 test('every exposed public table enables row level security', () => {
@@ -481,4 +482,31 @@ test('generated player matches lock player ratings at insert time', () => {
   assert.match(sql, /new\.player_a_fargo_rating := rating_a\.fargo_rating/i);
   assert.match(sql, /new\.player_b_fargo_rating := rating_b\.fargo_rating/i);
   assert.match(sql, /create trigger lock_player_match_ratings_before_insert/i);
+});
+
+test('season race chart bands are public read and trusted write only', () => {
+  assert.match(sql, /create table public\.season_race_chart_bands/i);
+  assert.match(sql, /primary key \(season_id, max_rating_diff\)/i);
+  assert.match(sql, /grant select on public\.season_race_chart_bands to anon, authenticated;/i);
+  assert.match(sql, /grant all on public\.season_race_chart_bands to service_role;/i);
+  assert.match(
+    sql,
+    /create policy "Race chart bands are publicly readable"[\s\S]*on public\.season_race_chart_bands for select[\s\S]*using \(true\);/i,
+  );
+  assert.doesNotMatch(
+    sql,
+    /grant\s+(?:insert|update|delete|all)[^;]*public\.season_race_chart_bands[^;]*to\s+(?:anon|authenticated)/i,
+  );
+});
+
+test('generated player matches lock race targets from the season chart', () => {
+  assert.match(sql, /alter table public\.player_matches[\s\S]*race_to_a integer/i);
+  assert.match(sql, /alter table public\.player_matches[\s\S]*race_to_b integer/i);
+  assert.match(sql, /rating_band public\.season_race_chart_bands%rowtype/i);
+  assert.match(sql, /abs\(rating_a\.fargo_rating - rating_b\.fargo_rating\) <= band\.max_rating_diff/i);
+  assert.match(sql, /order by band\.max_rating_diff asc/i);
+  assert.match(sql, /new\.race_to_a := rating_band\.stronger_race_to/i);
+  assert.match(sql, /new\.race_to_b := rating_band\.weaker_race_to/i);
+  assert.match(sql, /new\.race_to_a := rating_band\.weaker_race_to/i);
+  assert.match(sql, /new\.race_to_b := rating_band\.stronger_race_to/i);
 });
