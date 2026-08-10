@@ -7,13 +7,17 @@
     "binding": "CF_VERSION_METADATA"
   },
   "vars": {
-    "ENVIRONMENT": "production"
+    "ENVIRONMENT": "production",
+    "SUPABASE_URL": "https://cpiucsxlkicmlbvdvhww.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_7WQihuB4HVf-xFKMBeYIng_bUP--oUz"
   },
   "env": {
     "staging": {
       "workers_dev": true,
       "vars": {
-        "ENVIRONMENT": "staging"
+        "ENVIRONMENT": "staging",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB"
       }
     }
   }
