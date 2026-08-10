@@ -16,3 +16,16 @@ export async function listTeamStandingsCommand(
 
   return repository.listTeamStandings({ seasonId });
 }
+
+export async function listIndividualStandingsCommand(
+  { seasonId },
+  repository,
+) {
+  if (!seasonId) {
+    throw new Error('seasonId is required');
+  }
+
+  assertRepository(repository, 'listIndividualStandings');
+
+  return repository.listIndividualStandings({ seasonId });
+}

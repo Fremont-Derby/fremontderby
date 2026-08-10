@@ -27,7 +27,10 @@ import {
 } from './scoringCommands.js';
 import { createScoringRepository } from './scoringRepository.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
-import { listTeamStandingsCommand } from './standingsCommands.js';
+import {
+  listIndividualStandingsCommand,
+  listTeamStandingsCommand,
+} from './standingsCommands.js';
 import { createStandingsRepository } from './standingsRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
@@ -514,6 +517,24 @@ export async function handleListTeamStandingsRequest(
   }
 }
 
+export async function handleListIndividualStandingsRequest(
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const standings = await listIndividualStandingsCommand(
+      { seasonId },
+      repository,
+    );
+
+    return jsonResponse({ standings });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleGetPlayerMatchScorecardRequest(
   request,
   env,
@@ -650,6 +671,9 @@ export default {
     );
     const teamStandingsMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/team-standings$/,
+    );
+    const individualStandingsMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/individual-standings$/,
     );
     const playerMatchScorecardMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/scorecard$/,
@@ -859,6 +883,17 @@ export default {
       return handleListTeamStandingsRequest(
         env,
         decodeURIComponent(teamStandingsMatch[1]),
+      );
+    }
+
+    if (individualStandingsMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListIndividualStandingsRequest(
+        env,
+        decodeURIComponent(individualStandingsMatch[1]),
       );
     }
 

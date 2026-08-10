@@ -61,5 +61,15 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         }),
       });
     },
+
+    async listIndividualStandings({ seasonId }) {
+      return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_individual_standings`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          target_season_id: seasonId,
+        }),
+      });
+    },
   };
 }

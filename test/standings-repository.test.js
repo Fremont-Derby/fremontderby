@@ -34,6 +34,34 @@ test('standings repository lists team standings through the standings RPC', asyn
   assert.equal(standings[0].team_id, 'team-1');
 });
 
+test('standings repository lists individual standings through the standings RPC', async () => {
+  const calls = [];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify([{
+      season_id: 'season-1',
+      player_id: 'player-1',
+      standings_rank: 1,
+      prize_rank: 1,
+      is_prize_eligible: true,
+      wins: 5,
+    }]), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  const repository = createStandingsRepository(env, { fetch });
+  const standings = await repository.listIndividualStandings({ seasonId: 'season-1' });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/list_individual_standings');
+  assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    target_season_id: 'season-1',
+  });
+  assert.equal(standings[0].player_id, 'player-1');
+});
+
 test('standings repository surfaces Supabase failures', async () => {
   const fetch = async () => new Response(
     JSON.stringify({ message: 'standings unavailable' }),

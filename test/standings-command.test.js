@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listTeamStandingsCommand } from '../src/standingsCommands.js';
+import {
+  listIndividualStandingsCommand,
+  listTeamStandingsCommand,
+} from '../src/standingsCommands.js';
 
 test('team standings command lists standings for a season', async () => {
   const calls = [];
@@ -30,6 +33,38 @@ test('team standings command validates season id before reading', async () => {
 
   await assert.rejects(
     () => listTeamStandingsCommand({ seasonId: '' }, repository),
+    /seasonId is required/,
+  );
+});
+
+test('individual standings command lists standings for a season', async () => {
+  const calls = [];
+  const repository = {
+    async listIndividualStandings(payload) {
+      calls.push(payload);
+      return [{
+        season_id: payload.seasonId,
+        player_id: 'player-1',
+        standings_rank: 1,
+        wins: 5,
+      }];
+    },
+  };
+
+  const standings = await listIndividualStandingsCommand(
+    { seasonId: 'season-1' },
+    repository,
+  );
+
+  assert.equal(standings[0].player_id, 'player-1');
+  assert.deepEqual(calls, [{ seasonId: 'season-1' }]);
+});
+
+test('individual standings command validates season id before reading', async () => {
+  const repository = { listIndividualStandings: async () => [] };
+
+  await assert.rejects(
+    () => listIndividualStandingsCommand({ seasonId: '' }, repository),
     /seasonId is required/,
   );
 });
