@@ -40,11 +40,10 @@ function pageShell(title, body) {
 export function renderIntroPage() {
   return pageShell('Welcome', `
     <h1>Fremont Derby</h1>
-    <p class="lead">A flexible, Fargo-handicapped 8-ball / 9-ball league with team and singles competition, cash payouts, and very little paperwork.</p>
+    <p class="lead">A flexible, Fargo-handicapped 8-ball / 9-ball round-robin league with team and singles competition, cash payouts, and very little paperwork.</p>
 
     <h2>How it works</h2>
-    <p>Teams play through the regular-season schedule, but the calendar is flexible. League nights will have scheduled matchups and reserved tables for convenience and for everyone who wants the regular league-night atmosphere. Teams can also agree to play early, late, out of order, or somewhere else.</p>
-    <p>Players score from their phones, both sides confirm the same rack history, and the site keeps standings and player stats automatically.</p>
+    <p>Eight teams play a seven-round single round robin, so every team plays every other team once. League nights have scheduled matchups and reserved tables, but the calendar stays flexible: teams can agree to play early, late, out of order, or somewhere else.</p>
 
     <h2>Teams and singles</h2>
     <p>You do not need to join a permanent team to participate. You can play as a free agent or substitute for teams that need a player, and those matches still count toward your individual singles record and eligibility.</p>
