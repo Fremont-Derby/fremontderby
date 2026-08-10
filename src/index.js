@@ -9,7 +9,10 @@ import {
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
 import { createFreeAgentRepository } from './freeAgentRepository.js';
-import { submitTeamLineupCommand } from './lineupCommands.js';
+import {
+  listVisibleTeamLineupsCommand,
+  submitTeamLineupCommand,
+} from './lineupCommands.js';
 import { createLineupRepository } from './lineupRepository.js';
 import {
   getOwnPlayerProfileCommand,
@@ -452,6 +455,30 @@ export async function handleSubmitTeamLineupRequest(
   }
 }
 
+export async function handleListVisibleTeamLineupsRequest(
+  request,
+  env,
+  { teamId, roundId },
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createLineupRepository(env, { fetch: fetchImpl });
+    const lineups = await listVisibleTeamLineupsCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        roundId,
+      },
+      repository,
+    );
+
+    return jsonResponse({ lineups });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -656,18 +683,28 @@ export default {
     }
 
     if (teamLineupMatch) {
-      if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+      if (request.method === "GET") {
+        return handleListVisibleTeamLineupsRequest(
+          request,
+          env,
+          {
+            teamId: decodeURIComponent(teamLineupMatch[1]),
+            roundId: decodeURIComponent(teamLineupMatch[2]),
+          },
+        );
+      }
+      if (request.method === "POST") {
+        return handleSubmitTeamLineupRequest(
+          request,
+          env,
+          {
+            teamId: decodeURIComponent(teamLineupMatch[1]),
+            roundId: decodeURIComponent(teamLineupMatch[2]),
+          },
+        );
       }
 
-      return handleSubmitTeamLineupRequest(
-        request,
-        env,
-        {
-          teamId: decodeURIComponent(teamLineupMatch[1]),
-          roundId: decodeURIComponent(teamLineupMatch[2]),
-        },
-      );
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (url.pathname.startsWith("/api/")) {

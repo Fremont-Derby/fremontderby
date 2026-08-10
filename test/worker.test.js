@@ -7,6 +7,7 @@ import worker, {
   handleInvitePlayerToTeamRequest,
   handleListEligibleFreeAgentsRequest,
   handleListTeamRoundAvailabilityRequest,
+  handleListVisibleTeamLineupsRequest,
   handlePublishScheduleRequest,
   handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
@@ -805,9 +806,58 @@ test("team lineup handler treats duplicate round scheduling as a conflict", asyn
   });
 });
 
-test("team lineup route allows only POST", async () => {
+test("visible team lineups handler returns only revealable lineup slots", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [
+        {
+          lineup_id: "lineup-1",
+          season_id: "season-1",
+          round_id: "round-1",
+          team_match_id: "team-match-1",
+          team_id: "team-1",
+          is_own_team: true,
+          opponent_lineup_visible: false,
+          slot_number: 1,
+          player_id: "player-1",
+          participation_type: "roster",
+        },
+      ],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
+    {
+      headers: { authorization: "Bearer captain-token" },
+    },
+  );
+
+  const response = await handleListVisibleTeamLineupsRequest(
+    request,
+    publishEnv,
+    { teamId: "team-1", roundId: "round-1" },
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.lineups[0].is_own_team, true);
+  assert.equal(body.lineups[0].opponent_lineup_visible, false);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_visible_team_lineups");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    target_team_id: "team-1",
+    target_round_id: "round-1",
+  });
+});
+
+test("team lineup route allows only GET and POST", async () => {
   const response = await worker.fetch(
-    new Request("https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup"),
+    new Request(
+      "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
+      { method: "PUT" },
+    ),
     publishEnv,
   );
 

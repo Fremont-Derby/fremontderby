@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { submitTeamLineupCommand } from '../src/lineupCommands.js';
+import {
+  listVisibleTeamLineupsCommand,
+  submitTeamLineupCommand,
+} from '../src/lineupCommands.js';
 
 function createRepository() {
   const calls = [];
@@ -16,6 +19,16 @@ function createRepository() {
         player_id: slot.playerId,
         participation_type: slot.playerId ? 'roster' : 'forfeit',
       }));
+    },
+    async listVisibleTeamLineups(payload) {
+      calls.push(['listVisibleTeamLineups', payload]);
+      return [{
+        round_id: payload.roundId,
+        team_id: payload.teamId,
+        is_own_team: true,
+        slot_number: 1,
+        player_id: 'player-1',
+      }];
     },
   };
 }
@@ -102,4 +115,28 @@ test('submit lineup command rejects invalid slot input before writing', async ()
     /more than four slots/,
   );
   assert.deepEqual(repository.calls, []);
+});
+
+test('visible lineups command lists captain-visible lineup rows', async () => {
+  const repository = createRepository();
+
+  const lineups = await listVisibleTeamLineupsCommand(
+    { actorUserId: 'captain-user-1', teamId: 'team-1', roundId: 'round-1' },
+    repository,
+  );
+
+  assert.deepEqual(lineups, [{
+    round_id: 'round-1',
+    team_id: 'team-1',
+    is_own_team: true,
+    slot_number: 1,
+    player_id: 'player-1',
+  }]);
+  assert.deepEqual(repository.calls, [
+    ['listVisibleTeamLineups', {
+      actorUserId: 'captain-user-1',
+      teamId: 'team-1',
+      roundId: 'round-1',
+    }],
+  ]);
 });
