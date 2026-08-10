@@ -50,6 +50,14 @@ test('active team membership is unique per season rather than globally', () => {
   assert.match(sql, /foreign key \(team_id, season_id\)[\s\S]*references public\.teams\(id, season_id\)/i);
 });
 
+test('captain bootstrap policy requires the membership and team season to match', () => {
+  assert.match(
+    sql,
+    /where t\.id = team_memberships\.team_id[\s\S]*t\.season_id = team_memberships\.season_id[\s\S]*t\.created_by = \(select auth\.uid\(\)\)/i,
+  );
+  assert.doesNotMatch(sql, /t\.season_id\s*=\s*t\.season_id/i);
+});
+
 test('ownership policies use authenticated identity and avoid user metadata for authorization', () => {
   assert.match(sql, /auth\.uid\(\)/);
   assert.doesNotMatch(sql, /raw_user_meta_data|user_metadata/i);
