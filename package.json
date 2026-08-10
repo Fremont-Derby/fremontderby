@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "node scripts/lint.mjs",
     "test": "node --test",
-    "check": "node --check src/index.js && node --check domain/schedule.js && node --check domain/match.js",
+    "check": "node --check src/index.js && node --check domain/schedule.js && node --check domain/match.js && node --check domain/season.js",
     "build": "npx wrangler deploy --dry-run --env=\"\" --outdir dist",
     "dev": "npx wrangler dev",
     "deploy": "npx wrangler deploy"

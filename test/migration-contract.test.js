@@ -14,6 +14,8 @@ const publicTables = [
   'seasons',
   'teams',
   'team_memberships',
+  'rounds',
+  'team_matches',
 ];
 
 test('every exposed public table enables row level security', () => {
@@ -109,4 +111,23 @@ test('private contact and payment data are not browser-readable', () => {
       new RegExp(`grant\\s+select\\s+on\\s+private\\.${table}\\s+to\\s+(?:anon|authenticated)`, 'i'),
     );
   }
+});
+
+test('published schedule tables are public read and trusted write only', () => {
+  for (const table of ['rounds', 'team_matches']) {
+    assert.match(sql, new RegExp(`create table public\\.${table}`, 'i'));
+    assert.match(
+      sql,
+      new RegExp(`create policy "[^"]+"\\s+on public\\.${table} for select[\\s\\S]*using \\(true\\);`, 'i'),
+    );
+    assert.doesNotMatch(
+      sql,
+      new RegExp(`grant\\s+(?:insert|update|delete|all)[^;]*public\\.${table}[^;]*to\\s+(?:anon|authenticated)`, 'i'),
+    );
+  }
+
+  assert.match(sql, /grant select on public\.rounds, public\.team_matches to anon, authenticated;/i);
+  assert.match(sql, /grant all on public\.rounds, public\.team_matches to service_role;/i);
+  assert.match(sql, /unique \(season_id, stage, round_number\)/i);
+  assert.match(sql, /unique \(round_id, table_number\)/i);
 });
