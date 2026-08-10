@@ -14,8 +14,8 @@ function normalizeLineupSlots(slots) {
   if (!Array.isArray(slots)) {
     throw new Error('slots must be an array');
   }
-  if (slots.length > 4) {
-    throw new Error('Lineup cannot contain more than four slots');
+  if (slots.length > 3) {
+    throw new Error('Lineup cannot contain more than three slots');
   }
 
   return slots.map((slot, index) => {
@@ -24,8 +24,8 @@ function normalizeLineupSlots(slots) {
     }
 
     const slotNumber = slot.slotNumber ?? index + 1;
-    if (!Number.isInteger(slotNumber) || slotNumber < 1 || slotNumber > 4) {
-      throw new Error('Lineup slot numbers must be between 1 and 4');
+    if (!Number.isInteger(slotNumber) || slotNumber < 1 || slotNumber > 3) {
+      throw new Error('Lineup slot numbers must be between 1 and 3');
     }
 
     return {
