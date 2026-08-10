@@ -15,6 +15,7 @@ Seasonal in-house pool league software for Fremont Derby.
 - `/season-setup` serves the league-director setup UI for creating/updating Season 1 settings and publishing the seven-round schedule.
 - `/standings` serves the public team and individual standings UI for a season.
 - `/teams` serves the team management UI for team creation, invitations, and roster actions.
+- `/trades` serves the team trade UI for captain proposals, moved-player acceptance, and captain approval.
 
 ## Local validation
 

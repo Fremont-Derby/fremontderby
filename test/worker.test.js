@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import worker, {
+  handleAdminProposeTeamTradeExceptionRequest,
+  handleApproveTeamTradeCaptainRequest,
   handleCancelTeamInvitationRequest,
   handleCorrectPlayerMatchRequest,
   handleCreateTeamRequest,
@@ -21,8 +23,11 @@ import worker, {
   handleGetSeasonPrizeSummaryRequest,
   handlePublishScheduleRequest,
   handleUpdateSeasonSetupRequest,
+  handleListOwnTeamTradesRequest,
+  handleProposeTeamTradeRequest,
   handleRegisterFreeAgentRequest,
   handleRemoveTeamMemberRequest,
+  handleRespondToTeamTradePlayerRequest,
   handleRespondToTeamInvitationRequest,
   handleSaveOwnProfileRequest,
   handleSetFreeAgentAvailabilityRequest,
@@ -326,6 +331,31 @@ test("teams page route returns the team management UI", async () => {
 test("teams page route allows only GET", async () => {
   const response = await worker.fetch(
     new Request("https://fremontderby.com/teams", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("trades page route returns the trade management UI", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/trades?team=team-1"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const html = await response.text();
+  assert.match(html, /Fremont Derby Trades/);
+  assert.match(html, /data-trade-form/);
+  assert.match(html, /data-trades-body/);
+});
+
+test("trades page route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/trades", { method: "POST" }),
     publishEnv,
   );
 
@@ -721,6 +751,56 @@ test("own team management route allows only GET", async () => {
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
 });
 
+test("own team trades handler returns visible player and captain trades", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "user-1", email: "captain@example.com" } },
+    {
+      body: [{
+        player_id: "player-1",
+        trades: [{
+          tradeId: "trade-1",
+          status: "pending",
+          requestingTeamName: "Breakers",
+          requestedTeamName: "Rack Pack",
+        }],
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/me/trades", {
+    headers: { authorization: "Bearer user-token" },
+  });
+
+  const response = await handleListOwnTeamTradesRequest(request, publishEnv, { fetch });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    tradeManagement: {
+      player_id: "player-1",
+      trades: [{
+        tradeId: "trade-1",
+        status: "pending",
+        requestingTeamName: "Breakers",
+        requestedTeamName: "Rack Pack",
+      }],
+    },
+  });
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/get_own_team_trades");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "user-1",
+  });
+});
+
+test("own team trades route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/me/trades", { method: "POST" }),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
 test("team creation handler authenticates and creates a captain team", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "user-1", email: "player@example.com" } },
@@ -808,6 +888,223 @@ test("team invitation handler authenticates and invites a player", async () => {
     target_team_id: "team-1",
     target_player_id: "player-2",
   });
+});
+
+test("team trade proposal handler authenticates and creates a pending trade", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    {
+      body: [{
+        id: "trade-1",
+        season_id: "season-1",
+        requesting_team_id: "team-1",
+        requested_team_id: "team-2",
+        offered_player_id: "player-1",
+        requested_player_id: "player-2",
+        status: "pending",
+        admin_exception: false,
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/teams/team-1/trades", {
+    method: "POST",
+    headers: { authorization: "Bearer captain-token" },
+    body: JSON.stringify({
+      offeredPlayerId: "player-1",
+      requestedTeamId: "team-2",
+      requestedPlayerId: "player-2",
+    }),
+  });
+
+  const response = await handleProposeTeamTradeRequest(
+    request,
+    publishEnv,
+    "team-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).trade.status, "pending");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/propose_team_trade");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-1",
+    actor_team_id: "team-1",
+    offered_roster_player_id: "player-1",
+    requested_roster_team_id: "team-2",
+    requested_roster_player_id: "player-2",
+  });
+});
+
+test("team trade proposal handler treats roster lock as a conflict", async () => {
+  const { fetch } = createFetch([
+    { body: { id: "captain-user-1", email: "captain@example.com" } },
+    { status: 400, body: { message: "Roster lock has passed; admin exception required" } },
+  ]);
+  const request = new Request("https://fremontderby.com/api/teams/team-1/trades", {
+    method: "POST",
+    headers: { authorization: "Bearer captain-token" },
+    body: JSON.stringify({
+      offeredPlayerId: "player-1",
+      requestedTeamId: "team-2",
+      requestedPlayerId: "player-2",
+    }),
+  });
+
+  const response = await handleProposeTeamTradeRequest(
+    request,
+    publishEnv,
+    "team-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: "Supabase request failed with 400: Roster lock has passed; admin exception required",
+  });
+});
+
+test("admin trade exception handler authenticates an admin proposal", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [{
+        id: "trade-1",
+        status: "pending",
+        admin_exception: true,
+      }],
+    },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/teams/team-1/trades", {
+    method: "POST",
+    headers: { authorization: "Bearer admin-token" },
+    body: JSON.stringify({
+      offeredPlayerId: "player-1",
+      requestedTeamId: "team-2",
+      requestedPlayerId: "player-2",
+    }),
+  });
+
+  const response = await handleAdminProposeTeamTradeExceptionRequest(
+    request,
+    publishEnv,
+    "team-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).trade.admin_exception, true);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/admin_propose_team_trade_exception");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "admin-user-1",
+    actor_team_id: "team-1",
+    offered_roster_player_id: "player-1",
+    requested_roster_team_id: "team-2",
+    requested_roster_player_id: "player-2",
+  });
+});
+
+test("admin trade exception route requires POST", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/admin/teams/team-1/trades"),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("team trade player response handler authenticates and records acceptance", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "player-user-1", email: "player@example.com" } },
+    {
+      body: [{
+        id: "trade-1",
+        status: "pending",
+        requesting_player_accepted_at: "2026-09-01T00:00:00Z",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/team-trades/trade-1/player-response",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer player-token" },
+      body: JSON.stringify({ response: "accepted" }),
+    },
+  );
+
+  const response = await handleRespondToTeamTradePlayerRequest(
+    request,
+    publishEnv,
+    "trade-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).trade.status, "pending");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/respond_to_team_trade_player");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "player-user-1",
+    target_trade_id: "trade-1",
+    response_status: "accepted",
+  });
+});
+
+test("team trade captain approval handler authenticates and records approval", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "captain-user-2", email: "captain@example.com" } },
+    {
+      body: [{
+        id: "trade-1",
+        status: "completed",
+        requested_captain_approved_at: "2026-09-01T00:00:00Z",
+        completed_at: "2026-09-01T00:00:01Z",
+      }],
+    },
+  ]);
+  const request = new Request(
+    "https://fremontderby.com/api/team-trades/trade-1/captain-approval",
+    {
+      method: "POST",
+      headers: { authorization: "Bearer captain-token" },
+      body: JSON.stringify({ response: "approved" }),
+    },
+  );
+
+  const response = await handleApproveTeamTradeCaptainRequest(
+    request,
+    publishEnv,
+    "trade-1",
+    { fetch },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).trade.status, "completed");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/approve_team_trade_captain");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: "captain-user-2",
+    target_trade_id: "trade-1",
+    response_status: "approved",
+  });
+});
+
+test("team trade action routes require POST", async () => {
+  const proposalResponse = await worker.fetch(
+    new Request("https://fremontderby.com/api/teams/team-1/trades"),
+    publishEnv,
+  );
+  const playerResponse = await worker.fetch(
+    new Request("https://fremontderby.com/api/team-trades/trade-1/player-response"),
+    publishEnv,
+  );
+  const captainResponse = await worker.fetch(
+    new Request("https://fremontderby.com/api/team-trades/trade-1/captain-approval"),
+    publishEnv,
+  );
+
+  assert.equal(proposalResponse.status, 405);
+  assert.equal(playerResponse.status, 405);
+  assert.equal(captainResponse.status, 405);
 });
 
 test("team invitation response handler authenticates and responds", async () => {

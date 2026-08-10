@@ -53,6 +53,32 @@ test('team repository loads the actor team-management view', async () => {
   assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
 });
 
+test('team repository loads the actor trade-management view', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_id: 'player-1',
+        trades: [{ tradeId: 'trade-1', status: 'pending' }],
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const tradeManagement = await repository.listOwnTeamTrades({
+    actorUserId: 'user-1',
+  });
+
+  assert.deepEqual(tradeManagement, {
+    player_id: 'player-1',
+    trades: [{ tradeId: 'trade-1', status: 'pending' }],
+  });
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_trades');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+  });
+  assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+});
+
 test('team repository creates a team through the captain RPC', async () => {
   const { fetch, calls } = createFetch([
     {
@@ -132,6 +158,73 @@ test('team repository invites a player through the invitation RPC', async () => 
   assert.equal(invitation.status, 'pending');
 });
 
+test('team repository proposes a trade through the captain RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        season_id: 'season-1',
+        requesting_team_id: 'team-1',
+        requested_team_id: 'team-2',
+        offered_player_id: 'player-1',
+        requested_player_id: 'player-2',
+        status: 'pending',
+        admin_exception: false,
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.proposeTeamTrade({
+    actorUserId: 'captain-user-1',
+    teamId: 'team-1',
+    offeredPlayerId: 'player-1',
+    requestedTeamId: 'team-2',
+    requestedPlayerId: 'player-2',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/propose_team_trade');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    actor_team_id: 'team-1',
+    offered_roster_player_id: 'player-1',
+    requested_roster_team_id: 'team-2',
+    requested_roster_player_id: 'player-2',
+  });
+  assert.equal(trade.admin_exception, false);
+});
+
+test('team repository proposes an admin trade exception through the admin RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        status: 'pending',
+        admin_exception: true,
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.adminProposeTeamTradeException({
+    actorUserId: 'admin-user-1',
+    teamId: 'team-1',
+    offeredPlayerId: 'player-1',
+    requestedTeamId: 'team-2',
+    requestedPlayerId: 'player-2',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/admin_propose_team_trade_exception');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'admin-user-1',
+    actor_team_id: 'team-1',
+    offered_roster_player_id: 'player-1',
+    requested_roster_team_id: 'team-2',
+    requested_roster_player_id: 'player-2',
+  });
+  assert.equal(trade.admin_exception, true);
+});
+
 test('team repository responds to an invitation through the response RPC', async () => {
   const { fetch, calls } = createFetch([
     {
@@ -159,6 +252,60 @@ test('team repository responds to an invitation through the response RPC', async
     response_status: 'accepted',
   });
   assert.equal(invitation.status, 'accepted');
+});
+
+test('team repository records a traded-player response through the response RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        status: 'pending',
+        requesting_player_accepted_at: '2026-09-01T00:00:00Z',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.respondToTeamTradePlayer({
+    actorUserId: 'user-1',
+    tradeId: 'trade-1',
+    response: 'accepted',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/respond_to_team_trade_player');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+    target_trade_id: 'trade-1',
+    response_status: 'accepted',
+  });
+  assert.equal(trade.status, 'pending');
+});
+
+test('team repository records a captain trade approval through the approval RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        status: 'completed',
+        completed_at: '2026-09-01T00:00:00Z',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.approveTeamTradeCaptain({
+    actorUserId: 'captain-user-2',
+    tradeId: 'trade-1',
+    response: 'approved',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/approve_team_trade_captain');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-2',
+    target_trade_id: 'trade-1',
+    response_status: 'approved',
+  });
+  assert.equal(trade.status, 'completed');
 });
 
 test('team repository cancels an invitation through the cancellation RPC', async () => {

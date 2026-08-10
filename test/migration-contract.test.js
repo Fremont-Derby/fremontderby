@@ -7,6 +7,10 @@ const sql = fs.readdirSync('supabase/migrations')
   .sort()
   .map((file) => fs.readFileSync(`supabase/migrations/${file}`, 'utf8'))
   .join('\n');
+const teamTradeSql = fs.readFileSync(
+  'supabase/migrations/20260810123000_team_trades.sql',
+  'utf8',
+);
 
 const publicTables = [
   'players',
@@ -125,6 +129,7 @@ test('private protected data tables are not browser-readable', () => {
     'roster_availability',
     'team_lineups',
     'team_lineup_slots',
+    'team_trades',
   ]) {
     assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
     assert.match(
@@ -395,6 +400,103 @@ test('team management read model is actor-scoped and service-role only', () => {
     sql,
     /grant execute on function public\.get_own_team_management\(uuid\)[\s\S]*to service_role;/i,
   );
+});
+
+test('team trades are private and service-role controlled', () => {
+  assert.match(teamTradeSql, /create table private\.team_trades/i);
+  assert.match(teamTradeSql, /admin_exception boolean not null default false/i);
+  assert.match(teamTradeSql, /status text not null default 'pending'[\s\S]*'completed'[\s\S]*'declined'[\s\S]*'canceled'/i);
+  assert.match(teamTradeSql, /revoke all on table private\.team_trades from public, anon, authenticated;/i);
+  assert.match(teamTradeSql, /grant all on table private\.team_trades to service_role;/i);
+  assert.doesNotMatch(
+    teamTradeSql,
+    /grant\s+select\s+on\s+private\.team_trades\s+to\s+(?:anon|authenticated)/i,
+  );
+});
+
+test('team trade proposal RPC enforces captain, roster-lock, and player boundaries', () => {
+  assert.match(teamTradeSql, /create or replace function public\.propose_team_trade\(/i);
+  assert.match(teamTradeSql, /private\.season_roster_lock_has_passed\(target_season_id\)/i);
+  assert.match(teamTradeSql, /Roster lock has passed; admin exception required/i);
+  assert.match(teamTradeSql, /Only the active captain can propose a trade/i);
+  assert.match(teamTradeSql, /Offered player must be an active non-captain roster member/i);
+  assert.match(teamTradeSql, /Requested player must be an active non-captain roster member/i);
+  assert.match(teamTradeSql, /A pending trade already includes one of these players/i);
+  assert.match(teamTradeSql, /requesting_captain_approved_at[\s\S]*now\(\)/i);
+  assert.match(
+    teamTradeSql,
+    /revoke all on function public\.propose_team_trade\(uuid, uuid, uuid, uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    teamTradeSql,
+    /grant execute on function public\.propose_team_trade\(uuid, uuid, uuid, uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('team trade admin exception RPC is admin-only and keeps approval gates', () => {
+  assert.match(teamTradeSql, /create or replace function public\.admin_propose_team_trade_exception\(/i);
+  assert.match(teamTradeSql, /from private\.league_admins la[\s\S]*where la\.user_id = actor_user_id/i);
+  assert.match(teamTradeSql, /Actor is not a league admin/i);
+  assert.match(teamTradeSql, /admin_exception[\s\S]*true/i);
+  assert.doesNotMatch(
+    teamTradeSql,
+    /admin_propose_team_trade_exception[\s\S]*requesting_captain_approved_at[\s\S]*create or replace function public\.respond_to_team_trade_player/i,
+  );
+  assert.match(
+    teamTradeSql,
+    /revoke all on function public\.admin_propose_team_trade_exception\(uuid, uuid, uuid, uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    teamTradeSql,
+    /grant execute on function public\.admin_propose_team_trade_exception\(uuid, uuid, uuid, uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('team trade acceptance and captain approval are both required before completion', () => {
+  assert.match(teamTradeSql, /create or replace function public\.respond_to_team_trade_player\(/i);
+  assert.match(teamTradeSql, /actor_player_id is null[\s\S]*Only a traded player can respond/i);
+  assert.match(teamTradeSql, /response_status must be accepted or declined/i);
+  assert.match(teamTradeSql, /requesting_player_accepted_at = coalesce\(requesting_player_accepted_at, now\(\)\)/i);
+  assert.match(teamTradeSql, /requested_player_accepted_at = coalesce\(requested_player_accepted_at, now\(\)\)/i);
+  assert.match(teamTradeSql, /create or replace function public\.approve_team_trade_captain\(/i);
+  assert.match(teamTradeSql, /Only an active captain for a trade team can approve/i);
+  assert.match(teamTradeSql, /response_status must be approved or declined/i);
+  assert.match(teamTradeSql, /requesting_captain_approved_at = coalesce\(requesting_captain_approved_at, now\(\)\)/i);
+  assert.match(teamTradeSql, /requested_captain_approved_at = coalesce\(requested_captain_approved_at, now\(\)\)/i);
+  assert.match(
+    teamTradeSql,
+    /requesting_player_accepted_at is null[\s\S]*requested_player_accepted_at is null[\s\S]*requesting_captain_approved_at is null[\s\S]*requested_captain_approved_at is null[\s\S]*return;/i,
+  );
+});
+
+test('team trade completion swaps memberships without rewriting played history', () => {
+  assert.match(teamTradeSql, /create or replace function private\.complete_team_trade_if_ready\(/i);
+  assert.match(teamTradeSql, /not trade\.admin_exception[\s\S]*private\.season_roster_lock_has_passed\(trade\.season_id\)/i);
+  assert.match(teamTradeSql, /update public\.team_memberships[\s\S]*set ends_at = now\(\)/i);
+  assert.match(teamTradeSql, /insert into public\.team_memberships \([\s\S]*season_id,[\s\S]*team_id,[\s\S]*player_id,[\s\S]*role/i);
+  assert.match(teamTradeSql, /trade\.requested_team_id,[\s\S]*trade\.offered_player_id,[\s\S]*'player'/i);
+  assert.match(teamTradeSql, /trade\.requesting_team_id,[\s\S]*trade\.requested_player_id,[\s\S]*'player'/i);
+  assert.match(teamTradeSql, /insert into private\.audit_events/i);
+  assert.match(teamTradeSql, /'team_trade\.complete'/i);
+  assert.doesNotMatch(teamTradeSql, /update public\.team_matches|delete from public\.team_matches/i);
+  assert.doesNotMatch(teamTradeSql, /update public\.player_matches|delete from public\.player_matches/i);
+});
+
+test('team trade read model is actor-scoped and exposes no Fargo cap', () => {
+  assert.match(teamTradeSql, /create or replace function public\.get_own_team_trades\(/i);
+  assert.match(teamTradeSql, /where p\.user_id = actor_user_id/i);
+  assert.match(teamTradeSql, /tt\.offered_player_id = ap\.id[\s\S]*or tt\.requested_player_id = ap\.id/i);
+  assert.match(teamTradeSql, /tm\.role = 'captain'[\s\S]*tm\.team_id in \(tt\.requesting_team_id, tt\.requested_team_id\)/i);
+  assert.match(teamTradeSql, /'adminException', vt\.admin_exception/i);
+  assert.match(
+    teamTradeSql,
+    /revoke all on function public\.get_own_team_trades\(uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    teamTradeSql,
+    /grant execute on function public\.get_own_team_trades\(uuid\)[\s\S]*to service_role;/i,
+  );
+  assert.doesNotMatch(teamTradeSql, /fargo|rating|strength/i);
 });
 
 test('free-agent participation and availability storage have the expected visibility', () => {

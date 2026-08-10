@@ -54,15 +54,21 @@ import { createStandingsRepository } from './standingsRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
 import {
+  adminProposeTeamTradeExceptionCommand,
+  approveTeamTradeCaptainCommand,
   cancelTeamInvitationCommand,
   createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
   listOwnTeamManagementCommand,
+  listOwnTeamTradesCommand,
+  proposeTeamTradeCommand,
   removeTeamMemberCommand,
+  respondToTeamTradePlayerCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
 import { createTeamRepository } from './teamRepository.js';
 import { renderTeamsPage } from './teamsPage.js';
+import { renderTradesPage } from './tradesPage.js';
 
 const serviceName = "fremontderby";
 
@@ -145,6 +151,8 @@ function statusForError(error) {
   if (error.message === "Actor is not a league admin") return 403;
   if (error.message.includes("Actor is not a league admin")) return 403;
   if (error.message.includes("Only the active captain")) return 403;
+  if (error.message.includes("Only an active captain")) return 403;
+  if (error.message.includes("Only a traded player")) return 403;
   if (error.message.includes("Active roster membership is required")) return 403;
   if (error.message.startsWith("Supabase request failed with 401")) return 401;
   if (error.message.startsWith("Supabase request failed with 403")) return 403;
@@ -161,6 +169,11 @@ function statusForError(error) {
   if (error.message.includes("Race targets are required")) return 409;
   if (error.message.includes("prize payouts are already finalized")) return 409;
   if (error.message.includes("Season setup can only change before publication")) return 409;
+  if (error.message.includes("Roster lock has passed")) return 409;
+  if (error.message.includes("pending trade already includes")) return 409;
+  if (error.message.includes("Trade is no longer pending")) return 409;
+  if (error.message.includes("active membership changed")) return 409;
+  if (error.message.includes("active non-captain roster member")) return 409;
   if (error.message === "Player match not found") return 404;
   return 400;
 }
@@ -372,6 +385,25 @@ export async function handleListOwnTeamManagementRequest(
   }
 }
 
+export async function handleListOwnTeamTradesRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const tradeManagement = await listOwnTeamTradesCommand(
+      { actorUserId: actor.id },
+      repository,
+    );
+
+    return jsonResponse({ tradeManagement });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleInvitePlayerToTeamRequest(
   request,
   env,
@@ -397,6 +429,60 @@ export async function handleInvitePlayerToTeamRequest(
   }
 }
 
+export async function handleProposeTeamTradeRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const trade = await proposeTeamTradeCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        offeredPlayerId: body.offeredPlayerId ?? body.offered_player_id,
+        requestedTeamId: body.requestedTeamId ?? body.requested_team_id,
+        requestedPlayerId: body.requestedPlayerId ?? body.requested_player_id,
+      },
+      repository,
+    );
+
+    return jsonResponse({ trade }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleAdminProposeTeamTradeExceptionRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const trade = await adminProposeTeamTradeExceptionCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        offeredPlayerId: body.offeredPlayerId ?? body.offered_player_id,
+        requestedTeamId: body.requestedTeamId ?? body.requested_team_id,
+        requestedPlayerId: body.requestedPlayerId ?? body.requested_player_id,
+      },
+      repository,
+    );
+
+    return jsonResponse({ trade }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleRespondToTeamInvitationRequest(
   request,
   env,
@@ -417,6 +503,56 @@ export async function handleRespondToTeamInvitationRequest(
     );
 
     return jsonResponse({ invitation });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRespondToTeamTradePlayerRequest(
+  request,
+  env,
+  tradeId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const trade = await respondToTeamTradePlayerCommand(
+      {
+        actorUserId: actor.id,
+        tradeId,
+        response: body.response,
+      },
+      repository,
+    );
+
+    return jsonResponse({ trade });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleApproveTeamTradeCaptainRequest(
+  request,
+  env,
+  tradeId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const trade = await approveTeamTradeCaptainCommand(
+      {
+        actorUserId: actor.id,
+        tradeId,
+        response: body.response,
+      },
+      repository,
+    );
+
+    return jsonResponse({ trade });
   } catch (error) {
     return jsonResponse({ error: error.message }, statusForError(error));
   }
@@ -893,14 +1029,26 @@ export default {
     const adminSeasonPrizeFinalizeMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/prizes\/finalize$/,
     );
+    const adminTeamTradeExceptionMatch = url.pathname.match(
+      /^\/api\/admin\/teams\/([^/]+)\/trades$/,
+    );
     const createTeamMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/teams$/,
     );
     const teamInvitationMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/invitations$/,
     );
+    const teamTradeProposalMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/trades$/,
+    );
     const invitationResponseMatch = url.pathname.match(
       /^\/api\/team-invitations\/([^/]+)\/respond$/,
+    );
+    const tradePlayerResponseMatch = url.pathname.match(
+      /^\/api\/team-trades\/([^/]+)\/player-response$/,
+    );
+    const tradeCaptainApprovalMatch = url.pathname.match(
+      /^\/api\/team-trades\/([^/]+)\/captain-approval$/,
     );
     const invitationCancelMatch = url.pathname.match(
       /^\/api\/team-invitations\/([^/]+)\/cancel$/,
@@ -1082,6 +1230,19 @@ export default {
       });
     }
 
+    if (url.pathname === "/trades") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderTradesPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (publishScheduleMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -1145,6 +1306,18 @@ export default {
       );
     }
 
+    if (adminTeamTradeExceptionMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleAdminProposeTeamTradeExceptionRequest(
+        request,
+        env,
+        decodeURIComponent(adminTeamTradeExceptionMatch[1]),
+      );
+    }
+
     if (url.pathname === "/api/me/profile") {
       if (request.method === "GET") {
         return handleGetOwnProfileRequest(request, env);
@@ -1162,6 +1335,14 @@ export default {
       }
 
       return handleListOwnTeamManagementRequest(request, env);
+    }
+
+    if (url.pathname === "/api/me/trades") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListOwnTeamTradesRequest(request, env);
     }
 
     if (createTeamMatch) {
@@ -1188,6 +1369,18 @@ export default {
       );
     }
 
+    if (teamTradeProposalMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleProposeTeamTradeRequest(
+        request,
+        env,
+        decodeURIComponent(teamTradeProposalMatch[1]),
+      );
+    }
+
     if (invitationResponseMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -1197,6 +1390,30 @@ export default {
         request,
         env,
         decodeURIComponent(invitationResponseMatch[1]),
+      );
+    }
+
+    if (tradePlayerResponseMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleRespondToTeamTradePlayerRequest(
+        request,
+        env,
+        decodeURIComponent(tradePlayerResponseMatch[1]),
+      );
+    }
+
+    if (tradeCaptainApprovalMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleApproveTeamTradeCaptainRequest(
+        request,
+        env,
+        decodeURIComponent(tradeCaptainApprovalMatch[1]),
       );
     }
 
