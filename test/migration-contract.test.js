@@ -610,6 +610,34 @@ test('player match finalization requires completed race state and writes an audi
   );
 });
 
+test('player match correction is admin-only and preserves corrected audit state', () => {
+  assert.match(sql, /alter table public\.player_matches[\s\S]*corrected_at timestamptz/i);
+  assert.match(sql, /alter table public\.player_matches[\s\S]*corrected_by uuid references auth\.users/i);
+  assert.match(sql, /alter table public\.player_matches[\s\S]*correction_reason text/i);
+  assert.match(sql, /create or replace function public\.correct_player_match\(/i);
+  assert.match(sql, /from private\.league_admins la[\s\S]*where la\.user_id = actor_user_id/i);
+  assert.match(sql, /Player match must be finalized before correction/i);
+  assert.match(sql, /Race targets are required before correction/i);
+  assert.match(sql, /Player match is not in a valid corrected race state/i);
+  assert.match(sql, /Corrected rack history must match corrected score/i);
+  assert.match(sql, /delete from public\.player_match_racks pmr[\s\S]*where pmr\.player_match_id = target_player_match_id/i);
+  assert.match(sql, /insert into public\.player_match_racks/i);
+  assert.match(sql, /set score_a = corrected_score_a[\s\S]*status = 'corrected'/i);
+  assert.match(sql, /insert into private\.audit_events/i);
+  assert.match(sql, /'player_match\.correct'/i);
+  assert.match(sql, /reason,[\s\S]*before_state,[\s\S]*after_state/i);
+  assert.match(sql, /jsonb_build_object\([\s\S]*'match', to_jsonb\(target_match\)[\s\S]*'racks', before_racks/i);
+  assert.match(sql, /jsonb_build_object\([\s\S]*'match', to_jsonb\(corrected_match\)[\s\S]*'racks', after_racks/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.correct_player_match\(uuid, uuid, text, integer, integer, text, jsonb\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.correct_player_match\(uuid, uuid, text, integer, integer, text, jsonb\)[\s\S]*to service_role;/i,
+  );
+});
+
 test('team standings read model derives regular-season records from finalized results', () => {
   assert.match(sql, /create or replace function public\.list_team_standings\(/i);
   assert.match(sql, /r\.stage = 'regular'/i);

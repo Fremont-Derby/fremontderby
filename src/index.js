@@ -20,6 +20,7 @@ import {
 } from './playerProfileCommands.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import {
+  correctPlayerMatchCommand,
   finalizePlayerMatchCommand,
   getPlayerMatchScorecardCommand,
   recordPlayerMatchRackCommand,
@@ -128,7 +129,10 @@ function statusForError(error) {
   if (error.message.includes("is finalized")) return 409;
   if (error.message.includes("no racks to undo")) return 409;
   if (error.message.includes("before finalization")) return 409;
+  if (error.message.includes("before correction")) return 409;
   if (error.message.includes("valid completed race state")) return 409;
+  if (error.message.includes("valid corrected race state")) return 409;
+  if (error.message.includes("rack history must match")) return 409;
   if (error.message.includes("Race targets are required")) return 409;
   if (error.message === "Player match not found") return 404;
   return 400;
@@ -629,6 +633,35 @@ export async function handleFinalizePlayerMatchRequest(
   }
 }
 
+export async function handleCorrectPlayerMatchRequest(
+  request,
+  env,
+  playerMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createScoringRepository(env, { fetch: fetchImpl });
+    const match = await correctPlayerMatchCommand(
+      {
+        actorUserId: actor.id,
+        playerMatchId,
+        winnerSide: body.winnerSide ?? body.winner,
+        scoreA: body.scoreA ?? body.score_a,
+        scoreB: body.scoreB ?? body.score_b,
+        reason: body.reason ?? body.correctionReason,
+        racks: body.racks ?? body.correctedRacks,
+      },
+      repository,
+    );
+
+    return jsonResponse({ match });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -686,6 +719,9 @@ export default {
     );
     const playerMatchFinalizeMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/finalize$/,
+    );
+    const playerMatchCorrectMatch = url.pathname.match(
+      /^\/api\/player-matches\/([^/]+)\/correct$/,
     );
 
     if (url.pathname === "/health") {
@@ -942,6 +978,18 @@ export default {
         request,
         env,
         decodeURIComponent(playerMatchFinalizeMatch[1]),
+      );
+    }
+
+    if (playerMatchCorrectMatch) {
+      if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleCorrectPlayerMatchRequest(
+        request,
+        env,
+        decodeURIComponent(playerMatchCorrectMatch[1]),
       );
     }
 

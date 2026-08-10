@@ -104,5 +104,31 @@ export function createScoringRepository(env, { fetch: fetchImpl = globalThis.fet
 
       return Array.isArray(result) ? result[0] : result;
     },
+
+    async correctPlayerMatch({
+      actorUserId,
+      playerMatchId,
+      winnerSide,
+      scoreA,
+      scoreB,
+      reason,
+      racks,
+    }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/correct_player_match`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_player_match_id: playerMatchId,
+          corrected_winner_side: winnerSide,
+          corrected_score_a: scoreA,
+          corrected_score_b: scoreB,
+          correction_reason_text: reason,
+          corrected_racks: racks,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
   };
 }
