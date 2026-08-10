@@ -116,6 +116,8 @@ test('private protected data tables are not browser-readable', () => {
     'team_invitations',
     'free_agent_availability',
     'roster_availability',
+    'team_lineups',
+    'team_lineup_slots',
   ]) {
     assert.match(sql, new RegExp(`create table private\\.${table}`, 'i'));
     assert.match(
@@ -385,5 +387,43 @@ test('team round availability read model is captain-scoped and includes eligible
   assert.match(
     sql,
     /grant execute on function public\.list_team_round_availability\(uuid, uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('lineup storage is private and prevents duplicate player scheduling per round', () => {
+  assert.match(sql, /alter table public\.rounds[\s\S]*add column if not exists lineup_deadline_at timestamptz;/i);
+  assert.match(sql, /create table private\.team_lineups/i);
+  assert.match(sql, /create table private\.team_lineup_slots/i);
+  assert.match(sql, /participation_type text not null[\s\S]*'roster'[\s\S]*'free_agent'[\s\S]*'forfeit'/i);
+  assert.match(sql, /participation_type = 'forfeit' and player_id is null/i);
+  assert.match(sql, /create unique index one_lineup_player_per_round[\s\S]*where player_id is not null;/i);
+  assert.match(sql, /create unique index one_lineup_slot_per_team_round/i);
+  assert.match(
+    sql,
+    /revoke all on table private\.team_lineups from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /revoke all on table private\.team_lineup_slots from public, anon, authenticated;/i,
+  );
+});
+
+test('lineup submit RPC is captain-scoped and service-role only', () => {
+  assert.match(sql, /create or replace function public\.submit_team_lineup\(/i);
+  assert.match(sql, /lineup_slots jsonb/i);
+  assert.match(sql, /Lineup cannot contain more than four slots/i);
+  assert.match(sql, /Lineup deadline has passed/i);
+  assert.match(sql, /Only the active captain can submit a lineup/i);
+  assert.match(sql, /Lineup player is not eligible for this team round/i);
+  assert.match(sql, /Player is already scheduled for another team in this round/i);
+  assert.match(sql, /from generate_series\(1, 4\) as slot_numbers\(slot_number\)/i);
+  assert.match(sql, /when parsed_slots\.player_id is null then 'forfeit'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.submit_team_lineup\(uuid, uuid, uuid, jsonb\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.submit_team_lineup\(uuid, uuid, uuid, jsonb\)[\s\S]*to service_role;/i,
   );
 });
