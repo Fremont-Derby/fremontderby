@@ -62,3 +62,13 @@ export async function confirmPlayerMatchScoreCommand(
   assertRepository(repository, 'confirmPlayerMatchScore');
   return repository.confirmPlayerMatchScore({ actorUserId, playerMatchId });
 }
+
+export async function finalizeReconciledPlayerMatchCommand(
+  { actorUserId, playerMatchId },
+  repository,
+) {
+  assertActor(actorUserId);
+  assertPlayerMatchId(playerMatchId);
+  assertRepository(repository, 'finalizeReconciledPlayerMatch');
+  return repository.finalizeReconciledPlayerMatch({ actorUserId, playerMatchId });
+}

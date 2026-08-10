@@ -43,10 +43,11 @@ test('rack repository sends winner side to independent score RPC', async () => {
   });
 });
 
-test('undo and confirm repository methods call their service RPCs', async () => {
+test('actor-scoped dual score actions call their service RPCs', async () => {
   for (const [method, rpc] of [
     ['undoPlayerMatchScoreRack', 'undo_player_match_score_rack'],
     ['confirmPlayerMatchScore', 'confirm_player_match_score'],
+    ['finalizeReconciledPlayerMatch', 'finalize_reconciled_player_match'],
   ]) {
     const fake = fakeFetch(rpc);
     const repository = createDualScoringRepository(env, { fetch: fake.fetchImpl });
