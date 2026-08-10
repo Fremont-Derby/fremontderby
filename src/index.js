@@ -27,6 +27,7 @@ import {
   undoPlayerMatchRackCommand,
 } from './scoringCommands.js';
 import { createScoringRepository } from './scoringRepository.js';
+import { renderScorecardPage } from './scorecardPage.js';
 import { publishSeasonScheduleCommand } from './seasonCommands.js';
 import {
   listIndividualStandingsCommand,
@@ -735,6 +736,19 @@ export default {
         },
         { headers: { "cache-control": "no-store" } },
       );
+    }
+
+    if (url.pathname === "/scorecard") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderScorecardPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
     }
 
     if (publishScheduleMatch) {
