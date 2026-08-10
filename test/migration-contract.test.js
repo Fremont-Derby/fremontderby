@@ -197,6 +197,58 @@ test('season publication RPC writes an audit event in the same transaction', () 
   assert.match(sql, /'teamMatchCount', inserted_match_count/i);
 });
 
+test('season setup columns capture publication defaults and playoff settings', () => {
+  assert.match(sql, /alter table public\.seasons[\s\S]*league_night text not null default 'Thursday'/i);
+  assert.match(sql, /first_round_date date/i);
+  assert.match(sql, /round_interval_days integer not null default 7/i);
+  assert.match(sql, /default_table_numbers integer\[\] not null default array\[1, 2, 3, 4\]/i);
+  assert.match(sql, /race_chart_version text not null default 'season-1-default'/i);
+  assert.match(sql, /playoff_team_count integer not null default 4/i);
+  assert.match(sql, /playoff_anchor_tiebreaker boolean not null default true/i);
+  assert.match(sql, /seasons_default_table_numbers_shape/i);
+  assert.match(sql, /create or replace function private\.validate_season_setup_table_numbers\(table_numbers integer\[\]\)/i);
+});
+
+test('season setup RPC is admin-only, pre-publication, and audited', () => {
+  assert.match(sql, /create or replace function public\.configure_season_setup\(/i);
+  assert.match(sql, /from private\.league_admins la[\s\S]*where la\.user_id = actor_user_id/i);
+  assert.match(sql, /Actor is not a league admin/i);
+  assert.match(sql, /insert into public\.seasons/i);
+  assert.match(sql, /status,[\s\S]*'registration'/i);
+  assert.match(sql, /s\.status in \('draft', 'registration'\)/i);
+  assert.match(sql, /Season setup can only change before publication/i);
+  assert.match(sql, /private\.validate_season_setup_table_numbers\(configured_table_numbers\)/i);
+  assert.match(sql, /insert into private\.audit_events/i);
+  assert.match(sql, /'season\.configure_setup'/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.configure_season_setup\(uuid, uuid, text, text, date, integer, integer, integer, integer, integer\[\], text, integer, boolean\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.configure_season_setup\(uuid, uuid, text, text, date, integer, integer, integer, integer, integer\[\], text, integer, boolean\)[\s\S]*to service_role;/i,
+  );
+});
+
+test('season setup read model includes teams and published schedule', () => {
+  assert.match(sql, /create or replace function public\.get_season_setup\(/i);
+  assert.match(sql, /from private\.league_admins la[\s\S]*where la\.user_id = actor_user_id/i);
+  assert.match(sql, /jsonb_build_object\([\s\S]*'teamName', t\.name[\s\S]*'activeRosterCount'/i);
+  assert.match(sql, /from public\.rounds r/i);
+  assert.match(sql, /from public\.team_matches tm/i);
+  assert.match(sql, /'tableNumber', tm\.table_number/i);
+  assert.match(sql, /'teamAName', team_a\.name/i);
+  assert.match(sql, /'teamBName', team_b\.name/i);
+  assert.match(
+    sql,
+    /revoke all on function public\.get_season_setup\(uuid, uuid\)[\s\S]*from public, anon, authenticated;/i,
+  );
+  assert.match(
+    sql,
+    /grant execute on function public\.get_season_setup\(uuid, uuid\)[\s\S]*to service_role;/i,
+  );
+});
+
 test('player profile RPC is service-role only and actor-scoped', () => {
   assert.match(sql, /create or replace function public\.upsert_player_profile\(/i);
   assert.match(sql, /actor_user_id uuid/i);

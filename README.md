@@ -12,6 +12,7 @@ Seasonal in-house pool league software for Fremont Derby.
 - `/profile` serves the sign-in/profile UI for player display name, rating, team, and season summaries.
 - `/prizes` serves the public season purse UI for aggregate collected/committed totals, projected payouts, and finalized payout snapshots.
 - `/scorecard` serves the phone scorecard UI for loading a player match, recording racks, undoing the latest unfinalized rack, and finalizing a completed race.
+- `/season-setup` serves the league-director setup UI for creating/updating Season 1 settings and publishing the seven-round schedule.
 - `/standings` serves the public team and individual standings UI for a season.
 - `/teams` serves the team management UI for team creation, invitations, and roster actions.
 
