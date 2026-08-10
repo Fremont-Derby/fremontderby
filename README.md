@@ -8,7 +8,7 @@ Seasonal in-house pool league software for Fremont Derby.
 - `/availability` serves the player availability UI for free-agent registration and round availability.
 - `/health` returns deployment/version metadata as JSON.
 - `/health/environment` returns non-secret Supabase environment readiness diagnostics.
-- `/lineup` serves the captain lineup UI for round availability, four-slot lineup submission, and visible lineup review.
+- `/lineup` serves the captain lineup UI for round availability, three-slot weekly lineup submission, and visible lineup review.
 - `/profile` serves the sign-in/profile UI for player display name, rating, team, and season summaries.
 - `/prizes` serves the public season purse UI for aggregate collected/committed totals, projected payouts, and finalized payout snapshots.
 - `/scorecard` serves the phone scorecard UI for loading a player match, recording racks, undoing the latest unfinalized rack, and finalizing a completed race.
