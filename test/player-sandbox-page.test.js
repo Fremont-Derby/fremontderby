@@ -14,12 +14,18 @@ test('player War Games supports fast dual-score practice without production writ
   assert.match(html, /Confirm this side/);
   assert.match(html, /Finalize practice match/);
   assert.match(html, /Review the full Season 1/);
+  assert.match(html, /Tell us what was confusing/);
   assert.match(html, /fd\.playerSandbox\.v1/);
+  assert.match(html, /fd\.sandboxFeedback\.player\.v1/);
+  assert.match(html, /surface:'player-sandbox'/);
+  assert.match(html, /mismatchRack/);
+  assert.match(html, /confirmedA/);
   assert.match(html, /function recordRack/);
   assert.match(html, /function createMatch/);
 
   assert.doesNotMatch(html, /fd\.accessToken/);
   assert.doesNotMatch(html, /\/api\/player-matches\//);
+  assert.doesNotMatch(html, /\/api\/sandbox-feedback/);
   assert.doesNotMatch(html, /supabase\.co/);
   assert.doesNotMatch(html, /SUPABASE_/);
 });
