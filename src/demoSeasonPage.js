@@ -31,6 +31,28 @@ const playerStandings = [
   ['Casey Morgan', 'Table Eight', 3, 4, '42.9%', '-2'],
 ];
 
+const postseason = {
+  semifinalOne: {
+    teamA: 'Break Room Bandits',
+    teamB: 'Corner Pocket Club',
+    score: '3–1',
+    winner: 'Break Room Bandits',
+  },
+  semifinalTwo: {
+    teamA: 'Golden Rail',
+    teamB: 'Nine Ball Neighbors',
+    score: '2–2',
+    anchors: 'Eli Torres vs Jordan Lee',
+    anchorWinner: 'Golden Rail',
+  },
+  championship: {
+    teamA: 'Break Room Bandits',
+    teamB: 'Golden Rail',
+    score: '3–1',
+    winner: 'Break Room Bandits',
+  },
+};
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -103,7 +125,7 @@ export function renderDemoSeasonPage() {
     body { margin:0; background:linear-gradient(180deg,#081a12,#06110d); }
     main { width:min(1080px,calc(100% - 24px)); margin:auto; padding:20px 0 56px; }
     a { color:#d7f6e2; }
-    .demo-banner { position:sticky; top:0; z-index:2; margin:0 -12px 20px; padding:12px; text-align:center; background:#e9bd45; color:#17120a; font-weight:900; border-radius:0 0 12px 12px; }
+    .demo-banner { position:sticky; top:56px; z-index:2; margin:0 -12px 20px; padding:12px; text-align:center; background:#e9bd45; color:#17120a; font-weight:900; border-radius:0 0 12px 12px; }
     .hero,.card,.round { border:1px solid #315d45; background:#0b2418; border-radius:14px; }
     .hero { padding:24px; }
     h1 { margin:0 0 10px; font-size:clamp(2rem,7vw,4rem); }
@@ -124,8 +146,12 @@ export function renderDemoSeasonPage() {
     .ball { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:#e7f2eb; color:#07150f; font-weight:900; }
     .ball.nine { background:linear-gradient(#f4d64b 0 34%,#fff 34% 66%,#f4d64b 66%); }
     .lineup { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .lineup div { padding:10px; background:#102f20; border-radius:10px; }
+    .lineup div,.postseason-match { padding:10px; background:#102f20; border-radius:10px; }
+    .postseason-match { margin-top:10px; }
+    .anchor { border-left:4px solid #e9bd45; padding-left:12px; }
+    .champion { border:1px solid #e9bd45; background:#30280f; }
     .note { font-size:.9rem; color:#9fb2a6; }
+    @media(max-width:640px){.lineup{grid-template-columns:1fr}.demo-banner{top:56px}}
   </style>
 </head>
 <body>
@@ -134,8 +160,8 @@ export function renderDemoSeasonPage() {
     <section class="hero">
       <a href="/">← Fremont Derby</a>
       <h1>Season 1 Demo</h1>
-      <p>Explore a complete seven-round example season using fake players, teams, scores, standings, lineups, and rack history. This is an early testing surface; nothing on this page writes to Supabase or production league records.</p>
-      <div class="chips"><span class="chip">8 teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 scoring example</span></div>
+      <p>Explore a complete seven-round example season and postseason using fake players, teams, scores, standings, lineups, anchors, and rack history. Nothing on this page writes to Supabase or competitive league records.</p>
+      <div class="chips"><span class="chip">8 teams</span><span class="chip">7 rounds</span><span class="chip">3 regular-season players/team</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>
     </section>
 
     <h2>Team standings</h2>
@@ -163,7 +189,16 @@ export function renderDemoSeasonPage() {
       <div class="rack" aria-label="Example rack winners">
         <span class="ball">M</span><span class="ball nine">E</span><span class="ball">M</span><span class="ball nine">M</span><span class="ball">E</span><span class="ball nine">M</span><span class="ball">E</span><span class="ball nine">M</span>
       </div>
-      <p class="note">In the real scorecard each player keeps an independent rack history. Finalization requires matching histories and confirmation from both players.</p>
+      <p class="note">In the real scorecard each team maintains its own rack history. Eligible teammates can score their side; finalization requires both team-owned histories to agree and both teams to confirm.</p>
+    </section>
+
+    <h2>Postseason example</h2>
+    <section class="card">
+      <p>Top four teams advance. Each postseason team submits four qualified players and locks one anchor before scoring begins.</p>
+      <div class="postseason-match"><strong>Semifinal · #1 vs #4</strong><p>${postseason.semifinalOne.teamA} ${postseason.semifinalOne.score} ${postseason.semifinalOne.teamB}<br><strong>Winner: ${postseason.semifinalOne.winner}</strong></p></div>
+      <div class="postseason-match anchor"><strong>Semifinal · #2 vs #3</strong><p>${postseason.semifinalTwo.teamA} ${postseason.semifinalTwo.score} ${postseason.semifinalTwo.teamB}. The four scheduled matches stay recorded as a 2–2 tie.</p><p><strong>Declared anchors:</strong> ${postseason.semifinalTwo.anchors}<br><strong>Anchor winner:</strong> ${postseason.semifinalTwo.anchorWinner}</p></div>
+      <div class="postseason-match champion"><strong>Championship</strong><p>${postseason.championship.teamA} ${postseason.championship.score} ${postseason.championship.teamB}<br><strong>Season champion: ${postseason.championship.winner}</strong></p></div>
+      <p class="note">The anchor match is an additional deciding match only. It never replaces or rewrites the four scheduled postseason player results.</p>
     </section>
   </main>
 </body>
