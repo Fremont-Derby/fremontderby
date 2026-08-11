@@ -6,6 +6,22 @@ test('teams page uses the signed-in session and human-readable team setup contro
   const html = renderTeamsPage();
 
   assert.match(html, /Fremont Derby Teams/);
+  assert.match(html, /data-night-hub/);
+  assert.match(html, /League night/);
+  assert.match(html, /data-hub-lineup/);
+  assert.match(html, /data-hub-availability/);
+  assert.match(html, /data-hub-score/);
+  assert.match(html, /data-hub-chat/);
+  assert.match(html, /data-hub-manage/);
+  assert.match(html, /Mark availability/);
+  assert.match(html, /Score a match/);
+  assert.match(html, /Roster & trades/);
+  assert.match(html, /href="\/availability"/);
+  assert.match(html, /href="\/scorecard"/);
+  assert.match(html, /lineupRounds/);
+  assert.match(html, /round\.opponentName/);
+  assert.match(html, /\/lineup\?team=/);
+  assert.match(html, /id="join-teams"/);
   assert.match(html, /data-season-select/);
   assert.match(html, /data-team-name/);
   assert.match(html, /data-create-team/);
