@@ -20,8 +20,10 @@ GitHub-native agents also receive a thin pointer through [`.github/copilot-instr
 
 - `AGENTS.md` — durable autonomous operating behavior.
 - `README.md` — stable product/architecture/environment orientation.
+- `docs/product-surface-catalog.md` — canonical index connecting audiences, documented user stories, functions, and page ownership.
+- `.github/agents/*.agent.md` — specialist operating profiles, including the Product Librarian / Information Architecture lane.
 - `docs/agent-bootstrap.md` — minimal external-session bootstrap.
-- GitHub issues/milestones/PRs — current priorities, requirements, blockers, and acceptance criteria.
+- GitHub issues/milestones/PRs — current priorities, user stories, requirements, blockers, and acceptance criteria.
 - Code/tests/migrations/live state — what actually exists.
 
 Agents should improve these instruction files when they discover a **durable** lesson that will make future sessions safer or more effective. Temporary blockers and current priorities belong in issues, not in the bootstrap prompt.
@@ -43,6 +45,27 @@ npm run check
 npm test
 npm run build
 ```
+
+## Product library and information-architecture invariants
+
+Fremont Derby treats user stories, page ownership, and navigation as maintained product infrastructure rather than incidental UI details.
+
+The **Product Librarian / Information Architecture** agent at [`.github/agents/product-librarian.agent.md`](.github/agents/product-librarian.agent.md) continuously reconciles this structure. The durable catalog lives at [`docs/product-surface-catalog.md`](docs/product-surface-catalog.md).
+
+For normal user-facing product work:
+
+- every meaningful user requirement should be documented as a GitHub user story, preferably in `As a <audience>, I can <capability>, so that <outcome>` form;
+- every user-facing function must have one canonical page/surface home;
+- every page must have one distinct primary purpose for each audience/group it serves;
+- secondary functions should directly support that primary purpose rather than turning a page into a grab bag;
+- duplicate pages/functions should be consolidated or explicitly documented as intentional;
+- backend/API capability with no appropriate authorized UI surface is incomplete product work;
+- normal pages and primary functions should be discoverable by the authorized audience within **two deliberate navigation actions** from shared/group navigation;
+- technical URLs, UUID/token entry, browser history, and undocumented deep links do not count as discoverability;
+- diagnostic/health, disposable demo/sandbox, moderation-only review, and destructive-confirmation substeps may be explicit documented exceptions;
+- discoverability never overrides authentication or authorization boundaries.
+
+When a route, page, navigation element, role, or user-facing function changes, reconcile the affected story/page mapping and create or update issues for orphaned functions, overloaded pages, duplicate surfaces, dead ends, stale documentation, or two-click reachability violations.
 
 ## Product invariants that should not be casually changed
 
@@ -75,6 +98,7 @@ The code intentionally uses small modules rather than a framework.
 | Pure domain logic | `domain/*.js` | Schedule, match/race, season, playoff logic without HTTP/database concerns |
 | Database source of truth | `supabase/migrations/*.sql` | Tables, constraints, RPC functions, triggers, RLS, grants |
 | Tests | `test/*.test.js` | Node `node:test` regression and integration-contract coverage |
+| Product surface catalog | `docs/product-surface-catalog.md` | Audience/story/function/page ownership and discoverability index |
 | Cloudflare config | `wrangler.jsonc` | Worker name and non-secret environment bindings |
 | CI | `.github/workflows/ci.yml` | Required validation on PRs and `main` |
 
@@ -149,6 +173,8 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/lineup` — captain lineup workflow
 - `/scorecard` — eligible match picker
 - `/scorecard/live` — live rack scoring
+- `/messages` — league, matchup, team, and player communication
+- `/messages/moderation` — moderator/admin message-report review
 - `/standings` — team / individual standings
 - `/season-setup` — league-director season setup and publishing
 - `/trades` — player trade workflow
@@ -157,7 +183,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/health/environment` — non-secret environment diagnostics
 - `/demo`, `/sandbox/*` — disposable War Games/demo surfaces; useful for testing, not authoritative production proof
 
-Inspect `src/router.js` before adding a route so a second surface is not created for behavior that already exists.
+Inspect `src/router.js` and `docs/product-surface-catalog.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
 ## Development commands
 
@@ -192,6 +218,8 @@ For affected behavior, aim to leave:
 - required CI green;
 - authorization/RLS boundaries preserved;
 - staging/production isolation intact;
+- user-facing changes mapped to a documented story and canonical page/function home;
+- navigation/discoverability gaps captured when the affected function is not reachable as intended;
 - issue/parent state reconciled accurately;
 - durable discoveries captured so the next low-context agent can continue from the repository alone.
 
