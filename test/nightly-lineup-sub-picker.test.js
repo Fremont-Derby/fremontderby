@@ -34,9 +34,9 @@ test('lineup page is a mobile one-tap roster and substitute picker', () => {
   assert.match(html, /Pick tonight's players/);
   assert.match(html, /Available substitutes/);
   assert.match(html, /data-player-search/);
-  assert.match(html, /data-add-player|data\.addPlayer|dataset\.addPlayer/);
+  assert.match(html, /dataset\.addPlayer/);
   assert.match(html, /\/7 played/);
-  assert.match(html, /Payment required before playing/);
+  assert.match(html, /eligibility_reason/);
   assert.match(html, /Forfeit slot/);
   assert.match(html, /Lock this lineup\?/);
   assert.match(html, /Score the three matches/);
