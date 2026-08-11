@@ -56,6 +56,12 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
     getPlayerMatchScoreComparison(input) {
       return callRpc('get_player_match_score_comparison', scoringBody(input));
     },
+    getPlayerMatchLiveContext({ actorUserId, playerMatchId }) {
+      return callRpc('get_player_match_live_context', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
+      });
+    },
     setPlayerMatchOpeningDiscipline({ actorUserId, playerMatchId, scoringTeamId, openingDiscipline }) {
       return callRpc('set_player_match_opening_discipline', {
         ...scoringBody({ actorUserId, playerMatchId, scoringTeamId }),
