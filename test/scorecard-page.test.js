@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderScorecardPage } from '../src/scorecardPage.js';
 
-test('scorecard page renders the dual-player phone scoring controls', () => {
+test('scorecard page renders the dual-team phone scoring controls without technical inputs', () => {
   const html = renderScorecardPage();
 
   assert.match(html, /Fremont Derby Scorecard/);
-  assert.match(html, /data-match-id/);
-  assert.match(html, /data-token/);
+  assert.doesNotMatch(html, /data-match-id/);
+  assert.doesNotMatch(html, /data-token/);
+  assert.match(html, /params\.get\('match'\)/);
+  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /data-rack-a/);
   assert.match(html, /data-rack-b/);
   assert.match(html, /data-undo/);
