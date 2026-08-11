@@ -4,8 +4,8 @@ import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/Actor is not a league admin/i.test(error.message)) return 403;
-  if (/last league admin/i.test(error.message)) return 409;
-  if (/Player not found|Season not found/i.test(error.message)) return 404;
+  if (/last league admin|captain lifecycle/i.test(error.message)) return 409;
+  if (/Player not found|Season not found|Team not found|Active team membership not found/i.test(error.message)) return 404;
   if (/required|500 characters|must sign in/i.test(error.message)) return 400;
   return 502;
 }
@@ -25,8 +25,12 @@ export async function handleListAdminPlayersRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
+    const [players, rosterTeams] = await Promise.all([
+      repository.listPlayers({ actorUserId: actor.id }),
+      repository.listRosterTeams({ actorUserId: actor.id }),
+    ]);
     return Response.json(
-      { players: await repository.listPlayers({ actorUserId: actor.id }) },
+      { players, rosterTeams },
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch (error) {
@@ -68,6 +72,30 @@ export async function handleSetAdminRoleRequest(
       });
       return Response.json(
         { player: result },
+        { headers: { 'cache-control': 'no-store' } },
+      );
+    }
+
+    if (body.operation === 'roster-membership') {
+      if (typeof body.active !== 'boolean') {
+        return Response.json({ error: 'active is required' }, { status: 400 });
+      }
+      if (typeof body.seasonId !== 'string' || !body.seasonId.trim()) {
+        return Response.json({ error: 'seasonId is required' }, { status: 400 });
+      }
+      if (typeof body.teamId !== 'string' || !body.teamId.trim()) {
+        return Response.json({ error: 'teamId is required' }, { status: 400 });
+      }
+      const result = await repository.setRosterMembership({
+        actorUserId: actor.id,
+        playerId,
+        seasonId: body.seasonId,
+        teamId: body.teamId,
+        active: body.active,
+        reason: typeof body.reason === 'string' ? body.reason.trim() || null : null,
+      });
+      return Response.json(
+        { membership: result },
         { headers: { 'cache-control': 'no-store' } },
       );
     }
