@@ -21,6 +21,14 @@ function normalizeWinnerSide(value) {
   return value;
 }
 
+function normalizeOpeningDiscipline(value) {
+  const normalized = value === '8' ? '8-ball' : value === '9' ? '9-ball' : value;
+  if (!['8-ball', '9-ball'].includes(normalized)) {
+    throw new Error('openingDiscipline must be 8-ball or 9-ball');
+  }
+  return normalized;
+}
+
 function normalizeReason(value) {
   const reason = typeof value === 'string' ? value.trim() : '';
   if (!reason) throw new Error('reason is required');
@@ -42,6 +50,20 @@ export async function getPlayerMatchScoreComparisonCommand(input, repository) {
   assertScoringContext(input);
   assertRepository(repository, 'getPlayerMatchScoreComparison');
   return repository.getPlayerMatchScoreComparison(input);
+}
+
+export async function setPlayerMatchOpeningDisciplineCommand(
+  { actorUserId, playerMatchId, scoringTeamId, openingDiscipline },
+  repository,
+) {
+  assertScoringContext({ actorUserId, playerMatchId, scoringTeamId });
+  assertRepository(repository, 'setPlayerMatchOpeningDiscipline');
+  return repository.setPlayerMatchOpeningDiscipline({
+    actorUserId,
+    playerMatchId,
+    scoringTeamId,
+    openingDiscipline: normalizeOpeningDiscipline(openingDiscipline),
+  });
 }
 
 export async function recordPlayerMatchScoreRackCommand(
