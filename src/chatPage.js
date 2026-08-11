@@ -327,7 +327,7 @@ export function renderChatPage(env = {}) {
         if (!candidates.length) {
           const option = document.createElement('option');
           option.value = '';
-          option.textContent = 'No available players';
+          option.textContent = 'No other registered players yet';
           select.append(option);
           select.disabled = true;
           continue;
