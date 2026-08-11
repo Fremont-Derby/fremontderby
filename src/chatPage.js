@@ -68,12 +68,22 @@ export function renderChatPage(env = {}) {
     .message.mine { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: #1f5f40; border-color: #3c8a60; }
     .message-meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; color: #c8d8ce; font-size: .72rem; font-weight: 800; }
     .message-body { white-space: pre-wrap; line-height: 1.4; }
+    .message-actions { display: flex; justify-content: flex-end; margin-top: 7px; }
+    .report { min-height: 30px; padding: 0 8px; border: 0; background: transparent; color: #b9c8bf; font-size: .72rem; }
     .empty { margin: auto; max-width: 440px; padding: 24px; text-align: center; line-height: 1.55; }
     .composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px; border-top: 1px solid var(--line); background: #081a12; }
     textarea { width: 100%; min-height: 48px; max-height: 144px; resize: vertical; padding: 12px; background: #06110d; color: #f4f7f5; }
     .send { min-width: 92px; padding: 0 18px; border-color: var(--green); background: var(--green); color: #06120d; }
     .signed-out { margin: 14px 0; padding: 14px; border: 1px solid var(--gold); border-radius: 12px; background: #2a2311; color: #f6df9d; }
     .signed-out a { color: #fff2bf; font-weight: 900; }
+    dialog { width: min(440px, calc(100% - 24px)); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: #0b2418; color: #f4f7f5; box-shadow: 0 24px 80px #000a; }
+    dialog::backdrop { background: #020705c9; }
+    .dialog-form { display: grid; gap: 12px; padding: 18px; }
+    .dialog-form h2 { margin: 0; }
+    .dialog-form label { display: grid; gap: 6px; color: var(--muted); font-weight: 750; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .dialog-actions button { padding: 0 14px; background: transparent; color: #f4f7f5; }
+    .dialog-actions .danger { background: #b84b42; border-color: #d36a61; }
     [hidden] { display: none !important; }
     button:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
     @media (max-width: 760px) {
@@ -135,6 +145,29 @@ export function renderChatPage(env = {}) {
         </form>
       </section>
     </section>
+
+    <dialog data-report-dialog>
+      <form class="dialog-form" data-report-form>
+        <h2>Report message</h2>
+        <div class="subhead">League admins can review the message and your report.</div>
+        <label>Reason
+          <select data-report-reason>
+            <option value="harassment">Harassment</option>
+            <option value="spam">Spam</option>
+            <option value="privacy">Private information</option>
+            <option value="threat">Threat or safety concern</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>Details (optional)
+          <textarea data-report-details maxlength="1000" rows="4" placeholder="Add context for the league admins"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" data-report-cancel>Cancel</button>
+          <button class="danger" type="submit">Submit report</button>
+        </div>
+      </form>
+    </dialog>
   </main>
 
   <script>
@@ -155,10 +188,15 @@ export function renderChatPage(env = {}) {
     const candidateSelectEl = document.querySelector('[data-candidate-select]');
     const mobileNewDirectFormEl = document.querySelector('[data-mobile-new-direct]');
     const mobileCandidateSelectEl = document.querySelector('[data-mobile-candidate-select]');
+    const reportDialogEl = document.querySelector('[data-report-dialog]');
+    const reportFormEl = document.querySelector('[data-report-form]');
+    const reportReasonEl = document.querySelector('[data-report-reason]');
+    const reportDetailsEl = document.querySelector('[data-report-details]');
     let threads = [];
     let candidates = [];
     let currentKey = '';
     let loadingMessages = false;
+    let reportingMessageId = '';
 
     function token() { return sessionStorage.getItem('fd.accessToken') || ''; }
     function refreshToken() { return sessionStorage.getItem('fd.refreshToken') || ''; }
@@ -252,19 +290,23 @@ export function renderChatPage(env = {}) {
       threadListEl.replaceChildren();
       threadSelectEl.replaceChildren();
       if (!threads.length) {
-        threadListEl.append(emptyState('Join a team or start a player message.'));
+        threadListEl.append(emptyState('Join a season, join a team, or start a player message.'));
         const option = document.createElement('option');
         option.textContent = 'No conversations';
         option.value = '';
         threadSelectEl.append(option);
         return;
       }
+      const leagueGroup = document.createElement('optgroup');
+      leagueGroup.label = 'League rooms';
       const directGroup = document.createElement('optgroup');
       directGroup.label = 'Player messages';
       const teamGroup = document.createElement('optgroup');
       teamGroup.label = 'Team chats';
+      appendSection('League rooms', threads.filter((thread) => thread.type === 'league'), leagueGroup);
       appendSection('Player messages', threads.filter((thread) => thread.type === 'direct'), directGroup);
       appendSection('Team chats', threads.filter((thread) => thread.type === 'team'), teamGroup);
+      if (leagueGroup.children.length) threadSelectEl.append(leagueGroup);
       if (directGroup.children.length) threadSelectEl.append(directGroup);
       if (teamGroup.children.length) threadSelectEl.append(teamGroup);
     }
@@ -311,6 +353,17 @@ export function renderChatPage(env = {}) {
         body.className = 'message-body';
         body.textContent = message.body;
         article.append(meta, body);
+        if (!message.is_own) {
+          const actions = document.createElement('div');
+          actions.className = 'message-actions';
+          const report = document.createElement('button');
+          report.type = 'button';
+          report.className = 'report';
+          report.dataset.reportMessage = message.message_id;
+          report.textContent = 'Report';
+          actions.append(report);
+          article.append(actions);
+        }
         messageListEl.append(article);
       }
       if (nearBottom || messageListEl.dataset.initial !== 'done') {
@@ -321,7 +374,9 @@ export function renderChatPage(env = {}) {
     function messagePath(thread, suffix = '') {
       const base = thread.type === 'team'
         ? '/api/teams/' + encodeURIComponent(thread.id)
-        : '/api/direct-conversations/' + encodeURIComponent(thread.id);
+        : (thread.type === 'direct'
+          ? '/api/direct-conversations/' + encodeURIComponent(thread.id)
+          : '/api/seasons/' + encodeURIComponent(thread.id));
       return base + '/messages' + suffix;
     }
     async function markRead(thread, messages) {
@@ -368,6 +423,7 @@ export function renderChatPage(env = {}) {
       const url = new URL(location.href);
       url.searchParams.delete('team');
       url.searchParams.delete('direct');
+      url.searchParams.delete('league');
       url.searchParams.set(thread.type, thread.id);
       history.replaceState({}, '', url.pathname + url.search);
       await loadMessages();
@@ -398,14 +454,28 @@ export function renderChatPage(env = {}) {
         blockedByMe: row.blocked_by_me,
       }));
     }
+    function normalizedLeagueThreads(rows) {
+      return rows.map((row) => ({
+        key: 'league:' + row.season_id,
+        type: 'league',
+        id: row.season_id,
+        name: 'League room',
+        season: row.season_name,
+        preview: row.last_message_body,
+        unread: row.unread_count,
+        canSend: row.can_send,
+      }));
+    }
     async function loadThreads({ preserveSelection = true } = {}) {
       setStatus('Loading conversations...');
-      const [teamBody, directBody, candidateBody] = await Promise.all([
+      const [teamBody, directBody, leagueBody, candidateBody] = await Promise.all([
         api('/api/me/chat-threads'),
         api('/api/me/direct-message-inbox'),
+        api('/api/me/league-chat-threads'),
         api('/api/me/direct-message-candidates'),
       ]);
       threads = [
+        ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
         ...normalizedDirectThreads(Array.isArray(directBody.conversations) ? directBody.conversations : []),
         ...normalizedTeamThreads(Array.isArray(teamBody.threads) ? teamBody.threads : []),
       ];
@@ -414,7 +484,9 @@ export function renderChatPage(env = {}) {
       const params = new URLSearchParams(location.search);
       const requestedKey = params.get('direct')
         ? 'direct:' + params.get('direct')
-        : (params.get('team') ? 'team:' + params.get('team') : '');
+        : (params.get('team')
+          ? 'team:' + params.get('team')
+          : (params.get('league') ? 'league:' + params.get('league') : ''));
       const existing = preserveSelection && threads.some((thread) => thread.key === currentKey)
         ? currentKey
         : '';
@@ -474,6 +546,28 @@ export function renderChatPage(env = {}) {
       await loadThreads({ preserveSelection: true });
       setStatus(unblocking ? 'Player unblocked' : 'Player blocked', 'ok');
     }
+    function openReport(messageId) {
+      reportingMessageId = messageId;
+      reportReasonEl.value = 'harassment';
+      reportDetailsEl.value = '';
+      reportDialogEl.showModal();
+    }
+    async function submitReport() {
+      const thread = currentThread();
+      if (!thread || !reportingMessageId) return;
+      await api('/api/chat-reports', {
+        method: 'POST',
+        body: JSON.stringify({
+          messageType: thread.type,
+          messageId: reportingMessageId,
+          reason: reportReasonEl.value,
+          details: reportDetailsEl.value,
+        }),
+      });
+      reportDialogEl.close();
+      reportingMessageId = '';
+      setStatus('Report submitted to league admins', 'ok');
+    }
     async function run(action) {
       try { await action(); } catch (error) { setStatus(error.message, 'error'); }
     }
@@ -489,6 +583,12 @@ export function renderChatPage(env = {}) {
     newDirectFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(() => startDirectConversation(candidateSelectEl)); });
     mobileNewDirectFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(() => startDirectConversation(mobileCandidateSelectEl)); });
     blockButtonEl.addEventListener('click', () => run(toggleBlock));
+    messageListEl.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-report-message]');
+      if (button) openReport(button.dataset.reportMessage);
+    });
+    document.querySelector('[data-report-cancel]').addEventListener('click', () => reportDialogEl.close());
+    reportFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(submitReport); });
     composerEl.addEventListener('submit', (event) => { event.preventDefault(); run(sendMessage); });
     messageInputEl.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); run(sendMessage); }
