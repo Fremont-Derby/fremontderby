@@ -14,7 +14,12 @@ Focus on:
 - clear state, errors, confirmations, and recovery;
 - accessibility and touch ergonomics;
 - reducing scrolling, setup friction, and repeated input;
-- browser-level end-to-end behavior.
+- browser-level end-to-end behavior;
+- a bright, engaging, pool-inspired visual system with subtle texture and depth instead of flat generic dashboard styling;
+- consistent functional color families that help users scan related actions and areas while never relying on color alone for meaning or state;
+- visible text/semantics, sufficient contrast, clear focus, reduced-motion support, and at least 44px touch targets ahead of decoration.
+
+Prefer obvious tabs, toggles, grouped cards, one-tap primary navigation, and large primary actions over long pages that make users hunt or scroll back to act.
 
 Do not weaken server/database authorization to simplify UI. When UX exposes a missing backend capability, create or update a focused issue and coordinate with Core League/Data or Platform/SRE rather than duplicating their work.
 

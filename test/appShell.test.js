@@ -12,9 +12,36 @@ import {
 
 test('primary navigation marks the current section', () => {
   const html = renderPrimaryNavigation('/teams');
-  assert.match(html, /href="\/teams" aria-current="page"/);
-  assert.doesNotMatch(html, /href="\/standings" aria-current="page"/);
+  assert.match(html, /href="\/teams"[^>]*aria-current="page"/);
+  assert.doesNotMatch(html, /href="\/standings"[^>]*aria-current="page"/);
   assert.match(html, /class="fd-nav-menu"/);
+});
+
+test('mobile quick navigation exposes frequent destinations with accessible active state', () => {
+  const html = renderPrimaryNavigation('/lineup');
+  const dock = html.match(/<nav class="fd-mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.match(dock, /data-fd-mobile-dock/);
+  assert.match(dock, /aria-label="Quick navigation"/);
+  for (const destination of ['/teams', '/standings', '/scorecard', '/messages', '/profile']) {
+    assert.match(dock, new RegExp(`href="${destination.replace('/', '\\/')}"`));
+  }
+  assert.doesNotMatch(dock, /href="\/rules"/);
+  assert.doesNotMatch(dock, /href="\/demo"/);
+  assert.match(dock, /href="\/teams"[^>]*aria-current="page"/);
+  assert.match(dock, /data-nav-key="teams"/);
+  assert.match(dock, /data-nav-key="standings"/);
+  assert.match(dock, /data-nav-key="score"/);
+  assert.match(dock, /data-nav-key="messages"/);
+  assert.match(dock, /data-nav-key="profile"/);
+});
+
+test('live scorecard keeps the reduced shell without the fixed mobile dock', () => {
+  const navigation = renderPrimaryNavigation('/scorecard');
+  assert.doesNotMatch(navigation, /data-fd-mobile-dock/);
+
+  const source = '<!doctype html><html><head><title>Score</title></head><body><main>Score</main></body></html>';
+  const html = decorateHtmlWithShell(source, '/scorecard');
+  assert.doesNotMatch(html, /<div class="fd-mobile-dock-spacer"/);
 });
 
 test('shared shell decorates standalone pages exactly once', () => {
@@ -23,7 +50,8 @@ test('shared shell decorates standalone pages exactly once', () => {
   const second = decorateHtmlWithShell(first, '/profile');
 
   assert.match(first, /data-fd-shell/);
-  assert.match(first, /href="\/profile" aria-current="page"/);
+  assert.match(first, /href="\/profile"[^>]*aria-current="page"/);
+  assert.match(first, /<div class="fd-mobile-dock-spacer"/);
   assert.equal((second.match(/<header class="fd-shell"/g) || []).length, 1);
 });
 

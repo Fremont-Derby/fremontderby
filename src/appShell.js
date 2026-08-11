@@ -9,6 +9,14 @@ const NAV_ITEMS = [
   { href: '/profile', label: 'Profile', key: 'profile' },
 ];
 
+const MOBILE_DOCK_ITEMS = [
+  { href: '/teams', label: 'Teams', key: 'teams', ball: 'T' },
+  { href: '/standings', label: 'Standings', key: 'standings', ball: '#' },
+  { href: '/scorecard', label: 'Score', key: 'score', ball: '8' },
+  { href: '/messages', label: 'Messages', key: 'messages', ball: 'M' },
+  { href: '/profile', label: 'Profile', key: 'profile', ball: 'P' },
+];
+
 const APP_PAGE_PATHS = new Set([
   '/scorecard',
   '/standings',
@@ -27,7 +35,12 @@ function sectionForPath(pathname) {
   if (pathname === '/') return 'home';
   if (pathname === '/rules') return 'rules';
   if (pathname === '/demo' || pathname.startsWith('/sandbox/')) return 'demo';
-  if (pathname.startsWith('/teams') || pathname === '/trades') return 'teams';
+  if (
+    pathname.startsWith('/teams')
+    || pathname === '/trades'
+    || pathname === '/availability'
+    || pathname === '/lineup'
+  ) return 'teams';
   if (pathname.startsWith('/standings') || pathname === '/prizes') return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
@@ -40,8 +53,22 @@ function navLinks(pathname, compact = false) {
   return NAV_ITEMS.filter((item) => compact || item.key !== 'messages').map((item) => {
     const current = active === item.key;
     const attrs = current ? ' aria-current="page" data-active="true"' : '';
-    return `<a href="${item.href}"${attrs}>${item.label}</a>`;
+    return `<a href="${item.href}" data-nav-key="${item.key}"${attrs}>${item.label}</a>`;
   }).join(compact ? '' : '\n');
+}
+
+function renderMobileDock(pathname) {
+  if (pathname.startsWith('/scorecard')) return '';
+  const active = sectionForPath(pathname);
+  const links = MOBILE_DOCK_ITEMS.map((item) => {
+    const current = active === item.key;
+    const attrs = current ? ' aria-current="page" data-active="true"' : '';
+    return `<a href="${item.href}" data-nav-key="${item.key}"${attrs}>
+      <span class="fd-mobile-dock__ball" aria-hidden="true">${item.ball}</span>
+      <span>${item.label}</span>
+    </a>`;
+  }).join('');
+  return `<nav class="fd-mobile-dock" aria-label="Quick navigation" data-fd-mobile-dock>${links}</nav>`;
 }
 
 export function friendlyErrorMessage(value) {
@@ -113,6 +140,7 @@ export function renderPrimaryNavigation(pathname = '/') {
       </details>
     </div>
   </header>
+  ${renderMobileDock(pathname)}
   ${renderErrorPopup()}`;
 }
 
@@ -127,6 +155,8 @@ export const shellStyles = `
   .fd-nav a:hover { color: #fff; background: #10291d; }
   .fd-nav a[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-nav a:focus-visible, .fd-brand:focus-visible, .fd-nav-menu summary:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
+  .fd-mobile-dock { display: none; }
+  .fd-mobile-dock-spacer { display: none; }
   .fd-message-notifications { position: relative; flex: 0 0 auto; }
   .fd-message-notifications[hidden] { display: none; }
   .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; }
@@ -175,6 +205,77 @@ export const shellStyles = `
     .fd-message-preview { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; }
     .fd-nav-menu { display: block; margin-left: 0; }
     .fd-error-popup { top: 66px; right: 12px; left: 12px; width: auto; }
+    .fd-mobile-dock {
+      position: fixed;
+      right: 8px;
+      bottom: max(8px, env(safe-area-inset-bottom));
+      left: 8px;
+      z-index: 1050;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
+      padding: 6px;
+      border: 1px solid #46694f;
+      border-top: 3px solid #8f673d;
+      border-radius: 17px;
+      background:
+        repeating-linear-gradient(92deg, rgba(255,255,255,.025) 0 1px, transparent 1px 5px),
+        linear-gradient(180deg, rgba(21,64,43,.98), rgba(6,23,15,.98));
+      box-shadow: 0 12px 34px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.08);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    .fd-mobile-dock a {
+      --fd-dock-accent: #9ad6ae;
+      min-width: 0;
+      min-height: 58px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      padding: 5px 2px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: #f7fbf8;
+      text-decoration: none;
+      font-size: .68rem;
+      font-weight: 850;
+      line-height: 1;
+      text-align: center;
+    }
+    .fd-mobile-dock a[data-nav-key="teams"] { --fd-dock-accent: #69c8ff; }
+    .fd-mobile-dock a[data-nav-key="standings"] { --fd-dock-accent: #ffd166; }
+    .fd-mobile-dock a[data-nav-key="score"] { --fd-dock-accent: #63e79a; }
+    .fd-mobile-dock a[data-nav-key="messages"] { --fd-dock-accent: #d8a6ff; }
+    .fd-mobile-dock a[data-nav-key="profile"] { --fd-dock-accent: #ffad8f; }
+    .fd-mobile-dock__ball {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--fd-dock-accent);
+      border-radius: 50%;
+      background: #f8fbf9;
+      color: #07150f;
+      box-shadow: 0 2px 6px rgba(0,0,0,.28);
+      font-size: .7rem;
+      font-weight: 950;
+    }
+    .fd-mobile-dock a[aria-current="page"] {
+      border-color: var(--fd-dock-accent);
+      background: rgba(255,255,255,.09);
+      box-shadow: inset 0 3px 0 var(--fd-dock-accent);
+    }
+    .fd-mobile-dock a[aria-current="page"] .fd-mobile-dock__ball { box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.28); }
+    .fd-mobile-dock a:focus-visible { outline: 3px solid var(--fd-dock-accent); outline-offset: 1px; }
+    .fd-mobile-dock-spacer { display: block; height: calc(82px + env(safe-area-inset-bottom)); }
+  }
+  @media (max-width: 360px) {
+    .fd-mobile-dock { right: 5px; left: 5px; gap: 3px; padding: 5px; }
+    .fd-mobile-dock a { min-height: 56px; font-size: .62rem; }
+    .fd-mobile-dock__ball { width: 24px; height: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fd-message-preview { transition: none; }
   }
 `;
 
@@ -348,9 +449,12 @@ export function decorateHtmlWithShell(html, pathname = '/') {
     /<body([^>]*)>/i,
     `<body$1>\n${renderPrimaryNavigation(pathname)}`,
   );
+  const mobileSpacer = pathname.startsWith('/scorecard')
+    ? ''
+    : '<div class="fd-mobile-dock-spacer" aria-hidden="true"></div>\n';
   return /<\/body>/i.test(withShell)
-    ? withShell.replace(/<\/body>/i, `${shellScript}\n${errorPopupScript}\n</body>`)
-    : `${withShell}${shellScript}${errorPopupScript}`;
+    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}\n${errorPopupScript}\n</body>`)
+    : `${withShell}${mobileSpacer}${shellScript}${errorPopupScript}`;
 }
 
 export function isKnownAppPagePath(pathname) {
