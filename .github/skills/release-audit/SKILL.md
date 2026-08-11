@@ -14,6 +14,21 @@ Use for independent release/QA checks.
 7. Fix only contained safe regressions; create a precise issue/blocker for broad implementation.
 8. Reconcile issue/checklist state only when acceptance criteria are actually satisfied.
 
+## Hosted staging readiness
+
+Use `.github/workflows/staging-readiness.yml` when the release gate needs proof that the deployed staging Worker is actually using staging bindings rather than merely trusting `wrangler.jsonc`.
+
+Provide the public staging Worker URL and the Git SHA expected to be deployed there. The workflow reuses `scripts/smoke-release.mjs` and records its evidence directly on #35.
+
+A passing staging readiness run proves all of the following from the hosted Worker response:
+
+- `/health` reports the expected Git SHA as `versionTag`;
+- `/health/environment` reports `staging`;
+- every environment-readiness check is green, including the expected staging Supabase project and presence of a distinct server-only service-role credential;
+- `/demo` serves the current Try a League Night surface.
+
+Do not infer staging readiness from repository bindings alone, and do not copy service-role values into workflow inputs, logs, issues, or docs. The readiness endpoint reports only presence/distinction checks, never secret values.
+
 ## Cloudflare-protected production smoke
 
 If Cloudflare security challenges the GitHub Actions release smoke before the Worker is reached, do **not** weaken site-wide protection or treat a browser challenge as Worker health proof.
