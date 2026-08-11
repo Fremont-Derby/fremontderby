@@ -85,6 +85,21 @@ function liveMatchSummary(matchRows, submissionRows) {
   return { total: rows.length, rows };
 }
 
+function selectedIneligibleSummary(slotRows, paymentRows) {
+  const playablePlayerIds = new Set(
+    paymentRows
+      .filter((row) => row.status === 'paid' || row.status === 'waived')
+      .map((row) => row.player_id),
+  );
+  const selectedPlayerIds = new Set(
+    slotRows.map((row) => row.player_id).filter(Boolean),
+  );
+  const rows = [...selectedPlayerIds]
+    .filter((playerId) => !playablePlayerIds.has(playerId))
+    .map((playerId) => ({ playerId }));
+  return { total: rows.length, rows };
+}
+
 export function createAdminOperationsRepository(
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -194,7 +209,7 @@ export function createAdminOperationsRepository(
           ['rounds', () => table('rounds', `${seasonFilter}select=id&limit=1`)],
           ['teamMatches', () => table('team_matches', `${seasonFilter}select=id&limit=1`)],
           ['lineups', () => table('team_lineups', `${seasonFilter}select=id&limit=1`, 'private')],
-          ['paidPlayers', () => table('payment_status', `${seasonFilter}status=eq.paid&select=player_id&limit=1`, 'private')],
+          ['paidPlayers', () => table('payment_status', `${seasonFilter}status=in.(paid,waived)&select=player_id&limit=1`, 'private')],
           ['playerMatches', () => table('player_matches', `${seasonFilter}select=id&limit=1`)],
           ['finalizedMatches', () => table('player_matches', `${seasonFilter}finalized_at=not.is.null&select=id&limit=1`)],
           ['liveMatches', async () => {
@@ -221,9 +236,26 @@ export function createAdminOperationsRepository(
 
       if (currentRound) {
         const roundFilter = `round_id=eq.${encodeURIComponent(currentRound.id)}&`;
+        const selectedSlotsPromise = tableRows(
+          'team_lineup_slots',
+          `${roundFilter}player_id=not.is.null&select=player_id`,
+          'private',
+        );
+        const eligiblePaymentsPromise = tableRows(
+          'payment_status',
+          `${seasonFilter}status=in.(paid,waived)&select=player_id,status`,
+          'private',
+        );
         metricTasks.push(
           ['currentRoundTeamMatches', () => table('team_matches', `${roundFilter}select=id&limit=1`)],
           ['currentRoundLineups', () => table('team_lineups', `${roundFilter}select=id&limit=1`, 'private')],
+          ['selectedIneligiblePlayers', async () => {
+            const [slotRows, paymentRows] = await Promise.all([
+              selectedSlotsPromise,
+              eligiblePaymentsPromise,
+            ]);
+            return selectedIneligibleSummary(slotRows, paymentRows);
+          }],
           ['rosterAvailabilityResponses', () => table('roster_availability', `${roundFilter}select=player_id&limit=1`, 'private')],
           ['availableRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.available&select=player_id&limit=1`, 'private')],
           ['unsureRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.unsure&select=player_id&limit=1`, 'private')],
