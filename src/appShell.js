@@ -37,7 +37,7 @@ function sectionForPath(pathname) {
 
 function navLinks(pathname, compact = false) {
   const active = sectionForPath(pathname);
-  return NAV_ITEMS.map((item) => {
+  return NAV_ITEMS.filter((item) => compact || item.key !== 'messages').map((item) => {
     const current = active === item.key;
     const attrs = current ? ' aria-current="page" data-active="true"' : '';
     return `<a href="${item.href}"${attrs}>${item.label}</a>`;
