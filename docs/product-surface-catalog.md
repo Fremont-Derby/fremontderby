@@ -46,7 +46,7 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 | `/trades` | Player / captain / admin exception | Manage player trade proposals, responses, and approvals | Canonical trade workflow |
 | `/prizes` | Public visitor / admin | View purse/payout state; administer prize configuration where authorized | Shared public/admin surface; role/function separation still needs exhaustive review under #238 |
 | `/season-setup` | League admin / director | Configure and publish a season | Canonical season-configuration/publishing surface |
-| `/admin/operations` | League admin / director | See readiness, exceptions, prioritized actions, and operational health | Canonical admin operations/triage surface. Shipped in PRs #292-#294; role-aware discovery from Profile shipped in PR #297; PR #304 added lineup-deadline warnings/critical actions; PR #307 added aged dual-score mismatch warning/critical actions. #169 remains open for remaining operational signals |
+| `/admin/operations` | League admin / director | See readiness, exceptions, prioritized actions, and operational health | Canonical admin operations/triage surface. Shipped in PRs #292-#294; role-aware discovery from Profile shipped in PR #297; PR #304 added lineup-deadline warnings/critical actions; PR #307 added aged dual-score mismatch warning/critical actions; PR #309 added 90/150-minute started-but-unfinalized match escalation based on first real scoring evidence. #169 remains open for remaining operational signals |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; intentionally role-restricted |
 | `/demo` | Public visitor / tester | Guided **Try a League Night** product test drive using fictional, non-authoritative data | Canonical public demo entry. Guided flow shipped under #249/#263; shared navigation still says `Demo`, and contextual feedback remains under #113/#172 |
 | `/sandbox/captain` | Tester / sandbox user | Practice fictional team formation, roster churn, availability, and lineup work | Canonical captain practice drill; #263 |
@@ -67,7 +67,7 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 | Public visitor / player | View current standings and understand loading/no-season/load-failure states | `/standings` | Implemented current-state recovery; history still open | #16, #17, #180, #250, PRs #272/#302 | Desktop nav is direct; mobile menu is <=2 actions; no-season recovery points to Rules and failures expose Retry |
 | Player / captain | Coordinate without sharing phone numbers and recover from communication non-happy paths | `/messages` | Implemented | #76, #250, #281, PR #285 | Messages is a direct shared-nav destination |
 | League admin / director | Configure and publish the season | `/season-setup` | Implemented core setup | #12 | Profile -> Season setup is <=2 actions for an authorized admin |
-| League admin / director | See readiness and operational exceptions without querying Supabase | `/admin/operations` | Partial but shipped and discoverable | #168, #169, #239, PRs #292-#294/#297/#304/#307 | Profile -> Operations is <=2 actions after role authorization; lineup-deadline actions link to `/lineup`; mismatch-aging actions link directly to `/scorecard` |
+| League admin / director | See readiness and operational exceptions without querying Supabase | `/admin/operations` | Partial but shipped and discoverable | #168, #169, #239, PRs #292-#294/#297/#304/#307/#309 | Profile -> Operations is <=2 actions after role authorization; lineup-deadline actions link to `/lineup`; mismatch-aging and long-running-match actions link directly to `/scorecard` |
 | Moderator / league admin | Resolve reported chat messages | `/messages/moderation` | Implemented | #80, #239, PR #297 | Authorized admins can discover Moderation through Profile; moderator-only access remains an explicit role exception |
 | Public visitor / tester | Learn the league through a safe guided test drive | `/demo` | Partial | #249, PR #265 | Route is discoverable, but shared navigation label remains stale (`Demo`); contextual feedback remains #113/#172 |
 | Tester / captain | Practice team formation and lineup work without production writes | `/sandbox/captain` | Implemented | #263, PR #264 | One action from `/demo`; explicit fictional/non-authoritative exception |
@@ -77,10 +77,11 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 
 ### 2026-08-11
 
-- **Operations readiness expanded twice without changing page ownership:** PR #304 added current-round lineup counts plus warning/critical lineup-deadline action cards; PR #307 then added aged dual-score mismatch warnings/critical escalation. `/admin/operations` remains the canonical league-readiness/exception surface; direct links to `/lineup` and `/scorecard` preserve canonical execution ownership and satisfy the two-action discovery model rather than duplicating those workflows inside Operations.
+- **Operations readiness expanded again without changing page ownership:** PR #309 added 90/150-minute escalation for genuinely started but unfinalized matches, deriving start time from the first non-empty team-owned score submission instead of a status value that scoring does not update. `/admin/operations` remains the canonical league-readiness/exception surface, and its direct `/scorecard` action preserves scoring ownership instead of duplicating scoring controls in Operations.
+- **Auth-gated initial-state guidance now matches the existing Teams story:** PR #310 codified that authenticated management controls/private panels should not render before session state resolves. This does not create a new product surface or story; #305 already owns the concrete `/teams` implementation gap, and #250 owns the broader route-state consistency epic.
 - **Teams remains the one unfinished major route-state slice:** #305 owns signed-out/loading/empty/expired-session/failure presentation on `/teams`; no duplicate team or registration surface should be created for that work.
 - **Known navigation-copy gap remains:** current `src/appShell.js` still labels `/demo` as `Demo` while the canonical public product name is **Try a League Night**. #249 already owns this; do not create a duplicate issue.
-- **No new routes or duplicate surfaces** were introduced by PRs #304/#307.
+- **No new routes, overloaded pages, or duplicate surfaces** were introduced by PRs #309/#310. The affected Operations actions continue to resolve on their canonical execution pages, and the guidance-only auth-state change reinforces existing page ownership.
 - #238 remains open until every current renderer/control is mapped. #239 remains open until role-aware navigation reachability is represented by a deterministic regression graph/test rather than only spot checks.
 
 ## Known catalog work
@@ -91,7 +92,7 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 - #240 — recurring Product Librarian cadence. Completed; subsequent cycles leave evidence in #238/#239 and this catalog.
 - #249 — Try a League Night shared-navigation naming plus contextual feedback closure work.
 - #250 — route-state cleanup. Score, Messages, Profile, and Standings recovery slices are shipped; #305 owns the remaining Teams slice plus final shared-state consistency review.
-- #169 — remaining `/admin/operations` signals after availability, lineup-deadline, and dual-score mismatch aging shipped.
+- #169 — remaining `/admin/operations` signals after availability, lineup-deadline, dual-score mismatch aging, and started-match aging shipped.
 
 ## Librarian update checklist
 
