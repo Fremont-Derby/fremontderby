@@ -65,10 +65,10 @@ export function renderCaptainSandboxPage() {
   <section class="panel"><button class="ghost" data-reset-all type="button">Reset entire captain War Game</button></section>
 </main>
 <script>
-const fixture=${JSON.stringify(fixture)};const storageKey='fd.captainSandbox.v2';const feedbackKey='fd.sandboxFeedback.captain.v2';
+const fixture=${JSON.stringify(fixture)};const storageKey='fd.captainSandbox.v1';const feedbackKey='fd.sandboxFeedback.captain.v1';
 const allTeamCandidates=[...fixture.formationRequests,...fixture.churnRequests];
 function fresh(){return{formation:Object.fromEntries(fixture.formationRequests.map(p=>[p.id,'pending'])),churn:Object.fromEntries(fixture.churnRequests.map(p=>[p.id,'pending'])),removed:[],availability:Object.fromEntries([fixture.captain,...allTeamCandidates,fixture.freeAgent].map(p=>[p.id,p.status])),slots:['','',''],submitted:false}}
-function load(){try{return JSON.parse(sessionStorage.getItem(storageKey))||fresh()}catch{return fresh()}}let state=load();
+function load(){try{const parsed=JSON.parse(sessionStorage.getItem(storageKey)||'null');return parsed&&parsed.formation&&parsed.churn&&Array.isArray(parsed.removed)?parsed:fresh()}catch{return fresh()}}let state=load();
 function save(){sessionStorage.setItem(storageKey,JSON.stringify(state))}
 function initialAccepted(){return fixture.formationRequests.filter(p=>state.formation[p.id]==='approved')}
 function churnAccepted(){return fixture.churnRequests.filter(p=>state.churn[p.id]==='approved')}
