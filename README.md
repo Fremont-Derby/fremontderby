@@ -178,6 +178,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/messages/moderation` — moderator/admin message-report review
 - `/standings` — team / individual standings
 - `/season-setup` — league-director season setup and publishing
+- `/admin/operations` — league-admin readiness, exception triage, action queue, and operational health
 - `/trades` — player trade workflow
 - `/prizes` — purse and payout state
 - `/health` — Worker version metadata
