@@ -64,6 +64,7 @@ export function renderChatPage(env = {}) {
     .chat-title small { color: var(--muted); font-weight: 650; }
     .block { min-height: 36px; padding: 0 10px; background: transparent; color: var(--danger); border-color: #7c413b; }
     .message-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+    .older { align-self: center; min-height: 36px; padding: 0 12px; background: transparent; color: #cde3d5; }
     .message { max-width: min(78%, 600px); align-self: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; background: #10291d; overflow-wrap: anywhere; }
     .message.mine { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: #1f5f40; border-color: #3c8a60; }
     .message-meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; color: #c8d8ce; font-size: .72rem; font-weight: 800; }
@@ -138,7 +139,7 @@ export function renderChatPage(env = {}) {
           <div class="chat-title"><span data-chat-name>Select a conversation</span><small data-chat-season></small></div>
           <button class="block" data-block type="button" hidden>Block</button>
         </header>
-        <div class="message-list" data-message-list role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div class="message-list" data-message-list role="log" aria-live="polite" aria-relevant="additions"><button class="older" type="button" data-load-older hidden>Load older messages</button></div>
         <form class="composer" data-composer>
           <textarea data-message-input maxlength="2000" rows="1" placeholder="Write a message" aria-label="Write a message" disabled></textarea>
           <button class="send" type="submit" disabled>Send</button>
@@ -181,6 +182,7 @@ export function renderChatPage(env = {}) {
     const chatSeasonEl = document.querySelector('[data-chat-season]');
     const blockButtonEl = document.querySelector('[data-block]');
     const messageListEl = document.querySelector('[data-message-list]');
+    const loadOlderButtonEl = document.querySelector('[data-load-older]');
     const composerEl = document.querySelector('[data-composer]');
     const messageInputEl = document.querySelector('[data-message-input]');
     const sendButtonEl = composerEl.querySelector('button[type="submit"]');
@@ -196,6 +198,9 @@ export function renderChatPage(env = {}) {
     let candidates = [];
     let currentKey = '';
     let loadingMessages = false;
+    let displayedMessages = [];
+    let canLoadOlder = false;
+    let reachedConversationStart = false;
     let reportingMessageId = '';
 
     function token() { return sessionStorage.getItem('fd.accessToken') || ''; }
@@ -336,9 +341,11 @@ export function renderChatPage(env = {}) {
         }
       }
     }
-    function renderMessages(messages) {
+    function renderMessages(messages, { keepPosition = false } = {}) {
       const nearBottom = messageListEl.scrollHeight - messageListEl.scrollTop - messageListEl.clientHeight < 100;
       messageListEl.replaceChildren();
+      loadOlderButtonEl.hidden = !canLoadOlder;
+      messageListEl.append(loadOlderButtonEl);
       if (!messages.length) {
         messageListEl.append(emptyState('No messages yet. Start the conversation.'));
         return;
@@ -373,7 +380,7 @@ export function renderChatPage(env = {}) {
         }
         messageListEl.append(article);
       }
-      if (nearBottom || messageListEl.dataset.initial !== 'done') {
+      if (!keepPosition && (nearBottom || messageListEl.dataset.initial !== 'done')) {
         messageListEl.scrollTop = messageListEl.scrollHeight;
       }
       messageListEl.dataset.initial = 'done';
@@ -402,14 +409,50 @@ export function renderChatPage(env = {}) {
       const selectedKey = thread.key;
       try {
         if (!quiet) setStatus('Loading messages...');
-        const body = await api(messagePath(thread) + '?limit=100');
+        const body = await api(messagePath(thread) + '?limit=50');
         if (selectedKey !== currentKey) return;
         const messages = Array.isArray(body.messages) ? body.messages : [];
-        renderMessages(messages);
-        await markRead(thread, messages);
+        if (quiet) {
+          const byId = new Map(displayedMessages.map((message) => [message.message_id, message]));
+          for (const message of messages) byId.set(message.message_id, message);
+          displayedMessages = [...byId.values()].sort((a, b) =>
+            a.created_at.localeCompare(b.created_at) || a.message_id.localeCompare(b.message_id));
+          canLoadOlder = !reachedConversationStart && (canLoadOlder || messages.length === 50);
+        } else {
+          displayedMessages = messages;
+          canLoadOlder = messages.length === 50;
+          reachedConversationStart = messages.length < 50;
+        }
+        renderMessages(displayedMessages);
+        await markRead(thread, displayedMessages);
         if (!quiet) setStatus('Messages loaded', 'ok');
       } finally {
         loadingMessages = false;
+      }
+    }
+    async function loadOlderMessages() {
+      const thread = currentThread();
+      const oldest = displayedMessages[0];
+      if (!thread || !oldest || !canLoadOlder || loadingMessages) return;
+      loadingMessages = true;
+      loadOlderButtonEl.disabled = true;
+      const priorHeight = messageListEl.scrollHeight;
+      try {
+        const query = '?limit=50&before=' + encodeURIComponent(oldest.created_at)
+          + '&beforeMessageId=' + encodeURIComponent(oldest.message_id);
+        const body = await api(messagePath(thread) + query);
+        const older = Array.isArray(body.messages) ? body.messages : [];
+        const byId = new Map([...older, ...displayedMessages].map((message) => [message.message_id, message]));
+        displayedMessages = [...byId.values()].sort((a, b) =>
+          a.created_at.localeCompare(b.created_at) || a.message_id.localeCompare(b.message_id));
+        canLoadOlder = older.length === 50;
+        reachedConversationStart = older.length < 50;
+        renderMessages(displayedMessages, { keepPosition: true });
+        messageListEl.scrollTop = messageListEl.scrollHeight - priorHeight;
+        setStatus(older.length ? 'Older messages loaded' : 'Beginning of conversation', 'ok');
+      } finally {
+        loadingMessages = false;
+        loadOlderButtonEl.disabled = false;
       }
     }
     async function selectThread(key) {
@@ -424,6 +467,9 @@ export function renderChatPage(env = {}) {
       blockButtonEl.hidden = !thread || thread.type !== 'direct' || (thread.canSend === false && !thread.blockedByMe);
       blockButtonEl.textContent = thread?.blockedByMe ? 'Unblock' : 'Block';
       messageListEl.dataset.initial = '';
+      displayedMessages = [];
+      canLoadOlder = false;
+      reachedConversationStart = false;
       renderThreads();
       if (!thread) {
         messageListEl.replaceChildren(emptyState('Choose a conversation.'));
@@ -523,6 +569,24 @@ export function renderChatPage(env = {}) {
       await selectThread(initial);
       setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
     }
+    async function refreshThreadMetadata() {
+      const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
+        api('/api/me/chat-threads'),
+        api('/api/me/direct-message-inbox'),
+        api('/api/me/league-chat-threads'),
+        api('/api/me/matchup-chat-threads'),
+        api('/api/me/direct-message-candidates'),
+      ]);
+      threads = [
+        ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
+        ...normalizedMatchupThreads(Array.isArray(matchupBody.threads) ? matchupBody.threads : []),
+        ...normalizedDirectThreads(Array.isArray(directBody.conversations) ? directBody.conversations : []),
+        ...normalizedTeamThreads(Array.isArray(teamBody.threads) ? teamBody.threads : []),
+      ];
+      candidates = Array.isArray(candidateBody.candidates) ? candidateBody.candidates : [];
+      renderCandidates();
+      renderThreads();
+    }
     async function detectModerator() {
       try {
         await api('/api/admin/chat-reports?limit=1');
@@ -617,6 +681,7 @@ export function renderChatPage(env = {}) {
     newDirectFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(() => startDirectConversation(candidateSelectEl)); });
     mobileNewDirectFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(() => startDirectConversation(mobileCandidateSelectEl)); });
     blockButtonEl.addEventListener('click', () => run(toggleBlock));
+    loadOlderButtonEl.addEventListener('click', () => run(loadOlderMessages));
     messageListEl.addEventListener('click', (event) => {
       const button = event.target.closest('[data-report-message]');
       if (button) openReport(button.dataset.reportMessage);
@@ -634,8 +699,11 @@ export function renderChatPage(env = {}) {
       run(() => loadThreads());
       run(detectModerator);
     }
+    let pollCount = 0;
     setInterval(() => {
       if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
+      pollCount += 1;
+      if (!document.hidden && token() && pollCount % 4 === 0) run(refreshThreadMetadata);
     }, 4000);
   </script>
 </body>
