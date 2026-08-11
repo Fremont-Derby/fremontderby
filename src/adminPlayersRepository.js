@@ -19,7 +19,11 @@ async function requestJson(fetchImpl, url, init) {
   const body = await parseResponse(response);
   if (!response.ok) {
     const message = typeof body === 'string' ? body : body?.message;
-    throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+    const error = new Error(
+      `Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`,
+    );
+    error.status = response.status;
+    throw error;
   }
   return body;
 }
@@ -44,22 +48,34 @@ export function createAdminPlayersRepository(
     });
   }
 
+  function normalizePlayer(row) {
+    return {
+      playerId: row.player_id,
+      displayName: row.display_name,
+      hasLogin: Boolean(row.has_login),
+      isLeagueAdmin: Boolean(row.is_league_admin),
+      teams: Array.isArray(row.teams) ? row.teams : [],
+      currentSeasonId: row.current_season_id ?? null,
+      currentSeasonName: row.current_season_name ?? null,
+      registrationStatus: row.registration_status ?? null,
+      paymentStatus: row.payment_status ?? null,
+      competitionEligible: row.competition_eligible !== false,
+      ineligibilityReason: row.ineligibility_reason ?? null,
+    };
+  }
+
   return {
     async listPlayers({ actorUserId }) {
-      const rows = await rpc('list_admin_players', { actor_user_id: actorUserId });
-      return Array.isArray(rows) ? rows.map((row) => ({
-        playerId: row.player_id,
-        displayName: row.display_name,
-        hasLogin: Boolean(row.has_login),
-        isLeagueAdmin: Boolean(row.is_league_admin),
-        teams: Array.isArray(row.teams) ? row.teams : [],
-        currentSeasonId: row.current_season_id ?? null,
-        currentSeasonName: row.current_season_name ?? null,
-        registrationStatus: row.registration_status ?? null,
-        paymentStatus: row.payment_status ?? null,
-        competitionEligible: row.competition_eligible !== false,
-        ineligibilityReason: row.ineligibility_reason ?? null,
-      })) : [];
+      let rows;
+      try {
+        rows = await rpc('list_admin_players_for_management', {
+          actor_user_id: actorUserId,
+        });
+      } catch (error) {
+        if (error.status !== 404) throw error;
+        rows = await rpc('list_admin_players', { actor_user_id: actorUserId });
+      }
+      return Array.isArray(rows) ? rows.map(normalizePlayer) : [];
     },
 
     async setAdminRole({ actorUserId, playerId, enabled, reason = null }) {
