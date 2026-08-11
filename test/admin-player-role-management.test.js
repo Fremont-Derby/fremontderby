@@ -61,6 +61,12 @@ test('admin player repository uses service role RPCs and normalizes player rows'
     hasLogin: true,
     isLeagueAdmin: false,
     teams: [{ teamId: 'team-1', teamName: 'Breakers' }],
+    currentSeasonId: null,
+    currentSeasonName: null,
+    registrationStatus: null,
+    paymentStatus: null,
+    competitionEligible: true,
+    ineligibilityReason: null,
   }]);
 
   const role = await repository.setAdminRole({
