@@ -3,6 +3,7 @@ import { createAdminOperationsRepository } from './adminOperationsRepository.js'
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
 const severityRank = { healthy: 0, warning: 1, critical: 2 };
+const lineupWarningWindowMs = 2 * 60 * 60 * 1000;
 
 function metric(raw, name) {
   const item = raw.metrics?.[name];
@@ -11,6 +12,44 @@ function metric(raw, name) {
 
 function action(severity, code, title, detail, href = null) {
   return { severity, code, title, detail, href };
+}
+
+function roundLabel(round) {
+  if (!round) return 'Current round';
+  return round.stage === 'regular' ? `Round ${round.round_number}` : round.stage;
+}
+
+function lineupDeadlineAction(raw) {
+  if (!raw.currentRound?.lineup_deadline_at) return null;
+  const teamMatches = metric(raw, 'currentRoundTeamMatches');
+  const lineups = metric(raw, 'currentRoundLineups');
+  if (teamMatches === null || lineups === null || teamMatches === 0) return null;
+
+  const expected = teamMatches * 2;
+  const missing = Math.max(0, expected - lineups);
+  if (missing === 0) return null;
+
+  const now = Date.parse(raw.generatedAt);
+  const deadline = Date.parse(raw.currentRound.lineup_deadline_at);
+  if (!Number.isFinite(now) || !Number.isFinite(deadline)) return null;
+
+  const remaining = deadline - now;
+  const label = roundLabel(raw.currentRound);
+  if (remaining <= 0) {
+    return action(
+      'critical', 'lineups_overdue', 'Lineups are overdue',
+      `${label} is missing ${missing} of ${expected} team lineup(s) after the lineup deadline.`,
+      '/lineup',
+    );
+  }
+  if (remaining <= lineupWarningWindowMs) {
+    return action(
+      'warning', 'lineups_due_soon', 'Lineups are due soon',
+      `${label} is missing ${missing} of ${expected} team lineup(s) with less than two hours until the deadline.`,
+      '/lineup',
+    );
+  }
+  return null;
 }
 
 export function buildAdminOperationsOverview(raw, readiness) {
@@ -55,18 +94,18 @@ export function buildAdminOperationsOverview(raw, readiness) {
     ));
   }
 
+  const lineupRisk = lineupDeadlineAction(raw);
+  if (lineupRisk) actions.push(lineupRisk);
+
   const rosterAvailabilityResponses = metric(raw, 'rosterAvailabilityResponses');
   if (
     raw.currentRound
     && metric(raw, 'teams') > 0
     && rosterAvailabilityResponses === 0
   ) {
-    const roundLabel = raw.currentRound.stage === 'regular'
-      ? `Round ${raw.currentRound.round_number}`
-      : raw.currentRound.stage;
     actions.push(action(
       'warning', 'availability_missing', 'Current-round availability is missing',
-      `${roundLabel} has no roster availability responses yet. Captains may be unable to build reliable lineups.`,
+      `${roundLabel(raw.currentRound)} has no roster availability responses yet. Captains may be unable to build reliable lineups.`,
       '/availability',
     ));
   }
@@ -113,6 +152,8 @@ export function buildAdminOperationsOverview(raw, readiness) {
       rounds: metric(raw, 'rounds'),
       teamMatches: metric(raw, 'teamMatches'),
       lineups: metric(raw, 'lineups'),
+      currentRoundTeamMatches: metric(raw, 'currentRoundTeamMatches'),
+      currentRoundLineups: metric(raw, 'currentRoundLineups'),
       playerMatches: metric(raw, 'playerMatches'),
       liveMatches,
       finalizedMatches: metric(raw, 'finalizedMatches'),
