@@ -2,15 +2,15 @@ const fixture = {
   team: 'Break Room Bandits',
   opponent: 'Golden Rail',
   roster: [
-    { id: 'maya', name: 'Maya Example', rating: 525, status: 'available', type: 'roster' },
-    { id: 'theo', name: 'Theo Example', rating: 505, status: 'unsure', type: 'roster' },
-    { id: 'alex', name: 'Alex Example', rating: 480, status: 'unavailable', type: 'roster' },
-    { id: 'jamie', name: 'Jamie Example', rating: 495, status: 'available', type: 'free-agent' },
+    { id: 'maya', name: 'Maya Banks', rating: 525, status: 'available', type: 'roster' },
+    { id: 'theo', name: 'Theo Martin', rating: 505, status: 'unsure', type: 'roster' },
+    { id: 'alex', name: 'Alex Monroe', rating: 480, status: 'unavailable', type: 'roster' },
+    { id: 'jamie', name: 'Jamie Park', rating: 495, status: 'available', type: 'free-agent' },
   ],
   opponentLineup: [
-    { name: 'Eli Example', rating: 475 },
-    { name: 'Dana Example', rating: 500 },
-    { name: 'Owen Example', rating: 515 },
+    { name: 'Eli Torres', rating: 475 },
+    { name: 'Dana Brooks', rating: 500 },
+    { name: 'Owen Wells', rating: 515 },
   ],
 };
 
