@@ -27,6 +27,9 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /\/api\/team-matches\//);
   assert.match(html, /\/api\/chat-reports/);
   assert.match(html, /data-report-dialog/);
+  assert.match(html, /data-load-older/);
+  assert.match(html, /beforeMessageId/);
+  assert.match(html, /refreshThreadMetadata/);
   assert.match(html, /\/messages\/moderation/);
   assert.match(html, /detectModerator/);
   assert.match(html, /setInterval[\s\S]*4000/);
