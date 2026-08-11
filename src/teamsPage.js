@@ -1,16 +1,4 @@
-function browserConfig(env = {}) {
-  return {
-    supabaseUrl: env.SUPABASE_URL || '',
-    supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
-  };
-}
-
-function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
-}
-
-export function renderTeamsPage(env = {}) {
-  const config = safeJson(browserConfig(env));
+export function renderTeamsPage() {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -26,47 +14,20 @@ export function renderTeamsPage(env = {}) {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">T</span><span>Fremont Derby Teams</span></div><div class="status" data-status>Loading…</div></header>
-
     <form class="setup" data-create-form>
-      <label>Season
-        <select name="seasonId" data-season-select><option value="">Loading open season…</option></select>
-      </label>
-      <label>Team name
-        <input name="teamName" data-team-name autocomplete="off" maxlength="80" placeholder="Team name" />
-      </label>
+      <label>Season<select name="seasonId" data-season-select><option value="">Loading open season…</option></select></label>
+      <label>Team name<input name="teamName" data-team-name autocomplete="off" maxlength="80" placeholder="Team name" /></label>
       <button class="primary" data-create-team type="submit">Create team</button>
     </form>
     <div class="hint" data-season-help hidden>No registration season is open yet. <a href="/season-setup">League setup</a> must create Season 1 first.</div>
-
     <section class="grid">
       <article class="panel"><div class="panel-head"><span>My invitations</span><button class="ghost" data-refresh type="button">Refresh</button></div><div data-invitations></div></article>
       <div data-captain-teams></div>
     </section>
   </main>
-
   <script>
-    const config=${config};
-    const createForm=document.querySelector('[data-create-form]');
-    const seasonSelect=document.querySelector('[data-season-select]');
-    const teamNameInput=document.querySelector('[data-team-name]');
-    const createTeamButton=document.querySelector('[data-create-team]');
-    const seasonHelp=document.querySelector('[data-season-help]');
-    const statusEl=document.querySelector('[data-status]');
-    const captainTeamsEl=document.querySelector('[data-captain-teams]');
-    const invitationsEl=document.querySelector('[data-invitations]');
-    let playerDirectory=[];
-
-    function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
-    function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
-    function requireToken(){const value=accessToken();if(!value)throw new Error('Sign in with Google to manage teams.');return value}
-    async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
-    async function api(path,options={}){const response=await fetch(path,{...options,headers:{authorization:'Bearer '+requireToken(),'content-type':'application/json',...(options.headers||{})}});const body=await parseJson(response);if(response.status===401){sessionStorage.removeItem('fd.accessToken');throw new Error('Your sign-in expired. Open Profile and sign in again.')}if(!response.ok)throw new Error(body.error||'Request failed');return body}
-    async function publicRows(path){if(!config.supabaseUrl||!config.supabasePublishableKey)throw new Error('Browser Supabase configuration is unavailable.');const response=await fetch(config.supabaseUrl.replace(/\/$/,'')+'/rest/v1/'+path,{headers:{apikey:config.supabasePublishableKey,accept:'application/json'}});const body=await parseJson(response);if(!response.ok)throw new Error(body.message||body.error||'Could not load public league data');return Array.isArray(body)?body:[]}
-    function text(value){return value==null||value===''?'-':String(value)}
-    function cell(value){const td=document.createElement('td');td.textContent=text(value);return td}
-    function actionButton(label,className,dataset){const button=document.createElement('button');button.type='button';button.className=className;button.textContent=label;for(const [key,value] of Object.entries(dataset))button.dataset[key]=value;return button}
-    function empty(message){const div=document.createElement('div');div.className='empty';div.textContent=message;return div}
-
+    const createForm=document.querySelector('[data-create-form]');const seasonSelect=document.querySelector('[data-season-select]');const teamNameInput=document.querySelector('[data-team-name]');const createTeamButton=document.querySelector('[data-create-team]');const seasonHelp=document.querySelector('[data-season-help]');const statusEl=document.querySelector('[data-status]');const captainTeamsEl=document.querySelector('[data-captain-teams]');const invitationsEl=document.querySelector('[data-invitations]');let playerDirectory=[];
+    function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}function requireToken(){const value=accessToken();if(!value)throw new Error('Sign in with Google to manage teams.');return value}async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}async function api(path,options={}){const response=await fetch(path,{...options,headers:{authorization:'Bearer '+requireToken(),'content-type':'application/json',...(options.headers||{})}});const body=await parseJson(response);if(response.status===401){sessionStorage.removeItem('fd.accessToken');throw new Error('Your sign-in expired. Open Profile and sign in again.')}if(!response.ok)throw new Error(body.error||'Request failed');return body}function text(value){return value==null||value===''?'-':String(value)}function cell(value){const td=document.createElement('td');td.textContent=text(value);return td}function actionButton(label,className,dataset){const button=document.createElement('button');button.type='button';button.className=className;button.textContent=label;for(const [key,value] of Object.entries(dataset))button.dataset[key]=value;return button}function empty(message){const div=document.createElement('div');div.className='empty';div.textContent=message;return div}
     function renderSeasonOptions(seasons){const requested=new URLSearchParams(location.search).get('season')||localStorage.getItem('fd.teamsSeasonId')||'';seasonSelect.replaceChildren();for(const season of seasons){const option=document.createElement('option');option.value=season.id;option.textContent=season.name+(season.first_round_date?' · starts '+season.first_round_date:'');seasonSelect.append(option)}if(requested&&seasons.some((season)=>season.id===requested))seasonSelect.value=requested;if(seasons.length){localStorage.setItem('fd.teamsSeasonId',seasonSelect.value);seasonSelect.disabled=false;createTeamButton.disabled=false;seasonHelp.hidden=true}else{const option=document.createElement('option');option.value='';option.textContent='No open registration season';seasonSelect.append(option);seasonSelect.disabled=true;createTeamButton.disabled=true;seasonHelp.hidden=false}}
     function renderInvitations(invitations){invitationsEl.replaceChildren();if(!invitations.length){invitationsEl.append(empty('No pending invitations.'));return}const table=document.createElement('table');table.innerHTML='<thead><tr><th>Season</th><th>Team</th><th>Status</th><th>Actions</th></tr></thead>';const body=document.createElement('tbody');for(const invitation of invitations){const actions=document.createElement('td');const wrap=document.createElement('div');wrap.className='actions';wrap.append(actionButton('Accept','primary',{respondInvitation:invitation.invitationId,response:'accepted'}),actionButton('Decline','danger',{respondInvitation:invitation.invitationId,response:'declined'}));actions.append(wrap);const row=document.createElement('tr');row.append(cell(invitation.seasonName),cell(invitation.teamName),cell(invitation.status),actions);body.append(row)}table.append(body);invitationsEl.append(table)}
     function renderRoster(team,body){for(const member of team.roster||[]){const actions=document.createElement('td');if(member.role!=='captain'){const wrap=document.createElement('div');wrap.className='actions';wrap.append(actionButton('Remove','danger',{removeMembership:member.membershipId}));actions.append(wrap)}else actions.textContent='-';const rating=member.fargoRating==null?'unrated':member.fargoRating;const row=document.createElement('tr');row.append(cell(member.displayName),cell(member.role),cell(rating),actions);body.append(row)}}
@@ -74,23 +35,12 @@ export function renderTeamsPage(env = {}) {
     function playerSelect(team){const select=document.createElement('select');select.dataset.invitePlayerSelect=team.teamId;const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Choose a player';select.append(placeholder);const excluded=new Set([...(team.roster||[]).map((member)=>member.playerId),...(team.pendingInvitations||[]).map((invitation)=>invitation.playerId)]);for(const player of playerDirectory){if(excluded.has(player.id))continue;const option=document.createElement('option');option.value=player.id;option.textContent=player.display_name;select.append(option)}return select}
     function renderCaptainTeams(teams){captainTeamsEl.replaceChildren();if(!teams.length){captainTeamsEl.append(empty('No teams yet. Create one above or accept an invitation.'));return}for(const team of teams){const panel=document.createElement('article');panel.className='panel';const head=document.createElement('div');head.className='panel-head';const title=document.createElement('span');title.textContent=team.teamName+' | '+team.seasonName;const badge=document.createElement('span');badge.className='badge';badge.textContent=String((team.roster||[]).length)+' players';const chatLink=document.createElement('a');chatLink.className='chat-link';chatLink.href='/messages?team='+encodeURIComponent(team.teamId);chatLink.textContent='Team chat';const headActions=document.createElement('div');headActions.className='head-actions';headActions.append(chatLink,badge);head.append(title,headActions);const stack=document.createElement('div');stack.className='stack';const inviteRow=document.createElement('div');inviteRow.className='invite-row';const label=document.createElement('label');label.textContent='Invite player';label.append(playerSelect(team));inviteRow.append(label,actionButton('Send invite','secondary',{inviteTeam:team.teamId}));const split=document.createElement('div');split.className='split';const rosterPanel=document.createElement('div');rosterPanel.className='panel';rosterPanel.innerHTML='<div class="panel-head"><span>Roster</span></div>';const rosterTable=document.createElement('table');rosterTable.innerHTML='<thead><tr><th>Player</th><th>Role</th><th>Rating</th><th>Actions</th></tr></thead>';const rosterBody=document.createElement('tbody');renderRoster(team,rosterBody);rosterTable.append(rosterBody);rosterPanel.append(rosterTable);const invitePanel=document.createElement('div');invitePanel.className='panel';invitePanel.innerHTML='<div class="panel-head"><span>Pending invites</span></div>';if(team.pendingInvitations&&team.pendingInvitations.length){const inviteTable=document.createElement('table');inviteTable.innerHTML='<thead><tr><th>Player</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>';const inviteBody=document.createElement('tbody');renderPendingInvitations(team,inviteBody);inviteTable.append(inviteBody);invitePanel.append(inviteTable)}else invitePanel.append(empty('No pending invites.'));split.append(rosterPanel,invitePanel);stack.append(inviteRow,split);panel.append(head,stack);captainTeamsEl.append(panel)}}
     function renderManagement(data){renderInvitations(data.invitations||[]);renderCaptainTeams(data.captain_teams||[])}
-
-    async function loadPublicDirectory(){const [seasons,players]=await Promise.all([publicRows('seasons?select=id,name,status,first_round_date&status=eq.registration&order=created_at.desc'),publicRows('players?select=id,display_name&order=display_name.asc')]);playerDirectory=players;renderSeasonOptions(seasons)}
-    async function loadTeams(){const body=await api('/api/me/teams',{method:'GET'});renderManagement(body.teamManagement||{captain_teams:[],invitations:[]})}
+    async function loadTeams(){const body=await api('/api/me/teams',{method:'GET'});const data=body.teamManagement||{captain_teams:[],invitations:[],open_seasons:[],players:[]};playerDirectory=data.players||[];renderSeasonOptions(data.open_seasons||[]);renderManagement(data);return data}
     async function createTeam(){const seasonId=seasonSelect.value;const teamName=teamNameInput.value.trim();if(!seasonId)throw new Error('No registration season is open.');if(!teamName)throw new Error('Team name is required');localStorage.setItem('fd.teamsSeasonId',seasonId);setStatus('Creating team...');await api('/api/seasons/'+encodeURIComponent(seasonId)+'/teams',{method:'POST',body:JSON.stringify({teamName})});teamNameInput.value='';await loadTeams();setStatus('Team created','ok')}
     async function invitePlayer(teamId){const select=Array.from(document.querySelectorAll('[data-invite-player-select]')).find((candidate)=>candidate.dataset.invitePlayerSelect===teamId);const playerId=select?select.value:'';if(!playerId)throw new Error('Choose a player to invite');setStatus('Sending invitation...');await api('/api/teams/'+encodeURIComponent(teamId)+'/invitations',{method:'POST',body:JSON.stringify({playerId})});await loadTeams();setStatus('Invitation sent','ok')}
-    async function cancelInvitation(invitationId){setStatus('Canceling invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Invitation canceled','ok')}
-    async function removeMember(membershipId){setStatus('Removing member...');await api('/api/team-memberships/'+encodeURIComponent(membershipId)+'/remove',{method:'POST',body:'{}'});await loadTeams();setStatus('Roster updated','ok')}
-    async function respondToInvitation(invitationId,response){setStatus(response==='accepted'?'Accepting invitation...':'Declining invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus('Invitation '+response,'ok')}
-    async function run(action){try{await action()}catch(error){setStatus(error.message,'error')}}
-
-    createForm.addEventListener('submit',(event)=>{event.preventDefault();run(createTeam)});
-    seasonSelect.addEventListener('change',()=>{if(seasonSelect.value)localStorage.setItem('fd.teamsSeasonId',seasonSelect.value)});
-    document.querySelector('[data-refresh]').addEventListener('click',()=>run(loadTeams));
-    document.addEventListener('click',(event)=>{const button=event.target.closest('button');if(!button)return;if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response))});
-
-    renderManagement({captain_teams:[],invitations:[]});
-    run(async()=>{await loadPublicDirectory();if(accessToken()){await loadTeams();setStatus('Teams loaded','ok')}else{setStatus('Sign in with Google to create or manage a team.','error');const link=document.createElement('a');link.className='signin';link.href='/profile';link.textContent='Sign in';captainTeamsEl.replaceChildren(link)}});
+    async function cancelInvitation(invitationId){setStatus('Canceling invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Invitation canceled','ok')}async function removeMember(membershipId){setStatus('Removing member...');await api('/api/team-memberships/'+encodeURIComponent(membershipId)+'/remove',{method:'POST',body:'{}'});await loadTeams();setStatus('Roster updated','ok')}async function respondToInvitation(invitationId,response){setStatus(response==='accepted'?'Accepting invitation...':'Declining invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus('Invitation '+response,'ok')}async function run(action){try{await action()}catch(error){setStatus(error.message,'error')}}
+    createForm.addEventListener('submit',(event)=>{event.preventDefault();run(createTeam)});seasonSelect.addEventListener('change',()=>{if(seasonSelect.value)localStorage.setItem('fd.teamsSeasonId',seasonSelect.value)});document.querySelector('[data-refresh]').addEventListener('click',()=>run(async()=>{await loadTeams();setStatus('Teams loaded','ok')}));document.addEventListener('click',(event)=>{const button=event.target.closest('button');if(!button)return;if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response))});
+    renderManagement({captain_teams:[],invitations:[]});if(accessToken())run(async()=>{await loadTeams();setStatus('Teams loaded','ok')});else{setStatus('Sign in with Google to create or manage a team.','error');seasonSelect.disabled=true;createTeamButton.disabled=true;const link=document.createElement('a');link.className='signin';link.href='/profile';link.textContent='Sign in';captainTeamsEl.replaceChildren(link)}
   </script>
 </body>
 </html>`;
