@@ -2,13 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderTeamsPage } from '../src/teamsPage.js';
 
-test('teams page renders team creation and roster management controls', () => {
+test('teams page uses the signed-in session and human-readable team setup controls', () => {
   const html = renderTeamsPage();
 
   assert.match(html, /Fremont Derby Teams/);
-  assert.match(html, /data-season-id/);
+  assert.match(html, /data-season-select/);
   assert.match(html, /data-team-name/);
-  assert.match(html, /data-token/);
+  assert.match(html, /data-create-team/);
+  assert.doesNotMatch(html, /data-season-id/);
+  assert.doesNotMatch(html, /data-token/);
+  assert.doesNotMatch(html, />Season ID</i);
+  assert.doesNotMatch(html, />Access token</i);
+  assert.doesNotMatch(html, />Player ID</i);
+  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
+  assert.match(html, /Choose a player/);
   assert.match(html, /data-refresh/);
   assert.match(html, /data-captain-teams/);
   assert.match(html, /data-invitations/);
