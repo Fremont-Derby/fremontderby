@@ -15,6 +15,7 @@ import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
+import { teamMembershipRequestHttpHandlers } from './teamMembershipRequestHttp.js';
 
 function htmlResponse(html, pathname, status = 200) {
   return new Response(decorateHtmlWithShell(html, pathname), {
@@ -123,6 +124,15 @@ export default {
     const matchupReadMatch = url.pathname.match(
       /^\/api\/team-matches\/([^/]+)\/messages\/read$/,
     );
+    const teamMembershipRequestMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/membership-request$/,
+    );
+    const membershipRequestResponseMatch = url.pathname.match(
+      /^\/api\/team-membership-requests\/([^/]+)\/respond$/,
+    );
+    const membershipRequestCancelMatch = url.pathname.match(
+      /^\/api\/team-membership-requests\/([^/]+)\/cancel$/,
+    );
 
     if (request.method === 'GET' && url.pathname === '/favicon.svg') {
       return faviconResponse();
@@ -180,6 +190,38 @@ export default {
       return scorableMatchesHttpHandlers.list(request, env);
     }
 
+    if (url.pathname === '/api/me/team-membership-requests') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return teamMembershipRequestHttpHandlers.list(request, env);
+    }
+
+    if (teamMembershipRequestMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return teamMembershipRequestHttpHandlers.requestJoin(
+        request,
+        env,
+        decodeURIComponent(teamMembershipRequestMatch[1]),
+      );
+    }
+
+    if (membershipRequestResponseMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return teamMembershipRequestHttpHandlers.respond(
+        request,
+        env,
+        decodeURIComponent(membershipRequestResponseMatch[1]),
+      );
+    }
+
+    if (membershipRequestCancelMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return teamMembershipRequestHttpHandlers.cancel(
+        request,
+        env,
+        decodeURIComponent(membershipRequestCancelMatch[1]),
+      );
+    }
+
     if (url.pathname === '/api/me/chat-threads') {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listThreads(request, env);
@@ -226,7 +268,9 @@ export default {
     if (moderateChatReportMatch) {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.moderateReport(
-        request, env, decodeURIComponent(moderateChatReportMatch[1]),
+        request,
+        env,
+        decodeURIComponent(moderateChatReportMatch[1]),
       );
     }
 
