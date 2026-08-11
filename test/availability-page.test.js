@@ -22,3 +22,15 @@ test('availability page uses signed-in human-readable league-night selection', (
   assert.match(html, /\/free-agent-availability\/me/);
   assert.match(html, /No published regular-season rounds/);
 });
+
+test('dual-team player chooses one matchup team before captains build lineups', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /Choose your team/);
+  assert.match(html, /Required before lineups/);
+  assert.match(html, /\/api\/me\/team-match-choices/);
+  assert.match(html, /\/team-choice\/me/);
+  assert.match(html, /You belong to both teams/);
+  assert.match(html, /data-choose-team/);
+  assert.match(html, /Choice locked because a lineup already includes you/);
+});
