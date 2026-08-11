@@ -107,6 +107,15 @@ export default {
     const playerBlockMatch = url.pathname.match(
       /^\/api\/players\/([^/]+)\/block$/,
     );
+    const leagueMessagesMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/messages$/,
+    );
+    const leagueReadMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/messages\/read$/,
+    );
+    const moderateChatReportMatch = url.pathname.match(
+      /^\/api\/admin\/chat-reports\/([^/]+)\/resolve$/,
+    );
 
     if (request.method === 'GET' && url.pathname === '/favicon.svg') {
       return faviconResponse();
@@ -162,6 +171,46 @@ export default {
     if (url.pathname === '/api/me/chat-threads') {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listThreads(request, env);
+    }
+
+    if (url.pathname === '/api/me/league-chat-threads') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listLeagueThreads(request, env);
+    }
+
+    if (url.pathname === '/api/chat-reports') {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.reportMessage(request, env);
+    }
+
+    if (url.pathname === '/api/admin/chat-reports') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listReports(request, env);
+    }
+
+    if (moderateChatReportMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.moderateReport(
+        request, env, decodeURIComponent(moderateChatReportMatch[1]),
+      );
+    }
+
+    if (leagueReadMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.markLeagueChatRead(
+        request, env, decodeURIComponent(leagueReadMatch[1]),
+      );
+    }
+
+    if (leagueMessagesMatch) {
+      const seasonId = decodeURIComponent(leagueMessagesMatch[1]);
+      if (request.method === 'GET') {
+        return chatHttpHandlers.listLeagueMessages(request, env, seasonId);
+      }
+      if (request.method === 'POST') {
+        return chatHttpHandlers.sendLeagueMessage(request, env, seasonId);
+      }
+      return methodNotAllowed();
     }
 
     if (url.pathname === '/api/me/direct-message-inbox') {
