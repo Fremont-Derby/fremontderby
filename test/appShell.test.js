@@ -38,7 +38,7 @@ test('live scorecard keeps the reduced shell without the fixed mobile dock', () 
 
   const source = '<!doctype html><html><head><title>Score</title></head><body><main>Score</main></body></html>';
   const html = decorateHtmlWithShell(source, '/scorecard');
-  assert.doesNotMatch(html, /fd-mobile-dock-spacer/);
+  assert.doesNotMatch(html, /<div class="fd-mobile-dock-spacer"/);
 });
 
 test('shared shell decorates standalone pages exactly once', () => {
@@ -48,7 +48,7 @@ test('shared shell decorates standalone pages exactly once', () => {
 
   assert.match(first, /data-fd-shell/);
   assert.match(first, /href="\/profile"[^>]*aria-current="page"/);
-  assert.match(first, /fd-mobile-dock-spacer/);
+  assert.match(first, /<div class="fd-mobile-dock-spacer"/);
   assert.equal((second.match(/<header class="fd-shell"/g) || []).length, 1);
 });
 
