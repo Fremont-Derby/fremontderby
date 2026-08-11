@@ -220,5 +220,38 @@ export function createChatRepository(env, { fetch: fetchImpl = globalThis.fetch 
       });
       return Array.isArray(result) ? result[0] : result;
     },
+
+    async listMatchupChatThreads({ actorUserId }) {
+      return rpc('get_my_matchup_chat_inbox', { actor_user_id: actorUserId });
+    },
+
+    async listMatchupMessages({ actorUserId, teamMatchId, before, beforeMessageId, limit }) {
+      return rpc('list_matchup_chat_messages', {
+        actor_user_id: actorUserId,
+        target_team_match_id: teamMatchId,
+        before_created_at: before,
+        before_message_id: beforeMessageId,
+        result_limit: limit,
+      });
+    },
+
+    async sendMatchupMessage({ actorUserId, teamMatchId, body, clientMessageId }) {
+      const result = await rpc('send_matchup_chat_message', {
+        actor_user_id: actorUserId,
+        target_team_match_id: teamMatchId,
+        message_body: body,
+        message_client_id: clientMessageId,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async markMatchupChatRead({ actorUserId, teamMatchId, readAt }) {
+      const result = await rpc('mark_matchup_chat_read', {
+        actor_user_id: actorUserId,
+        target_team_match_id: teamMatchId,
+        read_through_at: readAt,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
   };
 }
