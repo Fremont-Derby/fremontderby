@@ -60,26 +60,31 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
           actor_user_id: actorUserId,
         }),
       });
-      const openSeasons = await requestJson(
-        fetchImpl,
-        `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date&status=eq.registration&order=created_at.desc`,
-        { method: 'GET', headers },
-      );
-      const players = await requestJson(
-        fetchImpl,
-        `${supabaseUrl}/rest/v1/players?select=id,display_name&order=display_name.asc`,
-        { method: 'GET', headers },
-      );
 
       const management = Array.isArray(result)
         ? (result[0] ?? { player_id: null, captain_teams: [], invitations: [] })
         : (result ?? { player_id: null, captain_teams: [], invitations: [] });
 
-      return {
-        ...management,
-        open_seasons: Array.isArray(openSeasons) ? openSeasons : [],
-        players: Array.isArray(players) ? players : [],
-      };
+      try {
+        const openSeasons = await requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date&status=eq.registration&order=created_at.desc`,
+          { method: 'GET', headers },
+        );
+        const players = await requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/players?select=id,display_name&order=display_name.asc`,
+          { method: 'GET', headers },
+        );
+
+        return {
+          ...management,
+          open_seasons: Array.isArray(openSeasons) ? openSeasons : [],
+          players: Array.isArray(players) ? players : [],
+        };
+      } catch {
+        return management;
+      }
     },
 
     async listOwnTeamTrades({ actorUserId }) {
