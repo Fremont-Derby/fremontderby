@@ -22,14 +22,16 @@ function repositorySpy() {
   };
 }
 
-test('dual scoring commands forward actor-scoped match requests', async () => {
+const scoreContext = { actorUserId: 'user-1', playerMatchId: 'match-1', scoringTeamId: 'team-a' };
+
+test('dual scoring commands forward actor, match, and scoring-team context', async () => {
   const repository = repositorySpy();
   const resolvedRacks = [{ rackNumber: 1, discipline: '8-ball', winnerSide: 'A' }];
-  await getPlayerMatchScoreComparisonCommand({ actorUserId: 'user-1', playerMatchId: 'match-1' }, repository);
-  await recordPlayerMatchScoreRackCommand({ actorUserId: 'user-1', playerMatchId: 'match-1', winnerSide: 'A' }, repository);
-  await undoPlayerMatchScoreRackCommand({ actorUserId: 'user-1', playerMatchId: 'match-1' }, repository);
-  await confirmPlayerMatchScoreCommand({ actorUserId: 'user-1', playerMatchId: 'match-1' }, repository);
-  await finalizeReconciledPlayerMatchCommand({ actorUserId: 'user-1', playerMatchId: 'match-1' }, repository);
+  await getPlayerMatchScoreComparisonCommand(scoreContext, repository);
+  await recordPlayerMatchScoreRackCommand({ ...scoreContext, winnerSide: 'A' }, repository);
+  await undoPlayerMatchScoreRackCommand(scoreContext, repository);
+  await confirmPlayerMatchScoreCommand(scoreContext, repository);
+  await finalizeReconciledPlayerMatchCommand(scoreContext, repository);
   await adminOverrideReconciledPlayerMatchCommand({
     actorUserId: 'admin-1',
     playerMatchId: 'match-1',
@@ -38,11 +40,11 @@ test('dual scoring commands forward actor-scoped match requests', async () => {
   }, repository);
 
   assert.deepEqual(repository.calls, [
-    ['compare', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
-    ['record', { actorUserId: 'user-1', playerMatchId: 'match-1', winnerSide: 'A' }],
-    ['undo', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
-    ['confirm', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
-    ['finalize', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
+    ['compare', scoreContext],
+    ['record', { ...scoreContext, winnerSide: 'A' }],
+    ['undo', scoreContext],
+    ['confirm', scoreContext],
+    ['finalize', scoreContext],
     ['adminOverride', {
       actorUserId: 'admin-1',
       playerMatchId: 'match-1',
@@ -52,23 +54,23 @@ test('dual scoring commands forward actor-scoped match requests', async () => {
   ]);
 });
 
-test('dual scoring commands validate actor, match, winner side, and admin override payloads', async () => {
+test('dual scoring commands validate actor, match, scoring team, winner side, and admin override payloads', async () => {
   const repository = repositorySpy();
   await assert.rejects(
-    recordPlayerMatchScoreRackCommand({ actorUserId: 'user-1', playerMatchId: 'match-1', winnerSide: 'X' }, repository),
+    recordPlayerMatchScoreRackCommand({ ...scoreContext, winnerSide: 'X' }, repository),
     /winnerSide must be A or B/,
   );
   await assert.rejects(
-    getPlayerMatchScoreComparisonCommand({ actorUserId: '', playerMatchId: 'match-1' }, repository),
+    getPlayerMatchScoreComparisonCommand({ ...scoreContext, actorUserId: '' }, repository),
     /actorUserId is required/,
   );
   await assert.rejects(
-    confirmPlayerMatchScoreCommand({ actorUserId: 'user-1', playerMatchId: '' }, repository),
+    confirmPlayerMatchScoreCommand({ ...scoreContext, playerMatchId: '' }, repository),
     /playerMatchId is required/,
   );
   await assert.rejects(
-    finalizeReconciledPlayerMatchCommand({ actorUserId: '', playerMatchId: 'match-1' }, repository),
-    /actorUserId is required/,
+    finalizeReconciledPlayerMatchCommand({ ...scoreContext, scoringTeamId: '' }, repository),
+    /scoringTeamId is required/,
   );
   await assert.rejects(
     adminOverrideReconciledPlayerMatchCommand({ actorUserId: 'admin-1', playerMatchId: 'match-1', reason: ' ', resolvedRacks: [{}] }, repository),

@@ -12,10 +12,12 @@ function assertPlayerMatchId(playerMatchId) {
   if (!playerMatchId) throw new Error('playerMatchId is required');
 }
 
+function assertScoringTeamId(scoringTeamId) {
+  if (!scoringTeamId) throw new Error('scoringTeamId is required');
+}
+
 function normalizeWinnerSide(value) {
-  if (!['A', 'B'].includes(value)) {
-    throw new Error('winnerSide must be A or B');
-  }
+  if (!['A', 'B'].includes(value)) throw new Error('winnerSide must be A or B');
   return value;
 }
 
@@ -26,64 +28,52 @@ function normalizeReason(value) {
 }
 
 function normalizeResolvedRacks(value) {
-  if (!Array.isArray(value) || value.length === 0) {
-    throw new Error('resolvedRacks must be a non-empty array');
-  }
+  if (!Array.isArray(value) || value.length === 0) throw new Error('resolvedRacks must be a non-empty array');
   return value;
 }
 
-export async function getPlayerMatchScoreComparisonCommand(
-  { actorUserId, playerMatchId },
-  repository,
-) {
+function assertScoringContext({ actorUserId, playerMatchId, scoringTeamId }) {
   assertActor(actorUserId);
   assertPlayerMatchId(playerMatchId);
+  assertScoringTeamId(scoringTeamId);
+}
+
+export async function getPlayerMatchScoreComparisonCommand(input, repository) {
+  assertScoringContext(input);
   assertRepository(repository, 'getPlayerMatchScoreComparison');
-  return repository.getPlayerMatchScoreComparison({ actorUserId, playerMatchId });
+  return repository.getPlayerMatchScoreComparison(input);
 }
 
 export async function recordPlayerMatchScoreRackCommand(
-  { actorUserId, playerMatchId, winnerSide },
+  { actorUserId, playerMatchId, scoringTeamId, winnerSide },
   repository,
 ) {
-  assertActor(actorUserId);
-  assertPlayerMatchId(playerMatchId);
+  assertScoringContext({ actorUserId, playerMatchId, scoringTeamId });
   assertRepository(repository, 'recordPlayerMatchScoreRack');
   return repository.recordPlayerMatchScoreRack({
     actorUserId,
     playerMatchId,
+    scoringTeamId,
     winnerSide: normalizeWinnerSide(winnerSide),
   });
 }
 
-export async function undoPlayerMatchScoreRackCommand(
-  { actorUserId, playerMatchId },
-  repository,
-) {
-  assertActor(actorUserId);
-  assertPlayerMatchId(playerMatchId);
+export async function undoPlayerMatchScoreRackCommand(input, repository) {
+  assertScoringContext(input);
   assertRepository(repository, 'undoPlayerMatchScoreRack');
-  return repository.undoPlayerMatchScoreRack({ actorUserId, playerMatchId });
+  return repository.undoPlayerMatchScoreRack(input);
 }
 
-export async function confirmPlayerMatchScoreCommand(
-  { actorUserId, playerMatchId },
-  repository,
-) {
-  assertActor(actorUserId);
-  assertPlayerMatchId(playerMatchId);
+export async function confirmPlayerMatchScoreCommand(input, repository) {
+  assertScoringContext(input);
   assertRepository(repository, 'confirmPlayerMatchScore');
-  return repository.confirmPlayerMatchScore({ actorUserId, playerMatchId });
+  return repository.confirmPlayerMatchScore(input);
 }
 
-export async function finalizeReconciledPlayerMatchCommand(
-  { actorUserId, playerMatchId },
-  repository,
-) {
-  assertActor(actorUserId);
-  assertPlayerMatchId(playerMatchId);
+export async function finalizeReconciledPlayerMatchCommand(input, repository) {
+  assertScoringContext(input);
   assertRepository(repository, 'finalizeReconciledPlayerMatch');
-  return repository.finalizeReconciledPlayerMatch({ actorUserId, playerMatchId });
+  return repository.finalizeReconciledPlayerMatch(input);
 }
 
 export async function adminOverrideReconciledPlayerMatchCommand(

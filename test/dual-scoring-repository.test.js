@@ -20,30 +20,33 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'server-only-key',
 };
 
-test('comparison repository calls actor-scoped comparison RPC', async () => {
+const scoreContext = { actorUserId: 'u1', playerMatchId: 'm1', scoringTeamId: 'team-a' };
+const expectedContext = {
+  actor_user_id: 'u1',
+  target_player_match_id: 'm1',
+  target_scoring_team_id: 'team-a',
+};
+
+test('comparison repository calls team-scoped comparison RPC', async () => {
   const fake = fakeFetch('get_player_match_score_comparison', [{ histories_match: false }]);
   const repository = createDualScoringRepository(env, { fetch: fake.fetchImpl });
-  const result = await repository.getPlayerMatchScoreComparison({ actorUserId: 'u1', playerMatchId: 'm1' });
+  const result = await repository.getPlayerMatchScoreComparison(scoreContext);
   assert.equal(result.histories_match, false);
-  assert.deepEqual(JSON.parse(fake.calls[0].init.body), {
-    actor_user_id: 'u1',
-    target_player_match_id: 'm1',
-  });
+  assert.deepEqual(JSON.parse(fake.calls[0].init.body), expectedContext);
   assert.equal(fake.calls[0].init.headers.apikey, 'server-only-key');
 });
 
-test('rack repository sends winner side to independent score RPC', async () => {
+test('rack repository sends winner side and scoring team', async () => {
   const fake = fakeFetch('record_player_match_score_rack');
   const repository = createDualScoringRepository(env, { fetch: fake.fetchImpl });
-  await repository.recordPlayerMatchScoreRack({ actorUserId: 'u1', playerMatchId: 'm1', winnerSide: 'B' });
+  await repository.recordPlayerMatchScoreRack({ ...scoreContext, winnerSide: 'B' });
   assert.deepEqual(JSON.parse(fake.calls[0].init.body), {
-    actor_user_id: 'u1',
-    target_player_match_id: 'm1',
+    ...expectedContext,
     rack_winner_side: 'B',
   });
 });
 
-test('actor-scoped dual score actions call their service RPCs', async () => {
+test('team-scoped dual score actions call their service RPCs', async () => {
   for (const [method, rpc] of [
     ['undoPlayerMatchScoreRack', 'undo_player_match_score_rack'],
     ['confirmPlayerMatchScore', 'confirm_player_match_score'],
@@ -51,11 +54,8 @@ test('actor-scoped dual score actions call their service RPCs', async () => {
   ]) {
     const fake = fakeFetch(rpc);
     const repository = createDualScoringRepository(env, { fetch: fake.fetchImpl });
-    await repository[method]({ actorUserId: 'u1', playerMatchId: 'm1' });
-    assert.deepEqual(JSON.parse(fake.calls[0].init.body), {
-      actor_user_id: 'u1',
-      target_player_match_id: 'm1',
-    });
+    await repository[method](scoreContext);
+    assert.deepEqual(JSON.parse(fake.calls[0].init.body), expectedContext);
   }
 });
 

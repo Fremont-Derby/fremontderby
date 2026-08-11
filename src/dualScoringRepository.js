@@ -20,11 +20,7 @@ function jsonHeaders(serviceRoleKey) {
 async function parseResponse(response) {
   const text = await response.text();
   if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
+  try { return JSON.parse(text); } catch { return text; }
 }
 
 async function requestJson(fetchImpl, url, init) {
@@ -39,57 +35,42 @@ async function requestJson(fetchImpl, url, init) {
 
 export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
-
   const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
   const serviceRoleKey = requireEnvValue(env, 'SUPABASE_SERVICE_ROLE_KEY');
   const headers = jsonHeaders(serviceRoleKey);
 
   async function callRpc(name, body) {
     const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${name}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+      method: 'POST', headers, body: JSON.stringify(body),
     });
     return Array.isArray(result) ? result[0] : result;
   }
 
-  return {
-    getPlayerMatchScoreComparison({ actorUserId, playerMatchId }) {
-      return callRpc('get_player_match_score_comparison', {
-        actor_user_id: actorUserId,
-        target_player_match_id: playerMatchId,
-      });
-    },
+  const scoringBody = ({ actorUserId, playerMatchId, scoringTeamId }) => ({
+    actor_user_id: actorUserId,
+    target_player_match_id: playerMatchId,
+    target_scoring_team_id: scoringTeamId,
+  });
 
-    recordPlayerMatchScoreRack({ actorUserId, playerMatchId, winnerSide }) {
+  return {
+    getPlayerMatchScoreComparison(input) {
+      return callRpc('get_player_match_score_comparison', scoringBody(input));
+    },
+    recordPlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, winnerSide }) {
       return callRpc('record_player_match_score_rack', {
-        actor_user_id: actorUserId,
-        target_player_match_id: playerMatchId,
+        ...scoringBody({ actorUserId, playerMatchId, scoringTeamId }),
         rack_winner_side: winnerSide,
       });
     },
-
-    undoPlayerMatchScoreRack({ actorUserId, playerMatchId }) {
-      return callRpc('undo_player_match_score_rack', {
-        actor_user_id: actorUserId,
-        target_player_match_id: playerMatchId,
-      });
+    undoPlayerMatchScoreRack(input) {
+      return callRpc('undo_player_match_score_rack', scoringBody(input));
     },
-
-    confirmPlayerMatchScore({ actorUserId, playerMatchId }) {
-      return callRpc('confirm_player_match_score', {
-        actor_user_id: actorUserId,
-        target_player_match_id: playerMatchId,
-      });
+    confirmPlayerMatchScore(input) {
+      return callRpc('confirm_player_match_score', scoringBody(input));
     },
-
-    finalizeReconciledPlayerMatch({ actorUserId, playerMatchId }) {
-      return callRpc('finalize_reconciled_player_match', {
-        actor_user_id: actorUserId,
-        target_player_match_id: playerMatchId,
-      });
+    finalizeReconciledPlayerMatch(input) {
+      return callRpc('finalize_reconciled_player_match', scoringBody(input));
     },
-
     adminOverrideReconciledPlayerMatch({ actorUserId, playerMatchId, reason, resolvedRacks }) {
       return callRpc('admin_override_reconciled_player_match', {
         actor_user_id: actorUserId,
