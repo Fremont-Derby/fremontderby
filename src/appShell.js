@@ -44,6 +44,18 @@ function navLinks(pathname, compact = false) {
   }).join(compact ? '' : '\n');
 }
 
+function renderMessageIndicator(pathname) {
+  const current = sectionForPath(pathname) === 'messages';
+  const attrs = current ? ' aria-current="page" data-active="true"' : '';
+  return `<a class="fd-message-indicator" href="/messages" aria-label="Messages" title="Messages" data-message-indicator hidden${attrs}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 5.75A2.75 2.75 0 0 1 6.75 3h10.5A2.75 2.75 0 0 1 20 5.75v7.5A2.75 2.75 0 0 1 17.25 16H10l-4.7 4.03A.8.8 0 0 1 4 19.42V5.75Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M8 8.2h8M8 11.8h5.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <span class="fd-message-indicator__badge" data-message-badge hidden></span>
+  </a>`;
+}
+
 export function renderPrimaryNavigation(pathname = '/') {
   return `<header class="fd-shell" data-fd-shell>
     <div class="fd-shell__inner">
@@ -54,6 +66,7 @@ export function renderPrimaryNavigation(pathname = '/') {
       <nav class="fd-nav fd-nav--desktop" aria-label="Primary navigation">
         ${navLinks(pathname)}
       </nav>
+      ${renderMessageIndicator(pathname)}
       <details class="fd-nav-menu">
         <summary>Menu</summary>
         <nav class="fd-nav fd-nav--mobile" aria-label="Primary navigation">
@@ -75,6 +88,14 @@ export const shellStyles = `
   .fd-nav a:hover { color: #fff; background: #10291d; }
   .fd-nav a[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-nav a:focus-visible, .fd-brand:focus-visible, .fd-nav-menu summary:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
+  .fd-message-indicator { position: relative; flex: 0 0 auto; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; }
+  .fd-message-indicator[hidden] { display: none; }
+  .fd-message-indicator:hover { color: #fff; background: #123522; }
+  .fd-message-indicator[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
+  .fd-message-indicator svg { width: 23px; height: 23px; }
+  .fd-message-indicator__badge { position: absolute; top: -6px; right: -7px; min-width: 20px; height: 20px; display: grid; place-items: center; padding: 0 5px; border: 2px solid #06110d; border-radius: 999px; color: #fff; background: #d83d37; font: 900 .68rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
+  .fd-message-indicator__badge[hidden] { display: none; }
+  .fd-message-indicator:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
   .fd-nav-menu { display: none; margin-left: auto; position: relative; font: 700 .9rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-nav-menu summary { cursor: pointer; list-style: none; min-height: 42px; display: inline-flex; align-items: center; padding: 9px 12px; border: 1px solid #315d45; border-radius: 10px; background: #0b2418; color: #f4f7f5; }
   .fd-nav-menu summary::-webkit-details-marker { display: none; }
@@ -83,9 +104,55 @@ export const shellStyles = `
   @media (max-width: 760px) {
     .fd-shell__inner { min-height: 56px; padding: 7px 12px; }
     .fd-nav--desktop { display: none; }
-    .fd-nav-menu { display: block; }
+    .fd-message-indicator { margin-left: auto; }
+    .fd-nav-menu { display: block; margin-left: 0; }
   }
 `;
+
+const shellScript = `<script data-fd-message-indicator-script>
+  (() => {
+    const indicator = document.querySelector('[data-message-indicator]');
+    const badge = document.querySelector('[data-message-badge]');
+    if (!indicator || !badge) return;
+    let loading = false;
+    const token = () => sessionStorage.getItem('fd.accessToken') || '';
+    const render = (count) => {
+      const unread = Number.isFinite(Number(count)) ? Math.max(0, Math.floor(Number(count))) : 0;
+      indicator.hidden = !token();
+      badge.hidden = unread === 0;
+      badge.textContent = unread > 99 ? '99+' : String(unread);
+      const label = unread > 0 ? 'Messages, ' + unread + ' unread' : 'Messages';
+      indicator.setAttribute('aria-label', label);
+      indicator.title = label;
+    };
+    const refresh = async () => {
+      const accessToken = token();
+      if (!accessToken) { render(0); return; }
+      indicator.hidden = false;
+      if (loading || document.hidden) return;
+      loading = true;
+      try {
+        const response = await fetch('/api/me/message-notification-summary', {
+          headers: { authorization: 'Bearer ' + accessToken },
+        });
+        if (response.status === 401) { render(0); return; }
+        if (!response.ok) return;
+        const body = await response.json();
+        render(body.unreadCount);
+      } catch {
+        // Keep the icon usable when a background refresh temporarily fails.
+      } finally {
+        loading = false;
+      }
+    };
+    render(0);
+    refresh();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('fd:messages-read', refresh);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    window.setInterval(refresh, 15000);
+  })();
+</script>`;
 
 export function decorateHtmlWithShell(html, pathname = '/') {
   if (typeof html !== 'string' || html.includes('data-fd-shell')) return html;
@@ -95,7 +162,13 @@ export function decorateHtmlWithShell(html, pathname = '/') {
     ? html.replace(/<\/head>/i, `<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
     : html;
 
-  return withStyles.replace(/<body([^>]*)>/i, `<body$1>\n${renderPrimaryNavigation(pathname)}`);
+  const withShell = withStyles.replace(
+    /<body([^>]*)>/i,
+    `<body$1>\n${renderPrimaryNavigation(pathname)}`,
+  );
+  return /<\/body>/i.test(withShell)
+    ? withShell.replace(/<\/body>/i, `${shellScript}\n</body>`)
+    : `${withShell}${shellScript}`;
 }
 
 export function isKnownAppPagePath(pathname) {
