@@ -387,3 +387,63 @@ test('team repository removes a team member through the removal RPC', async () =
   });
   assert.equal(membership.ends_at, '2026-09-01T00:00:00Z');
 });
+
+
+test('team repository names the opponent in each captain lineup matchup', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_id: null,
+        captain_teams: [{
+          teamId: 'team-1',
+          teamName: 'Breakers',
+          seasonId: 'season-1',
+          seasonName: 'Season 1',
+        }],
+        invitations: [],
+      }],
+    },
+    { body: [] },
+    { body: [] },
+    {
+      body: [{
+        id: 'match-1',
+        round_id: 'round-4',
+        team_a_id: 'team-1',
+        team_b_id: 'team-2',
+        table_number: 3,
+        status: 'scheduled',
+      }],
+    },
+    {
+      body: [{
+        id: 'round-4',
+        round_number: 4,
+        scheduled_on: '2026-09-24',
+        status: 'published',
+        stage: 'regular',
+        lineup_deadline_at: '2026-09-24T18:30:00Z',
+      }],
+    },
+    {
+      body: [
+        { id: 'team-1', name: 'Breakers' },
+        { id: 'team-2', name: 'Rack Pack' },
+      ],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const teamManagement = await repository.listOwnTeamManagement({
+    actorUserId: 'captain-user-1',
+  });
+
+  assert.equal(
+    teamManagement.captain_teams[0].lineupRounds[0].opponentName,
+    'Rack Pack',
+  );
+  assert.match(calls[3].url, /team_a_id/);
+  assert.match(calls[3].url, /team_b_id/);
+  assert.match(calls[5].url, /\/rest\/v1\/teams\?/);
+  assert.match(calls[5].url, /season_id=eq\.season-1/);
+});

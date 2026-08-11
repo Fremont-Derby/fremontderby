@@ -49,7 +49,7 @@ async function loadLineupRoundsForTeam(
   { seasonId, teamId },
 ) {
   const matchParams = new URLSearchParams({
-    select: 'id,round_id,table_number,status',
+    select: 'id,round_id,team_a_id,team_b_id,table_number,status',
     season_id: `eq.${seasonId}`,
     or: `(team_a_id.eq.${teamId},team_b_id.eq.${teamId})`,
   });
@@ -59,8 +59,12 @@ async function loadLineupRoundsForTeam(
     stage: 'eq.regular',
     order: 'round_number.asc',
   });
+  const teamParams = new URLSearchParams({
+    select: 'id,name',
+    season_id: `eq.${seasonId}`,
+  });
 
-  const [teamMatches, rounds] = await Promise.all([
+  const [teamMatches, rounds, teams] = await Promise.all([
     requestJson(
       fetchImpl,
       `${supabaseUrl}/rest/v1/team_matches?${matchParams}`,
@@ -71,16 +75,27 @@ async function loadLineupRoundsForTeam(
       `${supabaseUrl}/rest/v1/rounds?${roundParams}`,
       { method: 'GET', headers },
     ),
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/teams?${teamParams}`,
+      { method: 'GET', headers },
+    ),
   ]);
 
   const matchByRoundId = new Map(
     (Array.isArray(teamMatches) ? teamMatches : []).map((match) => [match.round_id, match]),
+  );
+  const teamById = new Map(
+    (Array.isArray(teams) ? teams : []).map((team) => [team.id, team]),
   );
 
   return (Array.isArray(rounds) ? rounds : [])
     .filter((round) => matchByRoundId.has(round.id))
     .map((round) => {
       const match = matchByRoundId.get(round.id);
+      const opponentTeamId = match.team_a_id === teamId
+        ? match.team_b_id
+        : match.team_a_id;
       return {
         roundId: round.id,
         roundNumber: round.round_number,
@@ -88,6 +103,7 @@ async function loadLineupRoundsForTeam(
         roundStatus: round.status,
         lineupDeadlineAt: round.lineup_deadline_at,
         teamMatchId: match.id,
+        opponentName: teamById.get(opponentTeamId)?.name ?? 'Opponent',
         tableNumber: match.table_number,
         teamMatchStatus: match.status,
       };

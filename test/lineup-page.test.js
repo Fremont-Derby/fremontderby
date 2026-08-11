@@ -16,8 +16,13 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
   assert.doesNotMatch(html, />Access token</i);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/teams/);
+  assert.match(html, /Matchup/);
   assert.match(html, /Round '/);
+  assert.match(html, / · vs /);
+  assert.match(html, /round\.opponentName/);
   assert.match(html, /Table '/);
+  assert.match(html, /data-status-close/);
+  assert.match(html, /role="status"/);
   assert.match(html, /data-availability-body/);
   assert.match(html, /data-slots/);
   assert.match(html, /data-submit/);
