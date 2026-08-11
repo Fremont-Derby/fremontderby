@@ -9,6 +9,9 @@ test('schedule page makes the current league night obvious without technical inp
   assert.match(html, /data-season-select/);
   assert.match(html, /data-round-select/);
   assert.match(html, /Next league night/);
+  assert.match(html, /stageRank/);
+  assert.match(html, /championship/);
+  assert.match(html, /semifinal/);
   assert.match(html, /data-match-list/);
   assert.match(html, /teamAName/);
   assert.match(html, /teamBName/);
