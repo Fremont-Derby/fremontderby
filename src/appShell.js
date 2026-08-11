@@ -20,6 +20,7 @@ const APP_PAGE_PATHS = new Set([
   '/teams',
   '/trades',
   '/messages',
+  '/messages/moderation',
 ]);
 
 function sectionForPath(pathname) {

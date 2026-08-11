@@ -6,6 +6,7 @@ import {
 } from './appShell.js';
 import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { chatHttpHandlers } from './chatHttp.js';
+import { renderChatModerationPage } from './chatModerationPage.js';
 import { renderChatPage } from './chatPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
@@ -153,6 +154,11 @@ export default {
     if (url.pathname === '/messages') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatPage(env), url.pathname);
+    }
+
+    if (url.pathname === '/messages/moderation') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderChatModerationPage(env), url.pathname);
     }
 
     if (url.pathname === '/scorecard') {

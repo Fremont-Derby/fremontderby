@@ -27,6 +27,8 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /\/api\/team-matches\//);
   assert.match(html, /\/api\/chat-reports/);
   assert.match(html, /data-report-dialog/);
+  assert.match(html, /\/messages\/moderation/);
+  assert.match(html, /detectModerator/);
   assert.match(html, /setInterval[\s\S]*4000/);
   assert.match(html, /@media \(max-width: 760px\)/);
   assert.doesNotMatch(html, /Access token/i);
