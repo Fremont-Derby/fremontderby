@@ -13,8 +13,8 @@ export function renderAvailabilityPage() {
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">A</span><span>Fremont Derby Availability</span></div><div class="status" data-status>Loading…</div></header>
     <section class="picker"><label>League night<select data-context-select disabled><option value="">Loading your rounds…</option></select></label></section>
-    <section class="panel" data-panel>
-      <div class="panel-head"><span>Your availability</span><span class="badge" data-current-status>Not marked</span></div>
+    <section class="panel" data-panel data-register>
+      <div class="panel-head"><span>Your availability</span><span class="badge" data-current-status data-roster-status data-free-agent-status>Not marked</span></div>
       <div class="context"><strong data-context-title>Select a round</strong><span data-context-detail>Your roster or free-agent context will appear here.</span></div>
       <div class="actions">
         <button class="available" data-availability-status="available" type="button">Available</button>
