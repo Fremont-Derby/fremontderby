@@ -109,6 +109,7 @@ test('public season listing uses registration counts RPC', async () => {
         rostered_player_count: 2,
         registered_player_count: 5,
         free_agent_count: 3,
+        open_primary_roster_spots: 6,
         at_risk_team_count: 0,
       }]);
     },
@@ -118,5 +119,6 @@ test('public season listing uses registration counts RPC', async () => {
   assert.match(requests[0].url, /\/rpc\/list_public_season_registration$/);
   assert.equal(seasons[0].occupiedSlots, 2);
   assert.equal(seasons[0].applicationsWaiting, 4);
+  assert.equal(seasons[0].openPrimaryRosterSpots, 6);
   assert.equal(seasons[0].minimumCommittedRoster, 3);
 });
