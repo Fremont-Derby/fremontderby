@@ -278,48 +278,48 @@ test('regular-season workflow composes from teams through blind lineups, reconci
 
   for (const [index, match] of playerMatches.entries()) {
     await recordPlayerMatchScoreRackCommand(
-      { actorUserId: captainA, playerMatchId: match.id, winnerSide: 'A' },
+      { actorUserId: captainA, playerMatchId: match.id, scoringTeamId: teamA.id, winnerSide: 'A' },
       repository,
     );
     await recordPlayerMatchScoreRackCommand(
-      { actorUserId: captainB, playerMatchId: match.id, winnerSide: index === 0 ? 'B' : 'A' },
+      { actorUserId: captainB, playerMatchId: match.id, scoringTeamId: teamB.id, winnerSide: index === 0 ? 'B' : 'A' },
       repository,
     );
 
     if (index === 0) {
       const mismatch = await getPlayerMatchScoreComparisonCommand(
-        { actorUserId: captainA, playerMatchId: match.id },
+        { actorUserId: captainA, playerMatchId: match.id, scoringTeamId: teamA.id },
         repository,
       );
       assert.equal(mismatch.matches, false);
       assert.equal(mismatch.firstMismatchIndex, 0);
 
       await undoPlayerMatchScoreRackCommand(
-        { actorUserId: captainB, playerMatchId: match.id },
+        { actorUserId: captainB, playerMatchId: match.id, scoringTeamId: teamB.id },
         repository,
       );
       await recordPlayerMatchScoreRackCommand(
-        { actorUserId: captainB, playerMatchId: match.id, winnerSide: 'A' },
+        { actorUserId: captainB, playerMatchId: match.id, scoringTeamId: teamB.id, winnerSide: 'A' },
         repository,
       );
     }
 
     const reconciled = await getPlayerMatchScoreComparisonCommand(
-      { actorUserId: captainA, playerMatchId: match.id },
+      { actorUserId: captainA, playerMatchId: match.id, scoringTeamId: teamA.id },
       repository,
     );
     assert.equal(reconciled.matches, true);
 
     await confirmPlayerMatchScoreCommand(
-      { actorUserId: captainA, playerMatchId: match.id },
+      { actorUserId: captainA, playerMatchId: match.id, scoringTeamId: teamA.id },
       repository,
     );
     await confirmPlayerMatchScoreCommand(
-      { actorUserId: captainB, playerMatchId: match.id },
+      { actorUserId: captainB, playerMatchId: match.id, scoringTeamId: teamB.id },
       repository,
     );
     await finalizeReconciledPlayerMatchCommand(
-      { actorUserId: captainA, playerMatchId: match.id },
+      { actorUserId: captainA, playerMatchId: match.id, scoringTeamId: teamA.id },
       repository,
     );
   }
