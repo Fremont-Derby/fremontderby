@@ -14,7 +14,7 @@ create table private.team_membership_requests (
 );
 
 alter table private.team_membership_requests enable row level security;
-revoke all on private.team_membership_requests from anon, authenticated;
+revoke all on private.team_membership_requests from public, anon, authenticated;
 
 create unique index one_pending_membership_request_per_team
   on private.team_membership_requests (season_id, team_id, player_id)
@@ -271,10 +271,10 @@ select player_rows.rows, captain_rows.rows
 from player_rows cross join captain_rows;
 $$;
 
-revoke all on function public.request_team_membership(uuid, uuid) from public;
-revoke all on function public.respond_to_team_membership_request(uuid, uuid, text) from public;
-revoke all on function public.cancel_team_membership_request(uuid, uuid) from public;
-revoke all on function public.get_own_team_membership_requests(uuid) from public;
+revoke all on function public.request_team_membership(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.respond_to_team_membership_request(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function public.cancel_team_membership_request(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.get_own_team_membership_requests(uuid) from public, anon, authenticated;
 grant execute on function public.request_team_membership(uuid, uuid) to service_role;
 grant execute on function public.respond_to_team_membership_request(uuid, uuid, text) to service_role;
 grant execute on function public.cancel_team_membership_request(uuid, uuid) to service_role;
