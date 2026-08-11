@@ -111,3 +111,43 @@ test('chat repository blocks and unblocks by player id without contact data', as
   assert.equal(unblocked, true);
   assert.doesNotMatch(calls.map((call) => call.init.body).join(' '), /email|phone/i);
 });
+
+test('chat repository lists and sends season-scoped league messages', async () => {
+  const { fetch, calls } = createFetch([
+    { body: [{ season_id: 'season-1' }] },
+    { body: [{ message_id: 'message-1' }] },
+  ]);
+  const repository = createChatRepository(env, { fetch });
+  await repository.listLeagueChatThreads({ actorUserId: 'user-1' });
+  await repository.sendLeagueMessage({
+    actorUserId: 'user-1', seasonId: 'season-1', body: 'Hello league',
+    clientMessageId: 'client-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_my_league_chat_inbox');
+  assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/send_league_chat_message');
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: 'user-1', target_season_id: 'season-1',
+    message_body: 'Hello league', message_client_id: 'client-1',
+  });
+});
+
+test('chat repository reports and moderates messages through actor-scoped RPCs', async () => {
+  const { fetch, calls } = createFetch([
+    { body: [{ report_id: 'report-1' }] },
+    { body: [{ report_id: 'report-1', status: 'resolved' }] },
+  ]);
+  const repository = createChatRepository(env, { fetch });
+  await repository.reportChatMessage({
+    actorUserId: 'user-1', messageType: 'league', messageId: 'message-1',
+    reason: 'spam', details: 'Repeated links',
+  });
+  await repository.moderateChatReport({
+    actorUserId: 'admin-1', reportId: 'report-1', resolution: 'resolved',
+    note: 'Removed', removeMessage: true,
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/report_chat_message');
+  assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/moderate_chat_message_report');
+  assert.equal(JSON.parse(calls[1].init.body).remove_message, true);
+});
