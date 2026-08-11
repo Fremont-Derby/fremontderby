@@ -6,6 +6,8 @@ const severityRank = { healthy: 0, warning: 1, critical: 2 };
 const lineupWarningWindowMs = 2 * 60 * 60 * 1000;
 const scoreMismatchWarningMs = 10 * 60 * 1000;
 const scoreMismatchCriticalMs = 30 * 60 * 1000;
+const liveMatchWarningMs = 90 * 60 * 1000;
+const liveMatchCriticalMs = 150 * 60 * 1000;
 
 function metric(raw, name) {
   const item = raw.metrics?.[name];
@@ -82,6 +84,34 @@ function scoreMismatchAction(raw) {
   return null;
 }
 
+function liveMatchAgingAction(raw) {
+  const liveMatches = metric(raw, 'liveMatches');
+  if (!liveMatches || !raw.oldestLiveMatchStartedAt) return null;
+
+  const now = Date.parse(raw.generatedAt);
+  const oldestStarted = Date.parse(raw.oldestLiveMatchStartedAt);
+  if (!Number.isFinite(now) || !Number.isFinite(oldestStarted) || oldestStarted > now) return null;
+
+  const ageMs = now - oldestStarted;
+  const ageMinutes = Math.floor(ageMs / (60 * 1000));
+  const noun = liveMatches === 1 ? 'match is' : 'matches are';
+  if (ageMs >= liveMatchCriticalMs) {
+    return action(
+      'critical', 'match_unfinalized_overdue', 'Started match needs intervention',
+      `${liveMatches} ${noun} started but not finalized; the oldest has been open for ${ageMinutes} minutes.`,
+      '/scorecard',
+    );
+  }
+  if (ageMs >= liveMatchWarningMs) {
+    return action(
+      'warning', 'match_unfinalized_aging', 'Started match is running long',
+      `${liveMatches} ${noun} started but not finalized; the oldest has been open for ${ageMinutes} minutes.`,
+      '/scorecard',
+    );
+  }
+  return null;
+}
+
 export function buildAdminOperationsOverview(raw, readiness) {
   const actions = [];
   const unavailable = Object.entries(raw.metrics || {})
@@ -130,6 +160,9 @@ export function buildAdminOperationsOverview(raw, readiness) {
   const scoreMismatchRisk = scoreMismatchAction(raw);
   if (scoreMismatchRisk) actions.push(scoreMismatchRisk);
 
+  const liveMatchRisk = liveMatchAgingAction(raw);
+  if (liveMatchRisk) actions.push(liveMatchRisk);
+
   const rosterAvailabilityResponses = metric(raw, 'rosterAvailabilityResponses');
   if (
     raw.currentRound
@@ -151,12 +184,6 @@ export function buildAdminOperationsOverview(raw, readiness) {
     ));
   }
   const liveMatches = metric(raw, 'liveMatches');
-  if (liveMatches > 0) {
-    actions.push(action(
-      'warning', 'matches_live', 'Matches are still in progress',
-      `${liveMatches} player match(es) have started but are not finalized.`, '/scorecard',
-    ));
-  }
   if (unavailable.length) {
     actions.push(action(
       'warning', 'metrics_unavailable', 'Some health metrics are unavailable',

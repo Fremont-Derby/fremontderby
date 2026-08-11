@@ -61,6 +61,30 @@ function scoreMismatchSummary(matchRows, submissionRows) {
   return { total: mismatches.length, rows: mismatches };
 }
 
+function liveMatchSummary(matchRows, submissionRows) {
+  const unresolvedMatchIds = new Set(matchRows.map((row) => row.id));
+  const startedAtByMatch = new Map();
+
+  for (const submission of submissionRows) {
+    if (!unresolvedMatchIds.has(submission.player_match_id)) continue;
+    if (!Array.isArray(submission.racks) || submission.racks.length === 0) continue;
+    const startedAt = timestampMs(submission.created_at);
+    if (startedAt === null) continue;
+    const existing = startedAtByMatch.get(submission.player_match_id);
+    if (existing === undefined || startedAt < existing) {
+      startedAtByMatch.set(submission.player_match_id, startedAt);
+    }
+  }
+
+  const rows = [...startedAtByMatch.entries()]
+    .map(([playerMatchId, startedAt]) => ({
+      playerMatchId,
+      startedAt: new Date(startedAt).toISOString(),
+    }))
+    .sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+  return { total: rows.length, rows };
+}
+
 export function createAdminOperationsRepository(
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -151,6 +175,19 @@ export function createAdminOperationsRepository(
       ];
 
       if (seasonFilter) {
+        // Team-scoped dual scoring does not mutate player_matches.status when the first
+        // rack is recorded. Reuse the private score-submission read once so Operations
+        // can derive both a true live-match start and mismatch age server-side.
+        const unresolvedMatchesPromise = tableRows(
+          'player_matches',
+          `${seasonFilter}status=not.in.(finalized,corrected)&select=id`,
+        );
+        const scoreSubmissionsPromise = tableRows(
+          'player_match_score_submissions',
+          `${seasonFilter}select=player_match_id,racks,created_at,updated_at`,
+          'private',
+        );
+
         metricTasks.push(
           ['seasonPlayers', () => table('season_players', `${seasonFilter}select=id&limit=1`)],
           ['teams', () => table('teams', `${seasonFilter}select=id&limit=1`)],
@@ -160,11 +197,17 @@ export function createAdminOperationsRepository(
           ['paidPlayers', () => table('payment_status', `${seasonFilter}status=eq.paid&select=player_id&limit=1`, 'private')],
           ['playerMatches', () => table('player_matches', `${seasonFilter}select=id&limit=1`)],
           ['finalizedMatches', () => table('player_matches', `${seasonFilter}finalized_at=not.is.null&select=id&limit=1`)],
-          ['liveMatches', () => table('player_matches', `${seasonFilter}status=in.(active,in_progress,started)&finalized_at=is.null&select=id&limit=1`)],
+          ['liveMatches', async () => {
+            const [matchRows, submissionRows] = await Promise.all([
+              unresolvedMatchesPromise,
+              scoreSubmissionsPromise,
+            ]);
+            return liveMatchSummary(matchRows, submissionRows);
+          }],
           ['scoreMismatches', async () => {
             const [matchRows, submissionRows] = await Promise.all([
-              tableRows('player_matches', `${seasonFilter}status=not.in.(finalized,corrected)&select=id`),
-              tableRows('player_match_score_submissions', `${seasonFilter}select=player_match_id,racks,updated_at`, 'private'),
+              unresolvedMatchesPromise,
+              scoreSubmissionsPromise,
             ]);
             return scoreMismatchSummary(matchRows, submissionRows);
           }],
@@ -194,6 +237,7 @@ export function createAdminOperationsRepository(
       );
       const metrics = Object.fromEntries(entries);
       const latestRatingUpdate = metrics.ratings?.rows?.[0]?.updated_at ?? null;
+      const oldestLiveMatchStartedAt = metrics.liveMatches?.rows?.[0]?.startedAt ?? null;
       const oldestScoreMismatchAt = metrics.scoreMismatches?.rows?.[0]?.mismatchSince ?? null;
       for (const metric of Object.values(metrics)) delete metric.rows;
 
@@ -203,6 +247,7 @@ export function createAdminOperationsRepository(
         currentRound,
         metrics,
         latestRatingUpdate,
+        oldestLiveMatchStartedAt,
         oldestScoreMismatchAt,
       };
     },
