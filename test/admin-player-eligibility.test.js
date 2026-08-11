@@ -9,6 +9,10 @@ const migrationPath = new URL(
   '../supabase/migrations/20260811224500_player_competition_eligibility.sql',
   import.meta.url,
 );
+const correctionMigrationPath = new URL(
+  '../supabase/migrations/20260811224600_preserve_ineligible_match_corrections.sql',
+  import.meta.url,
+);
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -17,8 +21,9 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-test('competition restrictions are private, audited, season-scoped, and enforced at database write boundaries', async () => {
+test('competition restrictions are private, audited, season-scoped, and enforce new play while preserving corrections', async () => {
   const sql = await readFile(migrationPath, 'utf8');
+  const correctionSql = await readFile(correctionMigrationPath, 'utf8');
   assert.match(sql, /create table private\.player_competition_restrictions/);
   assert.match(sql, /season_id uuid not null/);
   assert.match(sql, /lifted_at timestamptz/);
@@ -29,9 +34,10 @@ test('competition restrictions are private, audited, season-scoped, and enforced
   assert.match(sql, /player\.restore_competition_eligibility/);
   assert.match(sql, /team_lineup_slots_competition_eligibility/);
   assert.match(sql, /team_score_submissions_competition_eligibility/);
-  assert.match(sql, /legacy_match_racks_competition_eligibility/);
   assert.match(sql, /new_rack_count <= old_rack_count then return new/);
   assert.match(sql, /Player is marked ineligible for competition/);
+  assert.match(correctionSql, /drop trigger if exists legacy_match_racks_competition_eligibility/);
+  assert.match(correctionSql, /Canonical rack correction remains available/);
 });
 
 test('admin player repository exposes current-season readiness and writes eligibility through service-role RPC', async () => {
