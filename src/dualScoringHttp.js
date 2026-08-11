@@ -46,6 +46,16 @@ function scoringTeamFromRequest(request, body = {}) {
   return body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
 }
 
+async function optionalLiveContext(repository, input) {
+  if (typeof repository.getPlayerMatchLiveContext !== 'function') return null;
+  try {
+    return await repository.getPlayerMatchLiveContext(input);
+  } catch (error) {
+    if (error?.message?.includes('Supabase request failed with 404')) return null;
+    throw error;
+  }
+}
+
 export function createDualScoringHttpHandlers({
   authenticate = authenticateSupabaseUser,
   createRepository = createDualScoringRepository,
@@ -70,7 +80,7 @@ export function createDualScoringHttpHandlers({
         };
         const [comparison, context] = await Promise.all([
           getPlayerMatchScoreComparisonCommand(input, repository),
-          repository.getPlayerMatchLiveContext({
+          optionalLiveContext(repository, {
             actorUserId: actor.id,
             playerMatchId,
           }),
