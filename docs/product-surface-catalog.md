@@ -62,7 +62,7 @@ A story is not considered fully complete merely because backend code exists. It 
 | `/` | Public visitor | Understand Fremont Derby and find the next appropriate league action | Public introduction; practical registration/current-season completeness remains under #252 |
 | `/rules` | Public visitor / player | Read the authoritative user-facing league rules | Canonical rules surface |
 | `/profile` | Player | Sign in and manage the player's own identity/profile state | Canonical player identity/auth surface |
-| `/teams` | Player / captain | Find, join, create, and manage teams and roster relationships | Canonical team/roster home. It may show contextual league-night shortcuts, but Schedule/Availability/Lineup/Score remain separate canonical functions |
+| `/teams` | Player / captain | Find, join, create, and manage teams and roster relationships | Canonical team/roster home. It may show contextual league-night shortcuts, but Schedule/Availability/Lineup/Score remain separate canonical functions. Current phone layout still forces horizontal scrolling in table-based sections; runtime correction remains on #131 |
 | `/schedule` | Public visitor / player / captain | See the current/upcoming league night, round, matchup, date/table context, and enter the appropriate next workflow | Canonical current-night/schedule home; added by #133 |
 | `/availability` | Player / captain | Declare and review league-night availability | Canonical availability surface; mobile segmented-control cleanup shipped in #273/PR #274; captain substitute-discovery improvements remain under #138 |
 | `/lineup` | Captain | Build and submit the team's lineup for a matchup | Canonical captain lineup surface; mobile sticky lineup summary shipped in #262/PR #271 |
@@ -94,7 +94,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Audience | User outcome / capability | Canonical page | State | Story / proof | Discoverability notes |
 | --- | --- | --- | --- | --- | --- |
 | Public visitor / player / captain | Find tonight's round and matchup context quickly | `/schedule` | Complete initial slice | #133 | Desktop primary navigation exposes Schedule; mobile dock exposes Tonight |
-| Player / captain | Find/create/join/manage team relationships | `/teams` | Partial / actively evolving | #131, #181, #182 | Teams is the canonical roster/membership home; league-night shortcuts are secondary links only |
+| Player / captain | Find/create/join/manage team relationships | `/teams` | Partial; canonical ownership is clear, phone table layout still needs correction | #131, #181, #182, PR #288 | Teams is the canonical roster/membership home; league-night shortcuts are secondary links only. #131 already owns the no-horizontal-scroll phone requirement, so no duplicate IA issue is needed |
 | Player / captain | Mark league-night availability | `/availability` | Implemented; mobile control polished | #13, #138, #273 / PR #274 | From shared navigation, Teams is one action and Mark availability is the second; the canonical function remains `/availability` |
 | Captain | Submit a blind ordered three-player lineup | `/lineup` | Implemented; mobile state visibility polished | #13, #139, #156, #262 / PR #271 | From shared navigation, Teams is one action and Build lineup is the second; human-readable matchup selection remains canonical here |
 | Player | Pick an eligible generated match without technical IDs/tokens | `/scorecard` | Implemented; empty/recovery states improved | #141, #250 / PR #277 | Score is a direct shared-navigation destination. Signed-out state links to Profile and Schedule; no-ready-match state links to Schedule and Teams; failures expose retry/Profile recovery instead of a dead end |
@@ -119,6 +119,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 - PR #277 improved `/scorecard` signed-out, no-ready-match, expired-session, and load-failure states without changing route ownership. The Score destination is still one action from shared navigation, while recovery paths now point directly to Profile, Schedule, Teams, or Retry instead of leaving a dead end. This is partial proof toward #250 and strengthens #239 reachability evidence.
 - PR #282 codified durable UI state/recovery guidance but did not change product route ownership.
 - PR #285 completed the concrete Messages recovery story #281 without changing the canonical communication surface. Messages remains directly reachable from shared navigation and its non-happy-path states now provide explicit recovery to Profile, Teams, Schedule, a new direct message, or Try again instead of becoming task dead ends.
+- PR #288 codified a durable no-horizontal-scroll mobile data rule after reconfirming that `/teams` still uses a horizontally scrolling `min-width:680px` table pattern on phones. The function/page ownership is not ambiguous, so #131 remains the single runtime owner of that correction rather than creating a duplicate cleanup story.
 - No new route/story card is needed for the Messages recovery work because #281/#250 already document the user outcome and PR #285 supplies implementation proof.
 - No new route or story issue was needed for release-only PRs because they change release proof/safety rather than user-facing product ownership.
 - #238 remains incomplete until every current renderer/control is mapped; #239 remains incomplete until the navigation graph/regression check is deterministic and role-aware.
@@ -132,6 +133,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 - #249 — guided Try a League Night presentation is largely shipped; shared navigation naming and contextual feedback remain before closure.
 - #250 — route-state cleanup remains open; `/scorecard` recovery is complete via PR #277 and `/messages` recovery is complete via PR #285; the other listed major routes still require reconciliation.
 - #281 — Messages recovery-state story completed by PR #285.
+- #131 — Teams remains the canonical team/directory surface; its current phone table implementation still needs the story’s required no-horizontal-scroll reflow.
 
 ## Librarian update checklist
 
