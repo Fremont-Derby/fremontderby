@@ -1,0 +1,158 @@
+function requireEnvValue(env, name) {
+  const value = env?.[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+function normalizeSupabaseUrl(value) {
+  return value.replace(/\/+$/, '');
+}
+
+function headers(serviceRoleKey) {
+  return {
+    apikey: serviceRoleKey,
+    authorization: `Bearer ${serviceRoleKey}`,
+    accept: 'application/json',
+    'content-type': 'application/json',
+  };
+}
+
+async function parsePayload(response) {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function requestJson(fetchImpl, url, init) {
+  const response = await fetchImpl(url, init);
+  const payload = await parsePayload(response);
+  if (!response.ok) {
+    const message = typeof payload === 'string' ? payload : payload?.message;
+    throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+  }
+  return payload;
+}
+
+async function requestRpc(fetchImpl, supabaseUrl, serviceRoleKey, rpcName, body) {
+  const payload = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
+    method: 'POST',
+    headers: headers(serviceRoleKey),
+    body: JSON.stringify(body),
+  });
+  return Array.isArray(payload) ? payload[0] : payload;
+}
+
+export function createTeamMembershipRequestRepository(
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
+  const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
+  const serviceRoleKey = requireEnvValue(env, 'SUPABASE_SERVICE_ROLE_KEY');
+  const serviceHeaders = headers(serviceRoleKey);
+
+  return {
+    async listOwn({ actorUserId }) {
+      const requests = await requestRpc(
+        fetchImpl,
+        supabaseUrl,
+        serviceRoleKey,
+        'get_own_team_membership_requests',
+        { actor_user_id: actorUserId },
+      );
+
+      const players = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/players?select=id&user_id=eq.${encodeURIComponent(actorUserId)}&limit=1`,
+        { method: 'GET', headers: serviceHeaders },
+      );
+      const playerId = Array.isArray(players) ? players[0]?.id : null;
+
+      let activeMemberships = [];
+      if (playerId) {
+        activeMemberships = await requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/team_memberships?select=season_id,team_id&player_id=eq.${encodeURIComponent(playerId)}&ends_at=is.null`,
+          { method: 'GET', headers: serviceHeaders },
+        );
+      }
+      const activeSeasonIds = new Set(
+        (Array.isArray(activeMemberships) ? activeMemberships : []).map((row) => row.season_id),
+      );
+
+      const seasons = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/seasons?select=id,name,status&status=in.(registration,active)&order=created_at.desc`,
+        { method: 'GET', headers: serviceHeaders },
+      );
+      const visibleSeasons = Array.isArray(seasons) ? seasons : [];
+      const seasonIds = visibleSeasons.map((season) => season.id);
+      let teams = [];
+      if (seasonIds.length) {
+        teams = await requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/teams?select=id,season_id,name&season_id=in.(${seasonIds.join(',')})&order=name.asc`,
+          { method: 'GET', headers: serviceHeaders },
+        );
+      }
+      const seasonById = new Map(visibleSeasons.map((season) => [season.id, season]));
+      const pendingByTeam = new Map(
+        (requests?.player_requests ?? [])
+          .filter((request) => request.status === 'pending')
+          .map((request) => [request.teamId, request]),
+      );
+      const joinableTeams = (Array.isArray(teams) ? teams : []).map((team) => ({
+        teamId: team.id,
+        teamName: team.name,
+        seasonId: team.season_id,
+        seasonName: seasonById.get(team.season_id)?.name ?? 'Season',
+        seasonStatus: seasonById.get(team.season_id)?.status ?? null,
+        hasActiveMembership: activeSeasonIds.has(team.season_id),
+        pendingRequestId: pendingByTeam.get(team.id)?.requestId ?? null,
+      }));
+
+      return {
+        ...(requests ?? { player_requests: [], captain_requests: [] }),
+        joinable_teams: joinableTeams,
+      };
+    },
+
+    requestJoin({ actorUserId, teamId }) {
+      return requestRpc(
+        fetchImpl,
+        supabaseUrl,
+        serviceRoleKey,
+        'request_team_membership',
+        { actor_user_id: actorUserId, target_team_id: teamId },
+      );
+    },
+
+    respond({ actorUserId, requestId, response }) {
+      return requestRpc(
+        fetchImpl,
+        supabaseUrl,
+        serviceRoleKey,
+        'respond_to_team_membership_request',
+        {
+          actor_user_id: actorUserId,
+          target_request_id: requestId,
+          response_status: response,
+        },
+      );
+    },
+
+    cancel({ actorUserId, requestId }) {
+      return requestRpc(
+        fetchImpl,
+        supabaseUrl,
+        serviceRoleKey,
+        'cancel_team_membership_request',
+        { actor_user_id: actorUserId, target_request_id: requestId },
+      );
+    },
+  };
+}
