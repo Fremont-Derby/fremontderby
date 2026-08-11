@@ -169,6 +169,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/rules` — public rules
 - `/profile` — Google sign-in and player profile
 - `/teams` — team creation, requests/invitations, roster management
+- `/schedule` — current/upcoming league night, round, matchup, date/table context, and next-workflow entry points
 - `/availability` — roster/free-agent availability
 - `/lineup` — captain lineup workflow
 - `/scorecard` — eligible match picker
