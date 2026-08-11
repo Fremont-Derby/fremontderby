@@ -56,6 +56,30 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
   const headers = jsonHeaders(serviceRoleKey);
 
   return {
+    async listAdminSeasons({ actorUserId }) {
+      const seasons = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/seasons?select=id,name,status,created_at&order=created_at.desc`,
+        {
+          method: 'GET',
+          headers,
+        },
+      );
+
+      if (seasons?.length) {
+        await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/get_season_setup`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            actor_user_id: actorUserId,
+            target_season_id: seasons[0].id,
+          }),
+        });
+      }
+
+      return seasons ?? [];
+    },
+
     async getSeason(seasonId) {
       const url = `${supabaseUrl}/rest/v1/seasons?id=eq.${encodeFilterValue(seasonId)}&select=id,status,first_round_date,round_interval_days,default_table_numbers`;
       const rows = await requestJson(fetchImpl, url, {
