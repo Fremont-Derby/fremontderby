@@ -58,5 +58,6 @@ test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /mouseenter/);
   assert.match(shell, /focusin/);
   assert.match(shell, /matchMedia\('\(hover: hover\)'\)/);
+  assert.match(shell, /touchPrimed/);
   assert.match(shell, /setInterval\(refresh, 15000\)/);
 });
