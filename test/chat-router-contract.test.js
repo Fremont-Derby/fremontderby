@@ -25,6 +25,15 @@ test('Worker routes authenticated direct messages, reads, and player blocks', ()
   assert.match(router, /request\.method === 'DELETE'/);
 });
 
+test('Worker routes league rooms, message reports, and admin moderation', () => {
+  assert.match(router, /url\.pathname === '\/api\/me\/league-chat-threads'/);
+  assert.match(router, /leagueMessagesMatch/);
+  assert.match(router, /leagueReadMatch/);
+  assert.match(router, /url\.pathname === '\/api\/chat-reports'/);
+  assert.match(router, /url\.pathname === '\/api\/admin\/chat-reports'/);
+  assert.match(router, /moderateChatReportMatch/);
+});
+
 test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /href: '\/messages', label: 'Messages'/);
   assert.match(shell, /'\/messages'/);

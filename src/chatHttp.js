@@ -5,11 +5,18 @@ import {
   listDirectMessageCandidatesCommand,
   listDirectMessageInboxCommand,
   listDirectMessagesCommand,
+  listLeagueChatThreadsCommand,
+  listLeagueMessagesCommand,
+  listChatReportsCommand,
   listTeamMessagesCommand,
   markDirectChatReadCommand,
   markTeamChatReadCommand,
+  markLeagueChatReadCommand,
+  moderateChatReportCommand,
+  reportChatMessageCommand,
   sendDirectMessageCommand,
   sendTeamMessageCommand,
+  sendLeagueMessageCommand,
   startDirectConversationCommand,
   unblockPlayerChatCommand,
 } from './chatCommands.js';
@@ -41,9 +48,10 @@ async function readJsonBody(request) {
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/Team not found/i.test(error.message)) return 404;
-  if (/Player not found|Direct conversation not found/i.test(error.message)) return 404;
+  if (/Player not found|Direct conversation not found|Chat message not found|Chat report not found/i.test(error.message)) return 404;
   if (/membership is required|No team chat access/i.test(error.message)) return 403;
   if (/Direct messages are blocked|Both players must participate/i.test(error.message)) return 403;
+  if (/League chat access|Active season participation|League admin access/i.test(error.message)) return 403;
   if (/Player profile is required/i.test(error.message)) return 409;
   if (/Supabase request failed with 401/i.test(error.message)) return 401;
   if (/Supabase request failed with 403/i.test(error.message)) return 403;
@@ -320,4 +328,129 @@ Object.assign(chatHttpHandlers, {
   blockPlayer: handleBlockPlayerChatRequest,
   unblockPlayer: handleUnblockPlayerChatRequest,
   listBlockedPlayers: handleListBlockedChatPlayersRequest,
+});
+
+export async function handleListLeagueChatThreadsRequest(
+  request, env, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const threads = await listLeagueChatThreadsCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse({ threads: Array.isArray(threads) ? threads : [] });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleListLeagueMessagesRequest(
+  request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const url = new URL(request.url);
+    const messages = await listLeagueMessagesCommand({
+      actorUserId: actor.id,
+      seasonId,
+      before: url.searchParams.get('before'),
+      beforeMessageId: url.searchParams.get('beforeMessageId'),
+      limit: url.searchParams.get('limit'),
+    }, repository);
+    return jsonResponse({ messages: Array.isArray(messages) ? messages : [] });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleSendLeagueMessageRequest(
+  request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const body = await readJsonBody(request);
+    const message = await sendLeagueMessageCommand({
+      actorUserId: actor.id, seasonId, body: body.body,
+      clientMessageId: body.clientMessageId,
+    }, repository);
+    return jsonResponse({ message }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleMarkLeagueChatReadRequest(
+  request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const body = await readJsonBody(request);
+    const readState = await markLeagueChatReadCommand({
+      actorUserId: actor.id, seasonId, readAt: body.readAt,
+    }, repository);
+    return jsonResponse({ readState });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleReportChatMessageRequest(
+  request, env, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const body = await readJsonBody(request);
+    const report = await reportChatMessageCommand({
+      actorUserId: actor.id,
+      messageType: body.messageType,
+      messageId: body.messageId,
+      reason: body.reason,
+      details: body.details,
+    }, repository);
+    return jsonResponse({ report }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleListChatReportsRequest(
+  request, env, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const url = new URL(request.url);
+    const reports = await listChatReportsCommand({
+      actorUserId: actor.id, limit: url.searchParams.get('limit'),
+    }, repository);
+    return jsonResponse({ reports: Array.isArray(reports) ? reports : [] });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleModerateChatReportRequest(
+  request, env, reportId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const body = await readJsonBody(request);
+    const result = await moderateChatReportCommand({
+      actorUserId: actor.id,
+      reportId,
+      resolution: body.resolution,
+      note: body.note,
+      removeMessage: body.removeMessage,
+    }, repository);
+    return jsonResponse({ result });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+Object.assign(chatHttpHandlers, {
+  listLeagueThreads: handleListLeagueChatThreadsRequest,
+  listLeagueMessages: handleListLeagueMessagesRequest,
+  sendLeagueMessage: handleSendLeagueMessageRequest,
+  markLeagueChatRead: handleMarkLeagueChatReadRequest,
+  reportMessage: handleReportChatMessageRequest,
+  listReports: handleListChatReportsRequest,
+  moderateReport: handleModerateChatReportRequest,
 });

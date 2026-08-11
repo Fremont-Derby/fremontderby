@@ -4,6 +4,9 @@ import {
   handleBlockPlayerChatRequest,
   handleListChatThreadsRequest,
   handleListDirectMessagesRequest,
+  handleListLeagueMessagesRequest,
+  handleReportChatMessageRequest,
+  handleModerateChatReportRequest,
   handleSendDirectMessageRequest,
   handleListTeamMessagesRequest,
   handleSendTeamMessageRequest,
@@ -42,6 +45,49 @@ test('chat inbox handler authenticates the Google session before listing threads
   assert.equal((await response.json()).threads[0].unread_count, 2);
   assert.equal(calls[0].url, 'https://project.supabase.co/auth/v1/user');
   assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/get_my_team_chat_inbox');
+});
+
+test('league chat HTTP handlers preserve tuple cursor and idempotent sends', async () => {
+  const listFetch = createFetch([
+    { body: { id: 'user-1' } }, { body: [{ message_id: 'message-1' }] },
+  ]);
+  const request = new Request(
+    'https://fremontderby.com/api/seasons/season-1/messages?limit=20&before=2026-08-11T00:00:00Z&beforeMessageId=message-9',
+    { headers: { authorization: 'Bearer token' } },
+  );
+  const response = await handleListLeagueMessagesRequest(
+    request, env, 'season-1', { fetch: listFetch.fetch },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(JSON.parse(listFetch.calls[1].init.body).before_message_id, 'message-9');
+});
+
+test('message reports authenticate players and moderation authenticates admins', async () => {
+  const reportFetch = createFetch([
+    { body: { id: 'user-1' } }, { body: [{ report_id: 'report-1' }] },
+  ]);
+  const reportRequest = new Request('https://fremontderby.com/api/chat-reports', {
+    method: 'POST', headers: { authorization: 'Bearer token' },
+    body: JSON.stringify({
+      messageType: 'league', messageId: 'message-1', reason: 'spam', details: 'Links',
+    }),
+  });
+  const reportResponse = await handleReportChatMessageRequest(reportRequest, env, { fetch: reportFetch.fetch });
+  assert.equal(reportResponse.status, 201);
+  assert.equal(JSON.parse(reportFetch.calls[1].init.body).target_message_id, 'message-1');
+
+  const moderateFetch = createFetch([
+    { body: { id: 'admin-1' } }, { body: [{ report_id: 'report-1', status: 'resolved' }] },
+  ]);
+  const moderateRequest = new Request('https://fremontderby.com/api/admin/chat-reports/report-1/resolve', {
+    method: 'POST', headers: { authorization: 'Bearer token' },
+    body: JSON.stringify({ resolution: 'resolved', removeMessage: true }),
+  });
+  const moderateResponse = await handleModerateChatReportRequest(
+    moderateRequest, env, 'report-1', { fetch: moderateFetch.fetch },
+  );
+  assert.equal(moderateResponse.status, 200);
+  assert.equal(JSON.parse(moderateFetch.calls[1].init.body).remove_message, true);
 });
 
 test('team message list forwards bounded pagination', async () => {

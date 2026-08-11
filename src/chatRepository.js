@@ -158,5 +158,67 @@ export function createChatRepository(env, { fetch: fetchImpl = globalThis.fetch 
     async listBlockedChatPlayers({ actorUserId }) {
       return rpc('list_blocked_chat_players', { actor_user_id: actorUserId });
     },
+
+    async listLeagueChatThreads({ actorUserId }) {
+      return rpc('get_my_league_chat_inbox', { actor_user_id: actorUserId });
+    },
+
+    async listLeagueMessages({ actorUserId, seasonId, before, beforeMessageId, limit }) {
+      return rpc('list_league_chat_messages', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        before_created_at: before,
+        before_message_id: beforeMessageId,
+        result_limit: limit,
+      });
+    },
+
+    async sendLeagueMessage({ actorUserId, seasonId, body, clientMessageId }) {
+      const result = await rpc('send_league_chat_message', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        message_body: body,
+        message_client_id: clientMessageId,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async markLeagueChatRead({ actorUserId, seasonId, readAt }) {
+      const result = await rpc('mark_league_chat_read', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        read_through_at: readAt,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async reportChatMessage({ actorUserId, messageType, messageId, reason, details }) {
+      const result = await rpc('report_chat_message', {
+        actor_user_id: actorUserId,
+        target_type: messageType,
+        target_message_id: messageId,
+        report_reason: reason,
+        report_details: details,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async listChatReports({ actorUserId, limit }) {
+      return rpc('list_chat_message_reports', {
+        actor_user_id: actorUserId,
+        result_limit: limit,
+      });
+    },
+
+    async moderateChatReport({ actorUserId, reportId, resolution, note, removeMessage }) {
+      const result = await rpc('moderate_chat_message_report', {
+        actor_user_id: actorUserId,
+        target_report_id: reportId,
+        resolution,
+        moderation_note: note,
+        remove_message: removeMessage,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
   };
 }
