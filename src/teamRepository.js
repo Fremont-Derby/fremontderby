@@ -42,6 +42,58 @@ async function requestJson(fetchImpl, url, init) {
   return body;
 }
 
+async function loadLineupRoundsForTeam(
+  fetchImpl,
+  supabaseUrl,
+  headers,
+  { seasonId, teamId },
+) {
+  const matchParams = new URLSearchParams({
+    select: 'id,round_id,table_number,status',
+    season_id: `eq.${seasonId}`,
+    or: `(team_a_id.eq.${teamId},team_b_id.eq.${teamId})`,
+  });
+  const roundParams = new URLSearchParams({
+    select: 'id,round_number,scheduled_on,status,stage,lineup_deadline_at',
+    season_id: `eq.${seasonId}`,
+    stage: 'eq.regular',
+    order: 'round_number.asc',
+  });
+
+  const [teamMatches, rounds] = await Promise.all([
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/team_matches?${matchParams}`,
+      { method: 'GET', headers },
+    ),
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/rounds?${roundParams}`,
+      { method: 'GET', headers },
+    ),
+  ]);
+
+  const matchByRoundId = new Map(
+    (Array.isArray(teamMatches) ? teamMatches : []).map((match) => [match.round_id, match]),
+  );
+
+  return (Array.isArray(rounds) ? rounds : [])
+    .filter((round) => matchByRoundId.has(round.id))
+    .map((round) => {
+      const match = matchByRoundId.get(round.id);
+      return {
+        roundId: round.id,
+        roundNumber: round.round_number,
+        scheduledOn: round.scheduled_on,
+        roundStatus: round.status,
+        lineupDeadlineAt: round.lineup_deadline_at,
+        teamMatchId: match.id,
+        tableNumber: match.table_number,
+        teamMatchStatus: match.status,
+      };
+    });
+}
+
 export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') {
     throw new Error('fetch implementation is required');
@@ -65,6 +117,7 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         ? (result[0] ?? { player_id: null, captain_teams: [], invitations: [] })
         : (result ?? { player_id: null, captain_teams: [], invitations: [] });
 
+      let enrichedManagement = management;
       try {
         const openSeasons = await requestJson(
           fetchImpl,
@@ -77,14 +130,36 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
           { method: 'GET', headers },
         );
 
-        return {
+        enrichedManagement = {
           ...management,
           open_seasons: Array.isArray(openSeasons) ? openSeasons : [],
           players: Array.isArray(players) ? players : [],
         };
       } catch {
-        return management;
+        // Team management remains useful even if optional picker data is unavailable.
       }
+
+      const captainTeams = enrichedManagement.captain_teams ?? [];
+      let scheduleEnriched = false;
+      const teamsWithRounds = [];
+      for (const team of captainTeams) {
+        try {
+          const lineupRounds = await loadLineupRoundsForTeam(
+            fetchImpl,
+            supabaseUrl,
+            headers,
+            team,
+          );
+          teamsWithRounds.push({ ...team, lineupRounds });
+          scheduleEnriched = true;
+        } catch {
+          teamsWithRounds.push(team);
+        }
+      }
+
+      return scheduleEnriched
+        ? { ...enrichedManagement, captain_teams: teamsWithRounds }
+        : enrichedManagement;
     },
 
     async listOwnTeamTrades({ actorUserId }) {
