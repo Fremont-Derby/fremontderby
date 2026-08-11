@@ -790,6 +790,19 @@ export async function handleListVisibleTeamLineupsRequest(
   }
 }
 
+export async function handleListPublicSeasonsRequest(
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    return jsonResponse({ seasons });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleListTeamStandingsRequest(
   env,
   seasonId,
@@ -1548,6 +1561,14 @@ export default {
       }
 
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (url.pathname === "/api/seasons") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListPublicSeasonsRequest(env);
     }
 
     if (teamStandingsMatch) {
