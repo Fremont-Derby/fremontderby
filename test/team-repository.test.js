@@ -25,7 +25,7 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-secret',
 };
 
-test('team repository loads the actor team-management view', async () => {
+test('team repository loads team management with open seasons and player directory', async () => {
   const { fetch, calls } = createFetch([
     {
       body: [{
@@ -33,6 +33,20 @@ test('team repository loads the actor team-management view', async () => {
         captain_teams: [{ teamName: 'Breakers' }],
         invitations: [{ teamName: 'Rack Pack' }],
       }],
+    },
+    {
+      body: [{
+        id: 'season-1',
+        name: 'Season 1',
+        status: 'registration',
+        first_round_date: '2026-09-03',
+      }],
+    },
+    {
+      body: [
+        { id: 'player-1', display_name: 'Alice' },
+        { id: 'player-2', display_name: 'Bob' },
+      ],
     },
   ]);
   const repository = createTeamRepository(env, { fetch });
@@ -45,12 +59,27 @@ test('team repository loads the actor team-management view', async () => {
     player_id: 'player-1',
     captain_teams: [{ teamName: 'Breakers' }],
     invitations: [{ teamName: 'Rack Pack' }],
+    open_seasons: [{
+      id: 'season-1',
+      name: 'Season 1',
+      status: 'registration',
+      first_round_date: '2026-09-03',
+    }],
+    players: [
+      { id: 'player-1', display_name: 'Alice' },
+      { id: 'player-2', display_name: 'Bob' },
+    ],
   });
   assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_management');
   assert.deepEqual(JSON.parse(calls[0].init.body), {
     actor_user_id: 'user-1',
   });
   assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+  assert.match(calls[1].url, /\/rest\/v1\/seasons\?/);
+  assert.match(calls[1].url, /status=eq\.registration/);
+  assert.equal(calls[1].init.headers.apikey, 'service-role-secret');
+  assert.match(calls[2].url, /\/rest\/v1\/players\?/);
+  assert.equal(calls[2].init.headers.apikey, 'service-role-secret');
 });
 
 test('team repository loads the actor trade-management view', async () => {
