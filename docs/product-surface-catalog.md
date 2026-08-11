@@ -68,7 +68,7 @@ A story is not considered fully complete merely because backend code exists. It 
 | `/lineup` | Captain | Build and submit the team's lineup for a matchup | Canonical captain lineup surface; mobile sticky lineup summary shipped in #262/PR #271 |
 | `/scorecard` | Player | Find an eligible generated match to score | Canonical score-selection surface; actionable signed-out/no-match/error recovery shipped in PR #277 under #250 |
 | `/scorecard/live` | Player | Operate the active team-owned rack scoring flow | Canonical live scoring surface; reduced navigation shell is intentional during scoring |
-| `/messages` | Player / captain | Coordinate league/team/matchup/direct communication without phone-number sharing | Canonical communication surface. Core messaging exists, but signed-out/loading/empty/expired-session/failure recovery remains partial under #281 / parent #250 |
+| `/messages` | Player / captain | Coordinate league/team/matchup/direct communication without phone-number sharing | Canonical communication surface. Signed-out, loading, empty, expired-session, no-candidate, and load-failure recovery shipped in PR #285 / #281 |
 | `/standings` | Public visitor / player | View team and individual competitive standings | Canonical standings surface; phone-native cards shipped in PR #272; season selection/history tracked by #180 |
 | `/trades` | Player / captain / admin exception | Manage player trade proposals, responses, and approvals | Canonical trade workflow |
 | `/prizes` | Public visitor / admin | View purse/payout state; administer prize configuration where authorized | Shared public/admin surface; role/function separation still requires audit under #238 |
@@ -100,7 +100,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Player | Pick an eligible generated match without technical IDs/tokens | `/scorecard` | Implemented; empty/recovery states improved | #141, #250 / PR #277 | Score is a direct shared-navigation destination. Signed-out state links to Profile and Schedule; no-ready-match state links to Schedule and Teams; failures expose retry/Profile recovery instead of a dead end |
 | Player / team member | Enter, reconcile, confirm, and finalize rack scoring | `/scorecard/live` | Implemented core flow | #14, #73, #229 | Reduced shell is an intentional task-focus exception; clear return path required |
 | Public visitor / player | Switch quickly between team and individual standings | `/standings` | Implemented current view; mobile cards shipped; history still open | #16, #17, #81, #180 / PR #272 | Canonical standings page; desktop nav is direct and mobile menu remains <=2 actions |
-| Player / captain | Coordinate without sharing phone numbers | `/messages` | Core function implemented; non-happy-path task states incomplete | #76, #250, #281 | Messages is a direct shared-navigation destination, so route reachability is healthy. #281 owns loading, signed-out, expired-session, no-thread/no-candidate, and API-failure recovery so the page does not become a task dead end after arrival |
+| Player / captain | Coordinate without sharing phone numbers | `/messages` | Implemented including recovery states | #76, #250, #281 / PR #285 | Messages is a direct shared-navigation destination. Signed-out/expired-session states route to Profile; empty states route to a new player message, Teams, or Schedule; load failure exposes Try again without changing authorization |
 | League admin / director | Configure and publish the season | `/season-setup` | Implemented core setup | #12 | Admin-only canonical configuration page; operational triage should not accumulate here |
 | Public visitor / tester | Understand the league by completing a safe guided test drive without sign-in | `/demo` | Partial: guided flow shipped; shared nav label + feedback remain open | #249, PR #265 | Desktop/mobile-menu entry remains within <=2 actions, but it still says `Demo`; contextual feedback stays in #113/#172 rather than a duplicate issue |
 | Tester / captain | Practice forming/changing a team and submitting a lineup without touching production | `/sandbox/captain` | Implemented | #263, PR #264 | One action from `/demo`; explicit fictional/non-authoritative exception |
@@ -117,9 +117,9 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 - Shared navigation still labels `/demo` as `Demo`. #249 records this precisely and remains open; contextual test-drive feedback is also explicitly linked to the existing #113/#172 lane rather than duplicated.
 - PRs #271, #272, and #274 improved mobile Lineup, Standings, and Availability respectively without creating new routes or changing canonical ownership. Their normal discovery remains within the two-action rule: Standings is directly available from shared navigation; Availability and Lineup are exposed from the Teams league-night hub after entering Teams from shared navigation.
 - PR #277 improved `/scorecard` signed-out, no-ready-match, expired-session, and load-failure states without changing route ownership. The Score destination is still one action from shared navigation, while recovery paths now point directly to Profile, Schedule, Teams, or Retry instead of leaving a dead end. This is partial proof toward #250 and strengthens #239 reachability evidence.
-- PR #282 codified durable UI state/recovery guidance but did not change product route ownership. Its concrete Messages gap is already captured by #281 under #250, so no duplicate issue was created.
-- `/messages` remains one action from shared navigation, but arrival is not sufficient task reachability when signed-out, empty, expired-session, or failure states do not expose a useful next action. #281 is now indexed as the canonical recovery-state story for this page.
-- No new route/story card is needed for those mobile/empty-state improvements because existing stories (#81, #250, page-specific issues, and scoring/messaging stories) already document the user outcomes.
+- PR #282 codified durable UI state/recovery guidance but did not change product route ownership.
+- PR #285 completed the concrete Messages recovery story #281 without changing the canonical communication surface. Messages remains directly reachable from shared navigation and its non-happy-path states now provide explicit recovery to Profile, Teams, Schedule, a new direct message, or Try again instead of becoming task dead ends.
+- No new route/story card is needed for the Messages recovery work because #281/#250 already document the user outcome and PR #285 supplies implementation proof.
 - No new route or story issue was needed for release-only PRs because they change release proof/safety rather than user-facing product ownership.
 - #238 remains incomplete until every current renderer/control is mapped; #239 remains incomplete until the navigation graph/regression check is deterministic and role-aware.
 
@@ -130,8 +130,8 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 - #239 — build/enforce the <=2-click navigation/reachability audit.
 - #240 — recurring Product Librarian review cadence. Completed; subsequent cycles continue to leave evidence in #238/#239 and this catalog.
 - #249 — guided Try a League Night presentation is largely shipped; shared navigation naming and contextual feedback remain before closure.
-- #250 — route-state cleanup remains open; `/scorecard` signed-out/empty/error recovery is complete via PR #277, while `/messages` recovery is now explicitly owned by #281 and the other listed major routes still require reconciliation.
-- #281 — make Messages loading, signed-out, empty, expired-session, no-candidate, and failure states task-oriented without changing messaging authorization or persistence.
+- #250 — route-state cleanup remains open; `/scorecard` recovery is complete via PR #277 and `/messages` recovery is complete via PR #285; the other listed major routes still require reconciliation.
+- #281 — Messages recovery-state story completed by PR #285.
 
 ## Librarian update checklist
 
