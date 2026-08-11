@@ -74,6 +74,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         rosteredPlayerCount: season.rostered_player_count,
         registeredPlayerCount: season.registered_player_count,
         freeAgentCount: season.free_agent_count,
+        openPrimaryRosterSpots: season.open_primary_roster_spots,
         atRiskTeamCount: season.at_risk_team_count,
         minimumCommittedRoster: season.minimum_committed_roster,
       }));
@@ -100,4 +101,3 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
     },
   };
 }
-
