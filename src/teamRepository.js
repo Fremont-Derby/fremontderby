@@ -94,6 +94,128 @@ async function loadLineupRoundsForTeam(
     });
 }
 
+function inFilter(values) {
+  return `in.(${values.join(',')})`;
+}
+
+async function loadAvailabilityContexts(
+  fetchImpl,
+  supabaseUrl,
+  headers,
+  playerId,
+) {
+  if (!playerId) return [];
+
+  const encodedPlayerId = encodeURIComponent(playerId);
+  const [memberships, seasonPlayers] = await Promise.all([
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/team_memberships?select=season_id,team_id,role&player_id=eq.${encodedPlayerId}&ends_at=is.null`,
+      { method: 'GET', headers },
+    ),
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/season_players?select=season_id,participation_type,status&player_id=eq.${encodedPlayerId}&status=eq.active`,
+      { method: 'GET', headers },
+    ),
+  ]);
+
+  const activeMemberships = Array.isArray(memberships) ? memberships : [];
+  const activeSeasonPlayers = Array.isArray(seasonPlayers) ? seasonPlayers : [];
+  const seasonIds = [...new Set([
+    ...activeMemberships.map((row) => row.season_id),
+    ...activeSeasonPlayers.map((row) => row.season_id),
+  ].filter(Boolean))];
+  if (!seasonIds.length) return [];
+
+  const seasonFilter = inFilter(seasonIds);
+  const [seasons, teams, rounds, teamMatches] = await Promise.all([
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/seasons?select=id,name,status&id=${seasonFilter}`,
+      { method: 'GET', headers },
+    ),
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/teams?select=id,season_id,name&season_id=${seasonFilter}`,
+      { method: 'GET', headers },
+    ),
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/rounds?select=id,season_id,round_number,scheduled_on,status,stage&season_id=${seasonFilter}&stage=eq.regular&order=scheduled_on.asc,round_number.asc`,
+      { method: 'GET', headers },
+    ),
+    requestJson(
+      fetchImpl,
+      `${supabaseUrl}/rest/v1/team_matches?select=id,season_id,round_id,team_a_id,team_b_id,table_number,status&season_id=${seasonFilter}`,
+      { method: 'GET', headers },
+    ),
+  ]);
+
+  const seasonById = new Map(
+    (Array.isArray(seasons) ? seasons : []).map((season) => [season.id, season]),
+  );
+  const teamById = new Map(
+    (Array.isArray(teams) ? teams : []).map((team) => [team.id, team]),
+  );
+  const regularRounds = Array.isArray(rounds) ? rounds : [];
+  const matches = Array.isArray(teamMatches) ? teamMatches : [];
+  const rosterSeasonIds = new Set(activeMemberships.map((row) => row.season_id));
+  const contexts = [];
+
+  for (const membership of activeMemberships) {
+    const team = teamById.get(membership.team_id);
+    const season = seasonById.get(membership.season_id);
+    for (const round of regularRounds.filter((row) => row.season_id === membership.season_id)) {
+      const match = matches.find((row) => row.round_id === round.id
+        && (row.team_a_id === membership.team_id || row.team_b_id === membership.team_id));
+      if (!match) continue;
+      contexts.push({
+        seasonId: membership.season_id,
+        seasonName: season?.name ?? 'Season',
+        participationType: 'roster',
+        teamId: membership.team_id,
+        teamName: team?.name ?? 'Team',
+        roundId: round.id,
+        roundNumber: round.round_number,
+        scheduledOn: round.scheduled_on,
+        roundStatus: round.status,
+        tableNumber: match.table_number,
+        teamMatchStatus: match.status,
+      });
+    }
+  }
+
+  for (const seasonPlayer of activeSeasonPlayers) {
+    if (seasonPlayer.participation_type !== 'free_agent') continue;
+    if (rosterSeasonIds.has(seasonPlayer.season_id)) continue;
+    const season = seasonById.get(seasonPlayer.season_id);
+    for (const round of regularRounds.filter((row) => row.season_id === seasonPlayer.season_id)) {
+      contexts.push({
+        seasonId: seasonPlayer.season_id,
+        seasonName: season?.name ?? 'Season',
+        participationType: 'free_agent',
+        teamId: null,
+        teamName: null,
+        roundId: round.id,
+        roundNumber: round.round_number,
+        scheduledOn: round.scheduled_on,
+        roundStatus: round.status,
+        tableNumber: null,
+        teamMatchStatus: null,
+      });
+    }
+  }
+
+  return contexts.sort((left, right) => {
+    const leftDate = left.scheduledOn ?? '9999-12-31';
+    const rightDate = right.scheduledOn ?? '9999-12-31';
+    return leftDate.localeCompare(rightDate)
+      || Number(left.roundNumber) - Number(right.roundNumber)
+      || left.participationType.localeCompare(right.participationType);
+  });
+}
+
 export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') {
     throw new Error('fetch implementation is required');
@@ -157,9 +279,26 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         }
       }
 
-      return scheduleEnriched
+      let finalManagement = scheduleEnriched
         ? { ...enrichedManagement, captain_teams: teamsWithRounds }
         : enrichedManagement;
+
+      try {
+        const availabilityContexts = await loadAvailabilityContexts(
+          fetchImpl,
+          supabaseUrl,
+          headers,
+          management.player_id,
+        );
+        finalManagement = {
+          ...finalManagement,
+          availability_contexts: availabilityContexts,
+        };
+      } catch {
+        // Availability selection is optional enrichment of the base management view.
+      }
+
+      return finalManagement;
     },
 
     async listOwnTeamTrades({ actorUserId }) {
