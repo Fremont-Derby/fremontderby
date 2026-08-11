@@ -49,7 +49,7 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
   const scoringBody = ({ actorUserId, playerMatchId, scoringTeamId }) => ({
     actor_user_id: actorUserId,
     target_player_match_id: playerMatchId,
-    scoring_team_id: scoringTeamId,
+    target_scoring_team_id: scoringTeamId,
   });
 
   return {
