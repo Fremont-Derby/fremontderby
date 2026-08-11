@@ -40,7 +40,7 @@ test('admin player repository uses service role RPCs and normalizes player rows'
     {
       fetch: async (url, init) => {
         requests.push({ url, init });
-        if (url.endsWith('/rpc/list_admin_players')) {
+        if (url.endsWith('/rpc/list_admin_players_for_management')) {
           return jsonResponse([{
             player_id: 'player-1',
             display_name: 'Alex Example',
