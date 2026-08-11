@@ -35,7 +35,7 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 | `/` | Public visitor | Understand Fremont Derby and choose the next appropriate league action | Canonical introduction; current-season practical details remain under #252 |
 | `/rules` | Public visitor / player | Read authoritative user-facing league rules | Canonical rules surface |
 | `/profile` | Player | Sign in and manage identity, memberships, season history, and role-specific tool discovery | Canonical identity/profile surface. PR #301 completed signed-out/loading/empty/error recovery and narrow-phone history reflow, closing #298 and #299. Authorized admin discovery from PR #297 remains intact |
-| `/teams` | Player / captain | Find, join, create, and manage teams and roster relationships | Canonical team/roster surface; phone-width table reflow shipped in PR #290 / #131. Non-happy-path state cleanup remains focused in #305 |
+| `/teams` | Player / captain | Find, join, create, and manage teams and roster relationships | Canonical team/roster surface; phone-width table reflow shipped in PR #290 / #131. PR #312 completed signed-out/loading/empty/expired-session/load-failure recovery and closed #305 |
 | `/schedule` | Public visitor / player / captain | See the current/upcoming league night and enter the appropriate next workflow | Canonical schedule/current-night surface; #133 |
 | `/availability` | Player / captain | Declare and review league-night availability | Canonical availability surface; substitute-discovery improvements remain under #138 |
 | `/lineup` | Captain | Build and submit the team's lineup for a matchup | Canonical captain lineup surface |
@@ -59,7 +59,7 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 | --- | --- | --- | --- | --- | --- |
 | Public visitor / player / captain | Find tonight's round and matchup context | `/schedule` | Implemented | #133 | Direct desktop navigation; Tonight is in the mobile dock |
 | Player | Sign in, manage profile/history, recover from signed-out/error states, and discover authorized admin tools | `/profile` | Implemented current slice | #8, #250, PRs #297/#301 | Profile is a direct shared-nav destination; admin links appear only after the existing admin authorization probe |
-| Player / captain | Find/create/join/manage team relationships | `/teams` | Implemented core flow; recovery states partial | #131, #181, #182, #305, PR #290 | Teams remains the canonical roster/membership home; league-night links are secondary shortcuts; #305 owns signed-out/loading/empty/failure presentation |
+| Player / captain | Find/create/join/manage team relationships and recover from signed-out/loading/empty/session/failure states | `/teams` | Implemented current slice | #131, #181, #182, #250, #305, PRs #290/#312 | Teams remains the canonical roster/membership home; authenticated mutation controls wait for usable session/data state; recovery points to Profile or retry as appropriate |
 | Player / captain | Mark league-night availability | `/availability` | Implemented | #13, #138, PR #274 | Teams -> Mark availability remains within two deliberate actions |
 | Captain | Submit a blind ordered lineup | `/lineup` | Implemented | #13, #139, #156, PR #271 | Teams -> Build lineup remains within two deliberate actions |
 | Player | Pick an eligible match and recover from no-match/session/load states | `/scorecard` | Implemented | #141, #250, PR #277 | Score is a direct shared-nav destination; recovery points to Profile, Schedule, Teams, or Retry |
@@ -77,11 +77,12 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 
 ### 2026-08-11
 
-- **Operations readiness expanded again without changing page ownership:** PR #309 added 90/150-minute escalation for genuinely started but unfinalized matches, deriving start time from the first non-empty team-owned score submission instead of a status value that scoring does not update. `/admin/operations` remains the canonical league-readiness/exception surface, and its direct `/scorecard` action preserves scoring ownership instead of duplicating scoring controls in Operations.
-- **Auth-gated initial-state guidance now matches the existing Teams story:** PR #310 codified that authenticated management controls/private panels should not render before session state resolves. This does not create a new product surface or story; #305 already owns the concrete `/teams` implementation gap, and #250 owns the broader route-state consistency epic.
-- **Teams remains the one unfinished major route-state slice:** #305 owns signed-out/loading/empty/expired-session/failure presentation on `/teams`; no duplicate team or registration surface should be created for that work.
+- **Teams non-happy-path recovery is now shipped:** PR #312 completed #305 without changing team, membership, captaincy, registration, authorization, database, payment, lineup, or scoring semantics. `/teams` remains the one canonical team/roster/membership surface; authenticated management controls wait for usable session/data state, signed-out and expired-session states recover through Profile, failures expose retry, and the no-horizontal-scroll phone behavior from PR #290 remains intact.
+- **The major-route recovery epic is now implementation-complete by route:** Score (PR #277), Messages (PR #285), Profile (PR #301), Standings (PR #302), and Teams (PR #312) all have focused non-happy-path recovery. #250 remains open only for its final cross-route consistency/shared-pattern audit; do not create another route-specific recovery issue unless new regression evidence appears.
+- **Operations readiness remains on its existing canonical surface:** PR #309 added 90/150-minute escalation for genuinely started but unfinalized matches, deriving start time from the first non-empty team-owned score submission. `/admin/operations` remains the canonical league-readiness/exception surface, and its direct `/scorecard` action preserves scoring ownership instead of duplicating scoring controls in Operations.
+- **Auth-gated initial-state guidance matches shipped Teams behavior:** PR #310 codified that authenticated management controls/private panels should not render before session state resolves; PR #312 now applies that principle to the concrete Teams slice.
 - **Known navigation-copy gap remains:** current `src/appShell.js` still labels `/demo` as `Demo` while the canonical public product name is **Try a League Night**. #249 already owns this; do not create a duplicate issue.
-- **No new routes, overloaded pages, or duplicate surfaces** were introduced by PRs #309/#310. The affected Operations actions continue to resolve on their canonical execution pages, and the guidance-only auth-state change reinforces existing page ownership.
+- **No new routes, overloaded pages, duplicate surfaces, or <=2-action violations** were introduced by PR #312. Teams remains directly discoverable in shared navigation, and its secondary Availability/Lineup links continue to land on their canonical execution pages.
 - #238 remains open until every current renderer/control is mapped. #239 remains open until role-aware navigation reachability is represented by a deterministic regression graph/test rather than only spot checks.
 
 ## Known catalog work
@@ -91,7 +92,7 @@ Issue #238 owns the exhaustive control-by-control inventory. This catalog descri
 - #239 — deterministic <=2-click role-aware navigation/reachability audit and regression coverage.
 - #240 — recurring Product Librarian cadence. Completed; subsequent cycles leave evidence in #238/#239 and this catalog.
 - #249 — Try a League Night shared-navigation naming plus contextual feedback closure work.
-- #250 — route-state cleanup. Score, Messages, Profile, and Standings recovery slices are shipped; #305 owns the remaining Teams slice plus final shared-state consistency review.
+- #250 — route-state cleanup. Score, Messages, Profile, Standings, and Teams recovery slices are shipped; only the final cross-route consistency/shared-pattern audit remains.
 - #169 — remaining `/admin/operations` signals after availability, lineup-deadline, dual-score mismatch aging, and started-match aging shipped.
 
 ## Librarian update checklist
