@@ -53,11 +53,12 @@ export function createTeamRegistrationRepository(
   const headers = jsonHeaders(serviceRoleKey);
 
   return {
-    getOwn({ actorUserId, seasonId }) {
-      return requestRpc(fetchImpl, supabaseUrl, headers, 'get_own_team_registration', {
+    async getOwn({ actorUserId, seasonId }) {
+      const result = await requestRpc(fetchImpl, supabaseUrl, headers, 'get_own_team_registration', {
         actor_user_id: actorUserId,
         target_season_id: seasonId,
       });
+      return result?.registration ?? result;
     },
 
     submitApplication({ actorUserId, seasonId, teamName }) {
@@ -84,11 +85,12 @@ export function createTeamRegistrationRepository(
       });
     },
 
-    getAdmin({ actorUserId, seasonId }) {
-      return requestRpc(fetchImpl, supabaseUrl, headers, 'get_admin_season_registration', {
+    async getAdmin({ actorUserId, seasonId }) {
+      const result = await requestRpc(fetchImpl, supabaseUrl, headers, 'get_admin_season_registration', {
         actor_user_id: actorUserId,
         target_season_id: seasonId,
       });
+      return result?.registration ?? result;
     },
 
     configure({
