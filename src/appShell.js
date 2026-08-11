@@ -137,8 +137,7 @@ export const shellStyles = `
     .fd-nav--desktop { display: none; }
     .fd-message-notifications { margin-left: auto; }
     .fd-message-preview { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; }
-    .fd-nav-menu { margin-left: 0; }
-    .fd-nav-menu { display: block; }
+    .fd-nav-menu { display: block; margin-left: 0; }
   }
 `;
 
@@ -164,6 +163,7 @@ const shellScript = `<script data-fd-message-indicator-script>
     const setOpen = (open) => {
       notifications.dataset.open = open ? 'true' : 'false';
       indicator.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!open) delete notifications.dataset.touchPrimed;
     };
     const renderPreviews = (previews, unread) => {
       previewList.replaceChildren();
@@ -241,8 +241,9 @@ const shellScript = `<script data-fd-message-indicator-script>
       }, 0);
     });
     indicator.addEventListener('click', (event) => {
-      if (!window.matchMedia('(hover: hover)').matches && notifications.dataset.open !== 'true') {
+      if (!window.matchMedia('(hover: hover)').matches && notifications.dataset.touchPrimed !== 'true') {
         event.preventDefault();
+        notifications.dataset.touchPrimed = 'true';
         setOpen(true);
       }
     });
