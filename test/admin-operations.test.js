@@ -114,6 +114,10 @@ test('operations page uses the Google session and fits phone width without a wid
   assert.match(html, /@media\(max-width:760px\)/);
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /Open Profile/);
+  assert.match(html, /severityLabel\(severity\)/);
+  assert.match(html, /Critical.*Warning.*Ready/);
+  assert.match(html, /link\.textContent='Open: '\+item\.title/);
+  assert.match(html, /:focus-visible/);
   assert.doesNotMatch(html, /overflow-x:auto|min-width:6\d\dpx/);
   assert.doesNotMatch(html, /Access token/i);
   assert.doesNotMatch(html, /service-secret/i);
