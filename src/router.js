@@ -79,6 +79,9 @@ export default {
     const adminAdvanceChampionshipMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/advance-championship$/,
     );
+    const postseasonLineupMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/postseason-lineup$/,
+    );
     const adminDualScoreOverrideMatch = url.pathname.match(
       /^\/api\/admin\/player-matches\/([^/]+)\/finalize-override$/,
     );
@@ -384,6 +387,15 @@ export default {
         request,
         env,
         decodeURIComponent(adminAdvanceChampionshipMatch[1]),
+      );
+    }
+
+    if (postseasonLineupMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return playoffHttpHandlers.submitLineup(
+        request,
+        env,
+        decodeURIComponent(postseasonLineupMatch[1]),
       );
     }
 
