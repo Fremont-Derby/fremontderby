@@ -18,3 +18,17 @@ export async function startSeasonPlayoffsCommand(
     actorUserId: requireUuidLike(actorUserId, 'Actor user id'),
   });
 }
+
+export async function advanceSeasonToChampionshipCommand(
+  { seasonId, actorUserId },
+  repository,
+) {
+  if (!repository || typeof repository.advanceSeasonToChampionship !== 'function') {
+    throw new Error('Playoff repository is required');
+  }
+
+  return repository.advanceSeasonToChampionship({
+    seasonId: requireUuidLike(seasonId, 'Season id'),
+    actorUserId: requireUuidLike(actorUserId, 'Actor user id'),
+  });
+}
