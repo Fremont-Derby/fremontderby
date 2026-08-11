@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Demo', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
+  { href: '/messages', label: 'Messages', key: 'messages' },
   { href: '/profile', label: 'Profile', key: 'profile' },
 ];
 
@@ -18,6 +19,7 @@ const APP_PAGE_PATHS = new Set([
   '/availability',
   '/teams',
   '/trades',
+  '/messages',
 ]);
 
 function sectionForPath(pathname) {
@@ -27,6 +29,7 @@ function sectionForPath(pathname) {
   if (pathname.startsWith('/teams') || pathname === '/trades') return 'teams';
   if (pathname.startsWith('/standings') || pathname === '/prizes') return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
+  if (pathname.startsWith('/messages')) return 'messages';
   if (pathname.startsWith('/profile')) return 'profile';
   return null;
 }
