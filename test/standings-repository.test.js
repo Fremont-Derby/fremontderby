@@ -77,3 +77,50 @@ test('standings repository surfaces Supabase failures', async () => {
     /standings unavailable/,
   );
 });
+
+
+test('standings repository lists public seasons with registration progress', async () => {
+  const calls = [];
+  const responses = [
+    [{
+      id: 'season-1',
+      name: 'Fremont Derby Season 1',
+      status: 'registration',
+      first_round_date: '2026-09-03',
+    }],
+    [
+      { id: 'team-1', season_id: 'season-1' },
+      { id: 'team-2', season_id: 'season-1' },
+    ],
+    [
+      { season_id: 'season-1', player_id: 'player-1' },
+      { season_id: 'season-1', player_id: 'player-2' },
+      { season_id: 'season-1', player_id: 'player-2' },
+    ],
+  ];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify(responses.shift()), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  const repository = createStandingsRepository(env, { fetch });
+  const seasons = await repository.listPublicSeasons();
+
+  assert.equal(calls.length, 3);
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/seasons?select=id,name,status,first_round_date,created_at&order=created_at.desc');
+  assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/teams?select=id,season_id');
+  assert.equal(calls[2].url, 'https://project.supabase.co/rest/v1/team_memberships?select=season_id,player_id&ends_at=is.null');
+  assert.deepEqual(seasons[0], {
+    id: 'season-1',
+    name: 'Fremont Derby Season 1',
+    status: 'registration',
+    firstRoundDate: '2026-09-03',
+    teamCount: 2,
+    teamCapacity: 8,
+    openTeamSlots: 6,
+    rosteredPlayerCount: 2,
+  });
+});
