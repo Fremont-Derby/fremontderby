@@ -128,6 +128,8 @@ export function createAdminOperationsRepository(
       if (currentRound) {
         const roundFilter = `round_id=eq.${encodeURIComponent(currentRound.id)}&`;
         metricTasks.push(
+          ['currentRoundTeamMatches', () => table('team_matches', `${roundFilter}select=id&limit=1`)],
+          ['currentRoundLineups', () => table('team_lineups', `${roundFilter}select=id&limit=1`, 'private')],
           ['rosterAvailabilityResponses', () => table('roster_availability', `${roundFilter}select=player_id&limit=1`, 'private')],
           ['availableRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.available&select=player_id&limit=1`, 'private')],
           ['unsureRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.unsure&select=player_id&limit=1`, 'private')],
