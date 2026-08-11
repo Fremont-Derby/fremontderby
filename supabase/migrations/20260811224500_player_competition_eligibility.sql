@@ -45,7 +45,7 @@ revoke all on function private.active_player_competition_restriction(uuid, uuid)
 grant execute on function private.active_player_competition_restriction(uuid, uuid)
   to service_role;
 
-create or replace function public.list_admin_players(actor_user_id uuid)
+create or replace function public.list_admin_players_for_management(actor_user_id uuid)
 returns table (
   player_id uuid,
   display_name text,
@@ -291,8 +291,9 @@ begin
 end;
 $$;
 
-revoke all on function public.list_admin_players(uuid) from public, anon, authenticated;
-grant execute on function public.list_admin_players(uuid) to service_role;
+revoke all on function public.list_admin_players_for_management(uuid)
+  from public, anon, authenticated;
+grant execute on function public.list_admin_players_for_management(uuid) to service_role;
 revoke all on function public.set_player_competition_eligibility(uuid, uuid, uuid, boolean, text)
   from public, anon, authenticated;
 grant execute on function public.set_player_competition_eligibility(uuid, uuid, uuid, boolean, text)
