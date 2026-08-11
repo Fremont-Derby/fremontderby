@@ -77,9 +77,9 @@ test('scorecard first view is a compact aligned W/L rack ledger with contained h
   assert.match(html, /body\{[^}]*overflow-x:hidden/);
   assert.match(html, /cellValue\(rack,playerSide\)/);
   assert.match(html, /winnerSide\(rack\)===playerSide\?'W':'L'/);
-  assert.match(html, /data-state=matched/);
-  assert.match(html, /data-state=pending/);
-  assert.match(html, /data-state=mismatch/);
+  assert.match(html, /\.submission\[data-state=matched\]/);
+  assert.match(html, /\.submission\[data-state=pending\]/);
+  assert.match(html, /\.submission\[data-state=mismatch\]/);
   assert.match(html, /aria-label','Rack '\+number\+', '\+gameForRack\(number\)/);
   assert.match(html, /game\.setAttribute\('aria-label',gameForRack\(number\)\)/);
   assert.match(html, /Match details/);
