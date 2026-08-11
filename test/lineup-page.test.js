@@ -2,20 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderLineupPage } from '../src/lineupPage.js';
 
-test('lineup page renders captain three-player lineup controls', () => {
+test('lineup page renders a signed-in human-readable three-player captain flow', () => {
   const html = renderLineupPage();
 
   assert.match(html, /Fremont Derby Lineup/);
-  assert.match(html, /data-team-id/);
-  assert.match(html, /data-round-id/);
-  assert.match(html, /data-token/);
+  assert.match(html, /data-team-select/);
+  assert.match(html, /data-round-select/);
+  assert.doesNotMatch(html, /data-team-id/);
+  assert.doesNotMatch(html, /data-round-id/);
+  assert.doesNotMatch(html, /data-token/);
+  assert.doesNotMatch(html, />Team ID</i);
+  assert.doesNotMatch(html, />Round ID</i);
+  assert.doesNotMatch(html, />Access token</i);
+  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
+  assert.match(html, /\/api\/me\/teams/);
+  assert.match(html, /Round '/);
+  assert.match(html, /Table '/);
   assert.match(html, /data-availability-body/);
   assert.match(html, /data-slots/);
   assert.match(html, /data-submit/);
-  assert.match(html, /data-lineup-body/);
-  assert.match(html, /3 slots/);
-  assert.match(html, /index < 3/);
+  assert.match(html, /Lock lineup/);
+  assert.match(html, /Opponent order stays hidden until both teams submit/);
+  assert.match(html, /index<3/);
   assert.doesNotMatch(html, /4 slots/);
-  assert.match(html, /eligible-free-agents|availability/);
+  assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/availability/);
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/lineup/);
 });
