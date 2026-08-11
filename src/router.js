@@ -98,6 +98,15 @@ export default {
     const teamChatReadMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/messages\/read$/,
     );
+    const directMessagesMatch = url.pathname.match(
+      /^\/api\/direct-conversations\/([^/]+)\/messages$/,
+    );
+    const directReadMatch = url.pathname.match(
+      /^\/api\/direct-conversations\/([^/]+)\/messages\/read$/,
+    );
+    const playerBlockMatch = url.pathname.match(
+      /^\/api\/players\/([^/]+)\/block$/,
+    );
 
     if (request.method === 'GET' && url.pathname === '/favicon.svg') {
       return faviconResponse();
@@ -153,6 +162,57 @@ export default {
     if (url.pathname === '/api/me/chat-threads') {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listThreads(request, env);
+    }
+
+    if (url.pathname === '/api/me/direct-message-inbox') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listDirectInbox(request, env);
+    }
+
+    if (url.pathname === '/api/me/direct-message-candidates') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listDirectCandidates(request, env);
+    }
+
+    if (url.pathname === '/api/me/blocked-players') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listBlockedPlayers(request, env);
+    }
+
+    if (url.pathname === '/api/direct-conversations') {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.startDirectConversation(request, env);
+    }
+
+    if (directReadMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.markDirectChatRead(
+        request,
+        env,
+        decodeURIComponent(directReadMatch[1]),
+      );
+    }
+
+    if (directMessagesMatch) {
+      const conversationId = decodeURIComponent(directMessagesMatch[1]);
+      if (request.method === 'GET') {
+        return chatHttpHandlers.listDirectMessages(request, env, conversationId);
+      }
+      if (request.method === 'POST') {
+        return chatHttpHandlers.sendDirectMessage(request, env, conversationId);
+      }
+      return methodNotAllowed();
+    }
+
+    if (playerBlockMatch) {
+      const playerId = decodeURIComponent(playerBlockMatch[1]);
+      if (request.method === 'POST') {
+        return chatHttpHandlers.blockPlayer(request, env, playerId);
+      }
+      if (request.method === 'DELETE') {
+        return chatHttpHandlers.unblockPlayer(request, env, playerId);
+      }
+      return methodNotAllowed();
     }
 
     if (teamChatReadMatch) {
