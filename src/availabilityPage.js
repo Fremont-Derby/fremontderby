@@ -6,274 +6,33 @@ export function renderAvailabilityPage() {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Fremont Derby Availability</title>
   <style>
-    :root {
-      color-scheme: dark;
-      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-      background: #111313;
-      color: #f6f1e7;
-      --panel: #1a1d1d;
-      --line: #343a3a;
-      --muted: #a9b2ae;
-      --green: #2fa56f;
-      --gold: #d7a934;
-      --red: #d55448;
-      --blue: #4b83d8;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: #111313; }
-    button, input { font: inherit; }
-    button {
-      min-height: 44px;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      color: #0d1110;
-      font-weight: 850;
-      cursor: pointer;
-    }
-    button:disabled { cursor: not-allowed; opacity: .5; }
-    input {
-      width: 100%;
-      min-height: 44px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #0f1111;
-      color: #f6f1e7;
-      padding: 0 12px;
-    }
-    label { display: grid; gap: 6px; color: var(--muted); font-size: .78rem; font-weight: 850; }
-    .app { width: min(920px, 100%); margin: 0 auto; padding: 16px; }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--line);
-    }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 950; }
-    .mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      background: var(--blue);
-      color: #07101f;
-      font-weight: 950;
-    }
-    .status { min-height: 32px; color: var(--muted); text-align: right; }
-    .status[data-tone="error"] { color: #ffb1aa; }
-    .status[data-tone="ok"] { color: #9ee5bd; }
-    .setup {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-      gap: 10px;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      padding-top: 14px;
-      align-items: stretch;
-    }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      min-width: 0;
-      overflow: hidden;
-    }
-    .panel-head {
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 0 12px;
-      border-bottom: 1px solid var(--line);
-      font-weight: 900;
-    }
-    .stack { display: grid; gap: 10px; padding: 12px; }
-    .primary { background: var(--green); color: #06120d; }
-    .secondary { background: var(--gold); color: #12100a; }
-    .unsure { background: var(--blue); color: #07101f; }
-    .danger { background: var(--red); color: #1a0604; }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      border-radius: 999px;
-      padding: 0 10px;
-      background: #26302f;
-      color: #d8e4de;
-      font-size: .78rem;
-      font-weight: 900;
-    }
-    .meta { min-height: 44px; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
-    @media (max-width: 780px) {
-      .app { padding: 12px; }
-      .topbar { align-items: flex-start; }
-      .setup, .grid { grid-template-columns: 1fr; }
-      .status { text-align: left; }
-    }
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#111313;color:#f6f1e7;--panel:#1a1d1d;--line:#343a3a;--muted:#a9b2ae;--green:#2fa56f;--gold:#d7a934;--red:#d55448;--blue:#4b83d8}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#111313}button,select{font:inherit}button{min-height:48px;border:1px solid transparent;border-radius:10px;color:#0d1110;font-weight:900;cursor:pointer}button:disabled,select:disabled{cursor:not-allowed;opacity:.5}select{width:100%;min-height:48px;border:1px solid var(--line);border-radius:10px;background:#0f1111;color:#f6f1e7;padding:0 12px}label{display:grid;gap:6px;color:var(--muted);font-size:.8rem;font-weight:850}.app{width:min(760px,100%);margin:0 auto;padding:16px}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:10px;font-weight:950}.mark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--blue);color:#07101f;font-weight:950}.status{min-height:32px;color:var(--muted);text-align:right}.status[data-tone="error"]{color:#ffb1aa}.status[data-tone="ok"]{color:#9ee5bd}.picker{padding:14px 0;border-bottom:1px solid var(--line)}.panel{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}.panel-head{min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);font-weight:900}.badge{display:inline-flex;align-items:center;min-height:28px;border-radius:999px;padding:0 10px;background:#26302f;color:#d8e4de;font-size:.78rem;font-weight:900}.context{display:grid;gap:5px;padding:14px;color:var(--muted)}.context strong{color:#f6f1e7;font-size:1.08rem}.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0 14px 14px}.available{background:var(--green);color:#06120d}.unsure{background:var(--gold);color:#171108}.unavailable{background:var(--red);color:#1a0604}.empty{padding:20px 14px;color:var(--muted);text-align:center}.signin{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 14px;border:1px solid var(--green);border-radius:10px;color:#9ee5bd;text-decoration:none;font-weight:900;margin-top:12px}@media(max-width:620px){.app{padding:12px}.topbar{align-items:flex-start}.status{text-align:left}.actions{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <main class="app">
-    <header class="topbar">
-      <div class="brand"><span class="mark">A</span><span>Fremont Derby Availability</span></div>
-      <div class="status" data-status>Ready</div>
-    </header>
-
-    <form class="setup" data-setup>
-      <label>Season ID
-        <input name="seasonId" data-season-id autocomplete="off" />
-      </label>
-      <label>Round ID
-        <input name="roundId" data-round-id autocomplete="off" />
-      </label>
-      <label>Access token
-        <input name="token" data-token type="password" autocomplete="current-password" />
-      </label>
-    </form>
-
-    <section class="grid">
-      <article class="panel">
-        <div class="panel-head"><span>Free agent</span><span class="badge" data-free-agent-state>-</span></div>
-        <div class="stack">
-          <div class="meta">Season registration</div>
-          <button class="secondary" data-register type="button">Register</button>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><span>Roster availability</span><span class="badge" data-roster-state>-</span></div>
-        <div class="stack">
-          <button class="primary" data-roster-status="available" type="button">Available</button>
-          <button class="unsure" data-roster-status="unsure" type="button">Unsure</button>
-          <button class="danger" data-roster-status="unavailable" type="button">Unavailable</button>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><span>Free-agent availability</span><span class="badge" data-free-agent-availability-state>-</span></div>
-        <div class="stack">
-          <button class="primary" data-free-agent-status="available" type="button">Available</button>
-          <button class="unsure" data-free-agent-status="unsure" type="button">Unsure</button>
-          <button class="danger" data-free-agent-status="unavailable" type="button">Unavailable</button>
-        </div>
-      </article>
+    <header class="topbar"><div class="brand"><span class="mark">A</span><span>Fremont Derby Availability</span></div><div class="status" data-status>Loading…</div></header>
+    <section class="picker"><label>League night<select data-context-select disabled><option value="">Loading your rounds…</option></select></label></section>
+    <section class="panel" data-panel>
+      <div class="panel-head"><span>Your availability</span><span class="badge" data-current-status>Not marked</span></div>
+      <div class="context"><strong data-context-title>Select a round</strong><span data-context-detail>Your roster or free-agent context will appear here.</span></div>
+      <div class="actions">
+        <button class="available" data-availability-status="available" type="button">Available</button>
+        <button class="unsure" data-availability-status="unsure" type="button">Unsure</button>
+        <button class="unavailable" data-availability-status="unavailable" type="button">Unavailable</button>
+      </div>
+      <div class="empty" data-empty hidden>No published regular-season rounds are available for you yet.</div>
     </section>
   </main>
-
   <script>
-    const seasonInput = document.querySelector('[data-season-id]');
-    const roundInput = document.querySelector('[data-round-id]');
-    const tokenInput = document.querySelector('[data-token]');
-    const statusEl = document.querySelector('[data-status]');
-    const freeAgentState = document.querySelector('[data-free-agent-state]');
-    const rosterState = document.querySelector('[data-roster-state]');
-    const freeAgentAvailabilityState = document.querySelector('[data-free-agent-availability-state]');
-
-    const params = new URLSearchParams(location.search);
-    seasonInput.value = params.get('season') || localStorage.getItem('fd.availabilitySeasonId') || '';
-    roundInput.value = params.get('round') || localStorage.getItem('fd.availabilityRoundId') || '';
-    tokenInput.value = sessionStorage.getItem('fd.accessToken') || '';
-
-    function setStatus(message, tone) {
-      statusEl.textContent = message;
-      statusEl.dataset.tone = tone || 'muted';
-    }
-
-    function requireInputs(scope) {
-      const seasonId = seasonInput.value.trim();
-      const roundId = roundInput.value.trim();
-      const token = tokenInput.value.trim();
-      if (scope === 'season' && !seasonId) throw new Error('Season ID is required');
-      if (scope === 'round' && !roundId) throw new Error('Round ID is required');
-      if (!token) throw new Error('Access token is required');
-      if (seasonId) localStorage.setItem('fd.availabilitySeasonId', seasonId);
-      if (roundId) localStorage.setItem('fd.availabilityRoundId', roundId);
-      sessionStorage.setItem('fd.accessToken', token);
-      return { seasonId, roundId, token };
-    }
-
-    async function parseJson(response) {
-      const text = await response.text();
-      if (!text) return {};
-      try {
-        return JSON.parse(text);
-      } catch {
-        return { error: text };
-      }
-    }
-
-    async function api(path, options, scope) {
-      const inputs = requireInputs(scope);
-      const url = path
-        .replace(':seasonId', encodeURIComponent(inputs.seasonId))
-        .replace(':roundId', encodeURIComponent(inputs.roundId));
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          authorization: 'Bearer ' + inputs.token,
-          'content-type': 'application/json',
-        },
-      });
-      const body = await parseJson(response);
-      if (!response.ok) {
-        throw new Error(body.error || 'Request failed');
-      }
-      return body;
-    }
-
-    async function registerFreeAgent() {
-      setStatus('Registering...');
-      await api('/api/seasons/:seasonId/free-agents/me', {
-        method: 'POST',
-        body: '{}',
-      }, 'season');
-      freeAgentState.textContent = 'registered';
-      setStatus('Registered as free agent', 'ok');
-    }
-
-    async function setRosterAvailability(status) {
-      setStatus('Saving roster availability...');
-      await api('/api/rounds/:roundId/availability/me', {
-        method: 'PUT',
-        body: JSON.stringify({ status }),
-      }, 'round');
-      rosterState.textContent = status;
-      setStatus('Roster availability saved', 'ok');
-    }
-
-    async function setFreeAgentAvailability(status) {
-      setStatus('Saving free-agent availability...');
-      await api('/api/rounds/:roundId/free-agent-availability/me', {
-        method: 'PUT',
-        body: JSON.stringify({ status }),
-      }, 'round');
-      freeAgentAvailabilityState.textContent = status;
-      setStatus('Free-agent availability saved', 'ok');
-    }
-
-    async function run(action) {
-      try {
-        await action();
-      } catch (error) {
-        setStatus(error.message, 'error');
-      }
-    }
-
-    document.querySelector('[data-register]').addEventListener('click', () => run(registerFreeAgent));
-    for (const button of document.querySelectorAll('[data-roster-status]')) {
-      button.addEventListener('click', () => run(() => setRosterAvailability(button.dataset.rosterStatus)));
-    }
-    for (const button of document.querySelectorAll('[data-free-agent-status]')) {
-      button.addEventListener('click', () => run(() => setFreeAgentAvailability(button.dataset.freeAgentStatus)));
-    }
+    const contextSelect=document.querySelector('[data-context-select]');const statusEl=document.querySelector('[data-status]');const currentStatus=document.querySelector('[data-current-status]');const contextTitle=document.querySelector('[data-context-title]');const contextDetail=document.querySelector('[data-context-detail]');const emptyEl=document.querySelector('[data-empty]');const buttons=Array.from(document.querySelectorAll('[data-availability-status]'));let contexts=[];
+    function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}async function signedApi(path,options={}){const token=accessToken();if(!token)throw new Error('Sign in with Google to mark availability.');const response=await fetch(path,{...options,headers:{authorization:'Bearer '+token,'content-type':'application/json',...(options.headers||{})}});const body=await parseJson(response);if(response.status===401){sessionStorage.removeItem('fd.accessToken');throw new Error('Your sign-in expired. Open Profile and sign in again.')}if(!response.ok)throw new Error(body.error||'Request failed');return body}
+    function dateLabel(value){if(!value)return'Date TBD';const d=new Date(value+'T12:00:00');return new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric'}).format(d)}function contextKey(context){return [context.participationType,context.teamId||'free-agent',context.roundId].join('|')}function contextLabel(context){const role=context.participationType==='roster'?(context.teamName+' roster'):'Free agent';return dateLabel(context.scheduledOn)+' · Round '+context.roundNumber+' · '+role}function selectedContext(){const key=contextSelect.value;return contexts.find((context)=>contextKey(context)===key)||null}
+    function renderContext(){const context=selectedContext();if(!context){contextTitle.textContent='No round selected';contextDetail.textContent='';for(const button of buttons)button.disabled=true;return}contextTitle.textContent=contextLabel(context);contextDetail.textContent=context.participationType==='roster'?('Team: '+context.teamName+(context.tableNumber?' · Table '+context.tableNumber:'')):'You are available to substitute for an eligible team this round.';currentStatus.textContent='Not marked';for(const button of buttons)button.disabled=false;localStorage.setItem('fd.availabilityContext',contextKey(context))}
+    function renderContexts(rows){contexts=rows||[];contextSelect.replaceChildren();if(!contexts.length){const option=document.createElement('option');option.value='';option.textContent='No published rounds available';contextSelect.append(option);contextSelect.disabled=true;emptyEl.hidden=false;contextTitle.textContent='Nothing to mark yet';contextDetail.textContent='Once the schedule is published, your upcoming rounds will appear here.';for(const button of buttons)button.disabled=true;setStatus('No upcoming round available yet.');return}const requested=new URLSearchParams(location.search).get('round');const remembered=localStorage.getItem('fd.availabilityContext')||'';for(const context of contexts){const option=document.createElement('option');option.value=contextKey(context);option.textContent=contextLabel(context);contextSelect.append(option)}const requestedContext=contexts.find((context)=>context.roundId===requested);if(requestedContext)contextSelect.value=contextKey(requestedContext);else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;contextSelect.disabled=false;emptyEl.hidden=true;renderContext();setStatus('Choose your availability for this league night.','ok')}
+    async function loadContexts(){setStatus('Loading your league nights...');const body=await signedApi('/api/me/teams',{method:'GET'});renderContexts(body.teamManagement?.availability_contexts||[])}async function saveAvailability(value){const context=selectedContext();if(!context)throw new Error('Choose a league night first.');setStatus('Saving availability...');const path=context.participationType==='roster'?'/api/rounds/'+encodeURIComponent(context.roundId)+'/availability/me':'/api/rounds/'+encodeURIComponent(context.roundId)+'/free-agent-availability/me';await signedApi(path,{method:'PUT',body:JSON.stringify({status:value})});currentStatus.textContent=value;setStatus('Availability saved','ok')}async function run(action){try{await action()}catch(error){setStatus(error.message,'error')}}
+    contextSelect.addEventListener('change',renderContext);for(const button of buttons)button.addEventListener('click',()=>run(()=>saveAvailability(button.dataset.availabilityStatus)));
+    if(!accessToken()){setStatus('Sign in with Google to mark availability.','error');contextSelect.disabled=true;for(const button of buttons)button.disabled=true;const link=document.createElement('a');link.className='signin';link.href='/profile';link.textContent='Sign in';document.querySelector('[data-panel]').append(link)}else run(loadContexts);
   </script>
 </body>
 </html>`;
