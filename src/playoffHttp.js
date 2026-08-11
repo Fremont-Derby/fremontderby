@@ -1,4 +1,7 @@
-import { startSeasonPlayoffsCommand } from './playoffCommands.js';
+import {
+  advanceSeasonToChampionshipCommand,
+  startSeasonPlayoffsCommand,
+} from './playoffCommands.js';
 import { createPlayoffRepository } from './playoffRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 
@@ -21,6 +24,9 @@ function statusForError(error) {
     || message.includes('already')
     || message.includes('playoff')
     || message.includes('complete')
+    || message.includes('semifinal')
+    || message.includes('championship')
+    || message.includes('tied')
   ) return 409;
   return 400;
 }
@@ -39,6 +45,20 @@ export function createPlayoffHttpHandlers({
           repository,
         );
         return jsonResponse({ playoffs }, 201);
+      } catch (error) {
+        return jsonResponse({ error: error.message }, statusForError(error));
+      }
+    },
+
+    async advance(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+      try {
+        const actor = await authenticate(request, env, { fetch: fetchImpl });
+        const repository = createRepository(env, { fetch: fetchImpl });
+        const championship = await advanceSeasonToChampionshipCommand(
+          { seasonId, actorUserId: actor.id },
+          repository,
+        );
+        return jsonResponse({ championship }, 201);
       } catch (error) {
         return jsonResponse({ error: error.message }, statusForError(error));
       }
