@@ -2,20 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderCaptainSandboxPage } from '../src/captainSandboxPage.js';
 
-test('captain sandbox practices availability and three-player lineups without production writes', () => {
+test('captain War Games starts ready and stays isolated from production', () => {
   const html = renderCaptainSandboxPage();
 
-  assert.match(html, /SANDBOX · CAPTAIN PRACTICE ONLY/);
+  assert.match(html, /SEASON 1 WAR GAMES/);
+  assert.match(html, /No sign-in or setup required/);
   assert.match(html, /Break Room Bandits/);
   assert.match(html, /Golden Rail/);
-  assert.match(html, /Three active players/);
+  assert.match(html, /Maya Banks/);
+  assert.match(html, /Theo Martin/);
+  assert.match(html, /Jamie Park/);
   assert.match(html, /free agent/i);
-  assert.match(html, /Submit practice lineup/);
-  assert.match(html, /Generated matchups/);
-  assert.match(html, /Reset sandbox/);
+  assert.match(html, /A valid starter lineup is already selected/);
+  assert.match(html, /Submit lineup/);
+  assert.match(html, /Score Match 1/);
   assert.match(html, /fd\.captainSandbox\.v1/);
-  assert.match(html, /fd\.accessToken/);
 
+  assert.doesNotMatch(html, /fd\.accessToken/);
   assert.doesNotMatch(html, /\/api\/teams\//);
   assert.doesNotMatch(html, /supabase\.co/);
   assert.doesNotMatch(html, /SUPABASE_/);
