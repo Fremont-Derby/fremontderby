@@ -34,13 +34,16 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-secret',
 };
 
-test('message notification summary combines unread counts across every chat type', async () => {
+test('message notification summary combines unread counts and returns newest previews', async () => {
   const { fetch, calls } = createFetch([
     { body: { id: 'user-1', email: 'player@example.com' } },
-    { body: [{ unread_count: 2 }, { unread_count: 0 }] },
-    { body: [{ unread_count: 3 }] },
-    { body: [{ unread_count: 1 }] },
-    { body: [{ unread_count: 4 }] },
+    { body: [
+      { unread_count: 2, team_name: 'Breakers', season_name: 'Season 1', last_message_body: 'Team update', last_message_at: '2026-08-11T01:00:00Z' },
+      { unread_count: 0 },
+    ] },
+    { body: [{ unread_count: 3, other_display_name: 'Drewbieeee', last_message_body: 'Direct update', last_message_at: '2026-08-11T04:00:00Z' }] },
+    { body: [{ unread_count: 1, season_name: 'Season 1', last_message_body: 'League update', last_message_at: '2026-08-11T03:00:00Z' }] },
+    { body: [{ unread_count: 4, team_a_name: 'Breakers', team_b_name: 'Racks', last_message_body: 'Matchup update', last_message_at: '2026-08-11T02:00:00Z' }] },
   ]);
   const request = new Request(
     'https://fremontderby.com/api/me/message-notification-summary',
@@ -49,7 +52,16 @@ test('message notification summary combines unread counts across every chat type
   const response = await handleMessageNotificationSummaryRequest(request, env, { fetch });
 
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { unreadCount: 10 });
+  const payload = await response.json();
+  assert.equal(payload.unreadCount, 10);
+  assert.deepEqual(payload.previews.map((preview) => preview.label), [
+    'Direct · Drewbieeee',
+    'Season 1 · League chat',
+    'Breakers vs Racks',
+    'Breakers · Season 1',
+  ]);
+  assert.equal(payload.previews[0].body, 'Direct update');
+  assert.equal(payload.previews[0].unreadCount, 3);
   assert.equal(calls[0].url, 'https://project.supabase.co/auth/v1/user');
   assert.deepEqual(
     calls.slice(1).map((call) => new URL(call.url).pathname).sort(),

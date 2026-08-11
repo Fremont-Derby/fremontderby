@@ -50,7 +50,14 @@ test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /compact \|\| item\.key !== 'messages'/);
   assert.match(shell, /data-message-indicator/);
   assert.match(shell, /data-message-badge/);
+  assert.match(shell, /data-message-preview/);
+  assert.match(shell, /data-message-preview-list/);
   assert.match(shell, /\/api\/me\/message-notification-summary/);
   assert.match(shell, /99\+/);
+  assert.match(shell, /previewBody\.textContent/);
+  assert.match(shell, /mouseenter/);
+  assert.match(shell, /focusin/);
+  assert.match(shell, /matchMedia\('\(hover: hover\)'\)/);
+  assert.match(shell, /touchPrimed/);
   assert.match(shell, /setInterval\(refresh, 15000\)/);
 });
