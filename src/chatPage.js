@@ -104,7 +104,7 @@ export function renderChatPage(env = {}) {
 <body>
   <main class="app">
     <header class="heading">
-      <div><h1>Messages</h1><div class="subhead">Team and player coordination without sharing phone numbers.</div></div>
+      <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
       <div class="status" data-status>Ready</div>
     </header>
 
@@ -265,7 +265,9 @@ export function renderChatPage(env = {}) {
         name.textContent = thread.name;
         const preview = document.createElement('span');
         preview.className = 'thread-preview';
-        preview.textContent = thread.canSend === false ? 'Messaging unavailable' : (thread.preview || 'No messages yet');
+        preview.textContent = thread.canSend === false
+          ? (thread.type === 'league' || thread.type === 'matchup' ? 'Read-only' : 'Messaging unavailable')
+          : (thread.preview || 'No messages yet');
         button.append(name);
         if (Number(thread.unread) > 0) {
           const unread = document.createElement('span');
@@ -299,14 +301,18 @@ export function renderChatPage(env = {}) {
       }
       const leagueGroup = document.createElement('optgroup');
       leagueGroup.label = 'League rooms';
+      const matchupGroup = document.createElement('optgroup');
+      matchupGroup.label = 'Matchup rooms';
       const directGroup = document.createElement('optgroup');
       directGroup.label = 'Player messages';
       const teamGroup = document.createElement('optgroup');
       teamGroup.label = 'Team chats';
       appendSection('League rooms', threads.filter((thread) => thread.type === 'league'), leagueGroup);
+      appendSection('Matchup rooms', threads.filter((thread) => thread.type === 'matchup'), matchupGroup);
       appendSection('Player messages', threads.filter((thread) => thread.type === 'direct'), directGroup);
       appendSection('Team chats', threads.filter((thread) => thread.type === 'team'), teamGroup);
       if (leagueGroup.children.length) threadSelectEl.append(leagueGroup);
+      if (matchupGroup.children.length) threadSelectEl.append(matchupGroup);
       if (directGroup.children.length) threadSelectEl.append(directGroup);
       if (teamGroup.children.length) threadSelectEl.append(teamGroup);
     }
@@ -344,7 +350,8 @@ export function renderChatPage(env = {}) {
         const meta = document.createElement('div');
         meta.className = 'message-meta';
         const author = document.createElement('span');
-        author.textContent = message.author_display_name;
+        author.textContent = message.author_display_name
+          + (message.author_team_name ? ' · ' + message.author_team_name : '');
         const time = document.createElement('time');
         time.dateTime = message.created_at;
         time.textContent = formatTime(message.created_at);
@@ -376,7 +383,9 @@ export function renderChatPage(env = {}) {
         ? '/api/teams/' + encodeURIComponent(thread.id)
         : (thread.type === 'direct'
           ? '/api/direct-conversations/' + encodeURIComponent(thread.id)
-          : '/api/seasons/' + encodeURIComponent(thread.id));
+          : (thread.type === 'league'
+            ? '/api/seasons/' + encodeURIComponent(thread.id)
+            : '/api/team-matches/' + encodeURIComponent(thread.id)));
       return base + '/messages' + suffix;
     }
     async function markRead(thread, messages) {
@@ -424,6 +433,7 @@ export function renderChatPage(env = {}) {
       url.searchParams.delete('team');
       url.searchParams.delete('direct');
       url.searchParams.delete('league');
+      url.searchParams.delete('matchup');
       url.searchParams.set(thread.type, thread.id);
       history.replaceState({}, '', url.pathname + url.search);
       await loadMessages();
@@ -466,16 +476,30 @@ export function renderChatPage(env = {}) {
         canSend: row.can_send,
       }));
     }
+    function normalizedMatchupThreads(rows) {
+      return rows.map((row) => ({
+        key: 'matchup:' + row.team_match_id,
+        type: 'matchup',
+        id: row.team_match_id,
+        name: row.team_a_name + ' vs ' + row.team_b_name,
+        season: row.season_name + ' · Round ' + row.round_number,
+        preview: row.last_message_body,
+        unread: row.unread_count,
+        canSend: row.can_send,
+      }));
+    }
     async function loadThreads({ preserveSelection = true } = {}) {
       setStatus('Loading conversations...');
-      const [teamBody, directBody, leagueBody, candidateBody] = await Promise.all([
+      const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
         api('/api/me/chat-threads'),
         api('/api/me/direct-message-inbox'),
         api('/api/me/league-chat-threads'),
+        api('/api/me/matchup-chat-threads'),
         api('/api/me/direct-message-candidates'),
       ]);
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
+        ...normalizedMatchupThreads(Array.isArray(matchupBody.threads) ? matchupBody.threads : []),
         ...normalizedDirectThreads(Array.isArray(directBody.conversations) ? directBody.conversations : []),
         ...normalizedTeamThreads(Array.isArray(teamBody.threads) ? teamBody.threads : []),
       ];
@@ -486,7 +510,9 @@ export function renderChatPage(env = {}) {
         ? 'direct:' + params.get('direct')
         : (params.get('team')
           ? 'team:' + params.get('team')
-          : (params.get('league') ? 'league:' + params.get('league') : ''));
+          : (params.get('league')
+            ? 'league:' + params.get('league')
+            : (params.get('matchup') ? 'matchup:' + params.get('matchup') : '')));
       const existing = preserveSelection && threads.some((thread) => thread.key === currentKey)
         ? currentKey
         : '';
