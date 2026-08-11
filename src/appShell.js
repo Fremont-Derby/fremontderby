@@ -21,6 +21,7 @@ const APP_PAGE_PATHS = new Set([
   '/trades',
   '/messages',
   '/messages/moderation',
+  '/admin/operations',
 ]);
 
 function sectionForPath(pathname) {
