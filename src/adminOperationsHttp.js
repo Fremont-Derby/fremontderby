@@ -150,7 +150,16 @@ export function buildAdminOperationsOverview(raw, readiness) {
   if (seasonPlayers !== null && paidPlayers !== null && seasonPlayers > paidPlayers) {
     actions.push(action(
       'warning', 'payments_incomplete', 'Player payments are incomplete',
-      `${seasonPlayers - paidPlayers} registered player(s) are not marked paid.`, '/teams',
+      `${seasonPlayers - paidPlayers} registered player(s) are not marked paid or waived.`, '/teams',
+    ));
+  }
+
+  const selectedIneligiblePlayers = metric(raw, 'selectedIneligiblePlayers');
+  if (selectedIneligiblePlayers > 0) {
+    actions.push(action(
+      'critical', 'selected_player_ineligible', 'Selected player cannot play',
+      `${selectedIneligiblePlayers} current-round selected player(s) are no longer marked paid or waived. Fix payment eligibility before scoring begins.`,
+      '/teams',
     ));
   }
 
@@ -214,6 +223,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
       lineups: metric(raw, 'lineups'),
       currentRoundTeamMatches: metric(raw, 'currentRoundTeamMatches'),
       currentRoundLineups: metric(raw, 'currentRoundLineups'),
+      selectedIneligiblePlayers,
       playerMatches: metric(raw, 'playerMatches'),
       liveMatches,
       finalizedMatches: metric(raw, 'finalizedMatches'),
