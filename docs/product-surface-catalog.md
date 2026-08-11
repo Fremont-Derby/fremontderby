@@ -27,7 +27,7 @@ Use the smallest clear audience definition that matches actual authorization and
 - **Captain** — player with team-management, lineup, roster, availability/substitute, and captain decision responsibilities.
 - **League admin / director** — trusted operator for season setup, publishing, exceptions, corrections, payouts, moderation administration, and league health.
 - **Moderator** — trusted reviewer for message reports/moderation where separated from broader admin authority.
-- **Tester / sandbox user** — disposable War Games/demo behavior used for learning and validation, never authoritative production state.
+- **Tester / sandbox user** — public or signed-in user learning and validating fictional, non-authoritative workflows through Try a League Night and its sandbox drills.
 - **Internal/diagnostic** — health and environment proof; not part of normal product navigation.
 
 If a new role appears in code or product decisions, add it here and reconcile every affected story/page.
@@ -63,7 +63,7 @@ A story is not considered fully complete merely because backend code exists. It 
 | `/rules` | Public visitor / player | Read the authoritative user-facing league rules | Canonical rules surface |
 | `/profile` | Player | Sign in and manage the player's own identity/profile state | Canonical player identity/auth surface |
 | `/teams` | Player / captain | Find, join, create, and manage teams and roster relationships | Canonical team/roster home. It may show contextual league-night shortcuts, but Schedule/Availability/Lineup/Score remain separate canonical functions |
-| `/schedule` | Public visitor / player / captain | See the current/upcoming league night, round, matchup, date/table context, and enter the appropriate next workflow | Canonical current-night/schedule home; added by #133 / commit `cb57d3a` |
+| `/schedule` | Public visitor / player / captain | See the current/upcoming league night, round, matchup, date/table context, and enter the appropriate next workflow | Canonical current-night/schedule home; added by #133 |
 | `/availability` | Player / captain | Declare and review league-night availability | Canonical availability surface; captain substitute-discovery improvements tracked by #138 |
 | `/lineup` | Captain | Build and submit the team's lineup for a matchup | Canonical captain lineup surface |
 | `/scorecard` | Player | Find an eligible generated match to score | Canonical score-selection surface |
@@ -74,7 +74,9 @@ A story is not considered fully complete merely because backend code exists. It 
 | `/prizes` | Public visitor / admin | View purse/payout state; administer prize configuration where authorized | Shared public/admin surface; role/function separation still requires audit under #238 |
 | `/season-setup` | League admin / director | Configure and publish a season | Canonical season-configuration/publishing surface |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; intentionally role-restricted |
-| `/demo`, `/sandbox/*` | Tester / sandbox user | Practice and validate disposable league workflows | Explicit non-authoritative product exception; tester stories live under #113/#249 |
+| `/demo` | Public visitor / tester | Guided **Try a League Night** test drive: form a fictional team/lineup, practice scoring, and inspect a completed season | Canonical public product-demo entry; #249/#263 delivered the guided experience. The shared-nav label is still stale as `Demo`, so #249 was reopened until navigation matches the product name |
+| `/sandbox/captain` | Tester / sandbox user | Practice fictional team formation, request approval/rejection, roster viability/churn, availability, and lineup submission | Canonical captain practice drill; #263 |
+| `/sandbox/player` | Tester / sandbox user | Practice fictional team-owned scoring, mismatch/reconciliation, confirmation, and finalization | Canonical player scoring practice drill; #113 |
 | `/health`, `/health/environment` | Internal/diagnostic | Verify Worker/environment readiness without exposing secrets | Explicit normal-navigation exception |
 
 ### Planned / in-flight surfaces
@@ -91,7 +93,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 
 | Audience | User outcome / capability | Canonical page | State | Story / proof | Discoverability notes |
 | --- | --- | --- | --- | --- | --- |
-| Public visitor / player / captain | Find tonight's round and matchup context quickly | `/schedule` | Complete initial slice | #133, commit `cb57d3a` | Desktop primary navigation exposes Schedule; mobile dock exposes Tonight |
+| Public visitor / player / captain | Find tonight's round and matchup context quickly | `/schedule` | Complete initial slice | #133 | Desktop primary navigation exposes Schedule; mobile dock exposes Tonight |
 | Player / captain | Find/create/join/manage team relationships | `/teams` | Partial / actively evolving | #131, #181, #182 | Teams is the canonical roster/membership home; league-night shortcuts are secondary links only |
 | Player / captain | Mark league-night availability | `/availability` | Implemented, UX still evolving | #13, #138 | Reachable from Teams/current-night flows; should remain a distinct function rather than being absorbed into Teams |
 | Captain | Submit a blind ordered three-player lineup | `/lineup` | Implemented | #13, #139, #156 | Human-readable matchup selection; canonical captain action |
@@ -100,16 +102,21 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Public visitor / player | Switch quickly between team and individual standings | `/standings` | Implemented current view; history still open | #16, #17, #180 | Canonical standings page; no separate team/player standings pages should be created |
 | Player / captain | Coordinate without sharing phone numbers | `/messages` | Implemented core communication | #76 and children | Canonical communication page; moderation remains separate by role |
 | League admin / director | Configure and publish the season | `/season-setup` | Implemented core setup | #12 | Admin-only canonical configuration page; operational triage should not accumulate here |
+| Public visitor / tester | Understand the league by completing a safe guided test drive without sign-in | `/demo` | Partial: guided flow shipped; nav label stale | #249, PR #265 | Desktop/mobile-menu entry remains within <=2 actions, but it still says `Demo`; #249 reopened to finish its own navigation acceptance criterion |
+| Tester / captain | Practice forming/changing a team and submitting a lineup without touching production | `/sandbox/captain` | Implemented | #263, PR #264 | One action from `/demo`; explicit fictional/non-authoritative exception |
+| Tester / player | Practice dual scoring without touching production | `/sandbox/player` | Implemented core drill | #113 | One action from `/demo`; explicit fictional/non-authoritative exception |
 | League admin / director | See what needs attention across the running league | `/admin/operations` | In flight | #168, #169, draft PR #179 | Must become canonical admin home and satisfy <=2-click admin discoverability before story is considered complete |
 
 ## Current librarian findings
 
-### 2026-08-11 review cycle
+### 2026-08-11 review cycles
 
-- **Resolved during the cycle:** Schedule/current-night had no canonical page and `/teams` had temporarily become the league-night hub. Another implementation lane delivered `/schedule` on current `main` via #133 while this review was in progress. The catalog now restores canonical ownership: Teams owns team/roster relationships; Schedule owns current-night context; Availability, Lineup, Score, and Messages keep their own functional homes.
-- **Open / in-flight:** draft PR #179 proposes `/admin/operations` but initially makes it reachable through chat moderation. That path can exceed the two-click rule. A librarian review comment requests one role-aware Admin entry/group and makes Operations the canonical admin home instead of scattering operational functions across Moderation and Season Setup.
-- **Backlog hygiene:** no duplicate Schedule issue was created because #133 already owned the missing capability and was completed during the audit.
-- **Next exhaustive work:** #238 must continue through every renderer/control and #239 must formalize the navigation graph/regression check so future routes cannot silently become unreachable.
+- Schedule/current-night ownership was reconciled to `/schedule`; Teams remains the canonical roster/membership home.
+- Draft PR #179 still proposes an admin Operations surface whose current discovery path can exceed the <=2-action rule; #169/#239 remain the correct existing work rather than creating a duplicate.
+- PRs #264 and #265 changed `/demo` from an internal-looking fixture into the public **Try a League Night** tour and made `/sandbox/captain` a distinct team-formation/roster-churn drill. The catalog now maps those as separate canonical functions instead of grouping all sandbox behavior together.
+- The shared shell still labels `/demo` as `Demo`, violating the first acceptance criterion of #249 after that issue was closed. #249 was reopened rather than creating a duplicate cleanup card.
+- No new route or story issue was needed for PR #266 because it changes release proof rather than user-facing product ownership.
+- #238 remains incomplete until every current renderer/control is mapped; #239 remains incomplete until the navigation graph/regression check is deterministic and role-aware.
 
 ## Known catalog work
 
@@ -117,6 +124,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 - #238 — perform the first exhaustive user-story/page/function inventory and populate this catalog.
 - #239 — build/enforce the <=2-click navigation/reachability audit.
 - #240 — wire the Product Librarian into recurring autonomous review and prove repeated cycles.
+- #249 — reopened because the guided Try a League Night page shipped but shared public navigation still uses the stale `Demo` label.
 
 ## Librarian update checklist
 
