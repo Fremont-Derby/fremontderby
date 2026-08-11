@@ -105,7 +105,7 @@ export function renderChatPage(env = {}) {
   <main class="app">
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
-      <div class="status" data-status>Ready</div>
+      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status>Ready</div></div>
     </header>
 
     <div class="signed-out" data-signed-out hidden>
@@ -523,6 +523,14 @@ export function renderChatPage(env = {}) {
       await selectThread(initial);
       setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
     }
+    async function detectModerator() {
+      try {
+        await api('/api/admin/chat-reports?limit=1');
+        document.querySelector('[data-moderation-link]').hidden = false;
+      } catch (error) {
+        if (!/League admin access/i.test(error.message)) throw error;
+      }
+    }
     async function sendMessage() {
       const thread = currentThread();
       const body = messageInputEl.value.trim();
@@ -622,7 +630,10 @@ export function renderChatPage(env = {}) {
 
     signedOutEl.hidden = Boolean(token());
     layoutEl.hidden = !token();
-    if (token()) run(() => loadThreads());
+    if (token()) {
+      run(() => loadThreads());
+      run(detectModerator);
+    }
     setInterval(() => {
       if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
     }, 4000);
