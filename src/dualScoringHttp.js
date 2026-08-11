@@ -85,7 +85,7 @@ export function createDualScoringHttpHandlers({
             playerMatchId,
           }),
         ]);
-        return jsonResponse({ comparison, context });
+        return jsonResponse(context ? { comparison, context } : { comparison });
       });
     },
 
