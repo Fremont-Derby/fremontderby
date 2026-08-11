@@ -32,6 +32,7 @@ test('competition restrictions are private, audited, season-scoped, and enforce 
   assert.match(sql, /A reason is required to mark a player ineligible/);
   assert.match(sql, /player\.mark_competition_ineligible/);
   assert.match(sql, /player\.restore_competition_eligibility/);
+  assert.match(sql, /list_admin_players_for_management/);
   assert.match(sql, /team_lineup_slots_competition_eligibility/);
   assert.match(sql, /team_score_submissions_competition_eligibility/);
   assert.match(sql, /new_rack_count <= old_rack_count then return new/);
@@ -50,7 +51,7 @@ test('admin player repository exposes current-season readiness and writes eligib
     {
       fetch: async (url, init) => {
         calls.push({ url, init });
-        if (url.endsWith('/rpc/list_admin_players')) {
+        if (url.endsWith('/rpc/list_admin_players_for_management')) {
           return jsonResponse([{
             player_id: 'player-1',
             display_name: 'Alex Example',
@@ -98,6 +99,37 @@ test('admin player repository exposes current-season readiness and writes eligib
     eligible: true,
     change_reason: 'Review complete',
   });
+});
+
+test('admin player directory falls back during database rollout', async () => {
+  const calls = [];
+  const repository = createAdminPlayersRepository(
+    {
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-secret',
+    },
+    {
+      fetch: async (url) => {
+        calls.push(url);
+        if (url.endsWith('/rpc/list_admin_players_for_management')) {
+          return jsonResponse({ message: 'Could not find the function' }, 404);
+        }
+        return jsonResponse([{
+          player_id: 'player-1',
+          display_name: 'Alex Example',
+          has_login: true,
+          is_league_admin: false,
+          teams: [],
+        }]);
+      },
+    },
+  );
+
+  const [player] = await repository.listPlayers({ actorUserId: 'admin-user' });
+  assert.equal(calls.length, 2);
+  assert.match(calls[1], /\/rpc\/list_admin_players$/);
+  assert.equal(player.currentSeasonId, null);
+  assert.equal(player.competitionEligible, true);
 });
 
 test('player management UI requires an ineligibility reason and explains gameplay effect', () => {
