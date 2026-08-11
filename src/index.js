@@ -57,7 +57,6 @@ import {
   adminProposeTeamTradeExceptionCommand,
   approveTeamTradeCaptainCommand,
   cancelTeamInvitationCommand,
-  createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
   listOwnTeamManagementCommand,
   listOwnTeamTradesCommand,
@@ -66,7 +65,20 @@ import {
   respondToTeamTradePlayerCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
+import { createTeamMembershipRequestRepository } from './teamMembershipRequestRepository.js';
 import { createTeamRepository } from './teamRepository.js';
+import {
+  configureSeasonRegistrationCommand,
+  getAdminSeasonRegistrationCommand,
+  getOwnTeamRegistrationCommand,
+  manageTeamSlotCommand,
+  respondToReturningTeamSlotCommand,
+  reviewTeamApplicationCommand,
+  seedReturningTeamSlotsCommand,
+  submitTeamApplicationCommand,
+  withdrawTeamApplicationCommand,
+} from './teamRegistrationCommands.js';
+import { createTeamRegistrationRepository } from './teamRegistrationRepository.js';
 import { renderTeamsPage } from './teamsPage.js';
 import { renderTradesPage } from './tradesPage.js';
 
@@ -365,8 +377,8 @@ export async function handleCreateTeamRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const team = await createTeamWithCaptainCommand(
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const application = await submitTeamApplicationCommand(
       {
         actorUserId: actor.id,
         seasonId,
@@ -375,7 +387,263 @@ export async function handleCreateTeamRequest(
       repository,
     );
 
-    return jsonResponse({ team }, 201);
+    return jsonResponse({ application }, 202);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleGetOwnTeamRegistrationRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const registration = await getOwnTeamRegistrationCommand(
+      { actorUserId: actor.id, seasonId },
+      repository,
+    );
+    return jsonResponse({ registration });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleWithdrawTeamApplicationRequest(
+  request,
+  env,
+  applicationId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const application = await withdrawTeamApplicationCommand(
+      { actorUserId: actor.id, applicationId },
+      repository,
+    );
+    return jsonResponse({ application });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRespondToReturningTeamSlotRequest(
+  request,
+  env,
+  slotId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const slot = await respondToReturningTeamSlotCommand(
+      {
+        actorUserId: actor.id,
+        slotId,
+        action: body.action,
+        transferPlayerId: body.transferPlayerId ?? body.transfer_player_id,
+      },
+      repository,
+    );
+    return jsonResponse({ slot });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleGetAdminSeasonRegistrationRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const registration = await getAdminSeasonRegistrationCommand(
+      { actorUserId: actor.id, seasonId },
+      repository,
+    );
+    return jsonResponse({ registration });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleConfigureSeasonRegistrationRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const registration = await configureSeasonRegistrationCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+        teamCapacity: body.teamCapacity ?? body.team_capacity,
+        minimumCommittedRoster:
+          body.minimumCommittedRoster ?? body.minimum_committed_roster,
+        returningReservationDeadline:
+          body.returningReservationDeadline ?? body.returning_reservation_deadline,
+        conditionalHoldDays: body.conditionalHoldDays ?? body.conditional_hold_days,
+      },
+      repository,
+    );
+    return jsonResponse({ registration });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleReviewTeamApplicationRequest(
+  request,
+  env,
+  applicationId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const application = await reviewTeamApplicationCommand(
+      {
+        actorUserId: actor.id,
+        applicationId,
+        decision: body.decision,
+        reason: body.reason,
+      },
+      repository,
+    );
+    return jsonResponse({ application });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleManageTeamSlotRequest(
+  request,
+  env,
+  slotId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const slot = await manageTeamSlotCommand(
+      {
+        actorUserId: actor.id,
+        slotId,
+        action: body.action,
+        reason: body.reason,
+        extensionDays: body.extensionDays ?? body.extension_days,
+      },
+      repository,
+    );
+    return jsonResponse({ slot });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleSeedReturningTeamSlotsRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
+    const slots = await seedReturningTeamSlotsCommand(
+      {
+        actorUserId: actor.id,
+        seasonId,
+        sourceSeasonId: body.sourceSeasonId ?? body.source_season_id,
+      },
+      repository,
+    );
+    return jsonResponse({ slots }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleListOwnTeamMembershipRequestsRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
+    return jsonResponse({ requests: await repository.listOwn({ actorUserId: actor.id }) });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRequestTeamMembershipRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
+    const membershipRequest = await repository.requestJoin({ actorUserId: actor.id, teamId });
+    return jsonResponse({ membershipRequest }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleRespondToTeamMembershipRequest(
+  request,
+  env,
+  requestId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    if (!['approved', 'declined'].includes(body.response)) {
+      throw new Error('response must be approved or declined');
+    }
+    const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
+    const membershipRequest = await repository.respond({
+      actorUserId: actor.id,
+      requestId,
+      response: body.response,
+    });
+    return jsonResponse({ membershipRequest });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleCancelTeamMembershipRequest(
+  request,
+  env,
+  requestId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
+    const membershipRequest = await repository.cancel({ actorUserId: actor.id, requestId });
+    return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: error.message }, statusForError(error));
   }
@@ -1051,6 +1319,18 @@ export default {
     const adminSeasonSetupMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/setup$/,
     );
+    const adminSeasonRegistrationMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/team-registration$/,
+    );
+    const adminSeedReturningSlotsMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/team-slots\/seed$/,
+    );
+    const adminApplicationReviewMatch = url.pathname.match(
+      /^\/api\/admin\/team-applications\/([^/]+)\/respond$/,
+    );
+    const adminTeamSlotManageMatch = url.pathname.match(
+      /^\/api\/admin\/team-slots\/([^/]+)\/manage$/,
+    );
     const adminSeasonPrizesMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/prizes$/,
     );
@@ -1062,6 +1342,27 @@ export default {
     );
     const createTeamMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/teams$/,
+    );
+    const ownTeamRegistrationMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/team-registration\/me$/,
+    );
+    const teamApplicationMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/team-applications$/,
+    );
+    const teamApplicationWithdrawMatch = url.pathname.match(
+      /^\/api\/team-applications\/([^/]+)\/withdraw$/,
+    );
+    const returningTeamSlotResponseMatch = url.pathname.match(
+      /^\/api\/team-slots\/([^/]+)\/respond$/,
+    );
+    const teamMembershipRequestMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/membership-request$/,
+    );
+    const membershipRequestResponseMatch = url.pathname.match(
+      /^\/api\/team-membership-requests\/([^/]+)\/respond$/,
+    );
+    const membershipRequestCancelMatch = url.pathname.match(
+      /^\/api\/team-membership-requests\/([^/]+)\/cancel$/,
     );
     const teamInvitationMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/invitations$/,
@@ -1313,6 +1614,51 @@ export default {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
+    if (adminSeasonRegistrationMatch) {
+      if (request.method === "GET") {
+        return handleGetAdminSeasonRegistrationRequest(
+          request,
+          env,
+          decodeURIComponent(adminSeasonRegistrationMatch[1]),
+        );
+      }
+      if (request.method === "PUT") {
+        return handleConfigureSeasonRegistrationRequest(
+          request,
+          env,
+          decodeURIComponent(adminSeasonRegistrationMatch[1]),
+        );
+      }
+      return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    if (adminSeedReturningSlotsMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleSeedReturningTeamSlotsRequest(
+        request,
+        env,
+        decodeURIComponent(adminSeedReturningSlotsMatch[1]),
+      );
+    }
+
+    if (adminApplicationReviewMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleReviewTeamApplicationRequest(
+        request,
+        env,
+        decodeURIComponent(adminApplicationReviewMatch[1]),
+      );
+    }
+
+    if (adminTeamSlotManageMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleManageTeamSlotRequest(
+        request,
+        env,
+        decodeURIComponent(adminTeamSlotManageMatch[1]),
+      );
+    }
+
     if (adminSeasonPrizesMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -1368,6 +1714,11 @@ export default {
       return handleListOwnTeamManagementRequest(request, env);
     }
 
+    if (url.pathname === "/api/me/team-membership-requests") {
+      if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleListOwnTeamMembershipRequestsRequest(request, env);
+    }
+
     if (url.pathname === "/api/me/trades") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -1385,6 +1736,69 @@ export default {
         request,
         env,
         decodeURIComponent(createTeamMatch[1]),
+      );
+    }
+
+    if (ownTeamRegistrationMatch) {
+      if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleGetOwnTeamRegistrationRequest(
+        request,
+        env,
+        decodeURIComponent(ownTeamRegistrationMatch[1]),
+      );
+    }
+
+    if (teamApplicationMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleCreateTeamRequest(
+        request,
+        env,
+        decodeURIComponent(teamApplicationMatch[1]),
+      );
+    }
+
+    if (teamApplicationWithdrawMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleWithdrawTeamApplicationRequest(
+        request,
+        env,
+        decodeURIComponent(teamApplicationWithdrawMatch[1]),
+      );
+    }
+
+    if (returningTeamSlotResponseMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleRespondToReturningTeamSlotRequest(
+        request,
+        env,
+        decodeURIComponent(returningTeamSlotResponseMatch[1]),
+      );
+    }
+
+    if (teamMembershipRequestMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleRequestTeamMembershipRequest(
+        request,
+        env,
+        decodeURIComponent(teamMembershipRequestMatch[1]),
+      );
+    }
+
+    if (membershipRequestResponseMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleRespondToTeamMembershipRequest(
+        request,
+        env,
+        decodeURIComponent(membershipRequestResponseMatch[1]),
+      );
+    }
+
+    if (membershipRequestCancelMatch) {
+      if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+      return handleCancelTeamMembershipRequest(
+        request,
+        env,
+        decodeURIComponent(membershipRequestCancelMatch[1]),
       );
     }
 
