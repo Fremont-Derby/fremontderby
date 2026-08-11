@@ -42,6 +42,14 @@ export function renderChatPage(env = {}) {
     .subhead, .status, .empty { color: var(--muted); }
     .status[data-tone="error"] { color: var(--danger); }
     .status[data-tone="ok"] { color: #9ee5bd; }
+    .state-card { margin: 14px 0; padding: 22px; display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(145deg, rgba(16,45,32,.98), rgba(8,26,18,.98)); box-shadow: 0 18px 46px rgba(0,0,0,.22); }
+    .state-card[data-tone="warning"] { border-color: #8a7133; box-shadow: inset 4px 0 #e9bd45, 0 18px 46px rgba(0,0,0,.22); }
+    .state-card[data-tone="error"] { border-color: #87463f; box-shadow: inset 4px 0 #d66c62, 0 18px 46px rgba(0,0,0,.22); }
+    .state-card h2 { margin: 0; font-size: 1.18rem; }
+    .state-card p { margin: 0; color: #c6d5cc; line-height: 1.5; }
+    .state-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 3px; }
+    .state-action { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 15px; border: 1px solid var(--green); border-radius: 11px; background: var(--green); color: #06120d; text-decoration: none; font-weight: 900; }
+    .state-action.secondary { border-color: var(--line); background: #10291d; color: #e8f1eb; }
     .layout { min-height: min(720px, calc(100vh - 160px)); display: grid; grid-template-columns: 310px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: rgba(8, 27, 18, .94); box-shadow: 0 24px 70px rgba(0,0,0,.28); }
     .threads { border-right: 1px solid var(--line); background: #081a12; }
     .panel-title { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 900; }
@@ -49,6 +57,7 @@ export function renderChatPage(env = {}) {
     .panel-actions button { min-height: 36px; padding: 0 10px; background: transparent; color: #f4f7f5; }
     .new-direct { display: grid; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line); background: #10251a; }
     .new-direct button { background: var(--green); color: #06120d; }
+    .candidate-help { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.4; }
     .thread-list { display: grid; gap: 4px; padding: 8px; }
     .section-label { padding: 10px 10px 4px; color: var(--gold); font-size: .72rem; font-weight: 950; letter-spacing: .09em; text-transform: uppercase; }
     .thread { width: 100%; min-height: 70px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; gap: 5px 10px; padding: 10px; text-align: left; color: #f4f7f5; background: transparent; border-color: transparent; }
@@ -71,12 +80,14 @@ export function renderChatPage(env = {}) {
     .message-body { white-space: pre-wrap; line-height: 1.4; }
     .message-actions { display: flex; justify-content: flex-end; margin-top: 7px; }
     .report { min-height: 30px; padding: 0 8px; border: 0; background: transparent; color: #b9c8bf; font-size: .72rem; }
-    .empty { margin: auto; max-width: 440px; padding: 24px; text-align: center; line-height: 1.55; }
+    .empty { margin: auto; max-width: 440px; padding: 24px; display: grid; gap: 12px; text-align: center; line-height: 1.55; }
+    .empty strong { color: #f4f7f5; font-size: 1rem; }
+    .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .empty-actions button, .empty-actions a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: #123522; color: #e8f1eb; text-decoration: none; font-weight: 850; }
+    .empty-actions .primary { border-color: var(--green); background: var(--green); color: #06120d; }
     .composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px; border-top: 1px solid var(--line); background: #081a12; }
     textarea { width: 100%; min-height: 48px; max-height: 144px; resize: vertical; padding: 12px; background: #06110d; color: #f4f7f5; }
     .send { min-width: 92px; padding: 0 18px; border-color: var(--green); background: var(--green); color: #06120d; }
-    .signed-out { margin: 14px 0; padding: 14px; border: 1px solid var(--gold); border-radius: 12px; background: #2a2311; color: #f6df9d; }
-    .signed-out a { color: #fff2bf; font-weight: 900; }
     dialog { width: min(440px, calc(100% - 24px)); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: #0b2418; color: #f4f7f5; box-shadow: 0 24px 80px #000a; }
     dialog::backdrop { background: #020705c9; }
     .dialog-form { display: grid; gap: 12px; padding: 18px; }
@@ -87,9 +98,12 @@ export function renderChatPage(env = {}) {
     .dialog-actions .danger { background: #b84b42; border-color: #d36a61; }
     [hidden] { display: none !important; }
     button:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
     @media (max-width: 760px) {
       .app { padding: 12px 10px 18px; }
       .heading { align-items: start; display: grid; }
+      .state-card { padding: 18px 16px; }
+      .state-actions, .state-actions a, .state-actions button { width: 100%; }
       .layout { min-height: calc(100dvh - 175px); grid-template-columns: 1fr; }
       .threads { display: none; }
       .mobile-picker { display: grid; gap: 8px; }
@@ -99,6 +113,7 @@ export function renderChatPage(env = {}) {
       .message { max-width: 88%; }
       .composer { position: sticky; bottom: 0; padding: 9px; grid-template-columns: minmax(0, 1fr) auto; }
       .send { min-width: 72px; padding: 0 12px; }
+      .empty-actions, .empty-actions a, .empty-actions button { width: 100%; }
     }
   </style>
 </head>
@@ -106,12 +121,20 @@ export function renderChatPage(env = {}) {
   <main class="app">
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
-      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status>Ready</div></div>
+      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true">Checking your messages…</div></div>
     </header>
 
-    <div class="signed-out" data-signed-out hidden>
-      <a href="/profile">Continue with Google</a> to open your messages.
-    </div>
+    <section class="state-card" data-page-state data-tone="warning" hidden>
+      <h2 data-page-state-title>Messages unavailable</h2>
+      <p data-page-state-detail></p>
+      <div class="state-actions" data-page-state-actions></div>
+    </section>
+
+    <section class="state-card" data-signed-out data-tone="warning" hidden>
+      <h2 data-signed-out-title>Coordinate league night in one place</h2>
+      <p data-signed-out-detail>Sign in to read league, matchup, team, and player messages without sharing your phone number.</p>
+      <div class="state-actions"><a class="state-action" href="/profile">Sign in to message</a></div>
+    </section>
 
     <section class="layout" data-chat-layout hidden>
       <aside class="threads" aria-label="Conversations">
@@ -120,6 +143,7 @@ export function renderChatPage(env = {}) {
           <div class="panel-actions"><button type="button" data-new-message>New</button><button type="button" data-refresh>Refresh</button></div>
         </div>
         <form class="new-direct" data-new-direct hidden>
+          <p class="candidate-help" data-candidate-help hidden>No other registered players are available to message yet.</p>
           <select data-candidate-select aria-label="Choose a league player"></select>
           <button type="submit">Start message</button>
         </form>
@@ -131,6 +155,7 @@ export function renderChatPage(env = {}) {
           <select data-thread-select aria-label="Choose conversation"></select>
           <button type="button" data-mobile-new>New player message</button>
           <form class="new-direct" data-mobile-new-direct hidden>
+            <p class="candidate-help" data-mobile-candidate-help hidden>No other registered players are available to message yet.</p>
             <select data-mobile-candidate-select aria-label="Choose a league player"></select>
             <button type="submit">Start message</button>
           </form>
@@ -175,6 +200,12 @@ export function renderChatPage(env = {}) {
     const config = ${safeJson(browserConfig(env))};
     const statusEl = document.querySelector('[data-status]');
     const signedOutEl = document.querySelector('[data-signed-out]');
+    const signedOutTitleEl = document.querySelector('[data-signed-out-title]');
+    const signedOutDetailEl = document.querySelector('[data-signed-out-detail]');
+    const pageStateEl = document.querySelector('[data-page-state]');
+    const pageStateTitleEl = document.querySelector('[data-page-state-title]');
+    const pageStateDetailEl = document.querySelector('[data-page-state-detail]');
+    const pageStateActionsEl = document.querySelector('[data-page-state-actions]');
     const layoutEl = document.querySelector('[data-chat-layout]');
     const threadListEl = document.querySelector('[data-thread-list]');
     const threadSelectEl = document.querySelector('[data-thread-select]');
@@ -186,10 +217,14 @@ export function renderChatPage(env = {}) {
     const composerEl = document.querySelector('[data-composer]');
     const messageInputEl = document.querySelector('[data-message-input]');
     const sendButtonEl = composerEl.querySelector('button[type="submit"]');
+    const newMessageButtonEl = document.querySelector('[data-new-message]');
+    const mobileNewMessageButtonEl = document.querySelector('[data-mobile-new]');
     const newDirectFormEl = document.querySelector('[data-new-direct]');
     const candidateSelectEl = document.querySelector('[data-candidate-select]');
+    const candidateHelpEl = document.querySelector('[data-candidate-help]');
     const mobileNewDirectFormEl = document.querySelector('[data-mobile-new-direct]');
     const mobileCandidateSelectEl = document.querySelector('[data-mobile-candidate-select]');
+    const mobileCandidateHelpEl = document.querySelector('[data-mobile-candidate-help]');
     const reportDialogEl = document.querySelector('[data-report-dialog]');
     const reportFormEl = document.querySelector('[data-report-form]');
     const reportReasonEl = document.querySelector('[data-report-reason]');
@@ -208,6 +243,38 @@ export function renderChatPage(env = {}) {
     function setStatus(message, tone) {
       statusEl.textContent = message;
       statusEl.dataset.tone = tone || 'muted';
+    }
+    function clearSession() {
+      sessionStorage.removeItem('fd.accessToken');
+      sessionStorage.removeItem('fd.refreshToken');
+    }
+    function makeAction(label, { href, onClick, secondary = false } = {}) {
+      const action = href ? document.createElement('a') : document.createElement('button');
+      if (!href) action.type = 'button';
+      action.className = 'state-action' + (secondary ? ' secondary' : '');
+      action.textContent = label;
+      if (href) action.href = href;
+      if (onClick) action.addEventListener('click', onClick);
+      return action;
+    }
+    function showPageState(title, detail, { tone = 'warning', actions = [] } = {}) {
+      pageStateTitleEl.textContent = title;
+      pageStateDetailEl.textContent = detail;
+      pageStateEl.dataset.tone = tone;
+      pageStateActionsEl.replaceChildren(...actions);
+      pageStateEl.hidden = false;
+    }
+    function hidePageState() { pageStateEl.hidden = true; }
+    function showSignedOut(expired = false) {
+      clearSession();
+      layoutEl.hidden = true;
+      hidePageState();
+      signedOutTitleEl.textContent = expired ? 'Your sign-in expired' : 'Coordinate league night in one place';
+      signedOutDetailEl.textContent = expired
+        ? 'Sign in again to reopen your conversations. Your messages were not changed.'
+        : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.';
+      signedOutEl.hidden = false;
+      setStatus(expired ? 'Sign in again to open messages' : 'Sign in to open messages', expired ? 'error' : 'muted');
     }
     async function parseJson(response) {
       const text = await response.text();
@@ -230,12 +297,21 @@ export function renderChatPage(env = {}) {
     }
     async function api(path, options = {}, retry = true) {
       const accessToken = token();
-      if (!accessToken) throw new Error('Sign in is required');
+      if (!accessToken) {
+        const error = new Error('Sign in is required');
+        error.code = 'session_required';
+        throw error;
+      }
       const response = await fetch(path, {
         ...options,
         headers: { authorization: 'Bearer ' + accessToken, 'content-type': 'application/json' },
       });
-      if (response.status === 401 && retry && await refreshSession()) return api(path, options, false);
+      if (response.status === 401 && retry) {
+        if (await refreshSession()) return api(path, options, false);
+        const error = new Error('Your sign-in expired');
+        error.code = 'session_expired';
+        throw error;
+      }
       const body = await parseJson(response);
       if (!response.ok) throw new Error(body.error || 'Request failed');
       return body;
@@ -246,11 +322,36 @@ export function renderChatPage(env = {}) {
       if (Number.isNaN(date.valueOf())) return '';
       return new Intl.DateTimeFormat([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
     }
-    function emptyState(message) {
+    function emptyState(title, detail, actions = []) {
       const div = document.createElement('div');
       div.className = 'empty';
-      div.textContent = message;
+      const strong = document.createElement('strong');
+      strong.textContent = title;
+      const copy = document.createElement('span');
+      copy.textContent = detail;
+      div.append(strong, copy);
+      if (actions.length) {
+        const actionRow = document.createElement('div');
+        actionRow.className = 'empty-actions';
+        actionRow.append(...actions);
+        div.append(actionRow);
+      }
       return div;
+    }
+    function emptyLink(label, href, primary = false) {
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = label;
+      if (primary) link.className = 'primary';
+      return link;
+    }
+    function emptyButton(label, handler, primary = false) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      if (primary) button.className = 'primary';
+      button.addEventListener('click', handler);
+      return button;
     }
     function currentThread() { return threads.find((thread) => thread.key === currentKey) || null; }
     function appendSection(label, sectionThreads, group) {
@@ -293,11 +394,34 @@ export function renderChatPage(env = {}) {
         group.append(option);
       }
     }
+    function openNewMessage() {
+      if (!candidates.length) {
+        setStatus('No other registered players are available to message yet');
+        return;
+      }
+      newDirectFormEl.hidden = !newDirectFormEl.hidden;
+    }
+    function openMobileNewMessage() {
+      if (!candidates.length) {
+        setStatus('No other registered players are available to message yet');
+        return;
+      }
+      mobileNewDirectFormEl.hidden = !mobileNewDirectFormEl.hidden;
+    }
     function renderThreads() {
       threadListEl.replaceChildren();
       threadSelectEl.replaceChildren();
       if (!threads.length) {
-        threadListEl.append(emptyState('Join a season, join a team, or start a player message.'));
+        const actions = candidates.length
+          ? [emptyButton('Start a player message', () => { newDirectFormEl.hidden = false; candidateSelectEl.focus(); }, true)]
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule')];
+        threadListEl.append(emptyState(
+          'No conversations yet',
+          candidates.length
+            ? 'You can start a private league message with an eligible player.'
+            : 'Join a team or league-night matchup to unlock team, matchup, and player conversations.',
+          actions,
+        ));
         const option = document.createElement('option');
         option.textContent = 'No conversations';
         option.value = '';
@@ -322,12 +446,23 @@ export function renderChatPage(env = {}) {
       if (teamGroup.children.length) threadSelectEl.append(teamGroup);
     }
     function renderCandidates() {
+      const hasCandidates = candidates.length > 0;
+      newMessageButtonEl.disabled = !hasCandidates;
+      mobileNewMessageButtonEl.disabled = !hasCandidates;
+      newMessageButtonEl.title = hasCandidates ? '' : 'No other registered players are available to message yet';
+      mobileNewMessageButtonEl.title = newMessageButtonEl.title;
+      candidateHelpEl.hidden = hasCandidates;
+      mobileCandidateHelpEl.hidden = hasCandidates;
+      if (!hasCandidates) {
+        newDirectFormEl.hidden = true;
+        mobileNewDirectFormEl.hidden = true;
+      }
       for (const select of [candidateSelectEl, mobileCandidateSelectEl]) {
         select.replaceChildren();
-        if (!candidates.length) {
+        if (!hasCandidates) {
           const option = document.createElement('option');
           option.value = '';
-          option.textContent = 'No other registered players yet';
+          option.textContent = 'No eligible players to message';
           select.append(option);
           select.disabled = true;
           continue;
@@ -347,7 +482,7 @@ export function renderChatPage(env = {}) {
       loadOlderButtonEl.hidden = !canLoadOlder;
       messageListEl.append(loadOlderButtonEl);
       if (!messages.length) {
-        messageListEl.append(emptyState('No messages yet. Start the conversation.'));
+        messageListEl.append(emptyState('No messages yet', 'Send the first message when you are ready.'));
         return;
       }
       for (const message of messages) {
@@ -409,7 +544,7 @@ export function renderChatPage(env = {}) {
       loadingMessages = true;
       const selectedKey = thread.key;
       try {
-        if (!quiet) setStatus('Loading messages...');
+        if (!quiet) setStatus('Loading messages…');
         const body = await api(messagePath(thread) + '?limit=50');
         if (selectedKey !== currentKey) return;
         const messages = Array.isArray(body.messages) ? body.messages : [];
@@ -473,7 +608,16 @@ export function renderChatPage(env = {}) {
       reachedConversationStart = false;
       renderThreads();
       if (!thread) {
-        messageListEl.replaceChildren(emptyState('Choose a conversation.'));
+        const actions = candidates.length
+          ? [emptyButton('Start a player message', () => { mobileNewDirectFormEl.hidden = false; mobileCandidateSelectEl.focus(); }, true)]
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule')];
+        messageListEl.replaceChildren(emptyState(
+          'No conversations yet',
+          candidates.length
+            ? 'Start a player message or wait for a team, matchup, or league room to appear.'
+            : 'Join a team or league-night matchup to unlock conversations.',
+          actions,
+        ));
         return;
       }
       const url = new URL(location.href);
@@ -486,57 +630,22 @@ export function renderChatPage(env = {}) {
       await loadMessages();
     }
     function normalizedTeamThreads(rows) {
-      return rows.map((row) => ({
-        key: 'team:' + row.team_id,
-        type: 'team',
-        id: row.team_id,
-        name: row.team_name,
-        season: row.season_name,
-        preview: row.last_message_body,
-        unread: row.unread_count,
-        canSend: true,
-      }));
+      return rows.map((row) => ({ key: 'team:' + row.team_id, type: 'team', id: row.team_id, name: row.team_name, season: row.season_name, preview: row.last_message_body, unread: row.unread_count, canSend: true }));
     }
     function normalizedDirectThreads(rows) {
-      return rows.map((row) => ({
-        key: 'direct:' + row.conversation_id,
-        type: 'direct',
-        id: row.conversation_id,
-        otherPlayerId: row.other_player_id,
-        name: row.other_display_name,
-        season: row.season_name,
-        preview: row.last_message_body,
-        unread: row.unread_count,
-        canSend: row.can_send,
-        blockedByMe: row.blocked_by_me,
-      }));
+      return rows.map((row) => ({ key: 'direct:' + row.conversation_id, type: 'direct', id: row.conversation_id, otherPlayerId: row.other_player_id, name: row.other_display_name, season: row.season_name, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send, blockedByMe: row.blocked_by_me }));
     }
     function normalizedLeagueThreads(rows) {
-      return rows.map((row) => ({
-        key: 'league:' + row.season_id,
-        type: 'league',
-        id: row.season_id,
-        name: 'League room',
-        season: row.season_name,
-        preview: row.last_message_body,
-        unread: row.unread_count,
-        canSend: row.can_send,
-      }));
+      return rows.map((row) => ({ key: 'league:' + row.season_id, type: 'league', id: row.season_id, name: 'League room', season: row.season_name, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     function normalizedMatchupThreads(rows) {
-      return rows.map((row) => ({
-        key: 'matchup:' + row.team_match_id,
-        type: 'matchup',
-        id: row.team_match_id,
-        name: row.team_a_name + ' vs ' + row.team_b_name,
-        season: row.season_name + ' · Round ' + row.round_number,
-        preview: row.last_message_body,
-        unread: row.unread_count,
-        canSend: row.can_send,
-      }));
+      return rows.map((row) => ({ key: 'matchup:' + row.team_match_id, type: 'matchup', id: row.team_match_id, name: row.team_a_name + ' vs ' + row.team_b_name, season: row.season_name + ' · Round ' + row.round_number, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     async function loadThreads({ preserveSelection = true } = {}) {
-      setStatus('Loading conversations...');
+      signedOutEl.hidden = true;
+      hidePageState();
+      layoutEl.hidden = false;
+      setStatus('Loading conversations…');
       const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
         api('/api/me/chat-threads'),
         api('/api/me/direct-message-inbox'),
@@ -560,9 +669,7 @@ export function renderChatPage(env = {}) {
           : (params.get('league')
             ? 'league:' + params.get('league')
             : (params.get('matchup') ? 'matchup:' + params.get('matchup') : '')));
-      const existing = preserveSelection && threads.some((thread) => thread.key === currentKey)
-        ? currentKey
-        : '';
+      const existing = preserveSelection && threads.some((thread) => thread.key === currentKey) ? currentKey : '';
       const initial = existing
         || (threads.some((thread) => thread.key === requestedKey) ? requestedKey : '')
         || threads[0]?.key
@@ -572,11 +679,7 @@ export function renderChatPage(env = {}) {
     }
     async function refreshThreadMetadata() {
       const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
-        api('/api/me/chat-threads'),
-        api('/api/me/direct-message-inbox'),
-        api('/api/me/league-chat-threads'),
-        api('/api/me/matchup-chat-threads'),
-        api('/api/me/direct-message-candidates'),
+        api('/api/me/chat-threads'), api('/api/me/direct-message-inbox'), api('/api/me/league-chat-threads'), api('/api/me/matchup-chat-threads'), api('/api/me/direct-message-candidates'),
       ]);
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
@@ -602,12 +705,9 @@ export function renderChatPage(env = {}) {
       if (!thread || !body || thread.canSend === false) return;
       messageInputEl.disabled = true;
       sendButtonEl.disabled = true;
-      setStatus('Sending...');
+      setStatus('Sending…');
       try {
-        await api(messagePath(thread), {
-          method: 'POST',
-          body: JSON.stringify({ body, clientMessageId: crypto.randomUUID() }),
-        });
+        await api(messagePath(thread), { method: 'POST', body: JSON.stringify({ body, clientMessageId: crypto.randomUUID() }) });
         messageInputEl.value = '';
         await loadThreads({ preserveSelection: true });
         setStatus('Sent', 'ok');
@@ -623,11 +723,8 @@ export function renderChatPage(env = {}) {
       const value = select.value;
       if (!value) throw new Error('Choose a player');
       const [seasonId, playerId] = value.split('|');
-      setStatus('Starting player message...');
-      const body = await api('/api/direct-conversations', {
-        method: 'POST',
-        body: JSON.stringify({ seasonId, playerId }),
-      });
+      setStatus('Starting player message…');
+      const body = await api('/api/direct-conversations', { method: 'POST', body: JSON.stringify({ seasonId, playerId }) });
       newDirectFormEl.hidden = true;
       mobileNewDirectFormEl.hidden = true;
       currentKey = 'direct:' + body.conversation.conversation_id;
@@ -638,10 +735,7 @@ export function renderChatPage(env = {}) {
       if (!thread || thread.type !== 'direct') return;
       const unblocking = Boolean(thread.blockedByMe);
       if (!unblocking && !window.confirm('Block ' + thread.name + '? You will not be able to message each other.')) return;
-      await api('/api/players/' + encodeURIComponent(thread.otherPlayerId) + '/block', {
-        method: unblocking ? 'DELETE' : 'POST',
-        body: '{}',
-      });
+      await api('/api/players/' + encodeURIComponent(thread.otherPlayerId) + '/block', { method: unblocking ? 'DELETE' : 'POST', body: '{}' });
       await loadThreads({ preserveSelection: true });
       setStatus(unblocking ? 'Player unblocked' : 'Player blocked', 'ok');
     }
@@ -656,19 +750,38 @@ export function renderChatPage(env = {}) {
       if (!thread || !reportingMessageId) return;
       await api('/api/chat-reports', {
         method: 'POST',
-        body: JSON.stringify({
-          messageType: thread.type,
-          messageId: reportingMessageId,
-          reason: reportReasonEl.value,
-          details: reportDetailsEl.value,
-        }),
+        body: JSON.stringify({ messageType: thread.type, messageId: reportingMessageId, reason: reportReasonEl.value, details: reportDetailsEl.value }),
       });
       reportDialogEl.close();
       reportingMessageId = '';
       setStatus('Report submitted to league admins', 'ok');
     }
+    function friendlyFailure(error) {
+      const message = String(error?.message || '');
+      if (/supabase|bearer|uuid|rpc|permission denied|schema private|postgres|request failed/i.test(message)) return 'We could not load your conversations.';
+      return message || 'We could not load your conversations.';
+    }
+    function handleError(error, { loadFailure = false } = {}) {
+      if (error?.code === 'session_expired' || error?.code === 'session_required') {
+        showSignedOut(error.code === 'session_expired');
+        return;
+      }
+      const message = friendlyFailure(error);
+      setStatus(message, 'error');
+      if (loadFailure) {
+        layoutEl.hidden = true;
+        showPageState('Couldn’t load messages', 'Your conversations could not be loaded. Your sign-in is still active, so you can try again.', {
+          tone: 'error',
+          actions: [makeAction('Try again', { onClick: () => runLoadThreads() }), makeAction('See tonight', { href: '/schedule', secondary: true })],
+        });
+      }
+    }
     async function run(action) {
-      try { await action(); } catch (error) { setStatus(error.message, 'error'); }
+      try { await action(); } catch (error) { handleError(error); }
+    }
+    async function runLoadThreads() {
+      hidePageState();
+      try { await loadThreads(); } catch (error) { handleError(error, { loadFailure: true }); }
     }
 
     threadListEl.addEventListener('click', (event) => {
@@ -676,9 +789,9 @@ export function renderChatPage(env = {}) {
       if (button) run(() => selectThread(button.dataset.threadKey));
     });
     threadSelectEl.addEventListener('change', () => run(() => selectThread(threadSelectEl.value)));
-    document.querySelector('[data-refresh]').addEventListener('click', () => run(() => loadThreads()));
-    document.querySelector('[data-new-message]').addEventListener('click', () => { newDirectFormEl.hidden = !newDirectFormEl.hidden; });
-    document.querySelector('[data-mobile-new]').addEventListener('click', () => { mobileNewDirectFormEl.hidden = !mobileNewDirectFormEl.hidden; });
+    document.querySelector('[data-refresh]').addEventListener('click', runLoadThreads);
+    newMessageButtonEl.addEventListener('click', openNewMessage);
+    mobileNewMessageButtonEl.addEventListener('click', openMobileNewMessage);
     newDirectFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(() => startDirectConversation(candidateSelectEl)); });
     mobileNewDirectFormEl.addEventListener('submit', (event) => { event.preventDefault(); run(() => startDirectConversation(mobileCandidateSelectEl)); });
     blockButtonEl.addEventListener('click', () => run(toggleBlock));
@@ -694,11 +807,13 @@ export function renderChatPage(env = {}) {
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); run(sendMessage); }
     });
 
-    signedOutEl.hidden = Boolean(token());
-    layoutEl.hidden = !token();
     if (token()) {
-      run(() => loadThreads());
+      signedOutEl.hidden = true;
+      layoutEl.hidden = false;
+      runLoadThreads();
       run(detectModerator);
+    } else {
+      showSignedOut(false);
     }
     let pollCount = 0;
     setInterval(() => {

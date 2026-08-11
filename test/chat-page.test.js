@@ -33,7 +33,7 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /fd:messages-read/);
   assert.match(html, /\/messages\/moderation/);
   assert.match(html, /detectModerator/);
-  assert.match(html, /No other registered players yet/);
+  assert.match(html, /No other registered players are available to message yet/);
   assert.match(html, /setInterval[\s\S]*4000/);
   assert.match(html, /@media \(max-width: 760px\)/);
   assert.doesNotMatch(html, /Access token/i);
