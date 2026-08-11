@@ -33,3 +33,19 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/availability/);
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/lineup/);
 });
+
+test('lineup page keeps the three selected slots and lock action visible on mobile', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /data-mobile-lineup-summary/);
+  assert.match(html, /data-mobile-lineup-slots aria-live="polite"/);
+  assert.match(html, /data-mobile-slot-count/);
+  assert.match(html, /data-mobile-submit/);
+  assert.match(html, /\.mobile-lineup-summary\{position:sticky;top:70px/);
+  assert.match(html, /function renderMobileSummary\(\)/);
+  assert.match(html, /label\.textContent='Slot '\+\(index\+1\)/);
+  assert.match(html, /value\.textContent=slot\?\(slot\.forfeit\?'Forfeit':slot\.name\):'Empty'/);
+  assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
+  assert.match(html, /renderMobileSummary\(\)/);
+  assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
+});
