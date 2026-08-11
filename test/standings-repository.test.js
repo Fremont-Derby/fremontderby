@@ -81,23 +81,25 @@ test('standings repository surfaces Supabase failures', async () => {
 
 test('standings repository lists public seasons with registration progress', async () => {
   const calls = [];
-  const responses = [
-    [{
+  const responses = [[{
       id: 'season-1',
       name: 'Fremont Derby Season 1',
       status: 'registration',
       first_round_date: '2026-09-03',
-    }],
-    [
-      { id: 'team-1', season_id: 'season-1' },
-      { id: 'team-2', season_id: 'season-1' },
-    ],
-    [
-      { season_id: 'season-1', player_id: 'player-1' },
-      { season_id: 'season-1', player_id: 'player-2' },
-      { season_id: 'season-1', player_id: 'player-2' },
-    ],
-  ];
+      team_count: 2,
+      confirmed_team_count: 1,
+      team_capacity: 8,
+      minimum_committed_roster: 3,
+      occupied_slots: 3,
+      open_team_slots: 5,
+      reserved_returning_slots: 1,
+      held_team_slots: 1,
+      applications_waiting: 4,
+      rostered_player_count: 2,
+      registered_player_count: 5,
+      free_agent_count: 3,
+      at_risk_team_count: 1,
+    }]];
   const fetch = async (url, init) => {
     calls.push({ url, init });
     return new Response(JSON.stringify(responses.shift()), {
@@ -109,18 +111,26 @@ test('standings repository lists public seasons with registration progress', asy
   const repository = createStandingsRepository(env, { fetch });
   const seasons = await repository.listPublicSeasons();
 
-  assert.equal(calls.length, 3);
-  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/seasons?select=id,name,status,first_round_date,created_at&order=created_at.desc');
-  assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/teams?select=id,season_id');
-  assert.equal(calls[2].url, 'https://project.supabase.co/rest/v1/team_memberships?select=season_id,player_id&ends_at=is.null');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/list_public_season_registration');
+  assert.equal(calls[0].init.method, 'POST');
   assert.deepEqual(seasons[0], {
     id: 'season-1',
     name: 'Fremont Derby Season 1',
     status: 'registration',
     firstRoundDate: '2026-09-03',
     teamCount: 2,
+    confirmedTeamCount: 1,
     teamCapacity: 8,
-    openTeamSlots: 6,
+    occupiedSlots: 3,
+    openTeamSlots: 5,
+    reservedReturningSlots: 1,
+    heldTeamSlots: 1,
+    applicationsWaiting: 4,
     rosteredPlayerCount: 2,
+    registeredPlayerCount: 5,
+    freeAgentCount: 3,
+    atRiskTeamCount: 1,
+    minimumCommittedRoster: 3,
   });
 });
