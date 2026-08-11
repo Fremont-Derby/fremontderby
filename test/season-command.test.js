@@ -16,8 +16,8 @@ function createRepository({
       calls.push(['getSeason', seasonId]);
       return season;
     },
-    async listSeasonTeams(seasonId) {
-      calls.push(['listSeasonTeams', seasonId]);
+    async listSeasonTeams(seasonId, actorUserId) {
+      calls.push(['listSeasonTeams', seasonId, actorUserId]);
       return seasonTeams;
     },
     async savePublishedSchedule(payload) {
@@ -58,6 +58,10 @@ test('trusted command persists a generated schedule for a draft season', async (
   assert.deepEqual(
     saveCall[1].rounds[0].matches.map((match) => match.tableNumber),
     [3, 4, 5, 6],
+  );
+  assert.deepEqual(
+    repository.calls.find(([name]) => name === 'listSeasonTeams'),
+    ['listSeasonTeams', 'season-1', 'admin-user-1'],
   );
 });
 

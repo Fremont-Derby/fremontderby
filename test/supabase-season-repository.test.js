@@ -63,19 +63,24 @@ test('Supabase season repository returns null for a missing season', async () =>
   assert.equal(await repository.getSeason('missing-season'), null);
 });
 
-test('Supabase season repository lists season team ids', async () => {
+test('Supabase season repository lists viable confirmed team ids', async () => {
   const { fetch, calls } = createFetch([
     { body: [{ id: 'team-1' }, { id: 'team-2' }] },
   ]);
   const repository = createSupabaseSeasonRepository(env, { fetch });
 
-  const teams = await repository.listSeasonTeams('season-1');
+  const teams = await repository.listSeasonTeams('season-1', 'admin-user-1');
 
   assert.deepEqual(teams, [{ id: 'team-1' }, { id: 'team-2' }]);
   assert.equal(
     calls[0].url,
-    'https://project.supabase.co/rest/v1/teams?season_id=eq.season-1&select=id&order=name.asc',
+    'https://project.supabase.co/rest/v1/rpc/list_publishable_season_teams',
   );
+  assert.equal(calls[0].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'admin-user-1',
+    target_season_id: 'season-1',
+  });
 });
 
 test('Supabase season repository loads admin setup through the setup RPC', async () => {

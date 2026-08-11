@@ -141,11 +141,14 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
       return Array.isArray(result) ? result[0] : result;
     },
 
-    async listSeasonTeams(seasonId) {
-      const url = `${supabaseUrl}/rest/v1/teams?season_id=eq.${encodeFilterValue(seasonId)}&select=id&order=name.asc`;
-      return requestJson(fetchImpl, url, {
-        method: 'GET',
+    async listSeasonTeams(seasonId, actorUserId) {
+      return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_publishable_season_teams`, {
+        method: 'POST',
         headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_season_id: seasonId,
+        }),
       });
     },
 

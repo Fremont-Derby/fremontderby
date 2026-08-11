@@ -63,7 +63,7 @@ export async function publishSeasonScheduleCommand(
     throw new Error('firstRoundDate is required');
   }
 
-  const teams = await repository.listSeasonTeams(seasonId);
+  const teams = await repository.listSeasonTeams(seasonId, actorUserId);
   const schedule = publishRegularSeasonSchedule({
     seasonId,
     teamIds: activeTeamIds(teams),
