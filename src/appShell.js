@@ -1,6 +1,7 @@
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
+  { href: '/schedule', label: 'Schedule', key: 'schedule' },
   { href: '/standings', label: 'Standings', key: 'standings' },
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Demo', key: 'demo' },
@@ -11,7 +12,7 @@ const NAV_ITEMS = [
 
 const MOBILE_DOCK_ITEMS = [
   { href: '/teams', label: 'Teams', key: 'teams', ball: 'T' },
-  { href: '/standings', label: 'Standings', key: 'standings', ball: '#' },
+  { href: '/schedule', label: 'Tonight', key: 'schedule', ball: '9' },
   { href: '/scorecard', label: 'Score', key: 'score', ball: '8' },
   { href: '/messages', label: 'Messages', key: 'messages', ball: 'M' },
   { href: '/profile', label: 'Profile', key: 'profile', ball: 'P' },
@@ -19,6 +20,7 @@ const MOBILE_DOCK_ITEMS = [
 
 const APP_PAGE_PATHS = new Set([
   '/scorecard',
+  '/schedule',
   '/standings',
   '/prizes',
   '/season-setup',
@@ -41,6 +43,7 @@ function sectionForPath(pathname) {
     || pathname === '/availability'
     || pathname === '/lineup'
   ) return 'teams';
+  if (pathname.startsWith('/schedule')) return 'schedule';
   if (pathname.startsWith('/standings') || pathname === '/prizes') return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
@@ -243,6 +246,7 @@ export const shellStyles = `
       text-align: center;
     }
     .fd-mobile-dock a[data-nav-key="teams"] { --fd-dock-accent: #69c8ff; }
+    .fd-mobile-dock a[data-nav-key="schedule"] { --fd-dock-accent: #ffd166; }
     .fd-mobile-dock a[data-nav-key="standings"] { --fd-dock-accent: #ffd166; }
     .fd-mobile-dock a[data-nav-key="score"] { --fd-dock-accent: #63e79a; }
     .fd-mobile-dock a[data-nav-key="messages"] { --fd-dock-accent: #d8a6ff; }
@@ -522,8 +526,8 @@ export function renderNotFoundPage(pathname = '') {
     <div class="actions">
       <a class="primary" href="/">Back home</a>
       <a href="/teams">Teams</a>
+      <a href="/schedule">Schedule</a>
       <a href="/standings">Standings</a>
-      <a href="/demo">Demo season</a>
     </div>
   </main>
 </body>

@@ -136,3 +136,58 @@ test('standings repository lists public seasons with registration progress', asy
     minimumCommittedRoster: 3,
   });
 });
+
+
+test('standings repository returns a sanitized human-readable season schedule', async () => {
+  const calls = [];
+  const responses = [
+    [{
+      id: 'round-1',
+      round_number: 1,
+      scheduled_on: '2026-09-03',
+      status: 'scheduled',
+      stage: 'regular',
+    }],
+    [{
+      id: 'match-1',
+      round_id: 'round-1',
+      team_a_id: 'team-1',
+      team_b_id: 'team-2',
+      table_number: 4,
+      status: 'scheduled',
+    }],
+    [
+      { id: 'team-1', name: 'Breakers' },
+      { id: 'team-2', name: 'Rack Pack' },
+    ],
+  ];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify(responses.shift()), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const repository = createStandingsRepository(env, { fetch });
+
+  const rounds = await repository.listSeasonSchedule({ seasonId: 'season-1' });
+
+  assert.deepEqual(rounds, [{
+    roundId: 'round-1',
+    roundNumber: 1,
+    scheduledOn: '2026-09-03',
+    status: 'scheduled',
+    stage: 'regular',
+    matches: [{
+      teamMatchId: 'match-1',
+      teamAName: 'Breakers',
+      teamBName: 'Rack Pack',
+      tableNumber: 4,
+      status: 'scheduled',
+    }],
+  }]);
+  assert.match(calls[0].url, /\/rest\/v1\/rounds\?/);
+  assert.match(calls[1].url, /\/rest\/v1\/team_matches\?/);
+  assert.match(calls[2].url, /\/rest\/v1\/teams\?/);
+  assert.ok(calls.every((call) => call.init.headers.apikey === 'service-role-secret'));
+});

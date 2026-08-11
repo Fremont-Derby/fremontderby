@@ -1071,6 +1071,20 @@ export async function handleListPublicSeasonsRequest(
   }
 }
 
+export async function handleListSeasonScheduleRequest(
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const rounds = await repository.listSeasonSchedule({ seasonId });
+    return jsonResponse({ rounds });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleListTeamStandingsRequest(
   env,
   seasonId,
@@ -1402,6 +1416,9 @@ export default {
     );
     const teamLineupMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
+    );
+    const seasonScheduleMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/schedule$/,
     );
     const teamStandingsMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/team-standings$/,
@@ -1983,6 +2000,17 @@ export default {
       }
 
       return handleListPublicSeasonsRequest(env);
+    }
+
+    if (seasonScheduleMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleListSeasonScheduleRequest(
+        env,
+        decodeURIComponent(seasonScheduleMatch[1]),
+      );
     }
 
     if (teamStandingsMatch) {

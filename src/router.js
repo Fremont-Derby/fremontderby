@@ -13,6 +13,7 @@ import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
+import { renderSchedulePage } from './schedulePage.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
 import { teamMatchChoiceHttpHandlers } from './teamMatchChoiceHttp.js';
@@ -154,6 +155,11 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/rules') {
       return htmlResponse(stripLegacyPublicNav(renderRulesPage()), url.pathname);
+    }
+
+    if (url.pathname === '/schedule') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderSchedulePage(), url.pathname);
     }
 
     if (url.pathname === '/demo') {

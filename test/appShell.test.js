@@ -22,14 +22,15 @@ test('mobile quick navigation exposes frequent destinations with accessible acti
   const dock = html.match(/<nav class="fd-mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '';
   assert.match(dock, /data-fd-mobile-dock/);
   assert.match(dock, /aria-label="Quick navigation"/);
-  for (const destination of ['/teams', '/standings', '/scorecard', '/messages', '/profile']) {
+  for (const destination of ['/teams', '/schedule', '/scorecard', '/messages', '/profile']) {
     assert.match(dock, new RegExp(`href="${destination.replace('/', '\\/')}"`));
   }
   assert.doesNotMatch(dock, /href="\/rules"/);
   assert.doesNotMatch(dock, /href="\/demo"/);
   assert.match(dock, /href="\/teams"[^>]*aria-current="page"/);
   assert.match(dock, /data-nav-key="teams"/);
-  assert.match(dock, /data-nav-key="standings"/);
+  assert.match(dock, /data-nav-key="schedule"/);
+  assert.doesNotMatch(dock, /data-nav-key="standings"/);
   assert.match(dock, /data-nav-key="score"/);
   assert.match(dock, /data-nav-key="messages"/);
   assert.match(dock, /data-nav-key="profile"/);
@@ -87,6 +88,7 @@ test('technical failures are replaced with plain customer guidance', () => {
 test('known app route allowlist covers ordinary delegated pages', () => {
   for (const path of [
     '/scorecard',
+    '/schedule',
     '/standings',
     '/prizes',
     '/season-setup',
@@ -111,7 +113,7 @@ test('not-found page includes basset hound artwork and escapes the bad path', ()
 });
 
 test('intro and rules use the same shared navigation shell', async () => {
-  for (const path of ['/', '/rules']) {
+  for (const path of ['/', '/rules', '/schedule']) {
     const response = await router.fetch(
       new Request(`https://fremontderby.test${path}`),
       {},

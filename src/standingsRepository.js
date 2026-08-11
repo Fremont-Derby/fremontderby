@@ -80,6 +80,61 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
       }));
     },
 
+    async listSeasonSchedule({ seasonId }) {
+      const roundParams = new URLSearchParams({
+        select: 'id,round_number,scheduled_on,status,stage',
+        season_id: `eq.${seasonId}`,
+        order: 'scheduled_on.asc,round_number.asc',
+      });
+      const matchParams = new URLSearchParams({
+        select: 'id,round_id,team_a_id,team_b_id,table_number,status',
+        season_id: `eq.${seasonId}`,
+        order: 'round_id.asc,table_number.asc',
+      });
+      const teamParams = new URLSearchParams({
+        select: 'id,name',
+        season_id: `eq.${seasonId}`,
+        order: 'name.asc',
+      });
+      const [roundRows, matchRows, teamRows] = await Promise.all([
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, {
+          method: 'GET',
+          headers,
+        }),
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/team_matches?${matchParams}`, {
+          method: 'GET',
+          headers,
+        }),
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/teams?${teamParams}`, {
+          method: 'GET',
+          headers,
+        }),
+      ]);
+      const teamsById = new Map(
+        (Array.isArray(teamRows) ? teamRows : []).map((team) => [team.id, team.name]),
+      );
+      const matchesByRoundId = new Map();
+      for (const match of Array.isArray(matchRows) ? matchRows : []) {
+        const matches = matchesByRoundId.get(match.round_id) ?? [];
+        matches.push({
+          teamMatchId: match.id,
+          teamAName: teamsById.get(match.team_a_id) ?? 'Team',
+          teamBName: teamsById.get(match.team_b_id) ?? 'Team',
+          tableNumber: match.table_number,
+          status: match.status,
+        });
+        matchesByRoundId.set(match.round_id, matches);
+      }
+      return (Array.isArray(roundRows) ? roundRows : []).map((round) => ({
+        roundId: round.id,
+        roundNumber: round.round_number,
+        scheduledOn: round.scheduled_on,
+        status: round.status,
+        stage: round.stage,
+        matches: matchesByRoundId.get(round.id) ?? [],
+      }));
+    },
+
     async listTeamStandings({ seasonId }) {
       return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_team_standings`, {
         method: 'POST',
