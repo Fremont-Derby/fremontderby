@@ -43,6 +43,8 @@ test('team management enriches captained teams with human-readable scheduled rou
       body: [{
         id: 'team-match-1',
         round_id: 'round-1',
+        team_a_id: 'team-1',
+        team_b_id: 'team-2',
         table_number: 2,
         status: 'scheduled',
       }],
@@ -57,6 +59,12 @@ test('team management enriches captained teams with human-readable scheduled rou
         lineup_deadline_at: '2026-09-03T19:00:00Z',
       }],
     },
+    {
+      body: [
+        { id: 'team-1', name: 'Breakers' },
+        { id: 'team-2', name: 'Rack Pack' },
+      ],
+    },
   ]);
 
   const repository = createTeamRepository(env, { fetch });
@@ -69,6 +77,7 @@ test('team management enriches captained teams with human-readable scheduled rou
     roundStatus: 'scheduled',
     lineupDeadlineAt: '2026-09-03T19:00:00Z',
     teamMatchId: 'team-match-1',
+    opponentName: 'Rack Pack',
     tableNumber: 2,
     teamMatchStatus: 'scheduled',
   }]);
@@ -77,4 +86,5 @@ test('team management enriches captained teams with human-readable scheduled rou
   assert.match(calls[3].url, /team_b_id\.eq\.team-1/);
   assert.match(calls[4].url, /\/rest\/v1\/rounds\?/);
   assert.match(calls[4].url, /stage=eq\.regular/);
+  assert.match(calls[5].url, /\/rest\/v1\/teams\?/);
 });
