@@ -14,8 +14,8 @@ test('live scorecard uses selected match and signed-in session without technical
   assert.match(html, /params\.get\('match'\)/);
   assert.match(html, /params\.get\('team'\)/);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
-  assert.match(html, /Using your signed-in team scoring session\./);
-  assert.match(html, /Switch match \/ scoring team/);
+  assert.match(html, />Switch match</);
+  assert.match(html, /data-detail-team/);
 });
 
 test('live scorecard guides missing browser context through normal UI', () => {
