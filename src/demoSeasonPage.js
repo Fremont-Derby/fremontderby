@@ -118,7 +118,7 @@ export function renderDemoSeasonPage() {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <title>Season 1 War Games · Fremont Derby</title>
+  <title>Try a League Night · Fremont Derby</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#07150f; color:#f4f7f5; --gold:#e9bd45; --green:#2fa972; }
     * { box-sizing:border-box; }
@@ -127,7 +127,7 @@ export function renderDemoSeasonPage() {
     a { color:#d7f6e2; }
     button { font:inherit; cursor:pointer; }
     .demo-banner { position:sticky; top:58px; z-index:2; margin:0 -12px 20px; padding:12px; text-align:center; background:var(--gold); color:#17120a; font-weight:900; border-radius:0 0 12px 12px; }
-    .hero,.card,.round,.step { border:1px solid #315d45; background:#0b2418; border-radius:14px; }
+    .hero,.card,.round,.step,details { border:1px solid #315d45; background:#0b2418; border-radius:14px; }
     .hero { padding:24px; }
     h1 { margin:0 0 10px; font-size:clamp(2rem,7vw,4rem); }
     h2 { margin:28px 0 12px; }
@@ -164,25 +164,28 @@ export function renderDemoSeasonPage() {
     .anchor { border-left:4px solid var(--gold); padding-left:12px; }
     .champion { border:1px solid var(--gold); background:#30280f; }
     .note { font-size:.9rem; color:#9fb2a6; }
-    @media(max-width:760px){.flow,.lineup{grid-template-columns:1fr}.demo-banner{top:56px}}
+    details { margin-top:18px; padding:14px 16px; }
+    summary { cursor:pointer; font-weight:900; }
+    .next { display:flex; flex-wrap:wrap; gap:10px; }
+    @media(max-width:760px){.flow,.lineup{grid-template-columns:1fr}.demo-banner{top:56px}.step .button{width:100%}.actions .button{flex:1 1 100%}}
   </style>
 </head>
 <body>
   <main>
-    <div class="demo-banner">SEASON 1 WAR GAMES · THROWAWAY FAKE DATA · SAFE TO RESET OR DELETE BEFORE LAUNCH</div>
+    <div class="demo-banner">TRY A LEAGUE NIGHT · FICTIONAL PLAYERS AND RESULTS · CANNOT AFFECT THE REAL SEASON</div>
     <section class="hero">
-      <div class="kicker">Fremont Derby dry run</div>
-      <h1>Season 1 War Games</h1>
-      <p>This combines the old demo season and practice sandboxes into one disposable Season 1 test drive. Use the same fictional teams and players to submit a lineup, score a match, then inspect the completed seven-round season and postseason. No Google sign-in is required and these War Games screens never write to competitive league data.</p>
-      <div class="actions"><a class="button primary" href="/sandbox/captain">Start the test drive →</a><a class="button secondary" href="/sandbox/player">Jump to scoring</a><button class="reset" data-reset-all type="button">Reset all War Games</button></div>
-      <div class="chips"><span class="chip">8 fake teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 dual scoring</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>
+      <div class="kicker">War Games practice</div>
+      <h1>Try a League Night</h1>
+      <p>See how Fremont Derby feels before joining a real match. Build a fictional team, submit a three-player lineup, score one 8/9 race, then explore a completed seven-round season and playoffs. No Google sign-in is required.</p>
+      <div class="actions"><a class="button primary" href="/sandbox/captain">Start as captain →</a><a class="button secondary" href="/sandbox/player">Jump to scoring</a></div>
+      <div class="chips"><span class="chip">8 fictional teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 dual scoring</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>
     </section>
 
     <h2>Your test drive</h2>
-    <section class="flow" aria-label="Season 1 War Games test drive">
-      <article class="step"><span class="step-number">1</span><div><h3>Captain + lineup</h3><p>A valid three-player lineup is prefilled, including a free-agent substitute. Submit it in one tap or change availability first.</p></div><span class="step-status" data-captain-status>Ready</span><a class="button secondary" href="/sandbox/captain">Open lineup</a></article>
-      <article class="step"><span class="step-number">2</span><div><h3>Score Match 1</h3><p>Score both team-owned histories manually, create a mismatch, or load a complete matching score and test confirmation/finalization quickly.</p></div><span class="step-status" data-player-status>Ready</span><a class="button secondary" href="/sandbox/player">Open scoring</a></article>
-      <article class="step"><span class="step-number">3</span><div><h3>Inspect Season 1</h3><p>Use the fixture below as the completed outcome: standings, every round, a substitute, an 8/9 race, semifinals, anchor tiebreaker, and champion.</p></div><span class="step-status done">Available below</span><a class="button secondary" href="#team-standings">View results</a></article>
+    <section class="flow" aria-label="Fremont Derby league-night test drive">
+      <article class="step"><span class="step-number">1</span><div><h3>Form team + lineup</h3><p>Act as captain: approve and reject player requests, reach a viable roster, then choose three active players with an optional free-agent substitute.</p></div><span class="step-status" data-captain-status>Ready</span><a class="button secondary" href="/sandbox/captain">Start captain drill</a></article>
+      <article class="step"><span class="step-number">2</span><div><h3>Score Match 1</h3><p>Track both team-owned histories, create a mismatch if you want, then reconcile, confirm, and finalize the race.</p></div><span class="step-status" data-player-status>Ready</span><a class="button secondary" href="/sandbox/player">Open scoring</a></article>
+      <article class="step"><span class="step-number">3</span><div><h3>Inspect the season</h3><p>See standings, every round, substitutions, semifinals, an anchor tiebreaker, and a champion.</p></div><span class="step-status done">Available below</span><a class="button secondary" href="#team-standings">View results</a></article>
     </section>
 
     <h2 id="team-standings">Team standings</h2>
@@ -194,19 +197,19 @@ export function renderDemoSeasonPage() {
     <h2>Seven-round schedule</h2>
     <div class="grid">${renderSchedule()}</div>
 
-    <h2>War Games lineup</h2>
+    <h2>Example Round 1 lineup</h2>
     <section class="card">
       <div class="lineup">
         <div><strong>Break Room Bandits</strong><p>Maya Banks<br>Theo Martin<br>Jamie Park (sub)</p></div>
         <div><strong>Golden Rail</strong><p>Eli Torres<br>Dana Brooks<br>Owen Wells</p></div>
       </div>
-      <p class="note">The interactive captain step uses these same fictional players. Jamie Park demonstrates a free-agent substitute filling one of the three active regular-season spots.</p>
+      <p class="note">Jamie Park demonstrates a free-agent substitute filling one of the three active regular-season spots.</p>
     </section>
 
-    <h2>War Games Match 1 · 8/9 race</h2>
+    <h2>Example Match 1 · 8/9 race</h2>
     <section class="card">
       <h3>Maya Banks vs Eli Torres · Maya race 5 · Eli race 4</h3>
-      <p>Example final: Maya 5, Eli 3. The quick-load button in scoring uses this exact rack sequence, so the interactive dry run and completed Season 1 fixture stay aligned.</p>
+      <p>Example final: Maya 5, Eli 3. The scoring drill can load this same rack sequence so practice and the completed fixture stay aligned.</p>
       <div class="rack" aria-label="Example rack winners">
         <span class="ball">M</span><span class="ball nine">E</span><span class="ball">M</span><span class="ball nine">M</span><span class="ball">E</span><span class="ball nine">M</span><span class="ball">E</span><span class="ball nine">M</span>
       </div>
@@ -221,12 +224,25 @@ export function renderDemoSeasonPage() {
       <div class="postseason-match champion"><strong>Championship</strong><p>${postseason.championship.teamA} ${postseason.championship.score} ${postseason.championship.teamB}<br><strong>Season champion: ${postseason.championship.winner}</strong></p></div>
       <p class="note">The anchor match is an additional deciding match only. It never replaces or rewrites the four scheduled postseason player results.</p>
     </section>
+
+    <h2>Ready for the real league?</h2>
+    <section class="card">
+      <p>When you are done practicing, look at current teams or read the rules. The practice state stays separate from competitive records.</p>
+      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/rules">Read the rules</a></div>
+    </section>
+
+    <details>
+      <summary>Tester controls · War Games</summary>
+      <p class="note">Practice state is deterministic browser-session data. Resetting clears captain and scoring progress only; it never changes competitive league data.</p>
+      <button class="reset" data-reset-all type="button">Reset practice state</button>
+    </details>
   </main>
   <script>
     const captainKey='fd.captainSandbox.v1';const playerKey='fd.playerSandbox.v1';
     function stored(key){try{return JSON.parse(sessionStorage.getItem(key)||'null')}catch{return null}}
     function paint(el,state){el.className='step-status'+(state==='Done'?' done':state==='In progress'?' progress':'');el.textContent=state}
-    function progress(){const captain=stored(captainKey),player=stored(playerKey);paint(document.querySelector('[data-captain-status]'),captain&&captain.submitted?'Done':'Ready');const playerState=player&&player.finalized?'Done':player&&((player.A&&player.A.racks&&player.A.racks.length)||(player.B&&player.B.racks&&player.B.racks.length))?'In progress':'Ready';paint(document.querySelector('[data-player-status]'),playerState)}
+    function captainProgress(captain){if(!captain)return'Ready';if(captain.submitted)return'Done';if(captain.formation&&Object.values(captain.formation).some(value=>value!=='pending'))return'In progress';return'Ready'}
+    function progress(){const captain=stored(captainKey),player=stored(playerKey);paint(document.querySelector('[data-captain-status]'),captainProgress(captain));const playerState=player&&player.finalized?'Done':player&&((player.A&&player.A.racks&&player.A.racks.length)||(player.B&&player.B.racks&&player.B.racks.length))?'In progress':'Ready';paint(document.querySelector('[data-player-status]'),playerState)}
     document.querySelector('[data-reset-all]').onclick=()=>{sessionStorage.removeItem(captainKey);sessionStorage.removeItem(playerKey);progress()};progress();
   </script>
 </body>
