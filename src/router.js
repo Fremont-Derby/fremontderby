@@ -12,6 +12,8 @@ import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
+import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
+import { renderScorePickerPage } from './scorePickerPage.js';
 
 function htmlResponse(html, pathname, status = 200) {
   return new Response(decorateHtmlWithShell(html, pathname), {
@@ -127,6 +129,25 @@ export default {
     if (url.pathname === '/messages') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatPage(env), url.pathname);
+    }
+
+    if (url.pathname === '/scorecard') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderScorePickerPage(), url.pathname);
+    }
+
+    if (url.pathname === '/scorecard/live') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      const delegatedUrl = new URL(request.url);
+      delegatedUrl.pathname = '/scorecard';
+      const delegatedRequest = new Request(delegatedUrl, request);
+      const response = await app.fetch(delegatedRequest, env, ctx);
+      return decorateAppResponse(response, '/scorecard');
+    }
+
+    if (url.pathname === '/api/me/scorable-matches') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return scorableMatchesHttpHandlers.list(request, env);
     }
 
     if (url.pathname === '/api/me/chat-threads') {
