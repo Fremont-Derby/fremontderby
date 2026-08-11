@@ -58,7 +58,7 @@ export function renderIntroPage() {
     <p class="lead">A flexible, Fargo-handicapped 8-ball / 9-ball round-robin league with team and singles competition, cash payouts, and very little paperwork.</p>
 
     <h2>How it works</h2>
-    <p>Eight teams play a seven-round single round robin, so every team plays every other team once. League nights have scheduled matchups and reserved tables, but the calendar stays flexible: teams can agree to play early, late, out of order, or somewhere else.</p>
+    <p>Eight teams play a seven-round single round robin, so every team plays every other team once. The season spans 12 calendar weeks: seven scheduled rounds plus built-in off and makeup weeks for holidays, conflicts, and rescheduling. League nights have scheduled matchups and reserved tables, but the calendar stays flexible: teams can agree to play early, late, out of order, or somewhere else.</p>
 
     <h2>Teams and singles</h2>
     <p>You do not need to join a permanent team to participate. You can play as a free agent or substitute for teams that need a player, and those matches still count toward your individual singles record and eligibility.</p>
