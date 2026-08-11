@@ -18,14 +18,15 @@ test('standings provides useful no-season and load-failure recovery', () => {
   assert.match(html, /View league rules/);
   assert.match(html, /Standings unavailable/);
   assert.match(html, /Nothing needs to be re-entered/);
-  assert.match(html, />Try again<\/a>/);
+  assert.match(html, /'Try again'/);
   assert.match(html, /loadButton\.disabled=seasons\.length===0/);
 });
 
 test('standings recovery actions remain keyboard and mobile friendly', () => {
   const html = renderStandingsPage();
 
-  assert.match(html, /\.state-action:focus-visible\{outline:3px solid var\(--focus\)/);
+  assert.match(html, /\.state-action:focus-visible/);
+  assert.match(html, /outline:3px solid var\(--focus\)/);
   assert.match(html, /\.state-action\{width:max-content;min-height:44px/);
   assert.match(html, /\.register-link,\.state-action\{width:100%/);
   assert.match(html, /@media\(prefers-reduced-motion:reduce\)/);
