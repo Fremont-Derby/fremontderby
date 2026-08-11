@@ -9,22 +9,21 @@ import {
 import { createDualScoringRepository } from './dualScoringRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 
-function jsonResponse(body, status = 200) {
-  return Response.json(body, { status });
-}
+function jsonResponse(body, status = 200) { return Response.json(body, { status }); }
 
 function statusForError(error) {
   const message = error?.message || 'Request failed';
   if (message.includes('Actor is not a league admin')) return 403;
-  if (message.includes('Only match players')) return 403;
+  if (message.includes('not an active member of the scoring team')) return 403;
+  if (message.includes('Scoring team is not part')) return 403;
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
   if (message.includes('Player match not found')) return 404;
   if (
     message.includes('finalized')
     || message.includes('must match')
-    || message.includes('Both players must confirm')
-    || message.includes('Both player score records are required')
+    || message.includes('Both teams must confirm')
+    || message.includes('Both team score records are required')
     || message.includes('Race target')
     || message.includes('Score record')
     || message.includes('Resolved rack history')
@@ -36,10 +35,13 @@ async function readJsonBody(request) {
   const text = await request.text();
   if (!text.trim()) return {};
   const body = JSON.parse(text);
-  if (!body || Array.isArray(body) || typeof body !== 'object') {
-    throw new Error('Request body must be a JSON object');
-  }
+  if (!body || Array.isArray(body) || typeof body !== 'object') throw new Error('Request body must be a JSON object');
   return body;
+}
+
+function scoringTeamFromRequest(request, body = {}) {
+  const url = new URL(request.url);
+  return body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
 }
 
 export function createDualScoringHttpHandlers({
@@ -59,10 +61,11 @@ export function createDualScoringHttpHandlers({
   return {
     compare(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
-        const comparison = await getPlayerMatchScoreComparisonCommand(
-          { actorUserId: actor.id, playerMatchId },
-          repository,
-        );
+        const comparison = await getPlayerMatchScoreComparisonCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          scoringTeamId: scoringTeamFromRequest(request),
+        }, repository);
         return jsonResponse({ comparison });
       });
     },
@@ -70,44 +73,45 @@ export function createDualScoringHttpHandlers({
     record(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const body = await readJsonBody(request);
-        const rack = await recordPlayerMatchScoreRackCommand(
-          {
-            actorUserId: actor.id,
-            playerMatchId,
-            winnerSide: body.winnerSide ?? body.winner,
-          },
-          repository,
-        );
+        const rack = await recordPlayerMatchScoreRackCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          scoringTeamId: scoringTeamFromRequest(request, body),
+          winnerSide: body.winnerSide ?? body.winner,
+        }, repository);
         return jsonResponse({ rack }, 201);
       });
     },
 
     undo(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
-        const undo = await undoPlayerMatchScoreRackCommand(
-          { actorUserId: actor.id, playerMatchId },
-          repository,
-        );
+        const undo = await undoPlayerMatchScoreRackCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          scoringTeamId: scoringTeamFromRequest(request),
+        }, repository);
         return jsonResponse({ undo });
       });
     },
 
     confirm(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
-        const confirmation = await confirmPlayerMatchScoreCommand(
-          { actorUserId: actor.id, playerMatchId },
-          repository,
-        );
+        const confirmation = await confirmPlayerMatchScoreCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          scoringTeamId: scoringTeamFromRequest(request),
+        }, repository);
         return jsonResponse({ confirmation });
       });
     },
 
     finalize(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
-        const match = await finalizeReconciledPlayerMatchCommand(
-          { actorUserId: actor.id, playerMatchId },
-          repository,
-        );
+        const match = await finalizeReconciledPlayerMatchCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          scoringTeamId: scoringTeamFromRequest(request),
+        }, repository);
         return jsonResponse({ match });
       });
     },
@@ -115,15 +119,12 @@ export function createDualScoringHttpHandlers({
     adminOverride(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const body = await readJsonBody(request);
-        const match = await adminOverrideReconciledPlayerMatchCommand(
-          {
-            actorUserId: actor.id,
-            playerMatchId,
-            reason: body.reason,
-            resolvedRacks: body.resolvedRacks ?? body.resolved_racks,
-          },
-          repository,
-        );
+        const match = await adminOverrideReconciledPlayerMatchCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          reason: body.reason,
+          resolvedRacks: body.resolvedRacks ?? body.resolved_racks,
+        }, repository);
         return jsonResponse({ match });
       });
     },
