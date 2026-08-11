@@ -623,7 +623,7 @@ test("season setup update handler authenticates and updates setup", async () => 
 
 test("season setup routes enforce supported methods", async () => {
   const createResponse = await worker.fetch(
-    new Request("https://fremontderby.com/api/admin/seasons"),
+    new Request("https://fremontderby.com/api/admin/seasons", { method: "DELETE" }),
     publishEnv,
   );
   const setupResponse = await worker.fetch(
