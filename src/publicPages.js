@@ -88,7 +88,7 @@ export function renderRulesPage() {
     <h2>Season</h2>
     <ul>
       <li>Eight teams play a seven-match single round robin: every team plays every other team once.</li>
-      <li>Each team matchup has four individual player matches.</li>
+      <li>Each team matchup has three individual player matches.</li>
       <li>The published league-night date and reserved tables are the default option, not a requirement.</li>
       <li>Teams may play early, late, out of round order, or at another mutually agreed venue.</li>
       <li>The result always counts toward the originally scheduled matchup, regardless of when or where it is played.</li>
@@ -101,7 +101,8 @@ export function renderRulesPage() {
       <li>Regular-season teams may operate with three players and add or use another eligible player as needed.</li>
       <li>Players may switch teams during the regular season; all prior results remain with the team and matchup where they were earned, and the player's full team history is preserved.</li>
       <li>Captains submit the players used for each matchup.</li>
-      <li>A player cannot play for two teams in the same scheduled round.</li>
+      <li>A player may shoot for different teams on the same league night, but may shoot no more than seven regular-season individual matches total across all teams.</li>
+      <li>A player may not shoot twice for the same team in the same team matchup; one player cannot fill two of that team's three active lineup slots.</li>
       <li>There is no team-strength or Fargo cap.</li>
     </ul>
 
@@ -115,10 +116,10 @@ export function renderRulesPage() {
 
     <h2>Scoring</h2>
     <ul>
-      <li>Players track the match rack by rack from their phones.</li>
-      <li>Both players' rack records must agree before the match can be finalized.</li>
+      <li>Each team maintains its own rack-by-rack score record from an authenticated team member's phone.</li>
+      <li>The two team-owned rack records must agree before the match can be finalized.</li>
       <li>Any mismatched or missing rack must be corrected first.</li>
-      <li>Both players confirm the reconciled result before submission.</li>
+      <li>Both teams confirm the reconciled result before submission.</li>
       <li>Finalized results may only be corrected through the audited admin correction process.</li>
     </ul>
 
