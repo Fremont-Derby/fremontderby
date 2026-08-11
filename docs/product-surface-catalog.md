@@ -66,7 +66,7 @@ A story is not considered fully complete merely because backend code exists. It 
 | `/schedule` | Public visitor / player / captain | See the current/upcoming league night, round, matchup, date/table context, and enter the appropriate next workflow | Canonical current-night/schedule home; added by #133 |
 | `/availability` | Player / captain | Declare and review league-night availability | Canonical availability surface; mobile segmented-control cleanup shipped in #273/PR #274; captain substitute-discovery improvements remain under #138 |
 | `/lineup` | Captain | Build and submit the team's lineup for a matchup | Canonical captain lineup surface; mobile sticky lineup summary shipped in #262/PR #271 |
-| `/scorecard` | Player | Find an eligible generated match to score | Canonical score-selection surface |
+| `/scorecard` | Player | Find an eligible generated match to score | Canonical score-selection surface; actionable signed-out/no-match/error recovery shipped in PR #277 under #250 |
 | `/scorecard/live` | Player | Operate the active team-owned rack scoring flow | Canonical live scoring surface; reduced navigation shell is intentional during scoring |
 | `/messages` | Player / captain | Coordinate league/team/matchup/direct communication without phone-number sharing | Canonical communication surface |
 | `/standings` | Public visitor / player | View team and individual competitive standings | Canonical standings surface; phone-native cards shipped in PR #272; season selection/history tracked by #180 |
@@ -85,7 +85,7 @@ Do not catalog a proposed route as shipped until it reaches `main`.
 
 | Proposed route | Intended audience | Intended canonical purpose | Current state |
 | --- | --- | --- | --- |
-| `/admin/operations` | League admin / director | League readiness, exception triage, action queue, and operational health | Draft PR #179 / story #169. Librarian review requires a role-aware Admin entry within <=2 navigation actions rather than hiding it behind Messages -> Moderation |
+| `/admin/operations` | League admin / director | League readiness, exception triage, action queue, and operational health | Story #169 remains open. Previous draft PR #179 is stale relative to current `main`; any renewed implementation must provide a role-aware Admin entry within <=2 navigation actions rather than hiding Operations behind Messages -> Moderation |
 
 ## Reconciled story/function mappings
 
@@ -97,7 +97,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Player / captain | Find/create/join/manage team relationships | `/teams` | Partial / actively evolving | #131, #181, #182 | Teams is the canonical roster/membership home; league-night shortcuts are secondary links only |
 | Player / captain | Mark league-night availability | `/availability` | Implemented; mobile control polished | #13, #138, #273 / PR #274 | From shared navigation, Teams is one action and Mark availability is the second; the canonical function remains `/availability` |
 | Captain | Submit a blind ordered three-player lineup | `/lineup` | Implemented; mobile state visibility polished | #13, #139, #156, #262 / PR #271 | From shared navigation, Teams is one action and Build lineup is the second; human-readable matchup selection remains canonical here |
-| Player | Pick an eligible generated match without technical IDs/tokens | `/scorecard` | Implemented | #141 | One-tap Score destination in shared navigation |
+| Player | Pick an eligible generated match without technical IDs/tokens | `/scorecard` | Implemented; empty/recovery states improved | #141, #250 / PR #277 | Score is a direct shared-navigation destination. Signed-out state links to Profile and Schedule; no-ready-match state links to Schedule and Teams; failures expose retry/Profile recovery instead of a dead end |
 | Player / team member | Enter, reconcile, confirm, and finalize rack scoring | `/scorecard/live` | Implemented core flow | #14, #73, #229 | Reduced shell is an intentional task-focus exception; clear return path required |
 | Public visitor / player | Switch quickly between team and individual standings | `/standings` | Implemented current view; mobile cards shipped; history still open | #16, #17, #81, #180 / PR #272 | Canonical standings page; desktop nav is direct and mobile menu remains <=2 actions |
 | Player / captain | Coordinate without sharing phone numbers | `/messages` | Implemented core communication | #76 and children | Canonical communication page; moderation remains separate by role |
@@ -105,19 +105,20 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Public visitor / tester | Understand the league by completing a safe guided test drive without sign-in | `/demo` | Partial: guided flow shipped; shared nav label + feedback remain open | #249, PR #265 | Desktop/mobile-menu entry remains within <=2 actions, but it still says `Demo`; contextual feedback stays in #113/#172 rather than a duplicate issue |
 | Tester / captain | Practice forming/changing a team and submitting a lineup without touching production | `/sandbox/captain` | Implemented | #263, PR #264 | One action from `/demo`; explicit fictional/non-authoritative exception |
 | Tester / player | Practice dual scoring without touching production | `/sandbox/player` | Implemented core drill | #113 | One action from `/demo`; explicit fictional/non-authoritative exception |
-| League admin / director | See what needs attention across the running league | `/admin/operations` | In flight | #168, #169, draft PR #179 | Must become canonical admin home and satisfy <=2-click admin discoverability before story is considered complete |
+| League admin / director | See what needs attention across the running league | `/admin/operations` | Missing / planned | #168, #169 | Must become canonical admin home and satisfy <=2-click admin discoverability before story is considered complete |
 
 ## Current librarian findings
 
 ### 2026-08-11 review cycles
 
 - Schedule/current-night ownership was reconciled to `/schedule`; Teams remains the canonical roster/membership home.
-- Draft PR #179 still proposes an admin Operations surface whose current discovery path can exceed the <=2-action rule; #169/#239 remain the correct existing work rather than creating a duplicate.
+- #169 remains the canonical admin Operations story. The old draft PR #179 is no longer open and is stale relative to current `main`; a future implementation still needs an obvious role-aware Admin entry so Operations is not buried behind Messages -> Moderation.
 - PRs #264 and #265 changed `/demo` from an internal-looking fixture into the public **Try a League Night** tour and made `/sandbox/captain` a distinct team-formation/roster-churn drill. The catalog maps those as separate canonical functions instead of grouping all sandbox behavior together.
-- Shared navigation still labels `/demo` as `Demo`. #249 now records this precisely and remains open; contextual test-drive feedback is also explicitly linked to the existing #113/#172 lane rather than duplicated.
+- Shared navigation still labels `/demo` as `Demo`. #249 records this precisely and remains open; contextual test-drive feedback is also explicitly linked to the existing #113/#172 lane rather than duplicated.
 - PRs #271, #272, and #274 improved mobile Lineup, Standings, and Availability respectively without creating new routes or changing canonical ownership. Their normal discovery remains within the two-action rule: Standings is directly available from shared navigation; Availability and Lineup are exposed from the Teams league-night hub after entering Teams from shared navigation.
-- No new route/story card is needed for those mobile improvements because #81 plus the page-specific issues (#262/#273) and existing standings stories already document the user outcomes.
-- No new route or story issue was needed for PRs #266/#267 because they change release proof rather than user-facing product ownership.
+- PR #277 improved `/scorecard` signed-out, no-ready-match, expired-session, and load-failure states without changing route ownership. The Score destination is still one action from shared navigation, while recovery paths now point directly to Profile, Schedule, Teams, or Retry instead of leaving a dead end. This is partial proof toward #250 and strengthens #239 reachability evidence.
+- No new route/story card is needed for those mobile/empty-state improvements because existing stories (#81, #250, page-specific issues, and scoring stories) already document the user outcomes.
+- No new route or story issue was needed for PRs #266/#267/#275 because they change release proof/safety rather than user-facing product ownership.
 - #238 remains incomplete until every current renderer/control is mapped; #239 remains incomplete until the navigation graph/regression check is deterministic and role-aware.
 
 ## Known catalog work
@@ -127,6 +128,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 - #239 — build/enforce the <=2-click navigation/reachability audit.
 - #240 — recurring Product Librarian review cadence. Completed; subsequent cycles continue to leave evidence in #238/#239 and this catalog.
 - #249 — guided Try a League Night presentation is largely shipped; shared navigation naming and contextual feedback remain before closure.
+- #250 — route-state cleanup remains open; `/scorecard` signed-out/empty/error recovery is complete via PR #277, while the other listed major routes still require reconciliation.
 
 ## Librarian update checklist
 
