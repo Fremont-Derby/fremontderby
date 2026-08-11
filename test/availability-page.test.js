@@ -30,7 +30,7 @@ test('availability choices stay compact and expose selected state accessibly', (
   assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
   assert.match(html, /\.actions\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(html, /\.actions,.choice-actions\{grid-template-columns:1fr\}/);
-  assert.match(html, /button:focus-visible,select:focus-visible,.signin:focus-visible/);
+  assert.match(html, /button:focus-visible,select:focus-visible,.signin:focus-visible,.retry:focus-visible/);
   assert.match(html, /button\[aria-pressed="true"\]::after\{content:' ✓'/);
   assert.match(html, /function setAvailabilityState\(value\)/);
   assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.availabilityStatus===value\)\)/);
@@ -48,4 +48,21 @@ test('dual-team player chooses one matchup team before captains build lineups', 
   assert.match(html, /You belong to both teams/);
   assert.match(html, /data-choose-team/);
   assert.match(html, /Choice locked because a lineup already includes you/);
+});
+
+test('availability first render and recovery states are task-oriented', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /data-recovery aria-live="polite"/);
+  assert.match(html, /data-workspace hidden/);
+  assert.match(html, /Loading your league nights…/);
+  assert.match(html, /Sign in to mark availability/);
+  assert.match(html, /Open Profile and sign in again/);
+  assert.match(html, /Availability could not be loaded/);
+  assert.match(html, /Try again/);
+  assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
+  assert.match(html, /if\(!accessToken\(\)\)\{setStatus\('Sign in to mark availability\.'/);
+  assert.match(html, /if\(message\.startsWith\('Your sign-in expired'\)\)showRecovery/);
+  assert.match(html, /else showRecovery\('Availability could not be loaded'/);
+  assert.match(html, /\.recovery-actions\{display:grid;grid-template-columns:1fr\}/);
 });
