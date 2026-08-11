@@ -182,7 +182,9 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/prizes` — purse and payout state
 - `/health` — Worker version metadata
 - `/health/environment` — non-secret environment diagnostics
-- `/demo`, `/sandbox/*` — disposable War Games/demo surfaces; useful for testing, not authoritative production proof
+- `/demo` — public **Try a League Night** guided test drive using fictional, non-authoritative data
+- `/sandbox/captain` — fictional captain team-formation, roster-churn, availability, and lineup practice
+- `/sandbox/player` — fictional team-owned scoring and reconciliation practice
 
 Inspect `src/router.js` and `docs/product-surface-catalog.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
