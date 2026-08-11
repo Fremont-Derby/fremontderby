@@ -4,11 +4,15 @@ import {
   blockPlayerChatCommand,
   listChatThreadsCommand,
   listDirectMessagesCommand,
+  listLeagueMessagesCommand,
   listTeamMessagesCommand,
   markTeamChatReadCommand,
   sendDirectMessageCommand,
+  sendLeagueMessageCommand,
   sendTeamMessageCommand,
   startDirectConversationCommand,
+  reportChatMessageCommand,
+  moderateChatReportCommand,
 } from '../src/chatCommands.js';
 
 test('chat commands pass actor-scoped team operations to the repository', async () => {
@@ -35,6 +39,64 @@ test('chat commands pass actor-scoped team operations to the repository', async 
     }],
     ['read', { actorUserId: 'user-1', teamId: 'team-1', readAt: null }],
   ]);
+});
+
+test('league chat and report commands normalize trusted inputs', async () => {
+  const calls = [];
+  const repository = {
+    listLeagueMessages: async (input) => { calls.push(['list', input]); return []; },
+    sendLeagueMessage: async (input) => { calls.push(['send', input]); return input; },
+    reportChatMessage: async (input) => { calls.push(['report', input]); return input; },
+    moderateChatReport: async (input) => { calls.push(['moderate', input]); return input; },
+  };
+  await listLeagueMessagesCommand({
+    actorUserId: 'user-1', seasonId: 'season-1', limit: 20,
+    before: '2026-08-11T00:00:00Z', beforeMessageId: 'message-9',
+  }, repository);
+  await sendLeagueMessageCommand({
+    actorUserId: 'user-1', seasonId: 'season-1', body: '  League night!  ',
+    clientMessageId: 'client-1',
+  }, repository);
+  await reportChatMessageCommand({
+    actorUserId: 'user-1', messageType: 'LEAGUE', messageId: 'message-1',
+    reason: 'SPAM', details: '  repeated links  ',
+  }, repository);
+  await moderateChatReportCommand({
+    actorUserId: 'admin-1', reportId: 'report-1', resolution: 'RESOLVED',
+    note: '  reviewed  ', removeMessage: true,
+  }, repository);
+
+  assert.deepEqual(calls, [
+    ['list', {
+      actorUserId: 'user-1', seasonId: 'season-1', before: '2026-08-11T00:00:00Z',
+      beforeMessageId: 'message-9', limit: 20,
+    }],
+    ['send', {
+      actorUserId: 'user-1', seasonId: 'season-1', body: 'League night!',
+      clientMessageId: 'client-1',
+    }],
+    ['report', {
+      actorUserId: 'user-1', messageType: 'league', messageId: 'message-1',
+      reason: 'spam', details: 'repeated links',
+    }],
+    ['moderate', {
+      actorUserId: 'admin-1', reportId: 'report-1', resolution: 'resolved',
+      note: 'reviewed', removeMessage: true,
+    }],
+  ]);
+});
+
+test('report and moderation commands reject unsupported or inconsistent actions', async () => {
+  const repository = { reportChatMessage: async () => null, moderateChatReport: async () => null };
+  await assert.rejects(reportChatMessageCommand({
+    actorUserId: 'u', messageType: 'matchup', messageId: 'm', reason: 'spam',
+  }, repository), /Unsupported/);
+  await assert.rejects(reportChatMessageCommand({
+    actorUserId: 'u', messageType: 'team', messageId: 'm', reason: 'unknown',
+  }, repository), /valid report reason/);
+  await assert.rejects(moderateChatReportCommand({
+    actorUserId: 'u', reportId: 'r', resolution: 'dismissed', removeMessage: true,
+  }, repository), /removed message must use resolved/);
 });
 
 test('direct message commands keep actor, season, player, and conversation scope', async () => {
