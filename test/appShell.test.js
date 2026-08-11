@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import router from '../src/router.js';
 import {
   decorateHtmlWithShell,
   isKnownAppPagePath,
@@ -49,4 +50,20 @@ test('not-found page includes basset hound artwork and escapes the bad path', ()
   assert.match(html, /basset hound/i);
   assert.match(html, /&lt;b&gt;/);
   assert.doesNotMatch(html, /<span class="path">\/bad\/<b>/);
+});
+
+test('intro and rules use the same shared navigation shell', async () => {
+  for (const path of ['/', '/rules']) {
+    const response = await router.fetch(
+      new Request(`https://fremontderby.test${path}`),
+      {},
+      {},
+    );
+    const html = await response.text();
+
+    assert.equal(response.status, 200, path);
+    assert.equal((html.match(/<header class="fd-shell"/g) || []).length, 1, path);
+    assert.doesNotMatch(html, /aria-label="Main navigation"/, path);
+    assert.match(html, /aria-label="Primary navigation"/, path);
+  }
 });

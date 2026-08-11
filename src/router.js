@@ -11,16 +11,20 @@ import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 
-function htmlResponse(html, pathname, status = 200, useSharedShell = true) {
-  return new Response(
-    useSharedShell ? decorateHtmlWithShell(html, pathname) : html,
-    {
-      status,
-      headers: {
-        'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'no-store',
-      },
+function htmlResponse(html, pathname, status = 200) {
+  return new Response(decorateHtmlWithShell(html, pathname), {
+    status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
     },
+  });
+}
+
+function stripLegacyPublicNav(html) {
+  return html.replace(
+    /\s*<nav aria-label="Main navigation">[\s\S]*?<\/nav>/i,
+    '',
   );
 }
 
@@ -90,11 +94,11 @@ export default {
     }
 
     if (request.method === 'GET' && url.pathname === '/') {
-      return htmlResponse(renderIntroPage(), url.pathname, 200, false);
+      return htmlResponse(stripLegacyPublicNav(renderIntroPage()), url.pathname);
     }
 
     if (request.method === 'GET' && url.pathname === '/rules') {
-      return htmlResponse(renderRulesPage(), url.pathname, 200, false);
+      return htmlResponse(stripLegacyPublicNav(renderRulesPage()), url.pathname);
     }
 
     if (url.pathname === '/demo') {
