@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   handleBlockPlayerChatRequest,
   handleListChatThreadsRequest,
+  handleMessageNotificationSummaryRequest,
   handleListDirectMessagesRequest,
   handleListLeagueMessagesRequest,
   handleReportChatMessageRequest,
@@ -32,6 +33,34 @@ const env = {
   SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
   SUPABASE_SERVICE_ROLE_KEY: 'service-secret',
 };
+
+test('message notification summary combines unread counts across every chat type', async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: 'user-1', email: 'player@example.com' } },
+    { body: [{ unread_count: 2 }, { unread_count: 0 }] },
+    { body: [{ unread_count: 3 }] },
+    { body: [{ unread_count: 1 }] },
+    { body: [{ unread_count: 4 }] },
+  ]);
+  const request = new Request(
+    'https://fremontderby.com/api/me/message-notification-summary',
+    { headers: { authorization: 'Bearer player-token' } },
+  );
+  const response = await handleMessageNotificationSummaryRequest(request, env, { fetch });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { unreadCount: 10 });
+  assert.equal(calls[0].url, 'https://project.supabase.co/auth/v1/user');
+  assert.deepEqual(
+    calls.slice(1).map((call) => new URL(call.url).pathname).sort(),
+    [
+      '/rest/v1/rpc/get_my_direct_message_inbox',
+      '/rest/v1/rpc/get_my_league_chat_inbox',
+      '/rest/v1/rpc/get_my_matchup_chat_inbox',
+      '/rest/v1/rpc/get_my_team_chat_inbox',
+    ],
+  );
+});
 
 test('chat inbox handler authenticates the Google session before listing threads', async () => {
   const { fetch, calls } = createFetch([

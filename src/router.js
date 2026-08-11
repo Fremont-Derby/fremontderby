@@ -230,6 +230,11 @@ export default {
       return chatHttpHandlers.listThreads(request, env);
     }
 
+    if (url.pathname === '/api/me/message-notification-summary') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.notificationSummary(request, env);
+    }
+
     if (url.pathname === '/api/me/league-chat-threads') {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listLeagueThreads(request, env);

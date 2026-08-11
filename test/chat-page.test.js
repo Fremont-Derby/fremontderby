@@ -30,6 +30,7 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /data-load-older/);
   assert.match(html, /beforeMessageId/);
   assert.match(html, /refreshThreadMetadata/);
+  assert.match(html, /fd:messages-read/);
   assert.match(html, /\/messages\/moderation/);
   assert.match(html, /detectModerator/);
   assert.match(html, /No other registered players yet/);

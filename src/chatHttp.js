@@ -71,6 +71,38 @@ async function withActor(request, env, fetchImpl) {
   };
 }
 
+function unreadCount(rows) {
+  if (!Array.isArray(rows)) return 0;
+  return rows.reduce((total, row) => {
+    const count = Number(row?.unread_count);
+    return total + (Number.isFinite(count) && count > 0 ? Math.floor(count) : 0);
+  }, 0);
+}
+
+export async function handleMessageNotificationSummaryRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const actorUserId = actor.id;
+    const [teams, direct, league, matchups] = await Promise.all([
+      repository.listChatThreads({ actorUserId }),
+      repository.listDirectMessageInbox({ actorUserId }),
+      repository.listLeagueChatThreads({ actorUserId }),
+      repository.listMatchupChatThreads({ actorUserId }),
+    ]);
+    const unread = unreadCount(teams)
+      + unreadCount(direct)
+      + unreadCount(league)
+      + unreadCount(matchups);
+    return jsonResponse({ unreadCount: unread });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleListChatThreadsRequest(
   request,
   env,
@@ -148,6 +180,7 @@ export async function handleMarkTeamChatReadRequest(
 }
 
 export const chatHttpHandlers = {
+  notificationSummary: handleMessageNotificationSummaryRequest,
   listThreads: handleListChatThreadsRequest,
   listTeamMessages: handleListTeamMessagesRequest,
   sendTeamMessage: handleSendTeamMessageRequest,
