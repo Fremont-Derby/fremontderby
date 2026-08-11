@@ -53,6 +53,12 @@ export function createAdminPlayersRepository(
         hasLogin: Boolean(row.has_login),
         isLeagueAdmin: Boolean(row.is_league_admin),
         teams: Array.isArray(row.teams) ? row.teams : [],
+        currentSeasonId: row.current_season_id ?? null,
+        currentSeasonName: row.current_season_name ?? null,
+        registrationStatus: row.registration_status ?? null,
+        paymentStatus: row.payment_status ?? null,
+        competitionEligible: row.competition_eligible !== false,
+        ineligibilityReason: row.ineligibility_reason ?? null,
       })) : [];
     },
 
@@ -67,6 +73,29 @@ export function createAdminPlayersRepository(
       return {
         playerId: row?.player_id ?? playerId,
         isLeagueAdmin: Boolean(row?.is_league_admin ?? enabled),
+      };
+    },
+
+    async setCompetitionEligibility({
+      actorUserId,
+      playerId,
+      seasonId,
+      eligible,
+      reason = null,
+    }) {
+      const rows = await rpc('set_player_competition_eligibility', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        target_player_id: playerId,
+        eligible,
+        change_reason: reason,
+      });
+      const row = Array.isArray(rows) ? rows[0] : null;
+      return {
+        playerId: row?.player_id ?? playerId,
+        seasonId: row?.season_id ?? seasonId,
+        competitionEligible: Boolean(row?.competition_eligible ?? eligible),
+        ineligibilityReason: row?.ineligibility_reason ?? null,
       };
     },
   };
