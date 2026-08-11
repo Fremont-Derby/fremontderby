@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 const defaultAttempts = 30;
 const defaultDelayMs = 10_000;
+const smokeHeaderName = 'x-fremont-release-smoke';
 
 function normalizeBaseUrl(value) {
   if (!value || typeof value !== 'string') throw new Error('baseUrl is required');
@@ -10,6 +11,12 @@ function normalizeBaseUrl(value) {
 
 function compactBodyPreview(text, limit = 180) {
   return String(text || '').replace(/\s+/g, ' ').trim().slice(0, limit);
+}
+
+function requestHeaders(accept, bypassToken) {
+  const headers = { accept };
+  if (bypassToken) headers[smokeHeaderName] = bypassToken;
+  return headers;
 }
 
 async function readJson(response, label) {
@@ -74,6 +81,7 @@ export async function checkReleaseOnce({
   baseUrl,
   expectedEnvironment,
   expectedVersionTag,
+  bypassToken = '',
   fetchImpl = globalThis.fetch,
 }) {
   if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
@@ -82,8 +90,8 @@ export async function checkReleaseOnce({
 
   const base = normalizeBaseUrl(baseUrl);
   const [healthResult, environmentResult] = await Promise.all([
-    fetchImpl(`${base}/health`, { headers: { accept: 'application/json' } }),
-    fetchImpl(`${base}/health/environment`, { headers: { accept: 'application/json' } }),
+    fetchImpl(`${base}/health`, { headers: requestHeaders('application/json', bypassToken) }),
+    fetchImpl(`${base}/health/environment`, { headers: requestHeaders('application/json', bypassToken) }),
   ]);
 
   const { body: health } = await readJson(healthResult, '/health');
@@ -105,7 +113,9 @@ export async function checkReleaseOnce({
     throw new Error(`/health/environment failed with HTTP ${environmentResult.status}`);
   }
 
-  const demoResponse = await fetchImpl(`${base}/demo`, { headers: { accept: 'text/html' } });
+  const demoResponse = await fetchImpl(`${base}/demo`, {
+    headers: requestHeaders('text/html', bypassToken),
+  });
   const demoBody = await demoResponse.text();
   if (!demoResponse.ok) {
     throw new Error(`/demo failed with HTTP ${demoResponse.status}`);
@@ -127,6 +137,7 @@ export async function smokeRelease({
   baseUrl,
   expectedEnvironment,
   expectedVersionTag,
+  bypassToken = '',
   attempts = defaultAttempts,
   delayMs = defaultDelayMs,
   fetchImpl = globalThis.fetch,
@@ -141,6 +152,7 @@ export async function smokeRelease({
         baseUrl,
         expectedEnvironment,
         expectedVersionTag,
+        bypassToken,
         fetchImpl,
       });
       if (result.ready) return result;
@@ -164,7 +176,12 @@ export async function smokeRelease({
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirectRun) {
   const [baseUrl, expectedEnvironment, expectedVersionTag] = process.argv.slice(2);
-  smokeRelease({ baseUrl, expectedEnvironment, expectedVersionTag })
+  smokeRelease({
+    baseUrl,
+    expectedEnvironment,
+    expectedVersionTag,
+    bypassToken: process.env.RELEASE_SMOKE_BYPASS_TOKEN || '',
+  })
     .then((result) => {
       console.log(`Release smoke passed: ${JSON.stringify(result)}`);
     })

@@ -45,6 +45,43 @@ test('release smoke accepts the exact deployed Git tag and production environmen
   assert.equal(result.environment, 'production');
 });
 
+test('release smoke sends the optional bypass token to every public proof request', async () => {
+  const seen = [];
+  const fetchImpl = async (url, options = {}) => {
+    seen.push({ url, headers: new Headers(options.headers) });
+    if (url.endsWith('/health')) {
+      return json({ ok: true, service: 'fremontderby', version: 'worker-version', versionTag: 'abc123' });
+    }
+    if (url.endsWith('/health/environment')) {
+      return json({
+        ok: true,
+        service: 'fremontderby',
+        environment: 'production',
+        version: 'worker-version',
+        versionTag: 'abc123',
+        checks: [],
+      });
+    }
+    if (url.endsWith('/demo')) {
+      return new Response('<h1>Try a League Night</h1>', { status: 200 });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+
+  await checkReleaseOnce({
+    baseUrl: 'https://fremontderby.com',
+    expectedEnvironment: 'production',
+    expectedVersionTag: 'abc123',
+    bypassToken: 'secret-smoke-value',
+    fetchImpl,
+  });
+
+  assert.equal(seen.length, 3);
+  for (const request of seen) {
+    assert.equal(request.headers.get('x-fremont-release-smoke'), 'secret-smoke-value');
+  }
+});
+
 test('release smoke treats an older Worker tag as deployment still in progress', async () => {
   const result = await checkReleaseOnce({
     baseUrl: 'https://fremontderby.com',
