@@ -91,7 +91,7 @@ export function renderScorecardPage() {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="balls" aria-hidden="true"><span class="ball">8</span><span class="ball nine">9</span></span><span>Fremont Derby Scorecard</span></div><div class="status" data-status>Loading…</div></header>
-    <div class="context"><span data-context>Using your signed-in team scoring session.</span><a href="/scorecard">Switch match</a></div>
+    <div class="context"><span data-context>Using your signed-in team scoring session.</span><a href="/scorecard">Switch match / scoring team</a></div>
     <section class="scoreboard" data-primary-scoring aria-label="Live rack scoring">
       <header class="rack-banner"><div><span class="eyebrow">Rack <span data-rack-number>1</span> · now playing</span><strong class="discipline" data-discipline>8-BALL</strong></div><div class="rack-meta"><span>First break <strong data-break>-</strong></span><span>Match <strong data-match-status>-</strong></span></div></header>
       <div class="score-grid">

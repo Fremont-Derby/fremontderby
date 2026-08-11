@@ -12,7 +12,7 @@ test('scorecard page renders explicit team-owned phone scoring controls without 
   assert.match(html, /params\.get\('team'\)/);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /Scoring for/);
-  assert.match(html, /Switch match/);
+  assert.match(html, /Switch match \/ scoring team/);
   assert.match(html, /data-rack-a/);
   assert.match(html, /data-rack-b/);
   assert.match(html, /data-undo/);
