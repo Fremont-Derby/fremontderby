@@ -13,6 +13,7 @@ import worker, {
   handleListEligibleFreeAgentsRequest,
   handleListAdminSeasonsRequest,
   handleListIndividualStandingsRequest,
+  handleListPublicSeasonsRequest,
   handleListTeamRoundAvailabilityRequest,
   handleListTeamStandingsRequest,
   handleListOwnTeamManagementRequest,
@@ -1664,6 +1665,46 @@ test("team lineup route allows only GET and POST", async () => {
       "https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup",
       { method: "PUT" },
     ),
+    publishEnv,
+  );
+
+  assert.equal(response.status, 405);
+  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("public season list handler returns registration progress", async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: "season-1",
+        name: "Fremont Derby Season 1",
+        status: "registration",
+        first_round_date: "2026-09-03",
+      }],
+    },
+    { body: [{ id: "team-1", season_id: "season-1" }] },
+    {
+      body: [
+        { season_id: "season-1", player_id: "player-1" },
+        { season_id: "season-1", player_id: "player-2" },
+      ],
+    },
+  ]);
+
+  const response = await handleListPublicSeasonsRequest(publishEnv, { fetch });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.seasons[0].name, "Fremont Derby Season 1");
+  assert.equal(body.seasons[0].teamCount, 1);
+  assert.equal(body.seasons[0].openTeamSlots, 7);
+  assert.equal(body.seasons[0].rosteredPlayerCount, 2);
+  assert.equal(calls.length, 3);
+});
+
+test("public season list route allows only GET", async () => {
+  const response = await worker.fetch(
+    new Request("https://fremontderby.com/api/seasons", { method: "POST" }),
     publishEnv,
   );
 

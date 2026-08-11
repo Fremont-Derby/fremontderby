@@ -52,6 +52,54 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
   const headers = jsonHeaders(serviceRoleKey);
 
   return {
+    async listPublicSeasons() {
+      const [seasons, teams, memberships] = await Promise.all([
+        requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date,created_at&order=created_at.desc`,
+          { method: 'GET', headers },
+        ),
+        requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/teams?select=id,season_id`,
+          { method: 'GET', headers },
+        ),
+        requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/team_memberships?select=season_id,player_id&ends_at=is.null`,
+          { method: 'GET', headers },
+        ),
+      ]);
+
+      const teamCounts = new Map();
+      for (const team of Array.isArray(teams) ? teams : []) {
+        teamCounts.set(team.season_id, (teamCounts.get(team.season_id) ?? 0) + 1);
+      }
+
+      const playersBySeason = new Map();
+      for (const membership of Array.isArray(memberships) ? memberships : []) {
+        if (!playersBySeason.has(membership.season_id)) {
+          playersBySeason.set(membership.season_id, new Set());
+        }
+        playersBySeason.get(membership.season_id).add(membership.player_id);
+      }
+
+      const teamCapacity = 8;
+      return (Array.isArray(seasons) ? seasons : []).map((season) => {
+        const teamCount = teamCounts.get(season.id) ?? 0;
+        return {
+          id: season.id,
+          name: season.name,
+          status: season.status,
+          firstRoundDate: season.first_round_date,
+          teamCount,
+          teamCapacity,
+          openTeamSlots: Math.max(0, teamCapacity - teamCount),
+          rosteredPlayerCount: playersBySeason.get(season.id)?.size ?? 0,
+        };
+      });
+    },
+
     async listTeamStandings({ seasonId }) {
       return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_team_standings`, {
         method: 'POST',
