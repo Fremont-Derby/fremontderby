@@ -16,10 +16,16 @@ test('captain War Games starts ready and stays isolated from production', () => 
   assert.match(html, /A valid starter lineup is already selected/);
   assert.match(html, /Submit lineup/);
   assert.match(html, /Score Match 1/);
+  assert.match(html, /Tell us what was confusing/);
   assert.match(html, /fd\.captainSandbox\.v1/);
+  assert.match(html, /fd\.sandboxFeedback\.captain\.v1/);
+  assert.match(html, /surface:'captain-sandbox'/);
+  assert.match(html, /availableCount/);
+  assert.match(html, /ready-to-submit/);
 
   assert.doesNotMatch(html, /fd\.accessToken/);
   assert.doesNotMatch(html, /\/api\/teams\//);
+  assert.doesNotMatch(html, /\/api\/sandbox-feedback/);
   assert.doesNotMatch(html, /supabase\.co/);
   assert.doesNotMatch(html, /SUPABASE_/);
 });
