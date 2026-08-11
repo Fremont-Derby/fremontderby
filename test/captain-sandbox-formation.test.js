@@ -28,8 +28,10 @@ test('midseason churn can remove non-captains and restore viability through acce
 });
 
 test('captain sandbox remains deterministic session-only practice with no competitive write endpoint', () => {
+  assert.match(source, /const storageKey='fd\.captainSandbox\.v1'/);
   assert.match(source, /sessionStorage\.getItem\(storageKey\)/);
   assert.match(source, /sessionStorage\.setItem\(storageKey/);
+  assert.match(source, /parsed&&parsed\.formation&&parsed\.churn&&Array\.isArray\(parsed\.removed\)\?parsed:fresh\(\)/);
   assert.match(source, /Reset entire captain War Game/);
   assert.doesNotMatch(source, /fetch\s*\(/);
   assert.doesNotMatch(source, /\/api\//);
