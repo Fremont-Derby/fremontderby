@@ -98,6 +98,7 @@ test('standings repository lists public seasons with registration progress', asy
       rostered_player_count: 2,
       registered_player_count: 5,
       free_agent_count: 3,
+      open_primary_roster_spots: 6,
       at_risk_team_count: 1,
     }]];
   const fetch = async (url, init) => {
@@ -130,6 +131,7 @@ test('standings repository lists public seasons with registration progress', asy
     rosteredPlayerCount: 2,
     registeredPlayerCount: 5,
     freeAgentCount: 3,
+    openPrimaryRosterSpots: 6,
     atRiskTeamCount: 1,
     minimumCommittedRoster: 3,
   });
