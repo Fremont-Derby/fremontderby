@@ -38,6 +38,33 @@ test('operations overview prioritizes actionable league risks', () => {
   );
 });
 
+test('operations overview flags a current round with no availability responses', () => {
+  const overview = buildAdminOperationsOverview({
+    generatedAt: '2026-08-11T00:00:00Z',
+    season: { id: 'season-1', name: 'Season 1', status: 'active' },
+    currentRound: {
+      id: 'round-2', round_number: 2, stage: 'regular', status: 'scheduled',
+    },
+    latestRatingUpdate: '2026-08-11T00:00:00Z',
+    metrics: metrics({
+      profiles: 24, seasonPlayers: 24, teams: 8, paidPlayers: 24,
+      ratings: 24, openReports: 0, liveMatches: 0,
+      rounds: 7, teamMatches: 28, lineups: 8, playerMatches: 12,
+      finalizedMatches: 12, forfeits: 0, teamMessages: 4,
+      directMessages: 3, leagueMessages: 2, matchupMessages: 1,
+      rosterAvailabilityResponses: 0, availableRosterResponses: 0,
+      unsureRosterResponses: 0, unavailableRosterResponses: 0,
+      availableFreeAgents: 0,
+    }),
+  }, readiness);
+
+  assert.equal(overview.currentRound.id, 'round-2');
+  assert.equal(overview.counts.rosterAvailabilityResponses, 0);
+  assert.deepEqual(overview.actions.map((item) => item.code), ['availability_missing']);
+  assert.equal(overview.actions[0].href, '/availability');
+  assert.match(overview.actions[0].detail, /Round 2/);
+});
+
 test('operations endpoint authenticates and enforces the existing league-admin RPC', async () => {
   const env = {
     ENVIRONMENT: 'production',

@@ -54,6 +54,23 @@ export function buildAdminOperationsOverview(raw, readiness) {
       `${seasonPlayers - paidPlayers} registered player(s) are not marked paid.`, '/teams',
     ));
   }
+
+  const rosterAvailabilityResponses = metric(raw, 'rosterAvailabilityResponses');
+  if (
+    raw.currentRound
+    && metric(raw, 'teams') > 0
+    && rosterAvailabilityResponses === 0
+  ) {
+    const roundLabel = raw.currentRound.stage === 'regular'
+      ? `Round ${raw.currentRound.round_number}`
+      : raw.currentRound.stage;
+    actions.push(action(
+      'warning', 'availability_missing', 'Current-round availability is missing',
+      `${roundLabel} has no roster availability responses yet. Captains may be unable to build reliable lineups.`,
+      '/availability',
+    ));
+  }
+
   const openReports = metric(raw, 'openReports');
   if (openReports > 0) {
     actions.push(action(
@@ -87,6 +104,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
     generatedAt: raw.generatedAt,
     overall,
     season: raw.season,
+    currentRound: raw.currentRound ?? null,
     counts: {
       profiles: metric(raw, 'profiles'),
       seasonPlayers,
@@ -99,6 +117,11 @@ export function buildAdminOperationsOverview(raw, readiness) {
       liveMatches,
       finalizedMatches: metric(raw, 'finalizedMatches'),
       forfeits: metric(raw, 'forfeits'),
+      rosterAvailabilityResponses,
+      availableRosterResponses: metric(raw, 'availableRosterResponses'),
+      unsureRosterResponses: metric(raw, 'unsureRosterResponses'),
+      unavailableRosterResponses: metric(raw, 'unavailableRosterResponses'),
+      availableFreeAgents: metric(raw, 'availableFreeAgents'),
       ratings,
       openReports,
       messages,

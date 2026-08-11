@@ -91,6 +91,15 @@ export function createAdminOperationsRepository(
       );
       const season = seasons.rows[0] ?? null;
       const seasonFilter = season ? `season_id=eq.${encodeURIComponent(season.id)}&` : null;
+      let currentRound = null;
+      if (seasonFilter) {
+        const currentRounds = await table(
+          'rounds',
+          `${seasonFilter}status=in.(scheduled,in_progress)&select=id,round_number,stage,scheduled_on,status,lineup_deadline_at&order=round_number.asc&limit=1`,
+        );
+        currentRound = currentRounds.rows[0] ?? null;
+      }
+
       const metricTasks = [
         ['profiles', () => table('players', 'select=id&limit=1')],
         ['ratings', () => table('player_ratings', 'select=player_id,updated_at&order=updated_at.desc&limit=1')],
@@ -116,6 +125,17 @@ export function createAdminOperationsRepository(
         );
       }
 
+      if (currentRound) {
+        const roundFilter = `round_id=eq.${encodeURIComponent(currentRound.id)}&`;
+        metricTasks.push(
+          ['rosterAvailabilityResponses', () => table('roster_availability', `${roundFilter}select=player_id&limit=1`, 'private')],
+          ['availableRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.available&select=player_id&limit=1`, 'private')],
+          ['unsureRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.unsure&select=player_id&limit=1`, 'private')],
+          ['unavailableRosterResponses', () => table('roster_availability', `${roundFilter}status=eq.unavailable&select=player_id&limit=1`, 'private')],
+          ['availableFreeAgents', () => table('free_agent_availability', `${roundFilter}status=eq.available&select=player_id&limit=1`, 'private')],
+        );
+      }
+
       const entries = await Promise.all(
         metricTasks.map(([name, task]) => safeMetric(name, task)),
       );
@@ -126,6 +146,7 @@ export function createAdminOperationsRepository(
       return {
         generatedAt: new Date().toISOString(),
         season,
+        currentRound,
         metrics,
         latestRatingUpdate,
       };
