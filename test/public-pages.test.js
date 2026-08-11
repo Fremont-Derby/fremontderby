@@ -26,3 +26,10 @@ test('rulebook allows multi-team nights while enforcing Season 1 match limits', 
   assert.match(html, /may not shoot twice for the same team in the same team matchup/);
   assert.doesNotMatch(html, /cannot play for two teams in the same scheduled round/);
 });
+
+test('homepage explains the 12-week season window and built-in makeup time', () => {
+  const html = renderIntroPage();
+  assert.match(html, /season spans 12 calendar weeks/i);
+  assert.match(html, /seven scheduled rounds plus built-in off and makeup weeks/i);
+  assert.match(html, /holidays, conflicts, and rescheduling/i);
+});
