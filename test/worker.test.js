@@ -803,15 +803,15 @@ test("own team trades route allows only GET", async () => {
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
 });
 
-test("team creation handler authenticates and creates a captain team", async () => {
+test("team application handler authenticates and submits for admin review", async () => {
   const { fetch, calls } = createFetch([
     { body: { id: "user-1", email: "player@example.com" } },
     {
       body: [{
-        id: "team-1",
+        id: "application-1",
         season_id: "season-1",
-        name: "Breakers",
-        captain_player_id: "player-1",
+        status: "applied",
+        team_name: "Breakers",
       }],
     },
   ]);
@@ -828,21 +828,21 @@ test("team creation handler authenticates and creates a captain team", async () 
     { fetch },
   );
 
-  assert.equal(response.status, 201);
+  assert.equal(response.status, 202);
   assert.deepEqual(await response.json(), {
-    team: {
-      id: "team-1",
+    application: {
+      id: "application-1",
       season_id: "season-1",
-      name: "Breakers",
-      captain_player_id: "player-1",
+      status: "applied",
+      team_name: "Breakers",
     },
   });
   assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
-  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/create_team_with_captain");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/submit_team_application");
   assert.deepEqual(JSON.parse(calls[1].init.body), {
     actor_user_id: "user-1",
     target_season_id: "season-1",
-    team_name: "Breakers",
+    proposed_team_name: "Breakers",
   });
 });
 
@@ -1673,23 +1673,27 @@ test("team lineup route allows only GET and POST", async () => {
 });
 
 test("public season list handler returns registration progress", async () => {
-  const { fetch, calls } = createFetch([
-    {
-      body: [{
+  const { fetch, calls } = createFetch([{
+    body: [{
         id: "season-1",
         name: "Fremont Derby Season 1",
         status: "registration",
         first_round_date: "2026-09-03",
+        team_count: 1,
+        confirmed_team_count: 0,
+        team_capacity: 8,
+        minimum_committed_roster: 3,
+        occupied_slots: 1,
+        open_team_slots: 7,
+        reserved_returning_slots: 0,
+        held_team_slots: 1,
+        applications_waiting: 2,
+        rostered_player_count: 2,
+        registered_player_count: 4,
+        free_agent_count: 2,
+        at_risk_team_count: 0,
       }],
-    },
-    { body: [{ id: "team-1", season_id: "season-1" }] },
-    {
-      body: [
-        { season_id: "season-1", player_id: "player-1" },
-        { season_id: "season-1", player_id: "player-2" },
-      ],
-    },
-  ]);
+  }]);
 
   const response = await handleListPublicSeasonsRequest(publishEnv, { fetch });
 
@@ -1699,7 +1703,9 @@ test("public season list handler returns registration progress", async () => {
   assert.equal(body.seasons[0].teamCount, 1);
   assert.equal(body.seasons[0].openTeamSlots, 7);
   assert.equal(body.seasons[0].rosteredPlayerCount, 2);
-  assert.equal(calls.length, 3);
+  assert.equal(body.seasons[0].applicationsWaiting, 2);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_public_season_registration");
 });
 
 test("public season list route allows only GET", async () => {
