@@ -74,6 +74,13 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
         rack_winner_side: winnerSide,
       });
     },
+    updatePlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, rackNumber, winnerSide }) {
+      return callRpc('update_player_match_score_rack', {
+        ...scoringBody({ actorUserId, playerMatchId, scoringTeamId }),
+        target_rack_number: rackNumber,
+        rack_winner_side: winnerSide,
+      });
+    },
     undoPlayerMatchScoreRack(input) {
       return callRpc('undo_player_match_score_rack', scoringBody(input));
     },

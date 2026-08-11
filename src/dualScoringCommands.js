@@ -21,6 +21,14 @@ function normalizeWinnerSide(value) {
   return value;
 }
 
+function normalizeRackNumber(value) {
+  const rackNumber = Number(value);
+  if (!Number.isInteger(rackNumber) || rackNumber < 1) {
+    throw new Error('rackNumber must be a positive integer');
+  }
+  return rackNumber;
+}
+
 function normalizeOpeningDiscipline(value) {
   const normalized = value === '8' ? '8-ball' : value === '9' ? '9-ball' : value;
   if (!['8-ball', '9-ball'].includes(normalized)) {
@@ -76,6 +84,21 @@ export async function recordPlayerMatchScoreRackCommand(
     actorUserId,
     playerMatchId,
     scoringTeamId,
+    winnerSide: normalizeWinnerSide(winnerSide),
+  });
+}
+
+export async function updatePlayerMatchScoreRackCommand(
+  { actorUserId, playerMatchId, scoringTeamId, rackNumber, winnerSide },
+  repository,
+) {
+  assertScoringContext({ actorUserId, playerMatchId, scoringTeamId });
+  assertRepository(repository, 'updatePlayerMatchScoreRack');
+  return repository.updatePlayerMatchScoreRack({
+    actorUserId,
+    playerMatchId,
+    scoringTeamId,
+    rackNumber: normalizeRackNumber(rackNumber),
     winnerSide: normalizeWinnerSide(winnerSide),
   });
 }

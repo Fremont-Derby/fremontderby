@@ -6,6 +6,7 @@ import {
   recordPlayerMatchScoreRackCommand,
   setPlayerMatchOpeningDisciplineCommand,
   undoPlayerMatchScoreRackCommand,
+  updatePlayerMatchScoreRackCommand,
 } from './dualScoringCommands.js';
 import { createDualScoringRepository } from './dualScoringRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
@@ -29,6 +30,7 @@ function statusForError(error) {
     || message.includes('Score record')
     || message.includes('Resolved rack history')
     || message.includes('Opening discipline is locked')
+    || message.includes('Rack is not present')
   ) return 409;
   return 400;
 }
@@ -114,6 +116,17 @@ export function createDualScoringHttpHandlers({
             openingDiscipline,
           }, repository);
           return jsonResponse({ setup });
+        }
+        const rackNumber = body.rackNumber ?? body.rack_number;
+        if (rackNumber != null) {
+          const rack = await updatePlayerMatchScoreRackCommand({
+            actorUserId: actor.id,
+            playerMatchId,
+            scoringTeamId: scoringTeamFromRequest(request, body),
+            rackNumber,
+            winnerSide: body.winnerSide ?? body.winner,
+          }, repository);
+          return jsonResponse({ rack });
         }
         const rack = await recordPlayerMatchScoreRackCommand({
           actorUserId: actor.id,
