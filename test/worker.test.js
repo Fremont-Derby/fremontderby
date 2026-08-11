@@ -11,6 +11,7 @@ import worker, {
   handleGetPlayerMatchScorecardRequest,
   handleInvitePlayerToTeamRequest,
   handleListEligibleFreeAgentsRequest,
+  handleListAdminSeasonsRequest,
   handleListIndividualStandingsRequest,
   handleListTeamRoundAvailabilityRequest,
   handleListTeamStandingsRequest,
@@ -622,7 +623,7 @@ test("season setup update handler authenticates and updates setup", async () => 
 
 test("season setup routes enforce supported methods", async () => {
   const createResponse = await worker.fetch(
-    new Request("https://fremontderby.com/api/admin/seasons"),
+    new Request("https://fremontderby.com/api/admin/seasons", { method: "DELETE" }),
     publishEnv,
   );
   const setupResponse = await worker.fetch(
@@ -2377,4 +2378,35 @@ test("correct player match route allows only POST", async () => {
 
   assert.equal(response.status, 405);
   assert.deepEqual(await response.json(), { error: "Method not allowed" });
+});
+
+test("admin season list handler returns discoverable season names and statuses", async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: "admin-user-1", email: "admin@example.com" } },
+    {
+      body: [
+        { id: "season-live", name: "Fremont Derby Season 1", status: "registration" },
+        { id: "season-war", name: "Season 1 War Game", status: "playoffs" },
+      ],
+    },
+    { body: [{ id: "season-live" }] },
+  ]);
+  const request = new Request("https://fremontderby.com/api/admin/seasons", {
+    headers: { authorization: "Bearer admin-token" },
+  });
+
+  const response = await handleListAdminSeasonsRequest(request, publishEnv, { fetch });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(
+    body.seasons.map((season) => [season.name, season.status]),
+    [
+      ["Fremont Derby Season 1", "registration"],
+      ["Season 1 War Game", "playoffs"],
+    ],
+  );
+  assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/seasons?select=id,name,status,created_at&order=created_at.desc");
+  assert.equal(calls[2].url, "https://project.supabase.co/rest/v1/rpc/get_season_setup");
 });

@@ -197,3 +197,29 @@ test('Supabase season repository requires server-only configuration', () => {
     /fetch implementation/,
   );
 });
+
+test('Supabase season repository lists seasons only after verifying league-admin access', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [
+        { id: 'season-live', name: 'Fremont Derby Season 1', status: 'registration' },
+        { id: 'season-war', name: 'Season 1 War Game', status: 'playoffs' },
+      ],
+    },
+    { body: [{ id: 'season-live' }] },
+  ]);
+  const repository = createSupabaseSeasonRepository(env, { fetch });
+
+  const seasons = await repository.listAdminSeasons({ actorUserId: 'admin-user-1' });
+
+  assert.deepEqual(seasons.map((season) => season.status), ['registration', 'playoffs']);
+  assert.equal(
+    calls[0].url,
+    'https://project.supabase.co/rest/v1/seasons?select=id,name,status,created_at&order=created_at.desc',
+  );
+  assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/get_season_setup');
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: 'admin-user-1',
+    target_season_id: 'season-live',
+  });
+});

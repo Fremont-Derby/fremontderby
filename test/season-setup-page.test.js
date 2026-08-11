@@ -37,3 +37,14 @@ test('published seasons render as read-only instead of offering invalid mutation
   assert.match(html, /Viewing.*season.*read only/);
   assert.match(html, /Published seasons are read-only/);
 });
+
+test('season setup exposes a human-readable season picker and prefers the editable season', () => {
+  const html = renderSeasonSetupPage();
+
+  assert.match(html, /data-season-selector/);
+  assert.match(html, /\/api\/admin\/seasons/);
+  assert.match(html, /season\.name\+' — '\+season\.status/);
+  assert.match(html, /seasons\.find\(\(season\)=>editableSeasonStatuses\.has\(season\.status\)\)/);
+  assert.match(html, /seasonSelector\.addEventListener\('change'/);
+  assert.match(html, /history\.replaceState/);
+});

@@ -240,6 +240,21 @@ export async function handleCreateSeasonSetupRequest(
   }
 }
 
+export async function handleListAdminSeasonsRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listAdminSeasons({ actorUserId: actor.id });
+    return jsonResponse({ seasons });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
 export async function handleGetSeasonSetupRequest(
   request,
   env,
@@ -1256,11 +1271,14 @@ export default {
     }
 
     if (adminSeasonsMatch) {
-      if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+      if (request.method === "GET") {
+        return handleListAdminSeasonsRequest(request, env);
+      }
+      if (request.method === "POST") {
+        return handleCreateSeasonSetupRequest(request, env);
       }
 
-      return handleCreateSeasonSetupRequest(request, env);
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (adminSeasonSetupMatch) {
