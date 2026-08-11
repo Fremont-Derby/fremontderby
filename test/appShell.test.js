@@ -19,17 +19,20 @@ test('primary navigation marks the current section', () => {
 
 test('mobile quick navigation exposes frequent destinations with accessible active state', () => {
   const html = renderPrimaryNavigation('/lineup');
-  assert.match(html, /data-fd-mobile-dock/);
-  assert.match(html, /aria-label="Quick navigation"/);
+  const dock = html.match(/<nav class="fd-mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.match(dock, /data-fd-mobile-dock/);
+  assert.match(dock, /aria-label="Quick navigation"/);
   for (const destination of ['/teams', '/standings', '/scorecard', '/messages', '/profile']) {
-    assert.match(html, new RegExp(`href="${destination.replace('/', '\\/')}"`));
+    assert.match(dock, new RegExp(`href="${destination.replace('/', '\\/')}"`));
   }
-  assert.match(html, /href="\/teams"[^>]*aria-current="page"/);
-  assert.match(html, /data-nav-key="teams"/);
-  assert.match(html, /data-nav-key="standings"/);
-  assert.match(html, /data-nav-key="score"/);
-  assert.match(html, /data-nav-key="messages"/);
-  assert.match(html, /data-nav-key="profile"/);
+  assert.doesNotMatch(dock, /href="\/rules"/);
+  assert.doesNotMatch(dock, /href="\/demo"/);
+  assert.match(dock, /href="\/teams"[^>]*aria-current="page"/);
+  assert.match(dock, /data-nav-key="teams"/);
+  assert.match(dock, /data-nav-key="standings"/);
+  assert.match(dock, /data-nav-key="score"/);
+  assert.match(dock, /data-nav-key="messages"/);
+  assert.match(dock, /data-nav-key="profile"/);
 });
 
 test('live scorecard keeps the reduced shell without the fixed mobile dock', () => {
