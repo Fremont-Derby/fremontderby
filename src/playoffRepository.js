@@ -18,6 +18,20 @@ async function parseResponse(response) {
   }
 }
 
+async function invokeRpc(fetchImpl, supabaseUrl, headers, rpcName, body) {
+  const response = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  const parsed = await parseResponse(response);
+  if (!response.ok) {
+    const message = typeof parsed === 'string' ? parsed : parsed?.message;
+    throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+  }
+  return Array.isArray(parsed) ? parsed[0] ?? null : parsed;
+}
+
 export function createPlayoffRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
 
@@ -32,20 +46,17 @@ export function createPlayoffRepository(env, { fetch: fetchImpl = globalThis.fet
 
   return {
     async startSeasonPlayoffs({ seasonId, actorUserId }) {
-      const response = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/start_season_playoffs`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          target_season_id: seasonId,
-          actor_user_id: actorUserId,
-        }),
+      return invokeRpc(fetchImpl, supabaseUrl, headers, 'start_season_playoffs', {
+        target_season_id: seasonId,
+        actor_user_id: actorUserId,
       });
-      const body = await parseResponse(response);
-      if (!response.ok) {
-        const message = typeof body === 'string' ? body : body?.message;
-        throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
-      }
-      return Array.isArray(body) ? body[0] ?? null : body;
+    },
+
+    async advanceSeasonToChampionship({ seasonId, actorUserId }) {
+      return invokeRpc(fetchImpl, supabaseUrl, headers, 'advance_season_to_championship', {
+        target_season_id: seasonId,
+        actor_user_id: actorUserId,
+      });
     },
   };
 }
