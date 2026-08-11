@@ -51,61 +51,53 @@ export function createScoringRepository(env, { fetch: fetchImpl = globalThis.fet
   const serviceRoleKey = requireEnvValue(env, 'SUPABASE_SERVICE_ROLE_KEY');
   const headers = jsonHeaders(serviceRoleKey);
 
+  async function rpc(name, body) {
+    const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    return Array.isArray(result) ? result[0] : result;
+  }
+
   return {
-    async getPlayerMatchScorecard({ actorUserId, playerMatchId }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/get_player_match_scorecard`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          actor_user_id: actorUserId,
-          target_player_match_id: playerMatchId,
-        }),
+    getPlayerMatchScorecard({ actorUserId, playerMatchId }) {
+      return rpc('get_player_match_scorecard', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
       });
-
-      return Array.isArray(result) ? result[0] : result;
     },
 
-    async recordPlayerMatchRack({ actorUserId, playerMatchId, winnerSide }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/record_player_match_rack`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          actor_user_id: actorUserId,
-          target_player_match_id: playerMatchId,
-          rack_winner_side: winnerSide,
-        }),
+    getPlayerMatchLiveContext({ actorUserId, playerMatchId }) {
+      return rpc('get_player_match_live_context', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
       });
-
-      return Array.isArray(result) ? result[0] : result;
     },
 
-    async undoPlayerMatchRack({ actorUserId, playerMatchId }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/undo_player_match_rack`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          actor_user_id: actorUserId,
-          target_player_match_id: playerMatchId,
-        }),
+    recordPlayerMatchRack({ actorUserId, playerMatchId, winnerSide }) {
+      return rpc('record_player_match_rack', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
+        rack_winner_side: winnerSide,
       });
-
-      return Array.isArray(result) ? result[0] : result;
     },
 
-    async finalizePlayerMatch({ actorUserId, playerMatchId }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/finalize_player_match`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          actor_user_id: actorUserId,
-          target_player_match_id: playerMatchId,
-        }),
+    undoPlayerMatchRack({ actorUserId, playerMatchId }) {
+      return rpc('undo_player_match_rack', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
       });
-
-      return Array.isArray(result) ? result[0] : result;
     },
 
-    async correctPlayerMatch({
+    finalizePlayerMatch({ actorUserId, playerMatchId }) {
+      return rpc('finalize_player_match', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
+      });
+    },
+
+    correctPlayerMatch({
       actorUserId,
       playerMatchId,
       winnerSide,
@@ -114,21 +106,15 @@ export function createScoringRepository(env, { fetch: fetchImpl = globalThis.fet
       reason,
       racks,
     }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/correct_player_match`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          actor_user_id: actorUserId,
-          target_player_match_id: playerMatchId,
-          corrected_winner_side: winnerSide,
-          corrected_score_a: scoreA,
-          corrected_score_b: scoreB,
-          correction_reason_text: reason,
-          corrected_racks: racks,
-        }),
+      return rpc('correct_player_match', {
+        actor_user_id: actorUserId,
+        target_player_match_id: playerMatchId,
+        corrected_winner_side: winnerSide,
+        corrected_score_a: scoreA,
+        corrected_score_b: scoreB,
+        correction_reason_text: reason,
+        corrected_racks: racks,
       });
-
-      return Array.isArray(result) ? result[0] : result;
     },
   };
 }
