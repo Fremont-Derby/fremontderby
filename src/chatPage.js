@@ -401,6 +401,7 @@ export function renderChatPage(env = {}) {
       await api(messagePath(thread, '/read'), {
         method: 'POST', body: JSON.stringify({ readAt: latest.created_at }),
       });
+      window.dispatchEvent(new CustomEvent('fd:messages-read'));
     }
     async function loadMessages(quiet = false) {
       const thread = currentThread();
