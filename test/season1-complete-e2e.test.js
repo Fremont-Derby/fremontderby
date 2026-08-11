@@ -9,6 +9,13 @@ import {
   validatePostseasonLineup,
 } from '../domain/playoffs.js';
 import { generateRoundRobin } from '../domain/schedule.js';
+import {
+  invitePlayerToTeamCommand,
+  respondToTeamInvitationCommand,
+} from '../src/teamCommands.js';
+import { chooseTeamMatchTeamCommand } from '../src/teamMatchChoiceCommands.js';
+import { createTeamMembershipRequestHttpHandlers } from '../src/teamMembershipRequestHttp.js';
+import { recordPlayerMatchScoreRackCommand } from '../src/dualScoringCommands.js';
 
 const chart = [
   { maxDiff: 49, strongerTo: 5, weakerTo: 5 },
@@ -43,7 +50,177 @@ function makeTeam(index) {
   };
 }
 
-test('complete deterministic Season 1 runs from eight teams through anchor-resolved champion', () => {
+async function proveMultiTeamCaptainPlayerRegression() {
+  const seasonId = 'season-1';
+  const dualUserId = 'user-dual';
+  const dualPlayerId = 'player-dual';
+  const captainBUserId = 'user-captain-b';
+  const teamAId = 'team-1';
+  const teamBId = 'team-2';
+  const teamMatchId = 'team-match-1-2';
+  const memberships = new Set([`${teamAId}:${dualPlayerId}`]);
+  const requests = [];
+  const invitations = [];
+  const choices = new Map();
+  const appearances = new Set();
+  const scoreHistories = new Map([[teamAId, []], [teamBId, []]]);
+  const scoreAudit = [];
+
+  const membershipRequestRepository = {
+    async requestJoin({ actorUserId, teamId }) {
+      assert.equal(actorUserId, dualUserId);
+      assert.equal(teamId, teamBId);
+      const request = {
+        id: 'request-b',
+        actorUserId,
+        playerId: dualPlayerId,
+        teamId,
+        status: 'pending',
+      };
+      requests.push(request);
+      return request;
+    },
+    async listOwn() {
+      return { player_requests: requests, captain_requests: [] };
+    },
+    async respond() {
+      throw new Error('not used by this convergence path');
+    },
+    async cancel() {
+      throw new Error('not used by this convergence path');
+    },
+  };
+  const requestHandlers = createTeamMembershipRequestHttpHandlers({
+    authenticate: async () => ({ id: dualUserId }),
+    createRepository: () => membershipRequestRepository,
+  });
+  const requestResponse = await requestHandlers.requestJoin(
+    new Request(`https://fremontderby.com/api/teams/${teamBId}/membership-request`, {
+      method: 'POST',
+    }),
+    {},
+    teamBId,
+  );
+  assert.equal(requestResponse.status, 201);
+  assert.equal(requests[0].status, 'pending');
+
+  const teamRepository = {
+    async invitePlayerToTeam({ actorUserId, teamId, playerId }) {
+      assert.equal(actorUserId, captainBUserId);
+      assert.equal(teamId, teamBId);
+      assert.equal(playerId, dualPlayerId);
+      const invitation = {
+        id: 'invite-b', teamId, playerId, status: 'pending',
+      };
+      invitations.push(invitation);
+      return invitation;
+    },
+    async respondToTeamInvitation({ actorUserId, invitationId, response }) {
+      assert.equal(actorUserId, dualUserId);
+      const invitation = invitations.find((row) => row.id === invitationId);
+      assert.ok(invitation);
+      assert.equal(response, 'accepted');
+      invitation.status = 'accepted';
+      memberships.add(`${invitation.teamId}:${invitation.playerId}`);
+      const crossedRequest = requests.find((row) => (
+        row.teamId === invitation.teamId
+        && row.playerId === invitation.playerId
+        && row.status === 'pending'
+      ));
+      if (crossedRequest) crossedRequest.status = 'approved';
+      return invitation;
+    },
+  };
+
+  const invitation = await invitePlayerToTeamCommand({
+    actorUserId: captainBUserId,
+    teamId: teamBId,
+    playerId: dualPlayerId,
+  }, teamRepository);
+  await respondToTeamInvitationCommand({
+    actorUserId: dualUserId,
+    invitationId: invitation.id,
+    response: 'accepted',
+  }, teamRepository);
+  assert.equal(requests[0].status, 'approved', 'crossed request converged with accepted invitation');
+  assert.equal(memberships.has(`${teamAId}:${dualPlayerId}`), true);
+  assert.equal(memberships.has(`${teamBId}:${dualPlayerId}`), true);
+  assert.equal([...memberships].filter((key) => key.endsWith(`:${dualPlayerId}`)).length, 2);
+
+  let choiceLocked = false;
+  const choiceRepository = {
+    async chooseTeamMatchTeam({ actorUserId, teamMatchId: targetMatchId, teamId }) {
+      assert.equal(actorUserId, dualUserId);
+      assert.equal(targetMatchId, teamMatchId);
+      assert.equal([teamAId, teamBId].includes(teamId), true);
+      if (choiceLocked) throw new Error('Team choice is locked after lineup inclusion');
+      choices.set(targetMatchId, teamId);
+      return { team_match_id: targetMatchId, player_id: dualPlayerId, team_id: teamId };
+    },
+  };
+  const selectable = (teamId) => {
+    const choice = choices.get(teamMatchId);
+    if (!choice) return false;
+    if (choice !== teamId) return false;
+    return !appearances.has(dualPlayerId);
+  };
+
+  assert.equal(selectable(teamAId), false, 'both captains are blocked before represented-team choice');
+  assert.equal(selectable(teamBId), false, 'both captains are blocked before represented-team choice');
+  await chooseTeamMatchTeamCommand({
+    actorUserId: dualUserId,
+    teamMatchId,
+    teamId: teamBId,
+  }, choiceRepository);
+  assert.equal(selectable(teamAId), false, 'non-selected team remains blocked');
+  assert.equal(selectable(teamBId), true, 'selected team may use the player');
+  appearances.add(dualPlayerId);
+  choiceLocked = true;
+  assert.equal(selectable(teamBId), false, 'same player cannot appear twice in one matchup');
+  await assert.rejects(
+    chooseTeamMatchTeamCommand({
+      actorUserId: dualUserId,
+      teamMatchId,
+      teamId: teamAId,
+    }, choiceRepository),
+    /locked/,
+  );
+
+  const scoringRepository = {
+    async recordPlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, winnerSide }) {
+      assert.equal(actorUserId, dualUserId);
+      assert.equal(playerMatchId, 'dual-player-match');
+      assert.equal(memberships.has(`${scoringTeamId}:${dualPlayerId}`), true);
+      assert.equal([teamAId, teamBId].includes(scoringTeamId), true);
+      const history = scoreHistories.get(scoringTeamId);
+      history.push(winnerSide);
+      scoreAudit.push({ actorUserId, scoringTeamId, winnerSide });
+      return { scoringTeamId, rackNumber: history.length, winnerSide };
+    },
+  };
+  await recordPlayerMatchScoreRackCommand({
+    actorUserId: dualUserId,
+    playerMatchId: 'dual-player-match',
+    scoringTeamId: teamAId,
+    winnerSide: 'A',
+  }, scoringRepository);
+  await recordPlayerMatchScoreRackCommand({
+    actorUserId: dualUserId,
+    playerMatchId: 'dual-player-match',
+    scoringTeamId: teamBId,
+    winnerSide: 'A',
+  }, scoringRepository);
+  assert.deepEqual(scoreHistories.get(teamAId), ['A']);
+  assert.deepEqual(scoreHistories.get(teamBId), ['A']);
+  assert.deepEqual(scoreAudit.map(({ actorUserId, scoringTeamId }) => [actorUserId, scoringTeamId]), [
+    [dualUserId, teamAId],
+    [dualUserId, teamBId],
+  ]);
+}
+
+test('complete deterministic Season 1 runs from eight teams through multi-team scoring and anchor-resolved champion', async () => {
+  await proveMultiTeamCaptainPlayerRegression();
+
   const teams = Array.from({ length: 8 }, (_, index) => makeTeam(index + 1));
   const teamIds = teams.map((team) => team.id);
   const schedule = generateRoundRobin(teamIds);
