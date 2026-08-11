@@ -94,26 +94,12 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
       playoffTeamCount,
       playoffAnchorTiebreaker,
     }) {
-      let targetSeasonId = seasonId;
-      if (!targetSeasonId) {
-        const registrationSeasons = await requestJson(
-          fetchImpl,
-          `${supabaseUrl}/rest/v1/seasons?status=eq.registration&select=id&order=created_at.desc&limit=2`,
-          { method: 'GET', headers },
-        );
-        if (Array.isArray(registrationSeasons) && registrationSeasons.length === 1) {
-          targetSeasonId = registrationSeasons[0].id;
-        } else if (Array.isArray(registrationSeasons) && registrationSeasons.length > 1) {
-          throw new Error('Multiple registration seasons exist; choose a season before saving setup');
-        }
-      }
-
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/configure_season_setup`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           actor_user_id: actorUserId,
-          target_season_id: targetSeasonId,
+          target_season_id: seasonId,
           configured_season_name: seasonName,
           configured_league_night: leagueNight,
           configured_first_round_date: firstRoundDate,
