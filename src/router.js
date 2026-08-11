@@ -116,6 +116,12 @@ export default {
     const moderateChatReportMatch = url.pathname.match(
       /^\/api\/admin\/chat-reports\/([^/]+)\/resolve$/,
     );
+    const matchupMessagesMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/messages$/,
+    );
+    const matchupReadMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/messages\/read$/,
+    );
 
     if (request.method === 'GET' && url.pathname === '/favicon.svg') {
       return faviconResponse();
@@ -176,6 +182,29 @@ export default {
     if (url.pathname === '/api/me/league-chat-threads') {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listLeagueThreads(request, env);
+    }
+
+    if (url.pathname === '/api/me/matchup-chat-threads') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listMatchupThreads(request, env);
+    }
+
+    if (matchupReadMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.markMatchupChatRead(
+        request, env, decodeURIComponent(matchupReadMatch[1]),
+      );
+    }
+
+    if (matchupMessagesMatch) {
+      const teamMatchId = decodeURIComponent(matchupMessagesMatch[1]);
+      if (request.method === 'GET') {
+        return chatHttpHandlers.listMatchupMessages(request, env, teamMatchId);
+      }
+      if (request.method === 'POST') {
+        return chatHttpHandlers.sendMatchupMessage(request, env, teamMatchId);
+      }
+      return methodNotAllowed();
     }
 
     if (url.pathname === '/api/chat-reports') {
