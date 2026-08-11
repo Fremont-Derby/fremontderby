@@ -21,7 +21,7 @@ export function renderStandingsPage() {
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #101214; }
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
     button {
       min-height: 42px;
       border-radius: 8px;
@@ -60,7 +60,7 @@ export function renderStandingsPage() {
       border-bottom: 1px solid var(--line);
     }
     label { display: grid; gap: 6px; color: var(--muted); font-size: .78rem; font-weight: 850; }
-    input {
+    input, select {
       width: 100%;
       min-height: 42px;
       border: 1px solid var(--line);
@@ -70,6 +70,34 @@ export function renderStandingsPage() {
       padding: 0 12px;
     }
     .load { align-self: end; background: var(--gold); color: #101214; border-color: transparent; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+      gap: 12px;
+      align-items: center;
+      margin: 14px 0 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .summary[hidden] { display: none; }
+    .metric { display: grid; gap: 3px; }
+    .metric strong { color: var(--gold); font-size: 1.2rem; }
+    .metric span { color: var(--muted); font-size: .78rem; font-weight: 800; }
+    .register-link {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border-radius: 8px;
+      background: var(--green);
+      color: #06120d;
+      text-decoration: none;
+      font-weight: 900;
+      white-space: nowrap;
+    }
     .tabs { display: flex; gap: 8px; padding: 14px 0; }
     .tab { background: transparent; color: #f5f0e8; padding: 0 14px; }
     .tab[aria-selected="true"] { background: var(--green); color: #06120d; border-color: transparent; }
@@ -104,7 +132,7 @@ export function renderStandingsPage() {
     @media (max-width: 760px) {
       .app { padding: 12px; }
       .topbar { align-items: flex-start; }
-      .controls { grid-template-columns: 1fr; }
+      .controls, .summary { grid-template-columns: 1fr; }
       .status { text-align: left; }
       .panel { overflow-x: auto; }
       table { min-width: 720px; }
@@ -120,11 +148,20 @@ export function renderStandingsPage() {
     </header>
 
     <form class="controls" data-form>
-      <label>Season ID
-        <input name="seasonId" data-season-id autocomplete="off" />
+      <label>Season
+        <select name="seasonId" data-season-id>
+          <option value="">Loading seasons…</option>
+        </select>
       </label>
       <button class="load" type="submit">Load</button>
     </form>
+
+    <section class="summary" data-registration-summary hidden>
+      <div class="metric"><strong data-team-count>0 / 8</strong><span>Teams registered</span></div>
+      <div class="metric"><strong data-player-count>0</strong><span>Rostered players</span></div>
+      <div class="metric"><strong data-open-slots>8</strong><span>Open team slots</span></div>
+      <a class="register-link" data-register-link href="/teams">Register or join a team</a>
+    </section>
 
     <nav class="tabs" aria-label="Standings views">
       <button class="tab" data-tab="teams" type="button" aria-selected="true">Teams</button>
@@ -180,8 +217,14 @@ export function renderStandingsPage() {
     const playerEmpty = document.querySelector('[data-player-empty]');
     const tabs = Array.from(document.querySelectorAll('[data-tab]'));
     const panels = Array.from(document.querySelectorAll('[data-panel]'));
-
-    seasonInput.value = new URLSearchParams(location.search).get('season') || localStorage.getItem('fd.standingsSeasonId') || '';
+    const registrationSummary = document.querySelector('[data-registration-summary]');
+    const teamCountEl = document.querySelector('[data-team-count]');
+    const playerCountEl = document.querySelector('[data-player-count]');
+    const openSlotsEl = document.querySelector('[data-open-slots]');
+    const registerLink = document.querySelector('[data-register-link]');
+    const requestedSeasonId = new URLSearchParams(location.search).get('season') || '';
+    const rememberedSeasonId = localStorage.getItem('fd.standingsSeasonId') || '';
+    let seasons = [];
 
     function setStatus(message, tone) {
       statusEl.textContent = message;
@@ -205,6 +248,47 @@ export function renderStandingsPage() {
       span.className = 'badge ' + className;
       span.textContent = text;
       return span;
+    }
+
+    function renderSeasonOptions() {
+      seasonInput.replaceChildren();
+      for (const season of seasons) {
+        const option = document.createElement('option');
+        option.value = season.id;
+        option.textContent = season.name + ' — ' + season.status;
+        seasonInput.append(option);
+      }
+      const explicit = seasons.find((season) => season.id === requestedSeasonId);
+      const registration = seasons.find((season) => season.status === 'registration');
+      const remembered = seasons.find((season) => season.id === rememberedSeasonId);
+      const selected = explicit || registration || remembered || seasons[0];
+      seasonInput.value = selected?.id || '';
+      seasonInput.disabled = seasons.length === 0;
+    }
+
+    function renderRegistrationSummary(season) {
+      registrationSummary.hidden = !season;
+      if (!season) return;
+      teamCountEl.textContent = season.teamCount + ' / ' + season.teamCapacity;
+      playerCountEl.textContent = String(season.rosteredPlayerCount);
+      openSlotsEl.textContent = String(season.openTeamSlots);
+      registerLink.href = '/teams?season=' + encodeURIComponent(season.id);
+      registerLink.textContent = season.status === 'registration'
+        ? 'Register or join a team'
+        : 'View teams';
+    }
+
+    async function loadSeasons() {
+      setStatus('Loading seasons...');
+      const response = await fetch('/api/seasons');
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Season list failed');
+      seasons = body.seasons || [];
+      renderSeasonOptions();
+      if (!seasons.length) {
+        renderRegistrationSummary(null);
+        throw new Error('No seasons are available yet.');
+      }
     }
 
     function renderTeams(rows) {
@@ -263,9 +347,22 @@ export function renderStandingsPage() {
       const playerBodyJson = await playerResponse.json();
       if (!teamResponse.ok) throw new Error(teamBodyJson.error || 'Team standings failed');
       if (!playerResponse.ok) throw new Error(playerBodyJson.error || 'Individual standings failed');
-      renderTeams(teamBodyJson.standings || []);
-      renderPlayers(playerBodyJson.standings || []);
-      setStatus('Standings loaded', 'ok');
+      const teamRows = teamBodyJson.standings || [];
+      const playerRows = playerBodyJson.standings || [];
+      const season = seasons.find((candidate) => candidate.id === seasonId);
+      renderTeams(teamRows);
+      renderPlayers(playerRows);
+      renderRegistrationSummary(season);
+      if (!teamRows.length && season?.status === 'registration') {
+        teamEmpty.textContent = season.teamCount + ' of ' + season.teamCapacity
+          + ' teams are registered. Standings begin after league play starts.';
+      } else {
+        teamEmpty.textContent = 'No team standings are available for this season.';
+      }
+      playerEmpty.textContent = !playerRows.length && season?.status === 'registration'
+        ? 'Player standings begin after scored matches.'
+        : 'No individual standings are available for this season.';
+      setStatus(season?.status === 'registration' ? 'Registration progress loaded' : 'Standings loaded', 'ok');
     }
 
     function selectTab(name) {
@@ -292,9 +389,10 @@ export function renderStandingsPage() {
     for (const tab of tabs) {
       tab.addEventListener('click', () => selectTab(tab.dataset.tab));
     }
-    if (seasonInput.value) {
-      run(loadStandings);
-    }
+    run(async () => {
+      await loadSeasons();
+      await loadStandings();
+    });
   </script>
 </body>
 </html>`;
