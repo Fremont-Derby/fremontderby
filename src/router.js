@@ -1,4 +1,6 @@
 import app from './index.js';
+import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
+import { renderAdminOperationsPage } from './adminOperationsPage.js';
 import {
   decorateHtmlWithShell,
   isKnownAppPagePath,
@@ -161,6 +163,11 @@ export default {
       return htmlResponse(renderChatModerationPage(env), url.pathname);
     }
 
+    if (url.pathname === '/admin/operations') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderAdminOperationsPage(env), url.pathname);
+    }
+
     if (url.pathname === '/scorecard') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderScorePickerPage(), url.pathname);
@@ -216,6 +223,11 @@ export default {
     if (url.pathname === '/api/chat-reports') {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.reportMessage(request, env);
+    }
+
+    if (url.pathname === '/api/admin/operations') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return adminOperationsHttpHandlers.overview(request, env);
     }
 
     if (url.pathname === '/api/admin/chat-reports') {
