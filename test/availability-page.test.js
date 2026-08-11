@@ -23,6 +23,21 @@ test('availability page uses signed-in human-readable league-night selection', (
   assert.match(html, /No published regular-season rounds/);
 });
 
+test('availability choices stay compact and expose selected state accessibly', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /class="actions" role="group" aria-label="Availability status"/);
+  assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
+  assert.match(html, /\.actions\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.doesNotMatch(html, /\.actions,.choice-actions\{grid-template-columns:1fr\}/);
+  assert.match(html, /button:focus-visible,select:focus-visible,.signin:focus-visible/);
+  assert.match(html, /button\[aria-pressed="true"\]::after\{content:' ✓'/);
+  assert.match(html, /function setAvailabilityState\(value\)/);
+  assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.availabilityStatus===value\)\)/);
+  assert.match(html, /renderContext\(\)\{const context=selectedContext\(\);setAvailabilityState\(null\)/);
+  assert.match(html, /await signedApi\(path,[\s\S]*setAvailabilityState\(value\);setStatus\('Availability saved'/);
+});
+
 test('dual-team player chooses one matchup team before captains build lineups', () => {
   const html = renderAvailabilityPage();
 
