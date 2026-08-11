@@ -15,6 +15,7 @@ import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
+import { teamMatchChoiceHttpHandlers } from './teamMatchChoiceHttp.js';
 import { teamMembershipRequestHttpHandlers } from './teamMembershipRequestHttp.js';
 
 function htmlResponse(html, pathname, status = 200) {
@@ -130,6 +131,9 @@ export default {
     const matchupReadMatch = url.pathname.match(
       /^\/api\/team-matches\/([^/]+)\/messages\/read$/,
     );
+    const teamChoiceMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/team-choice\/me$/,
+    );
     const teamMembershipRequestMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/membership-request$/,
     );
@@ -194,6 +198,20 @@ export default {
     if (url.pathname === '/api/me/scorable-matches') {
       if (request.method !== 'GET') return methodNotAllowed();
       return scorableMatchesHttpHandlers.list(request, env);
+    }
+
+    if (url.pathname === '/api/me/team-match-choices') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return teamMatchChoiceHttpHandlers.list(request, env);
+    }
+
+    if (teamChoiceMatch) {
+      if (request.method !== 'PUT') return methodNotAllowed();
+      return teamMatchChoiceHttpHandlers.choose(
+        request,
+        env,
+        decodeURIComponent(teamChoiceMatch[1]),
+      );
     }
 
     if (url.pathname === '/api/me/team-membership-requests') {
