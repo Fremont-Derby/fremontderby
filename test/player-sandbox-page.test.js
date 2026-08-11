@@ -21,3 +21,18 @@ test('player sandbox is isolated and exercises dual-score practice', () => {
   assert.doesNotMatch(html, /supabase\.co/);
   assert.doesNotMatch(html, /SUPABASE_/);
 });
+
+test('player sandbox captures contextual feedback without competitive persistence', () => {
+  const html = renderPlayerSandboxPage();
+
+  assert.match(html, /Tell us what was confusing/);
+  assert.match(html, /fd\.sandboxFeedback\.player\.v1/);
+  assert.match(html, /surface:'player-sandbox'/);
+  assert.match(html, /phase:state\.finalized\?'finalized'/);
+  assert.match(html, /mismatchRack:bad/);
+  assert.match(html, /racksA:history\('A'\)\.length/);
+  assert.match(html, /Admin review submission is the next isolated persistence slice/);
+
+  assert.doesNotMatch(html, /fetch\s*\(/);
+  assert.doesNotMatch(html, /\/api\/sandbox-feedback/);
+});
