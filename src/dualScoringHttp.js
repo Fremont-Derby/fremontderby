@@ -4,6 +4,7 @@ import {
   finalizeReconciledPlayerMatchCommand,
   getPlayerMatchScoreComparisonCommand,
   recordPlayerMatchScoreRackCommand,
+  setPlayerMatchOpeningDisciplineCommand,
   undoPlayerMatchScoreRackCommand,
 } from './dualScoringCommands.js';
 import { createDualScoringRepository } from './dualScoringRepository.js';
@@ -27,6 +28,7 @@ function statusForError(error) {
     || message.includes('Race target')
     || message.includes('Score record')
     || message.includes('Resolved rack history')
+    || message.includes('Opening discipline is locked')
   ) return 409;
   return 400;
 }
@@ -67,6 +69,19 @@ export function createDualScoringHttpHandlers({
           scoringTeamId: scoringTeamFromRequest(request),
         }, repository);
         return jsonResponse({ comparison });
+      });
+    },
+
+    setOpeningDiscipline(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+      return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJsonBody(request);
+        const setup = await setPlayerMatchOpeningDisciplineCommand({
+          actorUserId: actor.id,
+          playerMatchId,
+          scoringTeamId: scoringTeamFromRequest(request, body),
+          openingDiscipline: body.openingDiscipline ?? body.opening_discipline,
+        }, repository);
+        return jsonResponse({ setup });
       });
     },
 
