@@ -16,15 +16,13 @@ export function renderStandingsPage() {
       --muted: #aab2b8;
       --green: #2ea86f;
       --gold: #d9ad38;
-      --blue: #4d83d1;
-      --red: #d35d4e;
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #101214; }
-    button, input, select { font: inherit; }
+    button, select { font: inherit; }
     button {
-      min-height: 42px;
-      border-radius: 8px;
+      min-height: 44px;
+      border-radius: 9px;
       border: 1px solid var(--line);
       cursor: pointer;
       font-weight: 850;
@@ -35,10 +33,9 @@ export function renderStandingsPage() {
       justify-content: space-between;
       gap: 12px;
       align-items: center;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--line);
+      padding-bottom: 12px;
     }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 950; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 950; font-size: 1.05rem; }
     .mark {
       width: 32px;
       height: 32px;
@@ -49,39 +46,67 @@ export function renderStandingsPage() {
       color: #101214;
       font-weight: 950;
     }
-    .status { min-height: 32px; color: var(--muted); text-align: right; }
+    .status { min-height: 24px; color: var(--muted); text-align: right; font-size: .86rem; }
     .status[data-tone="error"] { color: #ffb1aa; }
     .status[data-tone="ok"] { color: #9ee5bd; }
+    .tabs-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      padding: 8px 0 10px;
+      background: #101214;
+      border-bottom: 1px solid var(--line);
+    }
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #0d0f11;
+    }
+    .tab {
+      min-height: 48px;
+      background: transparent;
+      color: #f5f0e8;
+      border-color: transparent;
+      padding: 0 14px;
+    }
+    .tab[aria-selected="true"] {
+      background: var(--green);
+      color: #06120d;
+      border-color: var(--green);
+    }
     .controls {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px;
       padding: 14px 0;
-      border-bottom: 1px solid var(--line);
     }
     label { display: grid; gap: 6px; color: var(--muted); font-size: .78rem; font-weight: 850; }
-    input, select {
+    select {
       width: 100%;
-      min-height: 42px;
+      min-height: 44px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #0d0f11;
       color: #f5f0e8;
       padding: 0 12px;
     }
-    .load { align-self: end; background: var(--gold); color: #101214; border-color: transparent; }
+    .load { align-self: end; background: var(--gold); color: #101214; border-color: transparent; padding: 0 16px; }
     .summary {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
       gap: 12px;
       align-items: center;
-      margin: 14px 0 0;
+      margin: 0 0 14px;
       padding: 14px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
     }
-    .summary[hidden] { display: none; }
+    .summary[hidden], .panel[hidden] { display: none; }
     .metric { display: grid; gap: 3px; }
     .metric strong { color: var(--gold); font-size: 1.2rem; }
     .metric span { color: var(--muted); font-size: .78rem; font-weight: 800; }
@@ -98,16 +123,12 @@ export function renderStandingsPage() {
       font-weight: 900;
       white-space: nowrap;
     }
-    .tabs { display: flex; gap: 8px; padding: 14px 0; }
-    .tab { background: transparent; color: #f5f0e8; padding: 0 14px; }
-    .tab[aria-selected="true"] { background: var(--green); color: #06120d; border-color: transparent; }
     .panel {
       border: 1px solid var(--line);
       border-radius: 8px;
       overflow: hidden;
       background: var(--panel);
     }
-    .panel[hidden] { display: none; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
     th { color: var(--muted); font-size: .75rem; text-transform: uppercase; }
@@ -131,12 +152,12 @@ export function renderStandingsPage() {
     .empty { padding: 16px; color: var(--muted); }
     @media (max-width: 760px) {
       .app { padding: 12px; }
-      .topbar { align-items: flex-start; }
-      .controls, .summary { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
       .status { text-align: left; }
+      .controls, .summary { grid-template-columns: 1fr; }
       .panel { overflow-x: auto; }
       table { min-width: 720px; }
-      .tabs { position: sticky; top: 0; background: #101214; z-index: 1; }
+      .tab { padding: 0 8px; }
     }
   </style>
 </head>
@@ -146,6 +167,13 @@ export function renderStandingsPage() {
       <div class="brand"><span class="mark">9</span><span>Fremont Derby Standings</span></div>
       <div class="status" data-status>Ready</div>
     </header>
+
+    <div class="tabs-wrap">
+      <nav class="tabs" role="tablist" aria-label="Standings views">
+        <button class="tab" data-tab="teams" role="tab" type="button" aria-selected="true" aria-controls="team-standings">Team standings</button>
+        <button class="tab" data-tab="individuals" role="tab" type="button" aria-selected="false" aria-controls="individual-standings">Individual standings</button>
+      </nav>
+    </div>
 
     <form class="controls" data-form>
       <label>Season
@@ -163,44 +191,24 @@ export function renderStandingsPage() {
       <a class="register-link" data-register-link href="/teams">Register or join a team</a>
     </section>
 
-    <nav class="tabs" aria-label="Standings views">
-      <button class="tab" data-tab="teams" type="button" aria-selected="true">Teams</button>
-      <button class="tab" data-tab="individuals" type="button" aria-selected="false">Players</button>
-    </nav>
-
-    <section class="panel" data-panel="teams">
+    <section class="panel" id="team-standings" role="tabpanel" data-panel="teams">
       <table>
-        <thead>
-          <tr>
-            <th class="rank">Rank</th>
-            <th>Team</th>
-            <th class="numeric">GP</th>
-            <th class="numeric">Max</th>
-            <th class="numeric">W-L</th>
-            <th class="numeric">Pts</th>
-            <th class="numeric">Match</th>
-            <th class="numeric">Diff</th>
-            <th class="numeric">Forfeit</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th class="rank">Rank</th><th>Team</th><th class="numeric">GP</th><th class="numeric">Max</th>
+          <th class="numeric">W-L</th><th class="numeric">Pts</th><th class="numeric">Match</th>
+          <th class="numeric">Diff</th><th class="numeric">Forfeit</th>
+        </tr></thead>
         <tbody data-team-body></tbody>
       </table>
       <div class="empty" data-team-empty>No team standings loaded.</div>
     </section>
 
-    <section class="panel" data-panel="individuals" hidden>
+    <section class="panel" id="individual-standings" role="tabpanel" data-panel="individuals" hidden>
       <table>
-        <thead>
-          <tr>
-            <th class="rank">Rank</th>
-            <th>Player</th>
-            <th class="numeric">Record</th>
-            <th class="numeric">Win %</th>
-            <th class="numeric">Games</th>
-            <th class="numeric">Diff</th>
-            <th>Prize</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th class="rank">Rank</th><th>Player</th><th class="numeric">Record</th><th class="numeric">Win %</th>
+          <th class="numeric">Games</th><th class="numeric">Diff</th><th>Prize</th>
+        </tr></thead>
         <tbody data-player-body></tbody>
       </table>
       <div class="empty" data-player-empty>No individual standings loaded.</div>
@@ -222,8 +230,11 @@ export function renderStandingsPage() {
     const playerCountEl = document.querySelector('[data-player-count]');
     const openSlotsEl = document.querySelector('[data-open-slots]');
     const registerLink = document.querySelector('[data-register-link]');
-    const requestedSeasonId = new URLSearchParams(location.search).get('season') || '';
+    const query = new URLSearchParams(location.search);
+    const requestedSeasonId = query.get('season') || '';
     const rememberedSeasonId = localStorage.getItem('fd.standingsSeasonId') || '';
+    const requestedView = query.get('view');
+    const rememberedView = localStorage.getItem('fd.standingsView');
     let seasons = [];
 
     function setStatus(message, tone) {
@@ -250,6 +261,22 @@ export function renderStandingsPage() {
       return span;
     }
 
+    function selectTab(name, persist = true) {
+      const selected = name === 'individuals' ? 'individuals' : 'teams';
+      for (const tab of tabs) {
+        tab.setAttribute('aria-selected', String(tab.dataset.tab === selected));
+      }
+      for (const panel of panels) {
+        panel.hidden = panel.dataset.panel !== selected;
+      }
+      if (persist) {
+        localStorage.setItem('fd.standingsView', selected);
+        const next = new URL(location.href);
+        next.searchParams.set('view', selected);
+        history.replaceState(null, '', next.pathname + next.search + next.hash);
+      }
+    }
+
     function renderSeasonOptions() {
       seasonInput.replaceChildren();
       for (const season of seasons) {
@@ -273,9 +300,7 @@ export function renderStandingsPage() {
       playerCountEl.textContent = String(season.rosteredPlayerCount);
       openSlotsEl.textContent = String(season.openTeamSlots);
       registerLink.href = '/teams?season=' + encodeURIComponent(season.id);
-      registerLink.textContent = season.status === 'registration'
-        ? 'Register or join a team'
-        : 'View teams';
+      registerLink.textContent = season.status === 'registration' ? 'Register or join a team' : 'View teams';
     }
 
     async function loadSeasons() {
@@ -353,33 +378,18 @@ export function renderStandingsPage() {
       renderTeams(teamRows);
       renderPlayers(playerRows);
       renderRegistrationSummary(season);
-      if (!teamRows.length && season?.status === 'registration') {
-        teamEmpty.textContent = season.teamCount + ' of ' + season.teamCapacity
-          + ' teams are registered. Standings begin after league play starts.';
-      } else {
-        teamEmpty.textContent = 'No team standings are available for this season.';
-      }
+      teamEmpty.textContent = !teamRows.length && season?.status === 'registration'
+        ? season.teamCount + ' of ' + season.teamCapacity + ' teams are registered. Standings begin after league play starts.'
+        : 'No team standings are available for this season.';
       playerEmpty.textContent = !playerRows.length && season?.status === 'registration'
         ? 'Player standings begin after scored matches.'
         : 'No individual standings are available for this season.';
       setStatus(season?.status === 'registration' ? 'Registration progress loaded' : 'Standings loaded', 'ok');
     }
 
-    function selectTab(name) {
-      for (const tab of tabs) {
-        tab.setAttribute('aria-selected', String(tab.dataset.tab === name));
-      }
-      for (const panel of panels) {
-        panel.hidden = panel.dataset.panel !== name;
-      }
-    }
-
     async function run(action) {
-      try {
-        await action();
-      } catch (error) {
-        setStatus(error.message, 'error');
-      }
+      try { await action(); }
+      catch (error) { setStatus(error.message, 'error'); }
     }
 
     form.addEventListener('submit', (event) => {
@@ -389,6 +399,8 @@ export function renderStandingsPage() {
     for (const tab of tabs) {
       tab.addEventListener('click', () => selectTab(tab.dataset.tab));
     }
+
+    selectTab(requestedView || rememberedView || 'teams', false);
     run(async () => {
       await loadSeasons();
       await loadStandings();

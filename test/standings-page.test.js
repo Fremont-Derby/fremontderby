@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderStandingsPage } from '../src/standingsPage.js';
 
-test('standings page renders team and individual standings controls', () => {
+test('standings page keeps team and individual standings one tap away', () => {
   const html = renderStandingsPage();
 
   assert.match(html, /Fremont Derby Standings/);
@@ -10,8 +10,11 @@ test('standings page renders team and individual standings controls', () => {
   assert.match(html, /data-registration-summary/);
   assert.match(html, /Register or join a team/);
   assert.match(html, /fetch\('\/api\/seasons'\)/);
-  assert.match(html, /data-tab="teams"/);
-  assert.match(html, /data-tab="individuals"/);
+  assert.match(html, /data-tab="teams"[^>]*>Team standings<\/button>/);
+  assert.match(html, /data-tab="individuals"[^>]*>Individual standings<\/button>/);
+  assert.match(html, /position: sticky/);
+  assert.match(html, /fd\.standingsView/);
+  assert.match(html, /searchParams\.set\('view', selected\)/);
   assert.match(html, /data-team-body/);
   assert.match(html, /data-player-body/);
   assert.match(html, /<th class="numeric">W-L<\/th>/);
