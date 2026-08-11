@@ -14,6 +14,48 @@ export function seedSemifinals(rankedTeamIds) {
   ];
 }
 
+export function validatePostseasonLineup(players) {
+  if (!Array.isArray(players) || players.length !== 4) {
+    throw new Error('Postseason lineup requires exactly four players');
+  }
+
+  const playerIds = players.map((player) => player?.playerId);
+  if (playerIds.some((playerId) => !playerId)) {
+    throw new Error('Every postseason lineup player requires a playerId');
+  }
+  if (new Set(playerIds).size !== 4) {
+    throw new Error('Postseason lineup players must be unique');
+  }
+
+  const normalized = players.map((player) => ({
+    ...player,
+    teamMatchesPlayed: Number(player.teamMatchesPlayed ?? 0),
+  }));
+  if (normalized.some((player) => !Number.isInteger(player.teamMatchesPlayed)
+    || player.teamMatchesPlayed < 0)) {
+    throw new Error('Postseason team match counts must be non-negative integers');
+  }
+
+  const sorted = [...normalized].sort(
+    (left, right) => right.teamMatchesPlayed - left.teamMatchesPlayed,
+  );
+  const fourMatchQualifiers = sorted.filter((player) => player.teamMatchesPlayed >= 4);
+  const threeMatchQualifiers = sorted.filter((player) => player.teamMatchesPlayed >= 3);
+
+  if (fourMatchQualifiers.length < 3 || threeMatchQualifiers.length < 4) {
+    throw new Error(
+      'Postseason lineup requires three players with 4+ team matches and a fourth with 3+',
+    );
+  }
+
+  return {
+    eligible: true,
+    players: normalized,
+    fourMatchQualifierCount: fourMatchQualifiers.length,
+    threeMatchQualifierCount: threeMatchQualifiers.length,
+  };
+}
+
 export function createChampionship(semifinalResults) {
   if (!Array.isArray(semifinalResults) || semifinalResults.length !== 2) {
     throw new Error('Championship requires two semifinal results');
