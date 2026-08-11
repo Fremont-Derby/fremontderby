@@ -18,11 +18,14 @@ Check:
 8. Are team/individual views and other common comparisons one-tap when appropriate?
 9. Does every loading, signed-out, expired-session, empty, unavailable, and failure state explain what happened and provide one obvious next action?
 10. Does initial UI avoid claiming success/readiness before real data has resolved, and are important status changes exposed through accessible live-region semantics?
-11. When a form or control cannot be used, is it hidden or clearly disabled with the reason nearby rather than left looking broken?
-12. Do dense lists/tables fit the phone without horizontal page/panel scrolling, while keeping each row's person/team, state, and primary action understandable together?
-13. If a desktop table is retained semantically, does the narrow-phone presentation wrap/reflow into usable rows/cards or a compact grid rather than requiring sideways hunting?
+11. On auth-gated management pages, are mutation controls/private panels withheld until session state resolves, so signed-out or slow-network users never see authenticated-looking controls that cannot work?
+12. When a form or control cannot be used, is it hidden or clearly disabled with the reason nearby rather than left looking broken?
+13. Do dense lists/tables fit the phone without horizontal page/panel scrolling, while keeping each row's person/team, state, and primary action understandable together?
+14. If a desktop table is retained semantically, does the narrow-phone presentation wrap/reflow into usable rows/cards or a compact grid rather than requiring sideways hunting?
 
 State and recovery are part of the workflow, not decorative edge cases. Prefer one prominent recovery action such as Sign in, Try again, Join/apply, View tonight, or Open Teams over explanatory prose with no actionable next step.
+
+For auth-gated management surfaces, the first render should be truthful even on a slow network: show a loading/signed-out state before revealing forms, mutation controls, private panels, counts, or placeholders that imply an authenticated session.
 
 For dense management data, preserving a semantic table does not require preserving a desktop table layout. Prefer responsive wrapping/reflow that keeps row identity and actions together over `min-width` plus `overflow-x:auto` on phone widths.
 
