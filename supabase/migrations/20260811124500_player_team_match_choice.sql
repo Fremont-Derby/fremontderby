@@ -164,7 +164,7 @@ begin
   ) values (
     target_team_match_id, actor_player_id, target_team_id
   )
-  on conflict (team_match_id, player_id) do update
+  on conflict on constraint team_match_player_choices_pkey do update
     set team_id = excluded.team_id,
         updated_at = now();
 
