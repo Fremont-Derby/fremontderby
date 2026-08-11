@@ -78,6 +78,18 @@ export function createAdminPlayersRepository(
       return Array.isArray(rows) ? rows.map(normalizePlayer) : [];
     },
 
+    async listRosterTeams({ actorUserId }) {
+      const rows = await rpc('list_admin_roster_teams', {
+        actor_user_id: actorUserId,
+      });
+      return Array.isArray(rows) ? rows.map((row) => ({
+        seasonId: row.season_id,
+        seasonName: row.season_name,
+        teamId: row.team_id,
+        teamName: row.team_name,
+      })) : [];
+    },
+
     async setAdminRole({ actorUserId, playerId, enabled, reason = null }) {
       const rows = await rpc('set_league_admin_role', {
         actor_user_id: actorUserId,
@@ -112,6 +124,33 @@ export function createAdminPlayersRepository(
         seasonId: row?.season_id ?? seasonId,
         competitionEligible: Boolean(row?.competition_eligible ?? eligible),
         ineligibilityReason: row?.ineligibility_reason ?? null,
+      };
+    },
+
+    async setRosterMembership({
+      actorUserId,
+      playerId,
+      seasonId,
+      teamId,
+      active,
+      reason = null,
+    }) {
+      const rows = await rpc('set_admin_player_team_membership', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        target_team_id: teamId,
+        target_player_id: playerId,
+        active,
+        change_reason: reason,
+      });
+      const row = Array.isArray(rows) ? rows[0] : null;
+      return {
+        membershipId: row?.membership_id ?? null,
+        seasonId: row?.season_id ?? seasonId,
+        teamId: row?.team_id ?? teamId,
+        playerId: row?.player_id ?? playerId,
+        role: row?.role ?? 'player',
+        endsAt: row?.ends_at ?? null,
       };
     },
   };
