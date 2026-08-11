@@ -79,6 +79,57 @@ function unreadCount(rows) {
   }, 0);
 }
 
+function previewBody(value) {
+  const normalized = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (normalized.length <= 160) return normalized;
+  return `${normalized.slice(0, 157)}…`;
+}
+
+function unreadPreviews(rows, kind, labelFor) {
+  if (!Array.isArray(rows)) return [];
+  return rows.flatMap((row) => {
+    const count = Number(row?.unread_count);
+    const body = previewBody(row?.last_message_body);
+    if (!Number.isFinite(count) || count < 1 || !body) return [];
+    return [{
+      kind,
+      label: labelFor(row),
+      body,
+      lastMessageAt: row?.last_message_at ?? null,
+      unreadCount: Math.floor(count),
+    }];
+  });
+}
+
+function messagePreviews({ teams, direct, league, matchups }) {
+  return [
+    ...unreadPreviews(
+      teams,
+      'team',
+      (row) => `${row?.team_name || 'Team'} · ${row?.season_name || 'Team chat'}`,
+    ),
+    ...unreadPreviews(
+      direct,
+      'direct',
+      (row) => `Direct · ${row?.other_display_name || 'Player'}`,
+    ),
+    ...unreadPreviews(
+      league,
+      'league',
+      (row) => `${row?.season_name || 'League'} · League chat`,
+    ),
+    ...unreadPreviews(
+      matchups,
+      'matchup',
+      (row) => `${row?.team_a_name || 'Team A'} vs ${row?.team_b_name || 'Team B'}`,
+    ),
+  ].sort((left, right) => {
+    const leftAt = Date.parse(left.lastMessageAt || '') || 0;
+    const rightAt = Date.parse(right.lastMessageAt || '') || 0;
+    return rightAt - leftAt;
+  }).slice(0, 5);
+}
+
 export async function handleMessageNotificationSummaryRequest(
   request,
   env,
@@ -97,7 +148,10 @@ export async function handleMessageNotificationSummaryRequest(
       + unreadCount(direct)
       + unreadCount(league)
       + unreadCount(matchups);
-    return jsonResponse({ unreadCount: unread });
+    return jsonResponse({
+      unreadCount: unread,
+      previews: messagePreviews({ teams, direct, league, matchups }),
+    });
   } catch (error) {
     return jsonResponse({ error: error.message }, statusForError(error));
   }
