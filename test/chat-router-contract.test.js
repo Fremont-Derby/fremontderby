@@ -34,6 +34,13 @@ test('Worker routes league rooms, message reports, and admin moderation', () => 
   assert.match(router, /moderateChatReportMatch/);
 });
 
+test('Worker routes authenticated matchup chat threads', () => {
+  assert.match(router, /url\.pathname === '\/api\/me\/matchup-chat-threads'/);
+  assert.match(router, /matchupMessagesMatch/);
+  assert.match(router, /matchupReadMatch/);
+  assert.match(router, /chatHttpHandlers\.sendMatchupMessage/);
+});
+
 test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /href: '\/messages', label: 'Messages'/);
   assert.match(shell, /'\/messages'/);

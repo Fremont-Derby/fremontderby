@@ -151,3 +151,18 @@ test('chat repository reports and moderates messages through actor-scoped RPCs',
   assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/moderate_chat_message_report');
   assert.equal(JSON.parse(calls[1].init.body).remove_message, true);
 });
+
+test('chat repository lists and sends matchup-thread messages', async () => {
+  const { fetch, calls } = createFetch([
+    { body: [{ team_match_id: 'match-1' }] },
+    { body: [{ message_id: 'message-1' }] },
+  ]);
+  const repository = createChatRepository(env, { fetch });
+  await repository.listMatchupChatThreads({ actorUserId: 'user-1' });
+  await repository.sendMatchupMessage({
+    actorUserId: 'user-1', teamMatchId: 'match-1', body: 'Ready?', clientMessageId: 'client-1',
+  });
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_my_matchup_chat_inbox');
+  assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/send_matchup_chat_message');
+  assert.equal(JSON.parse(calls[1].init.body).target_team_match_id, 'match-1');
+});

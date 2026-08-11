@@ -5,10 +5,12 @@ import {
   listChatThreadsCommand,
   listDirectMessagesCommand,
   listLeagueMessagesCommand,
+  listMatchupMessagesCommand,
   listTeamMessagesCommand,
   markTeamChatReadCommand,
   sendDirectMessageCommand,
   sendLeagueMessageCommand,
+  sendMatchupMessageCommand,
   sendTeamMessageCommand,
   startDirectConversationCommand,
   reportChatMessageCommand,
@@ -38,6 +40,38 @@ test('chat commands pass actor-scoped team operations to the repository', async 
       actorUserId: 'user-1', teamId: 'team-1', body: 'Match at seven?', clientMessageId: 'client-1',
     }],
     ['read', { actorUserId: 'user-1', teamId: 'team-1', readAt: null }],
+  ]);
+});
+
+test('matchup chat commands preserve match scope and allow matchup reports', async () => {
+  const calls = [];
+  const repository = {
+    listMatchupMessages: async (input) => { calls.push(['list', input]); return []; },
+    sendMatchupMessage: async (input) => { calls.push(['send', input]); return input; },
+    reportChatMessage: async (input) => { calls.push(['report', input]); return input; },
+  };
+  await listMatchupMessagesCommand({
+    actorUserId: 'user-1', teamMatchId: 'match-1', limit: 30,
+  }, repository);
+  await sendMatchupMessageCommand({
+    actorUserId: 'user-1', teamMatchId: 'match-1', body: ' Table 3? ',
+    clientMessageId: 'client-1',
+  }, repository);
+  await reportChatMessageCommand({
+    actorUserId: 'user-1', messageType: 'matchup', messageId: 'message-1', reason: 'spam',
+  }, repository);
+  assert.deepEqual(calls, [
+    ['list', {
+      actorUserId: 'user-1', teamMatchId: 'match-1', before: null,
+      beforeMessageId: null, limit: 30,
+    }],
+    ['send', {
+      actorUserId: 'user-1', teamMatchId: 'match-1', body: 'Table 3?', clientMessageId: 'client-1',
+    }],
+    ['report', {
+      actorUserId: 'user-1', messageType: 'matchup', messageId: 'message-1',
+      reason: 'spam', details: null,
+    }],
   ]);
 });
 
@@ -89,7 +123,7 @@ test('league chat and report commands normalize trusted inputs', async () => {
 test('report and moderation commands reject unsupported or inconsistent actions', async () => {
   const repository = { reportChatMessage: async () => null, moderateChatReport: async () => null };
   await assert.rejects(reportChatMessageCommand({
-    actorUserId: 'u', messageType: 'matchup', messageId: 'm', reason: 'spam',
+    actorUserId: 'u', messageType: 'channel', messageId: 'm', reason: 'spam',
   }, repository), /Unsupported/);
   await assert.rejects(reportChatMessageCommand({
     actorUserId: 'u', messageType: 'team', messageId: 'm', reason: 'unknown',

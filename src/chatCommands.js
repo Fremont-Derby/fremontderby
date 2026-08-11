@@ -197,7 +197,7 @@ export async function reportChatMessageCommand(
   repository,
 ) {
   const normalizedType = requireValue(messageType, 'Message type is required').toLowerCase();
-  if (!['team', 'direct', 'league'].includes(normalizedType)) {
+  if (!['team', 'direct', 'league', 'matchup'].includes(normalizedType)) {
     throw new Error('Unsupported chat message type');
   }
   const normalizedReason = requireValue(reason, 'Report reason is required').toLowerCase();
@@ -248,5 +248,50 @@ export async function moderateChatReportCommand(
     resolution: normalizedResolution,
     note: normalizedNote,
     removeMessage: Boolean(removeMessage),
+  });
+}
+
+export async function listMatchupChatThreadsCommand({ actorUserId }, repository) {
+  return repository.listMatchupChatThreads({
+    actorUserId: requireValue(actorUserId, 'Actor user id is required'),
+  });
+}
+
+export async function listMatchupMessagesCommand(
+  { actorUserId, teamMatchId, before, beforeMessageId, limit },
+  repository,
+) {
+  return repository.listMatchupMessages({
+    actorUserId: requireValue(actorUserId, 'Actor user id is required'),
+    teamMatchId: requireValue(teamMatchId, 'Team match id is required'),
+    before: before ? String(before) : null,
+    beforeMessageId: beforeMessageId ? String(beforeMessageId) : null,
+    limit: normalizedLimit(limit),
+  });
+}
+
+export async function sendMatchupMessageCommand(
+  { actorUserId, teamMatchId, body, clientMessageId },
+  repository,
+) {
+  const normalizedBody = String(body ?? '').trim();
+  if (!normalizedBody) throw new Error('Message cannot be empty');
+  if (normalizedBody.length > 2000) throw new Error('Message cannot exceed 2000 characters');
+  return repository.sendMatchupMessage({
+    actorUserId: requireValue(actorUserId, 'Actor user id is required'),
+    teamMatchId: requireValue(teamMatchId, 'Team match id is required'),
+    body: normalizedBody,
+    clientMessageId: clientMessageId ? String(clientMessageId) : null,
+  });
+}
+
+export async function markMatchupChatReadCommand(
+  { actorUserId, teamMatchId, readAt },
+  repository,
+) {
+  return repository.markMatchupChatRead({
+    actorUserId: requireValue(actorUserId, 'Actor user id is required'),
+    teamMatchId: requireValue(teamMatchId, 'Team match id is required'),
+    readAt: readAt ? String(readAt) : null,
   });
 }

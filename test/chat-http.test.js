@@ -7,6 +7,8 @@ import {
   handleListLeagueMessagesRequest,
   handleReportChatMessageRequest,
   handleModerateChatReportRequest,
+  handleListMatchupMessagesRequest,
+  handleSendMatchupMessageRequest,
   handleSendDirectMessageRequest,
   handleListTeamMessagesRequest,
   handleSendTeamMessageRequest,
@@ -45,6 +47,33 @@ test('chat inbox handler authenticates the Google session before listing threads
   assert.equal((await response.json()).threads[0].unread_count, 2);
   assert.equal(calls[0].url, 'https://project.supabase.co/auth/v1/user');
   assert.equal(calls[1].url, 'https://project.supabase.co/rest/v1/rpc/get_my_team_chat_inbox');
+});
+
+test('matchup chat handlers authenticate and preserve team-match scope', async () => {
+  const listFetch = createFetch([
+    { body: { id: 'user-1' } }, { body: [{ message_id: 'message-1' }] },
+  ]);
+  const listRequest = new Request('https://fremontderby.com/api/team-matches/match-1/messages?limit=25', {
+    headers: { authorization: 'Bearer token' },
+  });
+  const listResponse = await handleListMatchupMessagesRequest(
+    listRequest, env, 'match-1', { fetch: listFetch.fetch },
+  );
+  assert.equal(listResponse.status, 200);
+  assert.equal(JSON.parse(listFetch.calls[1].init.body).target_team_match_id, 'match-1');
+
+  const sendFetch = createFetch([
+    { body: { id: 'user-1' } }, { body: [{ message_id: 'message-2' }] },
+  ]);
+  const sendRequest = new Request('https://fremontderby.com/api/team-matches/match-1/messages', {
+    method: 'POST', headers: { authorization: 'Bearer token' },
+    body: JSON.stringify({ body: 'Ready?', clientMessageId: 'client-1' }),
+  });
+  const sendResponse = await handleSendMatchupMessageRequest(
+    sendRequest, env, 'match-1', { fetch: sendFetch.fetch },
+  );
+  assert.equal(sendResponse.status, 201);
+  assert.equal(JSON.parse(sendFetch.calls[1].init.body).message_client_id, 'client-1');
 });
 
 test('league chat HTTP handlers preserve tuple cursor and idempotent sends', async () => {

@@ -7,16 +7,20 @@ import {
   listDirectMessagesCommand,
   listLeagueChatThreadsCommand,
   listLeagueMessagesCommand,
+  listMatchupChatThreadsCommand,
+  listMatchupMessagesCommand,
   listChatReportsCommand,
   listTeamMessagesCommand,
   markDirectChatReadCommand,
   markTeamChatReadCommand,
   markLeagueChatReadCommand,
+  markMatchupChatReadCommand,
   moderateChatReportCommand,
   reportChatMessageCommand,
   sendDirectMessageCommand,
   sendTeamMessageCommand,
   sendLeagueMessageCommand,
+  sendMatchupMessageCommand,
   startDirectConversationCommand,
   unblockPlayerChatCommand,
 } from './chatCommands.js';
@@ -48,10 +52,11 @@ async function readJsonBody(request) {
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/Team not found/i.test(error.message)) return 404;
-  if (/Player not found|Direct conversation not found|Chat message not found|Chat report not found/i.test(error.message)) return 404;
+  if (/Player not found|Direct conversation not found|Chat message not found|Chat report not found|Team matchup not found/i.test(error.message)) return 404;
   if (/membership is required|No team chat access/i.test(error.message)) return 403;
   if (/Direct messages are blocked|Both players must participate/i.test(error.message)) return 403;
   if (/League chat access|Active season participation|League admin access/i.test(error.message)) return 403;
+  if (/Matchup chat access|matchup team membership|Completed matchup chats/i.test(error.message)) return 403;
   if (/Player profile is required/i.test(error.message)) return 409;
   if (/Supabase request failed with 401/i.test(error.message)) return 401;
   if (/Supabase request failed with 403/i.test(error.message)) return 403;
@@ -453,4 +458,73 @@ Object.assign(chatHttpHandlers, {
   reportMessage: handleReportChatMessageRequest,
   listReports: handleListChatReportsRequest,
   moderateReport: handleModerateChatReportRequest,
+});
+
+export async function handleListMatchupChatThreadsRequest(
+  request, env, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const threads = await listMatchupChatThreadsCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse({ threads: Array.isArray(threads) ? threads : [] });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleListMatchupMessagesRequest(
+  request, env, teamMatchId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const url = new URL(request.url);
+    const messages = await listMatchupMessagesCommand({
+      actorUserId: actor.id,
+      teamMatchId,
+      before: url.searchParams.get('before'),
+      beforeMessageId: url.searchParams.get('beforeMessageId'),
+      limit: url.searchParams.get('limit'),
+    }, repository);
+    return jsonResponse({ messages: Array.isArray(messages) ? messages : [] });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleSendMatchupMessageRequest(
+  request, env, teamMatchId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const body = await readJsonBody(request);
+    const message = await sendMatchupMessageCommand({
+      actorUserId: actor.id, teamMatchId, body: body.body,
+      clientMessageId: body.clientMessageId,
+    }, repository);
+    return jsonResponse({ message }, 201);
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+export async function handleMarkMatchupChatReadRequest(
+  request, env, teamMatchId, { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const { actor, repository } = await withActor(request, env, fetchImpl);
+    const body = await readJsonBody(request);
+    const readState = await markMatchupChatReadCommand({
+      actorUserId: actor.id, teamMatchId, readAt: body.readAt,
+    }, repository);
+    return jsonResponse({ readState });
+  } catch (error) {
+    return jsonResponse({ error: error.message }, statusForError(error));
+  }
+}
+
+Object.assign(chatHttpHandlers, {
+  listMatchupThreads: handleListMatchupChatThreadsRequest,
+  listMatchupMessages: handleListMatchupMessagesRequest,
+  sendMatchupMessage: handleSendMatchupMessageRequest,
+  markMatchupChatRead: handleMarkMatchupChatReadRequest,
 });
