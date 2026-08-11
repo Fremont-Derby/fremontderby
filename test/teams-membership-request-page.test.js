@@ -8,8 +8,8 @@ test('Teams page exposes player join requests and captain approvals', () => {
 
   assert.match(html, /Join a team/);
   assert.match(html, /Requests for teams I captain/);
-  assert.match(html, /data-request-membership/);
-  assert.match(html, /data-respond-membership-request/);
+  assert.match(html, /requestMembership/);
+  assert.match(html, /respondMembershipRequest/);
   assert.match(html, /\/api\/me\/team-membership-requests/);
   assert.match(html, /membership-request/);
   assert.match(html, /\/respond/);
