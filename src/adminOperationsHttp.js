@@ -4,6 +4,8 @@ import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
 const severityRank = { healthy: 0, warning: 1, critical: 2 };
 const lineupWarningWindowMs = 2 * 60 * 60 * 1000;
+const scoreMismatchWarningMs = 10 * 60 * 1000;
+const scoreMismatchCriticalMs = 30 * 60 * 1000;
 
 function metric(raw, name) {
   const item = raw.metrics?.[name];
@@ -47,6 +49,34 @@ function lineupDeadlineAction(raw) {
       'warning', 'lineups_due_soon', 'Lineups are due soon',
       `${label} is missing ${missing} of ${expected} team lineup(s) with less than two hours until the deadline.`,
       '/lineup',
+    );
+  }
+  return null;
+}
+
+function scoreMismatchAction(raw) {
+  const mismatches = metric(raw, 'scoreMismatches');
+  if (!mismatches || !raw.oldestScoreMismatchAt) return null;
+
+  const now = Date.parse(raw.generatedAt);
+  const oldestMismatch = Date.parse(raw.oldestScoreMismatchAt);
+  if (!Number.isFinite(now) || !Number.isFinite(oldestMismatch) || oldestMismatch > now) return null;
+
+  const ageMs = now - oldestMismatch;
+  const ageMinutes = Math.floor(ageMs / (60 * 1000));
+  const noun = mismatches === 1 ? 'match has' : 'matches have';
+  if (ageMs >= scoreMismatchCriticalMs) {
+    return action(
+      'critical', 'score_mismatch_overdue', 'Score mismatch needs intervention',
+      `${mismatches} ${noun} conflicting team score histories; the oldest has been unresolved for ${ageMinutes} minutes.`,
+      '/scorecard',
+    );
+  }
+  if (ageMs >= scoreMismatchWarningMs) {
+    return action(
+      'warning', 'score_mismatch_aging', 'Score histories disagree',
+      `${mismatches} ${noun} conflicting team score histories; the oldest has been unresolved for ${ageMinutes} minutes.`,
+      '/scorecard',
     );
   }
   return null;
@@ -96,6 +126,9 @@ export function buildAdminOperationsOverview(raw, readiness) {
 
   const lineupRisk = lineupDeadlineAction(raw);
   if (lineupRisk) actions.push(lineupRisk);
+
+  const scoreMismatchRisk = scoreMismatchAction(raw);
+  if (scoreMismatchRisk) actions.push(scoreMismatchRisk);
 
   const rosterAvailabilityResponses = metric(raw, 'rosterAvailabilityResponses');
   if (
@@ -157,6 +190,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
       playerMatches: metric(raw, 'playerMatches'),
       liveMatches,
       finalizedMatches: metric(raw, 'finalizedMatches'),
+      scoreMismatches: metric(raw, 'scoreMismatches'),
       forfeits: metric(raw, 'forfeits'),
       rosterAvailabilityResponses,
       availableRosterResponses: metric(raw, 'availableRosterResponses'),

@@ -16,6 +16,17 @@ function metrics(values) {
   ]));
 }
 
+function healthySeasonMetrics(overrides = {}) {
+  return metrics({
+    profiles: 24, seasonPlayers: 24, teams: 8, paidPlayers: 24,
+    ratings: 24, openReports: 0, liveMatches: 0,
+    rounds: 7, teamMatches: 28, lineups: 16, playerMatches: 84,
+    finalizedMatches: 0, scoreMismatches: 0, forfeits: 0,
+    teamMessages: 0, directMessages: 0, leagueMessages: 0, matchupMessages: 0,
+    ...overrides,
+  });
+}
+
 test('operations overview prioritizes actionable league risks', () => {
   const overview = buildAdminOperationsOverview({
     generatedAt: '2026-08-11T00:00:00Z',
@@ -63,6 +74,51 @@ test('operations overview flags a current round with no availability responses',
   assert.deepEqual(overview.actions.map((item) => item.code), ['availability_missing']);
   assert.equal(overview.actions[0].href, '/availability');
   assert.match(overview.actions[0].detail, /Round 2/);
+});
+
+test('operations overview warns when a dual-score mismatch remains unresolved for ten minutes', () => {
+  const overview = buildAdminOperationsOverview({
+    generatedAt: '2026-08-11T12:00:00Z',
+    season: { id: 'season-1', name: 'Season 1', status: 'active' },
+    oldestScoreMismatchAt: '2026-08-11T11:45:00Z',
+    latestRatingUpdate: '2026-08-11T12:00:00Z',
+    metrics: healthySeasonMetrics({ scoreMismatches: 2 }),
+  }, readiness);
+
+  assert.equal(overview.counts.scoreMismatches, 2);
+  assert.equal(overview.overall, 'warning');
+  assert.equal(overview.actions[0].code, 'score_mismatch_aging');
+  assert.equal(overview.actions[0].href, '/scorecard');
+  assert.match(overview.actions[0].detail, /oldest has been unresolved for 15 minutes/);
+});
+
+test('operations overview escalates a thirty-minute dual-score mismatch to critical', () => {
+  const overview = buildAdminOperationsOverview({
+    generatedAt: '2026-08-11T12:00:00Z',
+    season: { id: 'season-1', name: 'Season 1', status: 'active' },
+    oldestScoreMismatchAt: '2026-08-11T11:29:00Z',
+    latestRatingUpdate: '2026-08-11T12:00:00Z',
+    metrics: healthySeasonMetrics({ scoreMismatches: 1 }),
+  }, readiness);
+
+  assert.equal(overview.overall, 'critical');
+  assert.equal(overview.actions[0].code, 'score_mismatch_overdue');
+  assert.equal(overview.actions[0].href, '/scorecard');
+  assert.match(overview.actions[0].detail, /31 minutes/);
+});
+
+test('operations overview does not escalate a fresh score mismatch before ten minutes', () => {
+  const overview = buildAdminOperationsOverview({
+    generatedAt: '2026-08-11T12:00:00Z',
+    season: { id: 'season-1', name: 'Season 1', status: 'active' },
+    oldestScoreMismatchAt: '2026-08-11T11:51:00Z',
+    latestRatingUpdate: '2026-08-11T12:00:00Z',
+    metrics: healthySeasonMetrics({ scoreMismatches: 1 }),
+  }, readiness);
+
+  assert.equal(overview.counts.scoreMismatches, 1);
+  assert.equal(overview.overall, 'healthy');
+  assert.deepEqual(overview.actions, []);
 });
 
 test('operations endpoint authenticates and enforces the existing league-admin RPC', async () => {
@@ -123,10 +179,46 @@ test('operations repository keeps private metrics behind service-role profile he
   await repository.getOverview({ actorUserId: 'admin-1' });
 
   const privateCalls = calls.filter(({ url }) =>
-    url.includes('/team_lineups?') || url.includes('/payment_status?'));
-  assert.equal(privateCalls.length, 2);
+    url.includes('/team_lineups?')
+    || url.includes('/payment_status?')
+    || url.includes('/player_match_score_submissions?'));
+  assert.equal(privateCalls.length, 3);
   assert.equal(privateCalls.every(({ init }) => init.headers['accept-profile'] === 'private'), true);
   assert.equal(calls.every(({ init }) => init.headers?.authorization !== 'Bearer player-token'), true);
+});
+
+test('operations repository counts only unresolved mismatched dual-score histories', async () => {
+  const fetch = async (url) => {
+    if (url.includes('/rpc/list_chat_message_reports')) return Response.json([]);
+    if (url.includes('/seasons?')) {
+      return Response.json([{ id: 'season-1', name: 'Season 1', status: 'active' }]);
+    }
+    if (url.includes('/rounds?') && url.includes('status=in.')) return Response.json([]);
+    if (url.includes('/player_matches?') && url.includes('status=not.in.')) {
+      return Response.json([{ id: 'match-open' }, { id: 'match-equal' }]);
+    }
+    if (url.includes('/player_match_score_submissions?')) {
+      return Response.json([
+        { player_match_id: 'match-open', racks: [{ winnerSide: 'A' }], updated_at: '2026-08-11T11:20:00Z' },
+        { player_match_id: 'match-open', racks: [{ winnerSide: 'B' }], updated_at: '2026-08-11T11:25:00Z' },
+        { player_match_id: 'match-equal', racks: [{ winnerSide: 'A' }], updated_at: '2026-08-11T11:30:00Z' },
+        { player_match_id: 'match-equal', racks: [{ winnerSide: 'A' }], updated_at: '2026-08-11T11:31:00Z' },
+        { player_match_id: 'match-finalized', racks: [{ winnerSide: 'A' }], updated_at: '2026-08-11T10:00:00Z' },
+        { player_match_id: 'match-finalized', racks: [{ winnerSide: 'B' }], updated_at: '2026-08-11T10:01:00Z' },
+      ]);
+    }
+    return new Response('[]', { status: 200, headers: { 'content-range': '*/0' } });
+  };
+  const repository = createAdminOperationsRepository({
+    SUPABASE_URL: 'https://project.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-secret',
+  }, { fetch });
+  const overview = await repository.getOverview({ actorUserId: 'admin-1' });
+
+  assert.equal(overview.metrics.scoreMismatches.available, true);
+  assert.equal(overview.metrics.scoreMismatches.value, 1);
+  assert.equal(overview.oldestScoreMismatchAt, '2026-08-11T11:25:00.000Z');
+  assert.equal('rows' in overview.metrics.scoreMismatches, false);
 });
 
 test('operations page uses the Google session and fits phone width without a wide table', () => {

@@ -30,6 +30,37 @@ function totalFrom(response, rows) {
   return match ? Number(match[1]) : (Array.isArray(rows) ? rows.length : 0);
 }
 
+function timestampMs(value) {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function scoreMismatchSummary(matchRows, submissionRows) {
+  const unresolvedMatchIds = new Set(matchRows.map((row) => row.id));
+  const submissionsByMatch = new Map();
+  for (const submission of submissionRows) {
+    if (!unresolvedMatchIds.has(submission.player_match_id)) continue;
+    const submissions = submissionsByMatch.get(submission.player_match_id) || [];
+    submissions.push(submission);
+    submissionsByMatch.set(submission.player_match_id, submissions);
+  }
+
+  const mismatches = [];
+  for (const [playerMatchId, submissions] of submissionsByMatch) {
+    if (submissions.length !== 2) continue;
+    if (JSON.stringify(submissions[0].racks) === JSON.stringify(submissions[1].racks)) continue;
+    const updatedTimes = submissions.map((row) => timestampMs(row.updated_at));
+    if (updatedTimes.some((value) => value === null)) continue;
+    mismatches.push({
+      playerMatchId,
+      mismatchSince: new Date(Math.max(...updatedTimes)).toISOString(),
+    });
+  }
+
+  mismatches.sort((a, b) => Date.parse(a.mismatchSince) - Date.parse(b.mismatchSince));
+  return { total: mismatches.length, rows: mismatches };
+}
+
 export function createAdminOperationsRepository(
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -51,12 +82,16 @@ export function createAdminOperationsRepository(
     return result.body;
   }
 
+  function profileHeaders(profile) {
+    return profile === 'private' ? { 'accept-profile': 'private' } : {};
+  }
+
   async function table(tableName, query, profile = 'public') {
     const requestHeaders = {
       ...headers,
       prefer: 'count=exact',
       range: '0-0',
-      ...(profile === 'private' ? { 'accept-profile': 'private' } : {}),
+      ...profileHeaders(profile),
     };
     const result = await requestJson(
       fetchImpl,
@@ -65,6 +100,15 @@ export function createAdminOperationsRepository(
     );
     const rows = Array.isArray(result.body) ? result.body : [];
     return { rows, total: totalFrom(result.response, rows) };
+  }
+
+  async function tableRows(tableName, query, profile = 'public') {
+    const result = await requestJson(
+      fetchImpl,
+      `${baseUrl}/rest/v1/${tableName}?${query}`,
+      { method: 'GET', headers: { ...headers, ...profileHeaders(profile) } },
+    );
+    return Array.isArray(result.body) ? result.body : [];
   }
 
   async function safeMetric(name, task) {
@@ -117,6 +161,13 @@ export function createAdminOperationsRepository(
           ['playerMatches', () => table('player_matches', `${seasonFilter}select=id&limit=1`)],
           ['finalizedMatches', () => table('player_matches', `${seasonFilter}finalized_at=not.is.null&select=id&limit=1`)],
           ['liveMatches', () => table('player_matches', `${seasonFilter}status=in.(active,in_progress,started)&finalized_at=is.null&select=id&limit=1`)],
+          ['scoreMismatches', async () => {
+            const [matchRows, submissionRows] = await Promise.all([
+              tableRows('player_matches', `${seasonFilter}status=not.in.(finalized,corrected)&select=id`),
+              tableRows('player_match_score_submissions', `${seasonFilter}select=player_match_id,racks,updated_at`, 'private'),
+            ]);
+            return scoreMismatchSummary(matchRows, submissionRows);
+          }],
           ['forfeits', () => table('team_match_forfeits', `${seasonFilter}select=id&limit=1`)],
           ['teamMessages', () => table('team_chat_messages', `${seasonFilter}select=id&limit=1`)],
           ['leagueMessages', () => table('league_chat_messages', `${seasonFilter}select=id&limit=1`)],
@@ -143,6 +194,7 @@ export function createAdminOperationsRepository(
       );
       const metrics = Object.fromEntries(entries);
       const latestRatingUpdate = metrics.ratings?.rows?.[0]?.updated_at ?? null;
+      const oldestScoreMismatchAt = metrics.scoreMismatches?.rows?.[0]?.mismatchSince ?? null;
       for (const metric of Object.values(metrics)) delete metric.rows;
 
       return {
@@ -151,6 +203,7 @@ export function createAdminOperationsRepository(
         currentRound,
         metrics,
         latestRatingUpdate,
+        oldestScoreMismatchAt,
       };
     },
   };
