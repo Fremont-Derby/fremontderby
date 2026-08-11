@@ -53,6 +53,7 @@ jobs:
         shell: bash
         env:
           EXPECTED_VERSION_TAG: ${{ github.sha }}
+          RELEASE_SMOKE_BYPASS_TOKEN: ${{ secrets.RELEASE_SMOKE_BYPASS_TOKEN }}
         run: |
           set +e
           node scripts/smoke-release.mjs https://fremontderby.com production "$EXPECTED_VERSION_TAG" 2>&1 | tee smoke-output.txt
