@@ -1,6 +1,8 @@
 import app from './index.js';
 import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
 import { renderAdminOperationsPage } from './adminOperationsPage.js';
+import { adminPlayersHttpHandlers } from './adminPlayersHttp.js';
+import { renderAdminPlayersPage } from './adminPlayersPage.js';
 import {
   decorateHtmlWithShell,
   isKnownAppPagePath,
@@ -88,6 +90,9 @@ export default {
     );
     const adminDualScoreOverrideMatch = url.pathname.match(
       /^\/api\/admin\/player-matches\/([^/]+)\/finalize-override$/,
+    );
+    const adminPlayerRoleMatch = url.pathname.match(
+      /^\/api\/admin\/players\/([^/]+)\/admin-role$/,
     );
     const dualScoreCompareMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/score-comparison$/,
@@ -192,6 +197,11 @@ export default {
     if (url.pathname === '/admin/operations') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderAdminOperationsPage(env), url.pathname);
+    }
+
+    if (url.pathname === '/admin/players') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderAdminPlayersPage(), url.pathname);
     }
 
     if (url.pathname === '/scorecard') {
@@ -305,6 +315,20 @@ export default {
     if (url.pathname === '/api/admin/operations') {
       if (request.method !== 'GET') return methodNotAllowed();
       return adminOperationsHttpHandlers.overview(request, env);
+    }
+
+    if (url.pathname === '/api/admin/players') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return adminPlayersHttpHandlers.list(request, env);
+    }
+
+    if (adminPlayerRoleMatch) {
+      if (request.method !== 'PUT') return methodNotAllowed();
+      return adminPlayersHttpHandlers.setAdminRole(
+        request,
+        env,
+        decodeURIComponent(adminPlayerRoleMatch[1]),
+      );
     }
 
     if (url.pathname === '/api/admin/chat-reports') {
