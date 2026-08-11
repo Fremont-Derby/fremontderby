@@ -76,6 +76,9 @@ export default {
     const adminStartPlayoffsMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/start-playoffs$/,
     );
+    const adminAdvanceChampionshipMatch = url.pathname.match(
+      /^\/api\/admin\/seasons\/([^/]+)\/advance-championship$/,
+    );
     const adminDualScoreOverrideMatch = url.pathname.match(
       /^\/api\/admin\/player-matches\/([^/]+)\/finalize-override$/,
     );
@@ -268,9 +271,7 @@ export default {
     if (moderateChatReportMatch) {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.moderateReport(
-        request,
-        env,
-        decodeURIComponent(moderateChatReportMatch[1]),
+        request, env, decodeURIComponent(moderateChatReportMatch[1]),
       );
     }
 
@@ -369,6 +370,15 @@ export default {
         request,
         env,
         decodeURIComponent(adminStartPlayoffsMatch[1]),
+      );
+    }
+
+    if (adminAdvanceChampionshipMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return playoffHttpHandlers.advance(
+        request,
+        env,
+        decodeURIComponent(adminAdvanceChampionshipMatch[1]),
       );
     }
 
