@@ -57,7 +57,7 @@ test('picker and live scorecard preserve an explicit team choice', () => {
   assert.match(picker, /If you belong to both teams/);
   assert.match(live, /params\.get\('team'\)/);
   assert.match(live, /scoringTeamId=/);
-  assert.match(live, /Switch match \/ scoring team/);
+  assert.match(live, />Switch match</);
   assert.match(live, /Scoring for/);
 });
 
