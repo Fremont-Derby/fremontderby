@@ -44,7 +44,7 @@ test('membership reconciliation preserves current team-slot and multi-team behav
 test('postseason insert qualifies player id and preserves 4-4-4-3 plus anchor rules', () => {
   assert.match(
     sql,
-    /with ordinality as lineup\(player_id, ordinality\)[\s\S]*lineup\.player_id/i,
+    /lineup\.ordinality::integer,\s+lineup\.player_id,\s+'roster'[\s\S]*from unnest\(lineup_player_ids\) with ordinality as lineup\(player_id, ordinality\)/i,
   );
   assert.match(sql, /Postseason lineup requires three players with 4\+ team matches and a fourth with 3\+/i);
   assert.match(sql, /Postseason anchor must be selected from the submitted lineup/i);
