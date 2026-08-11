@@ -2,22 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderDemoSeasonPage } from '../src/demoSeasonPage.js';
 
-test('demo season is complete, fictional, read only, and follows the three-player format', () => {
+test('Season 1 War Games combines the disposable dry run and completed fixture', () => {
   const html = renderDemoSeasonPage();
 
-  assert.match(html, /DEMO SEASON/);
-  assert.match(html, /FICTIONAL READ-ONLY DATA/);
-  assert.match(html, /Season 1 Demo/);
+  assert.match(html, /SEASON 1 WAR GAMES/);
+  assert.match(html, /Season 1 War Games/);
+  assert.match(html, /Start the test drive/);
+  assert.match(html, /Captain \+ lineup/);
+  assert.match(html, /Score Match 1/);
+  assert.match(html, /Reset all War Games/);
   assert.match(html, /28 team matchups/);
   assert.match(html, /3 active players\/team/);
   assert.match(html, /<th>W-L<\/th>/);
-  assert.doesNotMatch(html, /W-D-L/);
   assert.match(html, /Round 1/);
   assert.match(html, /Round 7/);
   assert.match(html, /Break Room Bandits/);
   assert.match(html, /Jamie Park \(sub\)/);
-  assert.match(html, /Example 8\/9 race/);
-  assert.match(html, /Maya race 5 · Eli race 4/);
+  assert.match(html, /Maya Banks vs Eli Torres/);
+  assert.match(html, /Postseason outcome/);
+  assert.match(html, /Season champion/);
+  assert.match(html, /fd\.captainSandbox\.v1/);
+  assert.match(html, /fd\.playerSandbox\.v1/);
   assert.doesNotMatch(html, /fetch\s*\(/);
   assert.doesNotMatch(html, /\/api\//);
 });
