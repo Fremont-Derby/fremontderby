@@ -88,6 +88,16 @@ export function createDualScoringHttpHandlers({
     record(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const body = await readJsonBody(request);
+        const openingDiscipline = body.openingDiscipline ?? body.opening_discipline;
+        if (openingDiscipline) {
+          const setup = await setPlayerMatchOpeningDisciplineCommand({
+            actorUserId: actor.id,
+            playerMatchId,
+            scoringTeamId: scoringTeamFromRequest(request, body),
+            openingDiscipline,
+          }, repository);
+          return jsonResponse({ setup });
+        }
         const rack = await recordPlayerMatchScoreRackCommand({
           actorUserId: actor.id,
           playerMatchId,
