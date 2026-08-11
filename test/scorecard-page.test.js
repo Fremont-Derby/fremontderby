@@ -41,9 +41,9 @@ test('scorecard first view keeps team score, player race, rack ledger, and curre
   assert.match(html, /data-next-rack/);
   assert.match(html, /data-next-discipline/);
   assert.match(html, /winnerSide\(rack\)===playerSide\?'W':'L'/);
-  assert.match(html, /data-state=matched/);
-  assert.match(html, /data-state=pending/);
-  assert.match(html, /data-state=mismatch/);
+  assert.match(html, /\.submission\[data-state=matched\]/);
+  assert.match(html, /\.submission\[data-state=pending\]/);
+  assert.match(html, /\.submission\[data-state=mismatch\]/);
   assert.match(html, /<details class="details">/);
   assert.match(html, /touch-action:manipulation/);
   assert.match(html, /body\{[^}]*overflow-x:hidden/);
