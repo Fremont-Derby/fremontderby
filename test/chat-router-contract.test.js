@@ -9,6 +9,7 @@ test('Worker routes the messages page and authenticated team chat APIs', () => {
   assert.match(router, /url\.pathname === '\/messages'/);
   assert.match(router, /url\.pathname === '\/messages\/moderation'/);
   assert.match(router, /url\.pathname === '\/api\/me\/chat-threads'/);
+  assert.match(router, /url\.pathname === '\/api\/me\/message-notification-summary'/);
   assert.match(router, /api\\\/teams\\\/\(\[\^\/\]\+\)\\\/messages\$/);
   assert.match(router, /chatHttpHandlers\.listTeamMessages/);
   assert.match(router, /chatHttpHandlers\.sendTeamMessage/);
@@ -46,4 +47,9 @@ test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /href: '\/messages', label: 'Messages'/);
   assert.match(shell, /'\/messages'/);
   assert.match(shell, /pathname\.startsWith\('\/messages'\)/);
+  assert.match(shell, /data-message-indicator/);
+  assert.match(shell, /data-message-badge/);
+  assert.match(shell, /\/api\/me\/message-notification-summary/);
+  assert.match(shell, /99\+/);
+  assert.match(shell, /setInterval\(refresh, 15000\)/);
 });
