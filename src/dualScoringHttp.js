@@ -63,12 +63,19 @@ export function createDualScoringHttpHandlers({
   return {
     compare(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
-        const comparison = await getPlayerMatchScoreComparisonCommand({
+        const input = {
           actorUserId: actor.id,
           playerMatchId,
           scoringTeamId: scoringTeamFromRequest(request),
-        }, repository);
-        return jsonResponse({ comparison });
+        };
+        const [comparison, context] = await Promise.all([
+          getPlayerMatchScoreComparisonCommand(input, repository),
+          repository.getPlayerMatchLiveContext({
+            actorUserId: actor.id,
+            playerMatchId,
+          }),
+        ]);
+        return jsonResponse({ comparison, context });
       });
     },
 
