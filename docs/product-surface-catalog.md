@@ -59,7 +59,7 @@ A story is not considered fully complete merely because backend code exists. It 
 | --- | --- | --- | --- |
 | `/` | Public visitor | Understand Fremont Derby and find the next appropriate league action | Public introduction; practical registration/current-season completeness remains under #252 |
 | `/rules` | Public visitor / player | Read the authoritative user-facing league rules | Canonical rules surface |
-| `/profile` | Player | Sign in and manage the player's own identity/profile state | Canonical player identity/auth surface |
+| `/profile` | Player | Sign in and manage the player's own identity/profile state | Canonical player identity/auth surface. PR #297 added role-aware admin-tool discovery here; narrow-phone Teams/Seasons history still horizontally scrolls and is tracked by #299 |
 | `/teams` | Player / captain | Find, join, create, and manage teams and roster relationships | Canonical team/roster home. Phone-width management tables stay inside the viewport after PR #290; #131 is complete |
 | `/schedule` | Public visitor / player / captain | See the current/upcoming league night, round, matchup, date/table context, and enter the appropriate next workflow | Canonical current-night/schedule home; #133 |
 | `/availability` | Player / captain | Declare and review league-night availability | Canonical availability surface; mobile control cleanup shipped in PR #274; substitute-discovery improvements remain under #138 |
@@ -71,7 +71,7 @@ A story is not considered fully complete merely because backend code exists. It 
 | `/trades` | Player / captain / admin exception | Manage player trade proposals, responses, and approvals | Canonical trade workflow |
 | `/prizes` | Public visitor / admin | View purse/payout state; administer prize configuration where authorized | Shared public/admin surface; role/function separation still requires audit under #238 |
 | `/season-setup` | League admin / director | Configure and publish a season | Canonical season-configuration/publishing surface |
-| `/admin/operations` | League admin / director | See league readiness, exceptions, prioritized actions, and operational health | Canonical admin operations/triage surface. First slice shipped in PR #292; accessibility refinement in #293; current-round availability in #294. Functional story #169 remains open for remaining metrics/status rules and role-aware discoverability |
+| `/admin/operations` | League admin / director | See league readiness, exceptions, prioritized actions, and operational health | Canonical admin operations/triage surface. First slice shipped in PR #292; accessibility refinement in #293; current-round availability in #294; role-aware discovery through Profile shipped in PR #297. Functional story #169 remains open for remaining metrics/status rules |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; intentionally role-restricted. General operations should not accumulate here |
 | `/demo` | Public visitor / tester | Guided **Try a League Night** test drive using fictional, non-authoritative data | Canonical public product-demo entry. Guided experience shipped under #249/#263; shared navigation still labels it `Demo`, and contextual feedback remains under #113/#172 |
 | `/sandbox/captain` | Tester / sandbox user | Practice fictional team formation, roster viability/churn, availability, and lineup submission | Canonical captain practice drill; #263 |
@@ -85,6 +85,7 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Audience | User outcome / capability | Canonical page | State | Story / proof | Discoverability notes |
 | --- | --- | --- | --- | --- | --- |
 | Public visitor / player / captain | Find tonight's round and matchup context quickly | `/schedule` | Complete initial slice | #133 | Desktop primary navigation exposes Schedule; mobile dock exposes Tonight |
+| Player | Sign in, manage identity, review memberships/seasons, and discover role-specific admin tools when authorized | `/profile` | Implemented core profile; narrow-phone history layout partial | #8, #81, #239, #299, PR #297 | Profile is a direct shared-navigation destination. Authorized admins see Operations/Season setup/Moderation after the existing admin authorization probe; ordinary users do not. Profile history mobile reflow remains #299 |
 | Player / captain | Find/create/join/manage team relationships | `/teams` | Implemented | #131, #181, #182, PR #290 | Teams is the canonical roster/membership home; league-night shortcuts are secondary links only |
 | Player / captain | Mark league-night availability | `/availability` | Implemented; mobile control polished | #13, #138, PR #274 | Teams is one shared-navigation action and Mark availability is the second |
 | Captain | Submit a blind ordered three-player lineup | `/lineup` | Implemented; mobile state visibility polished | #13, #139, #156, PR #271 | Teams is one shared-navigation action and Build lineup is the second |
@@ -92,9 +93,9 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 | Player / team member | Enter, reconcile, confirm, and finalize rack scoring | `/scorecard/live` | Implemented core flow | #14, #73, #229 | Reduced shell is an intentional task-focus exception; clear return path required |
 | Public visitor / player | Switch quickly between team and individual standings | `/standings` | Implemented current view; history still open | #16, #17, #180, PR #272 | Desktop nav is direct; mobile menu remains <=2 actions |
 | Player / captain | Coordinate without sharing phone numbers | `/messages` | Implemented including recovery states | #76, #250, #281, PR #285 | Messages is a direct shared-navigation destination; non-happy paths have explicit recovery |
-| League admin / director | Configure and publish the season | `/season-setup` | Implemented core setup | #12 | Canonical configuration/publishing page; operational triage should not accumulate here |
-| League admin / director | See current readiness and operational exceptions without querying Supabase | `/admin/operations` | Partial but shipped | #168, #169, PRs #292-#294 | **Reachability gap:** current shared shell has no role-aware Admin/Operations entry. Route knowledge alone does not satisfy #239. Keep #169/#239 open until admins can discover Operations within <=2 actions without exposing admin-only controls to ordinary users |
-| Moderator / league admin | Resolve reported chat messages | `/messages/moderation` | Implemented | #80 and related chat moderation work | Explicit moderation-only exception; separate from general operations |
+| League admin / director | Configure and publish the season | `/season-setup` | Implemented core setup | #12 | Canonical configuration/publishing page; authorized admins can discover it from Profile in <=2 actions after PR #297 |
+| League admin / director | See current readiness and operational exceptions without querying Supabase | `/admin/operations` | Partial but shipped; discoverable | #168, #169, #239, PRs #292-#294, #297 | **Reachability resolved:** Profile is a direct shared-navigation destination and its role-aware admin panel exposes Operations as the second action only after the existing admin endpoint authorizes the session. #239 stays open for deterministic role-aware graph coverage across the rest of the product |
+| Moderator / league admin | Resolve reported chat messages | `/messages/moderation` | Implemented | #80, #239, PR #297 | Moderator-only exception remains documented; league admins can also discover Moderation from the role-aware Profile admin panel |
 | Public visitor / tester | Understand the league by completing a safe guided test drive | `/demo` | Partial: guided flow shipped; shared nav label + feedback remain open | #249, PR #265 | Entry is discoverable, but shared navigation still says `Demo`; contextual feedback remains in #113/#172 |
 | Tester / captain | Practice team formation and lineup work without touching production | `/sandbox/captain` | Implemented | #263, PR #264 | One action from `/demo`; explicit fictional/non-authoritative exception |
 | Tester / player | Practice dual scoring without touching production | `/sandbox/player` | Implemented core drill | #113 | One action from `/demo`; explicit fictional/non-authoritative exception |
@@ -104,22 +105,24 @@ This table is intentionally incremental. #238 expands it until all meaningful st
 ### 2026-08-11 review cycles
 
 - Schedule/current-night ownership is `/schedule`; Teams remains the canonical roster/membership home.
-- `/admin/operations` is no longer planned. PR #292 shipped the protected first slice, PR #293 improved alert accessibility, and PR #294 added current-round availability aggregates. The catalog now treats Operations as the canonical league-admin readiness/exception-triage page.
-- The admin two-click gap is still real: current `src/appShell.js` contains no role-aware Admin/Operations entry. #169 and #239 already own that gap, so no duplicate issue was created. Season Setup remains configuration, Moderation remains report review, and neither should become a substitute admin home.
+- `/admin/operations` is the canonical league-admin readiness/exception-triage page. PR #292 shipped the protected first slice, PR #293 improved alert accessibility, and PR #294 added current-round availability aggregates.
+- **Admin discoverability is now resolved:** PR #297 added a hidden-by-default role-aware League admin panel on `/profile`. Profile is already in shared navigation, so an authorized admin can reach Operations, Season setup, or Moderation in the second deliberate action; ordinary players do not see the panel. #239 remains open for broader deterministic role-aware navigation-graph enforcement rather than this previously known violation.
+- **New cataloged mobile gap:** `/profile` still applies `overflow-x:auto` plus `table { min-width: 620px; }` under 820px for Teams/Seasons history. #299 now owns the contained responsive reflow; no duplicate profile surface should be created.
 - `/demo` is the canonical **Try a League Night** product demo, but shared navigation still labels it `Demo`. #249 already owns the stale label; contextual feedback remains #113/#172.
-- PRs #271, #272, #274, #277, #285, and #290 improved existing canonical surfaces without adding duplicate routes.
-- No new route/story card was needed for release-only PRs because they change release proof/safety rather than product ownership.
+- PRs #271, #272, #274, #277, #285, #290, and #297 improved existing canonical surfaces without adding duplicate routes.
+- No new route/story card was needed for release/security-only PR #296 because it changes authorization defense-in-depth rather than product-surface ownership.
 - #238 remains incomplete until every current renderer/control is mapped; #239 remains incomplete until the navigation graph/regression check is deterministic and role-aware.
 
 ## Known catalog work
 
 - #237 — establish the Product Librarian continuous information-architecture loop. Completed by PR #242.
 - #238 — exhaustive user-story/page/function inventory and catalog maintenance.
-- #239 — build/enforce the <=2-click role-aware navigation/reachability audit.
+- #239 — build/enforce the <=2-click role-aware navigation/reachability audit. The known hidden admin-operations violation was resolved by PR #297; broader graph/regression coverage remains.
 - #240 — recurring Product Librarian review cadence. Completed; subsequent cycles leave evidence in #238/#239 and this catalog.
 - #249 — Try a League Night is largely shipped; shared navigation naming and contextual feedback remain before closure.
 - #250 — route-state cleanup remains open; Score and Messages recovery slices are complete.
-- #169 — `/admin/operations` is shipped as a partial canonical admin surface; remaining metric/status criteria and role-aware discovery stay open.
+- #169 — `/admin/operations` is shipped and role-aware discoverability is complete; remaining metric/status criteria stay open.
+- #299 — reflow Profile team/season history on narrow phones without horizontal scrolling.
 
 ## Librarian update checklist
 
