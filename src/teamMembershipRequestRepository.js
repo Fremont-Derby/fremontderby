@@ -84,35 +84,27 @@ export function createTeamMembershipRequestRepository(
         (Array.isArray(activeMemberships) ? activeMemberships : []).map((row) => row.season_id),
       );
 
-      const seasons = await requestJson(
+      const teams = await requestRpc(
         fetchImpl,
-        `${supabaseUrl}/rest/v1/seasons?select=id,name,status&status=in.(registration,active)&order=created_at.desc`,
-        { method: 'GET', headers: serviceHeaders },
+        supabaseUrl,
+        serviceRoleKey,
+        'list_joinable_team_registration',
+        {},
       );
-      const visibleSeasons = Array.isArray(seasons) ? seasons : [];
-      const seasonIds = visibleSeasons.map((season) => season.id);
-      let teams = [];
-      if (seasonIds.length) {
-        teams = await requestJson(
-          fetchImpl,
-          `${supabaseUrl}/rest/v1/teams?select=id,season_id,name&season_id=in.(${seasonIds.join(',')})&order=name.asc`,
-          { method: 'GET', headers: serviceHeaders },
-        );
-      }
-      const seasonById = new Map(visibleSeasons.map((season) => [season.id, season]));
       const pendingByTeam = new Map(
         (requests?.player_requests ?? [])
           .filter((request) => request.status === 'pending')
           .map((request) => [request.teamId, request]),
       );
       const joinableTeams = (Array.isArray(teams) ? teams : []).map((team) => ({
-        teamId: team.id,
-        teamName: team.name,
+        teamId: team.team_id,
+        teamName: team.team_name,
         seasonId: team.season_id,
-        seasonName: seasonById.get(team.season_id)?.name ?? 'Season',
-        seasonStatus: seasonById.get(team.season_id)?.status ?? null,
+        seasonName: team.season_name,
+        seasonStatus: team.season_status,
+        slotStatus: team.slot_status,
         hasActiveMembership: activeSeasonIds.has(team.season_id),
-        pendingRequestId: pendingByTeam.get(team.id)?.requestId ?? null,
+        pendingRequestId: pendingByTeam.get(team.team_id)?.requestId ?? null,
       }));
 
       return {
@@ -156,3 +148,4 @@ export function createTeamMembershipRequestRepository(
     },
   };
 }
+
