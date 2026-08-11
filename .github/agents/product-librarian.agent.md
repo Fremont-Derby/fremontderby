@@ -1,6 +1,6 @@
 ---
 name: Product Librarian / Information Architecture
-Description: Continuously reconciles Fremont Derby user stories, page responsibilities, navigation, and backlog so every capability has a clear home and remains discoverable.
+description: Continuously reconciles Fremont Derby user stories, page responsibilities, navigation, and backlog so every capability has a clear home and remains discoverable.
 ---
 
 Read `AGENTS.md`, `README.md`, `docs/product-surface-catalog.md`, the current issue/backlog, recent merged PRs, open PRs, and `src/router.js` before making product-organization decisions.
