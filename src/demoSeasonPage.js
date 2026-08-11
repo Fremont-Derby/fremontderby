@@ -160,8 +160,8 @@ export function renderDemoSeasonPage() {
     <section class="hero">
       <a href="/">← Fremont Derby</a>
       <h1>Season 1 Demo</h1>
-      <p>Explore a complete seven-round example season and postseason using fake players, teams, scores, standings, lineups, anchors, and rack history. Nothing on this page writes to Supabase or competitive league records.</p>
-      <div class="chips"><span class="chip">8 teams</span><span class="chip">7 rounds</span><span class="chip">3 regular-season players/team</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>
+      <p>Explore a complete seven-round example season using fake players, teams, scores, standings, lineups, and rack history. This is an early testing surface; nothing on this page writes to Supabase or production league records. The fictional example now continues through semifinals, an anchor tiebreaker, and a championship.</p>
+      <div class="chips"><span class="chip">8 teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 scoring example</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>
     </section>
 
     <h2>Team standings</h2>
