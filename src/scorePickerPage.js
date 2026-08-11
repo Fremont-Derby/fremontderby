@@ -11,7 +11,7 @@ export function renderScorePickerPage() {
 </head>
 <body>
   <main class="app">
-    <header class="head"><h1>Score a match</h1><div class="muted">Choose the team whose score history you are entering. If you belong to both teams, the same match appears once for each team.</div></header>
+    <header class="head"><h1>Score a match</h1><div class="muted">Choose the team whose score history you are entering. If you belong to both teams, the same match appears once for each team. No tokens or database IDs required.</div></header>
     <div class="status" data-status>Loading your matches…</div>
     <section class="list" data-list></section>
   </main>
