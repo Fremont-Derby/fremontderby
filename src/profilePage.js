@@ -75,7 +75,7 @@ export function renderProfilePage(env = {}) {
     .badge { display: inline-flex; align-items: center; min-height: 28px; border-radius: 999px; padding: 0 10px; background: #26302f; color: #d8e4de; font-size: .78rem; font-weight: 900; }
     .admin-tools { border-color: #5c4d24; background: linear-gradient(145deg, #252113, #171b19 58%); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
     .admin-tools .panel-head { border-bottom-color: #5c4d24; }
-    .admin-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+    .admin-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 12px; }
     .admin-actions a { min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 10px 12px; border: 1px solid #6d5a29; border-radius: 10px; background: #2b2615; color: #f6e6af; text-decoration: none; text-align: center; font-weight: 900; }
     table { width: 100%; min-width: 0; border-collapse: collapse; table-layout: fixed; }
     th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
@@ -140,8 +140,9 @@ export function renderProfilePage(env = {}) {
 
         <article class="panel admin-tools" data-admin-tools hidden>
           <div class="panel-head"><span>League admin</span><span class="badge">Admin tools</span></div>
-          <div class="hint" style="padding:12px 12px 0">Manage league health, season setup, and reported messages.</div>
+          <div class="hint" style="padding:12px 12px 0">Manage players, league health, season setup, and reported messages.</div>
           <nav class="admin-actions" aria-label="League admin tools">
+            <a href="/admin/players">Players</a>
             <a href="/admin/operations">Operations</a>
             <a href="/season-setup">Season setup</a>
             <a href="/messages/moderation">Moderation</a>

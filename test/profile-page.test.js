@@ -17,6 +17,7 @@ test('profile page renders Google-only sign-in and profile controls with browser
   assert.match(html, /\/api\/me\/profile/);
   assert.match(html, /data-team-body/);
   assert.match(html, /data-season-body/);
+  assert.match(html, /href="\/admin\/players">Players<\/a>/);
   assert.match(html, /publishable-key/);
   assert.doesNotMatch(html, /\/auth\/v1\/signup/);
   assert.doesNotMatch(html, /grant_type=password/);
