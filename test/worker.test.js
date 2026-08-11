@@ -1691,6 +1691,7 @@ test("public season list handler returns registration progress", async () => {
         rostered_player_count: 2,
         registered_player_count: 4,
         free_agent_count: 2,
+        open_primary_roster_spots: 3,
         at_risk_team_count: 0,
       }],
   }]);
