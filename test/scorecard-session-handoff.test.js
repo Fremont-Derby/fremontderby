@@ -12,14 +12,16 @@ test('live scorecard uses selected match and signed-in session without technical
   assert.doesNotMatch(html, /data-token/);
   assert.match(html, /new URLSearchParams\(location\.search\)/);
   assert.match(html, /params\.get\('match'\)/);
+  assert.match(html, /params\.get\('team'\)/);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
-  assert.match(html, /Choose another match/);
+  assert.match(html, /Scoring as/);
 });
 
 test('live scorecard guides missing browser context through normal UI', () => {
   const html = renderScorecardPage();
 
   assert.match(html, /Choose a match from the scorecard list\./);
+  assert.match(html, /Choose which team you are scoring for\./);
   assert.match(html, /Sign in with Google to score this match\./);
   assert.match(html, /href=\"\/profile\"/);
 });
