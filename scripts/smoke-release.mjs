@@ -8,13 +8,32 @@ function normalizeBaseUrl(value) {
   return value.trim().replace(/\/+$/, '');
 }
 
+function compactBodyPreview(text, limit = 180) {
+  return String(text || '').replace(/\s+/g, ' ').trim().slice(0, limit);
+}
+
 async function readJson(response, label) {
   const text = await response.text();
   let body;
   try {
     body = JSON.parse(text);
   } catch {
-    throw new Error(`${label} did not return JSON`);
+    const details = [
+      `HTTP ${response.status}`,
+      `content-type ${response.headers.get('content-type') || 'unknown'}`,
+    ];
+    for (const [name, displayName] of [
+      ['server', 'server'],
+      ['cf-ray', 'cf-ray'],
+      ['location', 'location'],
+    ]) {
+      const value = response.headers.get(name);
+      if (value) details.push(`${displayName} ${value}`);
+    }
+    const preview = compactBodyPreview(text);
+    throw new Error(
+      `${label} did not return JSON (${details.join(', ')})${preview ? `; body preview: ${preview}` : ''}`,
+    );
   }
   return { response, body };
 }
