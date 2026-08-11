@@ -14,3 +14,4 @@ Use when validating or changing regular-season lineup/scoring/finalization behav
 7. Include 8/9 race/handicap behavior relevant to the changed code.
 8. Keep fixtures rollback-safe or otherwise isolated from production competitive records.
 9. Capture regressions as tests and follow-up issues rather than relying on a chat transcript.
+10. Under team-scoped dual scoring, do not infer that a match has started from `public.player_matches.status`: recording the first team-owned rack does not set that status to `in_progress`. For operational aging, derive the start server-side from the earliest `created_at` on a non-empty `private.player_match_score_submissions` record for an unfinalized match, and expose only the aggregate/age needed by the caller.
