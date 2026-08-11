@@ -4,6 +4,7 @@ import test from 'node:test';
 import router from '../src/router.js';
 import {
   decorateHtmlWithShell,
+  friendlyErrorMessage,
   isKnownAppPagePath,
   renderNotFoundPage,
   renderPrimaryNavigation,
@@ -24,6 +25,35 @@ test('shared shell decorates standalone pages exactly once', () => {
   assert.match(first, /data-fd-shell/);
   assert.match(first, /href="\/profile" aria-current="page"/);
   assert.equal((second.match(/<header class="fd-shell"/g) || []).length, 1);
+});
+
+test('shared shell keeps failed actions visible in a dismissible error pop-up', () => {
+  const source = '<!doctype html><html><head><title>Test</title></head><body><main><div data-status></div></main></body></html>';
+  const html = decorateHtmlWithShell(source, '/messages');
+
+  assert.match(html, /data-error-popup/);
+  assert.match(html, /role="alert"/);
+  assert.match(html, /aria-live="assertive"/);
+  assert.match(html, /data-error-popup-close/);
+  assert.match(html, /position: fixed/);
+  assert.match(html, /MutationObserver/);
+  assert.match(html, /data-tone="error"/);
+  assert.match(html, /fd:error/);
+});
+
+test('technical failures are replaced with plain customer guidance', () => {
+  assert.equal(
+    friendlyErrorMessage('Supabase request failed with 403: permission denied for schema private'),
+    'We could not complete that action. Nothing was changed. Please try again.',
+  );
+  assert.equal(
+    friendlyErrorMessage('Choose all three active players.'),
+    'Choose all three active players.',
+  );
+  assert.equal(
+    friendlyErrorMessage('Your sign-in expired.'),
+    'Your sign-in expired. Open Profile, sign in again, and retry.',
+  );
 });
 
 test('known app route allowlist covers ordinary delegated pages', () => {
