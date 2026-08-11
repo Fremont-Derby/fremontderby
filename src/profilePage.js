@@ -28,6 +28,7 @@ export function renderProfilePage(env = {}) {
       --green: #2fa972;
       --gold: #d8ad3f;
       --red: #d45b50;
+      --focus: #9ee5bd;
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #111313; }
@@ -40,6 +41,7 @@ export function renderProfilePage(env = {}) {
       cursor: pointer;
     }
     button:disabled { cursor: not-allowed; opacity: .5; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
     input {
       width: 100%;
       min-height: 44px;
@@ -72,6 +74,10 @@ export function renderProfilePage(env = {}) {
     .rating { min-width: 96px; min-height: 72px; border-radius: 8px; display: grid; place-items: center; background: #222928; color: var(--gold); font-size: 2rem; font-weight: 950; font-variant-numeric: tabular-nums; }
     .meta { color: var(--muted); overflow-wrap: anywhere; }
     .badge { display: inline-flex; align-items: center; min-height: 28px; border-radius: 999px; padding: 0 10px; background: #26302f; color: #d8e4de; font-size: .78rem; font-weight: 900; }
+    .admin-tools { border-color: #5c4d24; background: linear-gradient(145deg, #252113, #171b19 58%); box-shadow: inset 0 1px 0 rgba(255,255,255,.04); }
+    .admin-tools .panel-head { border-bottom-color: #5c4d24; }
+    .admin-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+    .admin-actions a { min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 10px 12px; border: 1px solid #6d5a29; border-radius: 10px; background: #2b2615; color: #f6e6af; text-decoration: none; text-align: center; font-weight: 900; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
     th { color: var(--muted); font-size: .75rem; text-transform: uppercase; }
@@ -82,7 +88,7 @@ export function renderProfilePage(env = {}) {
     @media (max-width: 820px) {
       .app { padding: 12px; }
       .topbar { align-items: flex-start; }
-      .grid, .actions, .profile-head { grid-template-columns: 1fr; }
+      .grid, .actions, .profile-head, .admin-actions { grid-template-columns: 1fr; }
       .status { text-align: left; }
       .panel { overflow-x: auto; }
       table { min-width: 620px; }
@@ -94,7 +100,7 @@ export function renderProfilePage(env = {}) {
   <main class="app">
     <header class="topbar">
       <div class="brand"><span class="mark">P</span><span>Fremont Derby Profile</span></div>
-      <div class="status" data-status>Ready</div>
+      <div class="status" role="status" aria-live="polite" data-status>Ready</div>
     </header>
 
     <section class="grid">
@@ -128,6 +134,16 @@ export function renderProfilePage(env = {}) {
           </div>
         </article>
 
+        <article class="panel admin-tools" data-admin-tools hidden>
+          <div class="panel-head"><span>League admin</span><span class="badge">Admin tools</span></div>
+          <div class="hint" style="padding:12px 12px 0">Manage league health, season setup, and reported messages.</div>
+          <nav class="admin-actions" aria-label="League admin tools">
+            <a href="/admin/operations">Operations</a>
+            <a href="/season-setup">Season setup</a>
+            <a href="/messages/moderation">Moderation</a>
+          </nav>
+        </article>
+
         <article class="panel">
           <div class="panel-head"><span>Teams</span><span class="badge" data-team-count>0</span></div>
           <table>
@@ -158,6 +174,7 @@ export function renderProfilePage(env = {}) {
     const googleSignInButton = document.querySelector('[data-google-sign-in]');
     const loadButton = document.querySelector('[data-load]');
     const logoutButton = document.querySelector('[data-logout]');
+    const adminTools = document.querySelector('[data-admin-tools]');
     const teamBody = document.querySelector('[data-team-body]');
     const teamEmpty = document.querySelector('[data-team-empty]');
     const teamCount = document.querySelector('[data-team-count]');
@@ -188,6 +205,7 @@ export function renderProfilePage(env = {}) {
       googleSignInButton.hidden = Boolean(accessToken);
       loadButton.hidden = !accessToken;
       logoutButton.hidden = !accessToken;
+      if (!accessToken) adminTools.hidden = true;
     }
 
     function setStatus(message, tone) {
@@ -252,6 +270,20 @@ export function renderProfilePage(env = {}) {
         throw new Error(body.error || 'Request failed');
       }
       return body;
+    }
+
+    async function refreshAdminAccess(retry = true) {
+      const accessToken = token();
+      adminTools.hidden = true;
+      if (!accessToken) return;
+      const response = await fetch('/api/admin/operations', {
+        headers: { authorization: 'Bearer ' + accessToken },
+      }).catch(() => null);
+      if (!response) return;
+      if (response.status === 401 && retry && await refreshSession()) {
+        return refreshAdminAccess(false);
+      }
+      adminTools.hidden = response.status !== 200;
     }
 
     function cell(value) {
@@ -354,7 +386,10 @@ export function renderProfilePage(env = {}) {
     renderProfile(null);
     run(async () => {
       const returnedFromGoogle = consumeOAuthCallback();
-      if (returnedFromGoogle || token()) await loadProfile();
+      if (returnedFromGoogle || token()) {
+        await loadProfile();
+        await refreshAdminAccess();
+      }
     });
   </script>
 </body>
