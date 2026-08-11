@@ -1,7 +1,7 @@
 import { createMatch, raceTargets, recordRack } from '../domain/match.js';
 
 const fixture = {
-  players: { A: 'Maya Example', B: 'Eli Example' },
+  players: { A: 'Maya Banks', B: 'Eli Torres' },
   ratings: { A: 525, B: 475 },
   chart: [{ maxDiff: 49, strongerTo: 5, weakerTo: 5 }, { maxDiff: 99, strongerTo: 5, weakerTo: 4 }, { maxDiff: 9999, strongerTo: 6, weakerTo: 4 }],
   openingBlockLength: 3,
@@ -30,8 +30,8 @@ export function renderPlayerSandboxPage() {
   <section class="panel quick"><strong>No sign-in or setup required.</strong><div class="muted">Score manually for the full experience, or load a finished matching score so you can test confirmation/finalization in a few taps.</div><div class="actions"><button class="gold" data-prefill>Load completed matching score</button><button class="ghost" data-reset>Reset match</button><span></span></div></section>
   <section class="panel" style="margin-top:12px"><h3>Which team's score history are you operating?</h3><div class="tabs"><button class="a active" data-perspective="A">Maya / Break Room Bandits</button><button class="bbtn" data-perspective="B">Eli / Golden Rail</button></div><div class="muted" style="margin-top:8px">Switch sides to enter each team's score independently. Record different winners on the two sides to intentionally create a mismatch.</div></section>
   <section class="players">
-    <article class="panel player"><h2>Maya Example</h2><div class="muted">525 · <span data-race-a></span></div><div class="score" data-score-a>0</div></article>
-    <article class="panel player b"><h2>Eli Example</h2><div class="muted">475 · <span data-race-b></span></div><div class="score" data-score-b>0</div></article>
+    <article class="panel player"><h2>Maya Banks</h2><div class="muted">525 · <span data-race-a></span></div><div class="score" data-score-a>0</div></article>
+    <article class="panel player b"><h2>Eli Torres</h2><div class="muted">475 · <span data-race-b></span></div><div class="score" data-score-b>0</div></article>
   </section>
   <section class="panel reconcile" data-reconcile><h3 data-reconcile-title></h3><div class="muted" data-reconcile-detail></div></section>
   <section class="panel" style="margin-top:12px"><div class="muted">Current scoring side: <strong data-phone></strong> · discipline: <strong data-discipline></strong></div><div class="actions"><button class="a" data-win-a>Maya wins rack</button><button class="bbtn" data-win-b>Eli wins rack</button><button class="ghost" data-undo>Undo this side's rack</button></div><div class="actions"><button class="gold" data-confirm>Confirm this side</button><button class="danger" data-finalize>Finalize practice match</button><span></span></div><a class="continue" data-continue href="/demo" hidden>3. Review the full Season 1 →</a></section>
