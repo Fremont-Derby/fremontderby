@@ -17,12 +17,14 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /\/api\/me\/direct-message-inbox/);
   assert.match(html, /\/api\/me\/direct-message-candidates/);
   assert.match(html, /\/api\/me\/league-chat-threads/);
+  assert.match(html, /\/api\/me\/matchup-chat-threads/);
   assert.match(html, /\/api\/teams\//);
   assert.match(html, /\/api\/direct-conversations\//);
   assert.match(html, /messagePath\(thread, '\/read'\)/);
   assert.match(html, /\/api\/players\//);
   assert.match(html, /\/block/);
   assert.match(html, /\/api\/seasons\//);
+  assert.match(html, /\/api\/team-matches\//);
   assert.match(html, /\/api\/chat-reports/);
   assert.match(html, /data-report-dialog/);
   assert.match(html, /setInterval[\s\S]*4000/);
