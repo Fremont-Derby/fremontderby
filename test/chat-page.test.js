@@ -14,8 +14,13 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /data-composer/);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/chat-threads/);
+  assert.match(html, /\/api\/me\/direct-message-inbox/);
+  assert.match(html, /\/api\/me\/direct-message-candidates/);
   assert.match(html, /\/api\/teams\//);
-  assert.match(html, /messages\/read/);
+  assert.match(html, /\/api\/direct-conversations\//);
+  assert.match(html, /messagePath\(thread, '\/read'\)/);
+  assert.match(html, /\/api\/players\//);
+  assert.match(html, /\/block/);
   assert.match(html, /setInterval[\s\S]*4000/);
   assert.match(html, /@media \(max-width: 760px\)/);
   assert.doesNotMatch(html, /Access token/i);
