@@ -79,6 +79,43 @@ test('release smoke fails closed when the tagged deployment reports staging', as
   );
 });
 
+test('release smoke reports safe HTTP routing details when health is not JSON', async () => {
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/health')) {
+      return new Response('<!doctype html><title>Not found</title>', {
+        status: 404,
+        headers: {
+          'content-type': 'text/html; charset=UTF-8',
+          server: 'cloudflare',
+          'cf-ray': 'abc123-SEA',
+        },
+      });
+    }
+    if (url.endsWith('/health/environment')) {
+      return json({ ok: true, service: 'fremontderby', environment: 'production', versionTag: 'abc123' });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+
+  await assert.rejects(
+    () => checkReleaseOnce({
+      baseUrl: 'https://fremontderby.com',
+      expectedEnvironment: 'production',
+      expectedVersionTag: 'abc123',
+      fetchImpl,
+    }),
+    (error) => {
+      assert.match(error.message, /\/health did not return JSON/);
+      assert.match(error.message, /HTTP 404/);
+      assert.match(error.message, /content-type text\/html/);
+      assert.match(error.message, /server cloudflare/);
+      assert.match(error.message, /cf-ray abc123-SEA/);
+      assert.match(error.message, /body preview: <!doctype html><title>Not found<\/title>/);
+      return true;
+    },
+  );
+});
+
 test('release smoke retries old deployments and then accepts the target release', async () => {
   let attempts = 0;
   const result = await smokeRelease({
