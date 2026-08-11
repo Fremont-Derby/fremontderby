@@ -113,6 +113,8 @@ export function renderTeamsPage() {
     }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .actions button { min-height: 36px; padding: 0 10px; }
+    .head-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .chat-link { min-height: 36px; display: inline-flex; align-items: center; padding: 0 11px; border: 1px solid var(--green); border-radius: 8px; color: #9ee5bd; text-decoration: none; font-size: .82rem; font-weight: 900; white-space: nowrap; }
     .empty { padding: 16px; color: var(--muted); }
     @media (max-width: 840px) {
       .app { padding: 12px; }
@@ -342,7 +344,14 @@ export function renderTeamsPage() {
         const badge = document.createElement('span');
         badge.className = 'badge';
         badge.textContent = team.teamId;
-        head.append(title, badge);
+        const chatLink = document.createElement('a');
+        chatLink.className = 'chat-link';
+        chatLink.href = '/messages?team=' + encodeURIComponent(team.teamId);
+        chatLink.textContent = 'Team chat';
+        const headActions = document.createElement('div');
+        headActions.className = 'head-actions';
+        headActions.append(chatLink, badge);
+        head.append(title, headActions);
 
         const stack = document.createElement('div');
         stack.className = 'stack';

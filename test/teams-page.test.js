@@ -17,4 +17,5 @@ test('teams page renders team creation and roster management controls', () => {
   assert.match(html, /\/api\/teams\//);
   assert.match(html, /\/api\/team-invitations\//);
   assert.match(html, /\/api\/team-memberships\//);
+  assert.match(html, /\/messages\?team=/);
 });

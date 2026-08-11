@@ -5,6 +5,8 @@ import {
   renderNotFoundPage,
 } from './appShell.js';
 import { renderCaptainSandboxPage } from './captainSandboxPage.js';
+import { chatHttpHandlers } from './chatHttp.js';
+import { renderChatPage } from './chatPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { playoffHttpHandlers } from './playoffHttp.js';
@@ -88,6 +90,12 @@ export default {
     const dualScoreFinalizeMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/finalize-reconciled$/,
     );
+    const teamChatMessagesMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/messages$/,
+    );
+    const teamChatReadMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/messages\/read$/,
+    );
 
     if (request.method === 'GET' && url.pathname === '/favicon.svg') {
       return faviconResponse();
@@ -114,6 +122,36 @@ export default {
     if (url.pathname === '/sandbox/captain') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderCaptainSandboxPage(), url.pathname);
+    }
+
+    if (url.pathname === '/messages') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderChatPage(env), url.pathname);
+    }
+
+    if (url.pathname === '/api/me/chat-threads') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listThreads(request, env);
+    }
+
+    if (teamChatReadMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return chatHttpHandlers.markTeamChatRead(
+        request,
+        env,
+        decodeURIComponent(teamChatReadMatch[1]),
+      );
+    }
+
+    if (teamChatMessagesMatch) {
+      const teamId = decodeURIComponent(teamChatMessagesMatch[1]);
+      if (request.method === 'GET') {
+        return chatHttpHandlers.listTeamMessages(request, env, teamId);
+      }
+      if (request.method === 'POST') {
+        return chatHttpHandlers.sendTeamMessage(request, env, teamId);
+      }
+      return methodNotAllowed();
     }
 
     if (adminStartPlayoffsMatch) {
