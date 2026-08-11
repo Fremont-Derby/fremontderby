@@ -19,7 +19,7 @@ export function renderChatModerationPage(env = {}) {
 </head>
 <body>
   <main class="app">
-    <header class="head"><div><h1>Chat moderation</h1><div style="color:var(--muted)">Review player reports across every chat type.</div></div><a href="/messages">Back to messages</a></header>
+    <header class="head"><div><h1>Chat moderation</h1><div style="color:var(--muted)">Review player reports across every chat type.</div></div><span><a href="/admin/operations">Operations</a> · <a href="/messages">Back to messages</a></span></header>
     <div class="status" data-status>Loading reports…</div>
     <section class="list" data-report-list aria-live="polite"></section>
   </main>
