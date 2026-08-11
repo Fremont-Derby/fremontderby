@@ -1,4 +1,9 @@
 import app from './index.js';
+import {
+  decorateHtmlWithShell,
+  isKnownAppPagePath,
+  renderNotFoundPage,
+} from './appShell.js';
 import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
@@ -6,13 +11,32 @@ import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 
-function htmlResponse(html) {
-  return new Response(html, {
+function htmlResponse(html, pathname, status = 200) {
+  return new Response(decorateHtmlWithShell(html, pathname), {
+    status,
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',
     },
   });
+}
+
+async function decorateAppResponse(response, pathname) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('text/html')) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.set('cache-control', 'no-store');
+
+  return new Response(
+    decorateHtmlWithShell(await response.text(), pathname),
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    },
+  );
 }
 
 function faviconResponse() {
@@ -27,6 +51,10 @@ function faviconResponse() {
 
 function methodNotAllowed() {
   return Response.json({ error: 'Method not allowed' }, { status: 405 });
+}
+
+function isDelegatedNonPagePath(pathname) {
+  return pathname.startsWith('/api/') || pathname.startsWith('/health');
 }
 
 export default {
@@ -59,26 +87,26 @@ export default {
     }
 
     if (request.method === 'GET' && url.pathname === '/') {
-      return htmlResponse(renderIntroPage());
+      return htmlResponse(renderIntroPage(), url.pathname);
     }
 
     if (request.method === 'GET' && url.pathname === '/rules') {
-      return htmlResponse(renderRulesPage());
+      return htmlResponse(renderRulesPage(), url.pathname);
     }
 
     if (url.pathname === '/demo') {
       if (request.method !== 'GET') return methodNotAllowed();
-      return htmlResponse(renderDemoSeasonPage());
+      return htmlResponse(renderDemoSeasonPage(), url.pathname);
     }
 
     if (url.pathname === '/sandbox/player') {
       if (request.method !== 'GET') return methodNotAllowed();
-      return htmlResponse(renderPlayerSandboxPage());
+      return htmlResponse(renderPlayerSandboxPage(), url.pathname);
     }
 
     if (url.pathname === '/sandbox/captain') {
       if (request.method !== 'GET') return methodNotAllowed();
-      return htmlResponse(renderCaptainSandboxPage());
+      return htmlResponse(renderCaptainSandboxPage(), url.pathname);
     }
 
     if (adminStartPlayoffsMatch) {
@@ -144,6 +172,15 @@ export default {
       );
     }
 
-    return app.fetch(request, env, ctx);
+    if (
+      !isDelegatedNonPagePath(url.pathname)
+      && !isKnownAppPagePath(url.pathname)
+    ) {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderNotFoundPage(url.pathname), url.pathname, 404);
+    }
+
+    const response = await app.fetch(request, env, ctx);
+    return decorateAppResponse(response, url.pathname);
   },
 };
