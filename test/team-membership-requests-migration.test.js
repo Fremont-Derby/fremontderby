@@ -10,7 +10,7 @@ const sql = fs.readFileSync(
 test('join requests are private and protected by RLS', () => {
   assert.match(sql, /create table private\.team_membership_requests/i);
   assert.match(sql, /alter table private\.team_membership_requests enable row level security/i);
-  assert.match(sql, /revoke all on private\.team_membership_requests from anon, authenticated/i);
+  assert.match(sql, /revoke all on private\.team_membership_requests from public, anon, authenticated/i);
 });
 
 test('only one pending request exists per player/team/season', () => {
@@ -35,7 +35,7 @@ test('captain approval checks active captaincy and blocks duplicate active membe
 });
 
 test('browser roles cannot call trusted membership-request RPCs directly', () => {
-  assert.match(sql, /revoke all on function public\.request_team_membership\(uuid, uuid\) from public/i);
+  assert.match(sql, /revoke all on function public\.request_team_membership\(uuid, uuid\) from public, anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.request_team_membership\(uuid, uuid\) to service_role/i);
   assert.doesNotMatch(sql, /grant execute[\s\S]*to authenticated/i);
 });
