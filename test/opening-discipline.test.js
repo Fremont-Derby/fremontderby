@@ -96,7 +96,7 @@ test('live scorecard exposes an accessible 8-first / 9-first control and locks i
   assert.match(html, />9 first</);
   assert.match(html, /aria-pressed/);
   assert.match(html, /opening_discipline/);
-  assert.match(html, /ownRacks\.length>0\|\|opponentRacks\.length>0/);
+  assert.match(html, /own\.length>0\|\|opponent\.length>0/);
   assert.match(html, /Order locked after rack 1/);
   assert.match(html, /openingDiscipline,scoringTeamId/);
   assert.match(html, /Racks 1–3 use this game/);
