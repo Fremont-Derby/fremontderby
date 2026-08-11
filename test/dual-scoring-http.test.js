@@ -19,22 +19,25 @@ function harness() {
   return { calls, handlers };
 }
 
-function request(body) {
-  return new Request('https://example.test', {
+function request(body, team = 'team-a') {
+  const url = team == null ? 'https://example.test' : `https://example.test?scoringTeamId=${encodeURIComponent(team)}`;
+  return new Request(url, {
     method: 'POST',
     body: body == null ? undefined : JSON.stringify(body),
     headers: { 'content-type': 'application/json' },
   });
 }
 
-test('dual-score HTTP handlers forward actor-scoped actions', async () => {
+const scoreContext = { actorUserId: 'user-1', playerMatchId: 'match-1', scoringTeamId: 'team-a' };
+
+test('dual-score HTTP handlers forward actor and explicit scoring-team actions', async () => {
   const { calls, handlers } = harness();
 
   let response = await handlers.compare(request(), {}, 'match-1');
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { comparison: { histories_match: false } });
 
-  response = await handlers.record(request({ winnerSide: 'A' }), {}, 'match-1');
+  response = await handlers.record(request({ winnerSide: 'A', scoringTeamId: 'team-a' }), {}, 'match-1');
   assert.equal(response.status, 201);
   assert.deepEqual(await response.json(), { rack: { rack_number: 1 } });
 
@@ -46,12 +49,20 @@ test('dual-score HTTP handlers forward actor-scoped actions', async () => {
   assert.equal(response.status, 200);
 
   assert.deepEqual(calls, [
-    ['compare', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
-    ['record', { actorUserId: 'user-1', playerMatchId: 'match-1', winnerSide: 'A' }],
-    ['undo', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
-    ['confirm', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
-    ['finalize', { actorUserId: 'user-1', playerMatchId: 'match-1' }],
+    ['compare', scoreContext],
+    ['record', { ...scoreContext, winnerSide: 'A' }],
+    ['undo', scoreContext],
+    ['confirm', scoreContext],
+    ['finalize', scoreContext],
   ]);
+});
+
+test('dual-score HTTP handlers reject missing scoring team before repository mutation', async () => {
+  const { calls, handlers } = harness();
+  const response = await handlers.compare(request(undefined, null), {}, 'match-1');
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /scoringTeamId is required/);
+  assert.deepEqual(calls, []);
 });
 
 test('admin score override HTTP handler requires and forwards dispute resolution evidence', async () => {
@@ -76,7 +87,7 @@ test('admin score override HTTP handler requires and forwards dispute resolution
 
 test('dual-score HTTP handlers reject invalid rack input without repository mutation', async () => {
   const { calls, handlers } = harness();
-  const response = await handlers.record(request({ winnerSide: 'X' }), {}, 'match-1');
+  const response = await handlers.record(request({ winnerSide: 'X', scoringTeamId: 'team-a' }), {}, 'match-1');
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /winnerSide must be A or B/);
   assert.deepEqual(calls, []);
@@ -95,12 +106,25 @@ test('dual-score HTTP handlers surface reconciliation conflicts as 409', async (
     authenticate: async () => ({ id: 'user-1' }),
     createRepository: () => ({
       async finalizeReconciledPlayerMatch() {
-        throw new Error('Both players must confirm the reconciled score before finalization');
+        throw new Error('Both teams must confirm the reconciled score before finalization');
       },
     }),
   });
   const response = await handlers.finalize(request(), {}, 'match-1');
   assert.equal(response.status, 409);
+});
+
+test('wrong scoring-team authorization failure maps to 403', async () => {
+  const handlers = createDualScoringHttpHandlers({
+    authenticate: async () => ({ id: 'user-1' }),
+    createRepository: () => ({
+      async getPlayerMatchScoreComparison() {
+        throw new Error('Actor is not an active member of the scoring team');
+      },
+    }),
+  });
+  const response = await handlers.compare(request(), {}, 'match-1');
+  assert.equal(response.status, 403);
 });
 
 test('admin override maps non-admin authorization failure to 403', async () => {
