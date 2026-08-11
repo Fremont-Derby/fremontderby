@@ -29,7 +29,7 @@ async function invokeRpc(fetchImpl, supabaseUrl, headers, rpcName, body) {
     const message = typeof parsed === 'string' ? parsed : parsed?.message;
     throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
   }
-  return Array.isArray(parsed) ? parsed[0] ?? null : parsed;
+  return Array.isArray(parsed) ? parsed : parsed;
 }
 
 export function createPlayoffRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
@@ -46,17 +46,30 @@ export function createPlayoffRepository(env, { fetch: fetchImpl = globalThis.fet
 
   return {
     async startSeasonPlayoffs({ seasonId, actorUserId }) {
-      return invokeRpc(fetchImpl, supabaseUrl, headers, 'start_season_playoffs', {
+      const result = await invokeRpc(fetchImpl, supabaseUrl, headers, 'start_season_playoffs', {
         target_season_id: seasonId,
         actor_user_id: actorUserId,
       });
+      return Array.isArray(result) ? result[0] ?? null : result;
     },
 
     async advanceSeasonToChampionship({ seasonId, actorUserId }) {
-      return invokeRpc(fetchImpl, supabaseUrl, headers, 'advance_season_to_championship', {
+      const result = await invokeRpc(fetchImpl, supabaseUrl, headers, 'advance_season_to_championship', {
         target_season_id: seasonId,
         actor_user_id: actorUserId,
       });
+      return Array.isArray(result) ? result[0] ?? null : result;
+    },
+
+    async submitPostseasonLineup({ actorUserId, teamMatchId, teamId, playerIds, anchorPlayerId }) {
+      const result = await invokeRpc(fetchImpl, supabaseUrl, headers, 'submit_postseason_lineup', {
+        actor_user_id: actorUserId,
+        target_team_match_id: teamMatchId,
+        target_team_id: teamId,
+        lineup_player_ids: playerIds,
+        anchor_player_id: anchorPlayerId,
+      });
+      return Array.isArray(result) ? result : [];
     },
   };
 }
