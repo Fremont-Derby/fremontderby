@@ -14,6 +14,17 @@ test('Worker routes the messages page and authenticated team chat APIs', () => {
   assert.match(router, /chatHttpHandlers\.markTeamChatRead/);
 });
 
+test('Worker routes authenticated direct messages, reads, and player blocks', () => {
+  assert.match(router, /url\.pathname === '\/api\/me\/direct-message-inbox'/);
+  assert.match(router, /url\.pathname === '\/api\/me\/direct-message-candidates'/);
+  assert.match(router, /url\.pathname === '\/api\/me\/blocked-players'/);
+  assert.match(router, /url\.pathname === '\/api\/direct-conversations'/);
+  assert.match(router, /directMessagesMatch/);
+  assert.match(router, /directReadMatch/);
+  assert.match(router, /playerBlockMatch/);
+  assert.match(router, /request\.method === 'DELETE'/);
+});
+
 test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /href: '\/messages', label: 'Messages'/);
   assert.match(shell, /'\/messages'/);

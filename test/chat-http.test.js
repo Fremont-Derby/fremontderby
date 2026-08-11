@@ -1,9 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  handleBlockPlayerChatRequest,
   handleListChatThreadsRequest,
+  handleListDirectMessagesRequest,
+  handleSendDirectMessageRequest,
   handleListTeamMessagesRequest,
   handleSendTeamMessageRequest,
+  handleStartDirectConversationRequest,
 } from '../src/chatHttp.js';
 
 function createFetch(responses) {
@@ -88,4 +92,88 @@ test('team message post maps inactive membership to forbidden', async () => {
   });
   const response = await handleSendTeamMessageRequest(request, env, 'team-1', { fetch });
   assert.equal(response.status, 403);
+});
+
+test('direct conversation start authenticates and scopes both player and season', async () => {
+  const { fetch, calls } = createFetch([
+    { body: { id: 'user-1' } },
+    { body: [{ conversation_id: 'conversation-1' }] },
+  ]);
+  const request = new Request('https://fremontderby.com/api/direct-conversations', {
+    method: 'POST',
+    headers: { authorization: 'Bearer token' },
+    body: JSON.stringify({ seasonId: 'season-1', playerId: 'player-2' }),
+  });
+  const response = await handleStartDirectConversationRequest(request, env, { fetch });
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    actor_user_id: 'user-1', target_season_id: 'season-1', target_player_id: 'player-2',
+  });
+});
+
+test('direct message list forwards tuple cursor and message send is idempotent', async () => {
+  const listFetch = createFetch([
+    { body: { id: 'user-1' } },
+    { body: [{ message_id: 'message-1' }] },
+  ]);
+  const listRequest = new Request(
+    'https://fremontderby.com/api/direct-conversations/conversation-1/messages?limit=25&before=2026-08-11T00:00:00Z&beforeMessageId=message-9',
+    { headers: { authorization: 'Bearer token' } },
+  );
+  const listResponse = await handleListDirectMessagesRequest(
+    listRequest, env, 'conversation-1', { fetch: listFetch.fetch },
+  );
+  assert.equal(listResponse.status, 200);
+  assert.equal(JSON.parse(listFetch.calls[1].init.body).before_message_id, 'message-9');
+
+  const sendFetch = createFetch([
+    { body: { id: 'user-1' } },
+    { body: [{ message_id: 'message-2', body: 'Hello' }] },
+  ]);
+  const sendRequest = new Request(
+    'https://fremontderby.com/api/direct-conversations/conversation-1/messages',
+    {
+      method: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ body: ' Hello ', clientMessageId: 'client-1' }),
+    },
+  );
+  const sendResponse = await handleSendDirectMessageRequest(
+    sendRequest, env, 'conversation-1', { fetch: sendFetch.fetch },
+  );
+  assert.equal(sendResponse.status, 201);
+  assert.equal(JSON.parse(sendFetch.calls[1].init.body).message_client_id, 'client-1');
+});
+
+test('direct message block errors are forbidden and blocking uses only the player id', async () => {
+  const blockedFetch = createFetch([
+    { body: { id: 'user-1' } },
+    { status: 400, body: { message: 'Direct messages are blocked' } },
+  ]);
+  const sendRequest = new Request(
+    'https://fremontderby.com/api/direct-conversations/conversation-1/messages',
+    {
+      method: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ body: 'Hello' }),
+    },
+  );
+  const blockedResponse = await handleSendDirectMessageRequest(
+    sendRequest, env, 'conversation-1', { fetch: blockedFetch.fetch },
+  );
+  assert.equal(blockedResponse.status, 403);
+
+  const blockFetch = createFetch([
+    { body: { id: 'user-1' } },
+    { body: [{ blocked_player_id: 'player-2' }] },
+  ]);
+  const blockRequest = new Request('https://fremontderby.com/api/players/player-2/block', {
+    method: 'POST', headers: { authorization: 'Bearer token' },
+  });
+  const blockResponse = await handleBlockPlayerChatRequest(
+    blockRequest, env, 'player-2', { fetch: blockFetch.fetch },
+  );
+  assert.equal(blockResponse.status, 201);
+  assert.deepEqual(JSON.parse(blockFetch.calls[1].init.body), {
+    actor_user_id: 'user-1', target_player_id: 'player-2',
+  });
 });

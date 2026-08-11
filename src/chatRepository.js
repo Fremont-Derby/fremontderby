@@ -82,5 +82,81 @@ export function createChatRepository(env, { fetch: fetchImpl = globalThis.fetch 
       });
       return Array.isArray(result) ? result[0] : result;
     },
+
+    async listDirectMessageCandidates({ actorUserId }) {
+      return rpc('list_direct_message_candidates', { actor_user_id: actorUserId });
+    },
+
+    async listDirectMessageInbox({ actorUserId }) {
+      return rpc('get_my_direct_message_inbox', { actor_user_id: actorUserId });
+    },
+
+    async startDirectConversation({ actorUserId, seasonId, playerId }) {
+      const result = await rpc('start_direct_conversation', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        target_player_id: playerId,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async listDirectMessages({
+      actorUserId,
+      conversationId,
+      before,
+      beforeMessageId,
+      limit,
+    }) {
+      return rpc('list_direct_messages', {
+        actor_user_id: actorUserId,
+        target_conversation_id: conversationId,
+        before_created_at: before,
+        before_message_id: beforeMessageId,
+        result_limit: limit,
+      });
+    },
+
+    async sendDirectMessage({
+      actorUserId,
+      conversationId,
+      body,
+      clientMessageId,
+    }) {
+      const result = await rpc('send_direct_message', {
+        actor_user_id: actorUserId,
+        target_conversation_id: conversationId,
+        message_body: body,
+        message_client_id: clientMessageId,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async markDirectChatRead({ actorUserId, conversationId, readAt }) {
+      const result = await rpc('mark_direct_chat_read', {
+        actor_user_id: actorUserId,
+        target_conversation_id: conversationId,
+        read_through_at: readAt,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async blockPlayerChat({ actorUserId, playerId }) {
+      const result = await rpc('block_player_chat', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+      });
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async unblockPlayerChat({ actorUserId, playerId }) {
+      return rpc('unblock_player_chat', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+      });
+    },
+
+    async listBlockedChatPlayers({ actorUserId }) {
+      return rpc('list_blocked_chat_players', { actor_user_id: actorUserId });
+    },
   };
 }
