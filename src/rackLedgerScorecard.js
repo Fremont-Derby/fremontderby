@@ -5,7 +5,7 @@ export const sharedRackLedgerScorecardStyles = `
   button:disabled{opacity:.42;cursor:not-allowed}
   .scorecard-app{width:min(760px,100%);margin:auto;padding:10px 8px 20px}
   .scorecard-status{min-height:28px;display:flex;justify-content:flex-end;align-items:center;font-size:.76rem}
-  .match-context{min-height:42px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem;font-weight:800;text-align:center}
+  .match-context{position:relative;min-height:42px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem;font-weight:800;text-align:center}
   .match-context a{position:absolute;right:12px;font-size:.72rem;text-decoration:none}
   .sandbox-banner{margin:0 0 8px;padding:10px 12px;border:1px solid;border-radius:13px;font-size:.75rem;line-height:1.35}
   .sandbox-banner strong{display:block;font-size:.8rem;margin-bottom:2px}
@@ -23,7 +23,7 @@ export const sharedRackLedgerScorecardStyles = `
   .team-block{min-width:0;text-align:center}.team-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1rem;font-weight:900}
   .team-points{display:block;margin-top:3px;font-size:clamp(2.3rem,12vw,4.2rem);line-height:.88;font-weight:1000;letter-spacing:-.06em}.team-separator{font-size:2rem;font-weight:700}
   .race{margin-top:8px;border:1px solid;border-radius:16px;overflow:hidden}
-  .race-context{padding:8px 10px;border-bottom:1px solid;display:flex;justify-content:center;gap:8px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}
+  .race-context{position:relative;padding:8px 10px;border-bottom:1px solid;display:flex;justify-content:center;gap:8px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}
   .race-context strong{position:absolute;right:18px;text-transform:none;letter-spacing:0}
   .players{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;padding:12px 10px 10px}
   .player{min-width:0}.player:last-child{text-align:right}.player-name{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(1.05rem,4.5vw,1.4rem)}
@@ -103,7 +103,7 @@ export const sharedRackLedgerScorecardMarkup = `
     <section class="next-rack" aria-label="Record next rack"><button class="add-rack primary" data-add-rack type="button">Add Rack 1</button><div class="winner-picker" data-winner-picker><button class="winner" data-rack-a data-side="A" type="button">Player A wins</button><button class="winner" data-rack-b data-side="B" type="button">Player B wins</button></div><span hidden data-next-rack>1</span><span hidden data-next-discipline>8-ball</span></section>
 
     <section class="reconcile" data-reconcile aria-live="polite"><strong data-reconcile-title>Loading both score records…</strong><span data-reconcile-detail></span></section>
-    <section class="quick-actions" aria-label="Score controls"><button class="ghost" data-edit-current type="button">Edit Rack</button><details class="details"><summary>Match Details</summary><div class="detail-grid"><div class="detail"><span>Opening order</span><strong data-detail-opening>–</strong></div><div class="detail"><span>First break</span><strong data-detail-break>–</strong></div><div class="detail"><span>Match status</span><strong data-detail-status>–</strong></div><div class="detail"><span>Scoring for</span><strong data-detail-team>–</strong></div></div></details><button class="undo ghost" data-undo type="button">Undo Last Rack</button></section>
+    <section class="quick-actions" aria-label="Score controls"><button class="ghost" data-edit-current type="button">Edit Rack</button><details class="details"><summary>Match details</summary><div class="detail-grid"><div class="detail"><span>Opening order</span><strong data-detail-opening>–</strong></div><div class="detail"><span>First break</span><strong data-detail-break>–</strong></div><div class="detail"><span>Match status</span><strong data-detail-status>–</strong></div><div class="detail"><span>Scoring for</span><strong data-detail-team>–</strong></div></div></details><button class="undo ghost" data-undo type="button">Undo Last Rack</button></section>
     <section class="completion-actions"><button class="confirm" data-confirm type="button">Confirm this side</button><button class="finalize danger" data-finalize type="button">Finalize match</button></section>
 
     <section class="sandbox-footer" data-sandbox-footer hidden><strong>Practice feedback</strong><p>Tell us what was confusing while it is fresh.</p><textarea data-sandbox-feedback placeholder="What was confusing?"></textarea><div class="sandbox-footer-actions"><button data-save-feedback type="button">Save feedback on this device</button><a href="/demo">Review the full Season 1 Test Drive</a></div></section>
