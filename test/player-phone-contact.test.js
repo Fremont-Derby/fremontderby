@@ -44,8 +44,8 @@ test('phone migration keeps contact private, admin-scoped, and audit-safe', asyn
 test('phone command validates human input and lets normal players clear contact', async () => {
   const calls = [];
   const repository = { setOwn(input) { calls.push(input); return input; } };
-  await assert.rejects(
-    setOwnPlayerContactCommand({ actorUserId: 'user-1', phone: '555' }, repository),
+  assert.throws(
+    () => setOwnPlayerContactCommand({ actorUserId: 'user-1', phone: '555' }, repository),
     /between 10 and 15 digits/,
   );
   await setOwnPlayerContactCommand({ actorUserId: 'user-1', phone: ' (206) 555-0123 ' }, repository);
@@ -59,8 +59,8 @@ test('phone command validates human input and lets normal players clear contact'
 test('admin contact command requires a target player and delegates without exposing ids to browser input', async () => {
   const calls = [];
   const repository = { getAdminPlayer(input) { calls.push(input); return { phone: '2065550123' }; } };
-  await assert.rejects(
-    getAdminPlayerContactCommand({ actorUserId: 'admin' }, repository),
+  assert.throws(
+    () => getAdminPlayerContactCommand({ actorUserId: 'admin' }, repository),
     /playerId is required/,
   );
   const result = await getAdminPlayerContactCommand({
