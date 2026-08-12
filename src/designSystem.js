@@ -99,14 +99,17 @@ export const designSystemStyles = `
     border-color: var(--fd-primary-text) !important;
     box-shadow: 0 1px 4px rgba(0,0,0,.3);
   }
-  .fd-nav a { color: #eff8f2 !important; }
+  .fd-shell .fd-nav a { min-height: 44px !important; color: #eff8f2 !important; }
   .fd-nav a:hover { background: rgba(255,255,255,.12) !important; color: var(--fd-primary-text) !important; }
   .fd-nav a[aria-current="page"] { background: var(--fd-bg-surface) !important; color: var(--fd-green-950) !important; border-color: var(--fd-bg-surface) !important; }
   .fd-message-indicator, .fd-nav-menu summary {
+    min-width: 44px !important;
+    min-height: 44px !important;
     background: rgba(255,255,255,.08) !important;
     border-color: rgba(255,255,255,.32) !important;
     color: var(--fd-primary-text) !important;
   }
+  .fd-message-indicator { width: 44px !important; height: 44px !important; }
   .fd-nav--mobile, .fd-message-preview {
     background: var(--fd-bg-surface) !important;
     border-color: var(--fd-border) !important;
@@ -115,6 +118,7 @@ export const designSystemStyles = `
   }
   .fd-nav--mobile a, .fd-message-preview a, .fd-message-preview__label { color: var(--fd-text) !important; }
   .fd-message-preview__body, .fd-message-preview__time, .fd-message-preview__empty { color: var(--fd-text-muted) !important; }
+  .fd-message-preview__all { min-height: 44px !important; }
 
   /* Shared surfaces. */
   .card, .panel, .hero, .step, .round, .scoreboard, .race, .team-score, .ledger-panel,
@@ -286,6 +290,10 @@ export const designSystemStyles = `
   .message { background: var(--fd-bg-subtle) !important; color: var(--fd-text) !important; border-color: var(--fd-border) !important; }
   .message.mine { background: var(--fd-green-100) !important; border-color: #b6d4c1 !important; }
   .message-meta, .report { color: var(--fd-text-muted) !important; }
+  .layout .panel-actions button, .layout .block, .layout .older, .layout .report {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
   dialog::backdrop { background: rgba(6, 20, 12, .58) !important; }
 
   /* Scoring-specific contract. */
@@ -323,6 +331,14 @@ export const designSystemStyles = `
   }
   .fd-mobile-dock a { color: var(--fd-text) !important; }
   .fd-mobile-dock a[aria-current="page"] { background: var(--fd-green-100) !important; }
+
+  @media (forced-colors: active) {
+    .fd-shell .fd-nav a, .fd-message-indicator, .fd-nav-menu summary, .fd-message-preview__all,
+    .layout .panel-actions button, .layout .block, .layout .older, .layout .report {
+      border: 1px solid ButtonText !important;
+      forced-color-adjust: auto;
+    }
+  }
 
   /* Responsive guardrails. */
   @media (max-width: 760px) {
