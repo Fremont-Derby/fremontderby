@@ -4,7 +4,7 @@ const NAV_ITEMS = [
   { href: '/schedule', label: 'Schedule', key: 'schedule' },
   { href: '/standings', label: 'Standings', key: 'standings' },
   { href: '/rules', label: 'Rules', key: 'rules' },
-  { href: '/demo', label: 'Demo', key: 'demo' },
+  { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
   { href: '/messages', label: 'Messages', key: 'messages' },
   { href: '/profile', label: 'Profile', key: 'profile' },

@@ -19,8 +19,6 @@ async function reconcileProductShell(response, pathname) {
     html = html.replace(moderationLink, seasonTeamsLink + moderationLink);
   }
 
-  html = html.replaceAll('>Demo</a>', '>Test Drive the App</a>');
-
   if (pathname === '/demo') {
     html = html
       .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
