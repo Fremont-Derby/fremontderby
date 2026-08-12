@@ -49,6 +49,16 @@ export const accessibilityStyles = `
     text-decoration-thickness: max(1px, .08em);
   }
 
+  /* Disabled controls must never hide their explanation in a tooltip alone. */
+  .fd-disabled-reason {
+    margin: 0;
+    max-width: 32rem;
+    color: var(--fd-text-muted, #4e5652);
+    font-size: .78rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       scroll-behavior: auto !important;
@@ -86,6 +96,75 @@ export const accessibilityStyles = `
   }
 `;
 
+export const accessibilityScript = `
+(() => {
+  let reasonSequence = 0;
+
+  function reasonElementFor(control) {
+    const id = control.getAttribute('data-fd-disabled-reason-id');
+    return id ? document.getElementById(id) : null;
+  }
+
+  function removeReason(control) {
+    const existing = reasonElementFor(control);
+    if (existing) existing.remove();
+    control.removeAttribute('data-fd-disabled-reason-id');
+    const describedBy = (control.getAttribute('aria-describedby') || '')
+      .split(/\\s+/)
+      .filter(Boolean)
+      .filter(id => !id.startsWith('fd-disabled-reason-'));
+    if (describedBy.length) control.setAttribute('aria-describedby', describedBy.join(' '));
+    else control.removeAttribute('aria-describedby');
+  }
+
+  function syncDisabledReason(control) {
+    if (!(control instanceof HTMLElement)) return;
+    const reason = (control.getAttribute('title') || '').trim();
+    if (!control.matches(':disabled') || !reason) {
+      removeReason(control);
+      return;
+    }
+
+    let note = reasonElementFor(control);
+    if (!note) {
+      note = document.createElement('p');
+      note.className = 'fd-disabled-reason';
+      note.id = 'fd-disabled-reason-' + (++reasonSequence);
+      note.setAttribute('role', 'note');
+      control.insertAdjacentElement('afterend', note);
+      control.setAttribute('data-fd-disabled-reason-id', note.id);
+    }
+    note.textContent = reason;
+    const ids = new Set((control.getAttribute('aria-describedby') || '').split(/\\s+/).filter(Boolean));
+    ids.add(note.id);
+    control.setAttribute('aria-describedby', [...ids].join(' '));
+  }
+
+  function scan(root) {
+    if (!(root instanceof Element || root instanceof Document)) return;
+    if (root instanceof Element && root.matches('button[disabled][title],input[disabled][title],select[disabled][title]')) {
+      syncDisabledReason(root);
+    }
+    for (const control of root.querySelectorAll('button[disabled][title],input[disabled][title],select[disabled][title]')) {
+      syncDisabledReason(control);
+    }
+  }
+
+  function start() {
+    scan(document);
+    new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'attributes') syncDisabledReason(record.target);
+        for (const node of record.addedNodes) if (node instanceof Element) scan(node);
+      }
+    }).observe(document.documentElement, {subtree:true, childList:true, attributes:true, attributeFilter:['disabled','title']});
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
+})();
+`;
+
 export async function injectAccessibilityLayer(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
@@ -100,11 +179,14 @@ export async function injectAccessibilityLayer(response) {
     });
   }
 
-  const styled = /<\/head>/i.test(html)
+  let enhanced = /<\/head>/i.test(html)
     ? html.replace(/<\/head>/i, `<style data-fd-accessibility-layer>${accessibilityStyles}</style>\n</head>`)
     : html;
+  enhanced = /<\/body>/i.test(enhanced)
+    ? enhanced.replace(/<\/body>/i, `<script data-fd-disabled-reasons>${accessibilityScript}</script>\n</body>`)
+    : enhanced;
 
-  return new Response(styled, {
+  return new Response(enhanced, {
     status: response.status,
     statusText: response.statusText,
     headers,
