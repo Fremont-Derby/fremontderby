@@ -78,6 +78,20 @@ export function createAdminPlayersRepository(
       return Array.isArray(rows) ? rows.map(normalizePlayer) : [];
     },
 
+    async createPlayer({ actorUserId, displayName, allowExactDuplicate = false }) {
+      const rows = await rpc('admin_create_unclaimed_player', {
+        actor_user_id: actorUserId,
+        target_display_name: displayName,
+        allow_exact_duplicate: allowExactDuplicate,
+      });
+      const row = Array.isArray(rows) ? rows[0] : rows;
+      return {
+        playerId: row?.player_id ?? null,
+        displayName: row?.display_name ?? displayName,
+        hasLogin: Boolean(row?.has_login),
+      };
+    },
+
     async listRosterTeams({ actorUserId }) {
       const rows = await rpc('list_admin_roster_teams', {
         actor_user_id: actorUserId,
