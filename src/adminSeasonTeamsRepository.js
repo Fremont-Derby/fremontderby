@@ -48,7 +48,7 @@ export function createAdminSeasonTeamsRepository(
 
   return {
     async list({ actorUserId, seasonId }) {
-      const [registrationPayload, candidatesPayload] = await Promise.all([
+      const [registrationPayload, candidatesPayload, readinessPayload] = await Promise.all([
         rpc(fetchImpl, url, headers, 'get_admin_season_registration', {
           actor_user_id: actorUserId,
           target_season_id: seasonId,
@@ -57,13 +57,26 @@ export function createAdminSeasonTeamsRepository(
           actor_user_id: actorUserId,
           target_season_id: seasonId,
         }),
+        rpc(fetchImpl, url, headers, 'list_admin_player_contact_readiness', {
+          actor_user_id: actorUserId,
+        }),
       ]);
       const registrationRow = Array.isArray(registrationPayload)
         ? registrationPayload[0]
         : registrationPayload;
+      const readiness = new Map(
+        (Array.isArray(readinessPayload) ? readinessPayload : [])
+          .map((row) => [row.player_id, Boolean(row.has_phone)]),
+      );
+      const teams = (Array.isArray(candidatesPayload) ? candidatesPayload : []).map((row) => ({
+        ...row,
+        captain_has_phone: row.captain_player_id
+          ? Boolean(readiness.get(row.captain_player_id))
+          : false,
+      }));
       return {
         registration: registrationRow?.registration ?? registrationRow ?? null,
-        teams: Array.isArray(candidatesPayload) ? candidatesPayload : [],
+        teams,
       };
     },
 
@@ -83,6 +96,40 @@ export function createAdminSeasonTeamsRepository(
         candidate_team_id: teamId,
       });
       return Array.isArray(payload) ? payload[0] : payload;
+    },
+
+    async listCaptainCandidates({ actorUserId, seasonId, teamId }) {
+      const payload = await rpc(fetchImpl, url, headers, 'list_admin_team_captain_candidates', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        target_team_id: teamId,
+      });
+      return (Array.isArray(payload) ? payload : []).map((row) => ({
+        playerId: row.player_id,
+        displayName: row.display_name,
+        hasLogin: Boolean(row.has_login),
+        hasPhone: Boolean(row.has_phone),
+        rosteredOnTeam: Boolean(row.rostered_on_team),
+        captainTeamId: row.captain_team_id ?? null,
+        captainTeamName: row.captain_team_name ?? null,
+      }));
+    },
+
+    async assignCaptain({ actorUserId, seasonId, teamId, playerId }) {
+      const payload = await rpc(fetchImpl, url, headers, 'admin_assign_team_captain', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        target_team_id: teamId,
+        target_player_id: playerId,
+      });
+      const row = Array.isArray(payload) ? payload[0] : payload;
+      return {
+        teamId: row?.team_id ?? teamId,
+        playerId: row?.player_id ?? playerId,
+        displayName: row?.display_name ?? null,
+        hasLogin: Boolean(row?.has_login),
+        hasPhone: Boolean(row?.has_phone),
+      };
     },
   };
 }
