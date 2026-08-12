@@ -1,4 +1,5 @@
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
+import { routeAdminGateway } from './adminGatewayRouter.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 
@@ -15,8 +16,11 @@ async function reconcileProductShell(response, pathname) {
   }
 
   if (pathname === '/profile') {
+    const playersLink = '<a href="/admin/players">Players</a>';
+    const adminGatewayLink = '<a href="/admin">Admin home</a>';
     const moderationLink = '<a href="/messages/moderation">Moderation</a>';
     const seasonTeamsLink = '<a href="/admin/season-teams">Season teams</a>';
+    html = html.replace(playersLink, adminGatewayLink + playersLink);
     html = html.replace(moderationLink, seasonTeamsLink + moderationLink);
   }
 
@@ -39,6 +43,8 @@ export default {
     if (url.pathname === '/api/admin/players' && request.method === 'POST') {
       return handleCreateAdminPlayerRequest(request, env);
     }
+    const adminGatewayResponse = routeAdminGateway(request);
+    if (adminGatewayResponse) return adminGatewayResponse;
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
     if (adminSeasonTeamsResponse) return adminSeasonTeamsResponse;
     const response = await legacyRouter.fetch(request, env, ctx);
