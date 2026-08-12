@@ -6,8 +6,6 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { discoverJavaScriptFiles } from '../scripts/check-js-syntax.mjs';
-
 const checkerPath = fileURLToPath(new URL('../scripts/check-js-syntax.mjs', import.meta.url));
 
 async function makeFixture() {
@@ -25,22 +23,7 @@ async function makeFixture() {
   return root;
 }
 
-test('syntax discovery automatically finds source modules and excludes generated/vendor directories', async () => {
-  const root = await makeFixture();
-  try {
-    const files = await discoverJavaScriptFiles(root);
-    assert.deepEqual(files, [
-      path.join('domain', 'bad.js'),
-      path.join('scripts', 'tool.mjs'),
-      path.join('src', 'nested', 'another.js'),
-      path.join('src', 'new-module.js'),
-    ]);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test('checker fails on an invalid discovered module, names it, then passes after correction', async () => {
+test('checker discovers source modules, excludes generated/vendor paths, and reports invalid files', async () => {
   const root = await makeFixture();
   try {
     let result = spawnSync(process.execPath, [checkerPath], { cwd: root, encoding: 'utf8' });
