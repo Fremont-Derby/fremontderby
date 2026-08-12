@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
 const DEFAULT_ROOTS = ['src', 'domain', 'scripts'];
 const EXCLUDED_DIRECTORIES = new Set([
@@ -75,7 +75,7 @@ export async function main(cwd = process.cwd()) {
 }
 
 const isDirectRun = process.argv[1]
-  && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+  && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
 
 if (isDirectRun) {
   process.exitCode = await main();
