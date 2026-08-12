@@ -1089,6 +1089,10 @@ export async function handleListSeasonScheduleRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
+      return jsonResponse({ error: "Season not found" }, 404);
+    }
     const rounds = await repository.listSeasonSchedule({ seasonId });
     return jsonResponse({ rounds });
   } catch (error) {
@@ -1103,6 +1107,10 @@ export async function handleListTeamStandingsRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
+      return jsonResponse({ error: "Season not found" }, 404);
+    }
     const standings = await listTeamStandingsCommand(
       { seasonId },
       repository,
@@ -1121,6 +1129,10 @@ export async function handleListIndividualStandingsRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
+      return jsonResponse({ error: "Season not found" }, 404);
+    }
     const standings = await listIndividualStandingsCommand(
       { seasonId },
       repository,
@@ -1491,7 +1503,8 @@ export default {
           version: version.id,
           versionTag: version.tag,
           deployedAt: version.timestamp,
-          ...readiness,
+          ok: readiness.ok,
+          environment: readiness.environment,
         },
         readiness.ok ? 200 : 503,
       );
@@ -2020,6 +2033,12 @@ export default {
     }
 
     if (url.pathname === "/api/seasons") {
+      if (request.method === "HEAD") {
+        return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
+      }
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: { allow: "GET, HEAD, OPTIONS", "cache-control": "no-store" } });
+      }
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }

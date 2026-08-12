@@ -3,6 +3,7 @@ const NAV_ITEMS = [
   { href: '/teams', label: 'Teams', key: 'teams' },
   { href: '/schedule', label: 'Schedule', key: 'schedule' },
   { href: '/standings', label: 'Standings', key: 'standings' },
+  { href: '/prizes', label: 'Prizes', key: 'prizes' },
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
@@ -56,7 +57,7 @@ function sectionForPath(pathname) {
 
 function navLinks(pathname, compact = false) {
   const active = sectionForPath(pathname);
-  return NAV_ITEMS.filter((item) => compact || item.key !== 'messages').map((item) => {
+  return NAV_ITEMS.map((item) => {
     const current = active === item.key;
     const attrs = current ? ' aria-current="page" data-active="true"' : '';
     return `<a href="${item.href}" data-nav-key="${item.key}"${attrs}>${item.label}</a>`;
@@ -139,7 +140,7 @@ export function renderPrimaryNavigation(pathname = '/') {
       </nav>
       ${renderMessageIndicator(pathname)}
       <details class="fd-nav-menu">
-        <summary>Menu</summary>
+        <summary aria-label="Menu">Menu</summary>
         <nav class="fd-nav fd-nav--mobile" aria-label="Primary navigation">
           ${navLinks(pathname, true)}
         </nav>
