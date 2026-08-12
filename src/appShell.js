@@ -30,7 +30,6 @@ const APP_PAGE_PATHS = new Set([
   '/profile',
   '/availability',
   '/teams',
-  '/trades',
   '/messages',
   '/messages/moderation',
 ]);
@@ -41,7 +40,6 @@ function sectionForPath(pathname) {
   if (pathname === '/demo' || pathname.startsWith('/sandbox/')) return 'demo';
   if (
     pathname.startsWith('/teams')
-    || pathname === '/trades'
     || pathname === '/availability'
     || pathname === '/lineup'
   ) return 'teams';
