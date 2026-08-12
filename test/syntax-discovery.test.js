@@ -17,9 +17,9 @@ async function makeFixture() {
   await writeFile(path.join(root, 'src/new-module.js'), 'export const value = 1;\n');
   await writeFile(path.join(root, 'src/nested/another.js'), 'export function ok() { return true; }\n');
   await writeFile(path.join(root, 'scripts/tool.mjs'), 'console.log("ok");\n');
-  await writeFile(path.join(root, 'domain/bad.js'), 'export const broken = ;\n');
-  await writeFile(path.join(root, 'src/node_modules/pkg/ignored.js'), 'export const broken = ;\n');
-  await writeFile(path.join(root, 'scripts/dist/ignored.mjs'), 'export const broken = ;\n');
+  await writeFile(path.join(root, 'domain/bad.js'), 'const broken = ;\n');
+  await writeFile(path.join(root, 'src/node_modules/pkg/ignored.js'), 'const broken = ;\n');
+  await writeFile(path.join(root, 'scripts/dist/ignored.mjs'), 'const broken = ;\n');
   return root;
 }
 
