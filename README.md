@@ -75,6 +75,7 @@ Current runtime can temporarily lag approved product ownership while focused cle
 - **#370 Schedule + availability** — PR #376 shipped the canonical personal date-keyed Available / Unsure / Unavailable check-in directly on `/schedule`, including teamless/free-agent players. PR #389 moved captain lineup/substitute discovery to that same date-keyed source. Remaining work is to migrate the normal Teams recruiting filters where applicable and retire standalone `/availability` only after parity/recovery proof.
 - **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains focused live scoring.
 - **#366 Admin gateway** — PR #369 shipped a role-aware `/admin` gateway with Operations, Players, League Management, Moderation, plus safe signed-out/non-admin states. It is not yet fully first-class because shared navigation does not expose Admin, Admin Teams/#372 and Admin Support/#361 remain missing, and Profile still carries fallback admin links to preserve <=2-action reachability.
+- **#341 prepared-player self-claim** — PR #391 shipped `Claim existing player` on `/profile` for a signed-in user without an owned player identity. Only unclaimed zero-competitive-rack identities are eligible; Profile owns self-claim while `/admin/players` owns creation of the prepared Unclaimed identity. Exact deployed-Worker real-account/phone proof remains open on #341.
 - **#362 Trades retirement** — formal player trades are removed from the product. Roster change uses applications, invitations, captain roster management, and admin exceptions; historical trade records may remain for audit/history.
 - **#18 Prize ownership split** — `/prizes` is the public/read-only purse and payout view; privileged prize configuration belongs in Admin → League Management.
 - **#365 Fargo profile identity** — players may enter their own Fargo identifier on Profile; official Fargo rating and robustness are displayed from sourced observations when available. Player-supplied IDs remain distinguishable from verified Fargo identity.
@@ -175,7 +176,7 @@ Server-side authorization must still enforce actor/team/captain/admin boundaries
 A useful current core workflow to keep healthy is:
 
 ```text
-sign in -> profile + current-season registration/payment -> team
+sign in -> profile / claim prepared identity if applicable -> current-season registration/payment -> team
 -> schedule + dated availability -> blind lineup -> Score -> generated player match
 -> live 8/9 rack scoring -> reconcile -> dual confirm -> finalize
 -> team standings -> individual standings
@@ -189,7 +190,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 
 - `/` — concise cash-league introduction and primary Join / sign in action; PR #379/#377 shipped the current above-the-fold shape, while #252 still owns deeper current-season practical details
 - `/rules` — public rules
-- `/profile` — Google sign-in, player identity/profile, and own current-season registration/payment status; PR #385/#343 adds Join this season plus Registered / Payment due / Paid / Waived state, Fargo self-service #365 and unclaimed-player self-claim #341 belong here, and PR #380/#378 keeps the login across normal browser restarts while the underlying Supabase refresh session remains valid
+- `/profile` — Google sign-in, player identity/profile, own current-season registration/payment status, and prepared-player self-claim; PR #391/#341 ships `Claim existing player` for signed-in users without an owned player and preserves prepared roster/season/rating state when the record has zero competitive racks. PR #385/#343 adds Join this season plus Registered / Payment due / Paid / Waived state, Fargo self-service #365 belongs here, and PR #380/#378 keeps the login across normal browser restarts while the underlying Supabase refresh session remains valid
 - `/teams` — team creation, requests/invitations, roster management, and normal player/recruiting discovery
 - `/schedule` — league dates, matchup context, and canonical personal dated Available / Unsure / Unavailable check-in after PR #376/#370; captain lineup/sub discovery consumes the same dated source after PR #389
 - `/availability` — **transitional duplicate availability surface** pending final #370 parity/recovery proof and retirement
@@ -203,7 +204,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/season-setup` — league-director season setup and publishing, grouped under Admin → League Management
 - `/admin/season-teams` — league-admin Returning / New / In season team assignment for a selected season
 - `/admin/operations` — league-admin readiness, exception triage, action queue, and operational health
-- `/admin/players` — league-admin player search, role management, competition eligibility, roster exceptions, and admin creation of unclaimed players (#340/PR #368)
+- `/admin/players` — league-admin player search, role management, competition eligibility, roster exceptions, and admin creation of unclaimed players (#340/PR #368); self-claim of those prepared identities belongs on Profile, not here
 - `/trades` — **legacy runtime surface pending removal under #362; do not extend as a supported product workflow**
 - `/prizes` — public purse/payout state; privileged configuration is moving to Admin → League Management under #18
 - `/health` — Worker version metadata
