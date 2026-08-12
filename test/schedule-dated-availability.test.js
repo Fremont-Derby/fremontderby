@@ -24,6 +24,7 @@ test('dated availability migration is personal, date-keyed, unsure-by-default, a
   assert.match(sql, /coalesce\(pda\.status, 'unsure'::text\)/);
   assert.match(sql, /sp\.status = 'active'/);
   assert.match(sql, /r\.scheduled_on = target_availability_date/);
+  assert.match(sql, /target_availability_status text/);
   assert.match(sql, /on conflict on constraint player_date_availability_pkey do update/);
   assert.match(sql, /revoke all on function public\.get_own_date_availability[\s\S]*from public, anon, authenticated/);
   assert.match(sql, /grant execute on function public\.get_own_date_availability[\s\S]*to service_role/);
@@ -64,7 +65,7 @@ test('dated availability repository uses actor-scoped service-role RPCs', async 
     actor_user_id: 'user-1',
     target_season_id: 'season-1',
     target_availability_date: '2026-08-20',
-    availability_status: 'unavailable',
+    target_availability_status: 'unavailable',
   });
   assert.equal(requests[1].init.headers.authorization, 'Bearer service-secret');
 });
