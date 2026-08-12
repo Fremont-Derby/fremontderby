@@ -81,8 +81,9 @@ test('season setup receives explicit accessible Close season readiness workflow'
   assert.match(html, /@media\(max-width:620px\)/);
 });
 
-test('router entry owns close API and season setup enhancer before legacy fallthrough', async () => {
+test('router entry owns close API and composes close readiness after publish readiness', async () => {
   const source = await readFile(routerPath, 'utf8');
   assert.match(source, /routeSeasonClose\(request, env\)/);
-  assert.match(source, /enhanceSeasonClose\(reconciled\)/);
+  assert.match(source, /enhanceSeasonPublishReadiness\(reconciled\)/);
+  assert.match(source, /enhanceSeasonClose\(withPublishReadiness\)/);
 });
