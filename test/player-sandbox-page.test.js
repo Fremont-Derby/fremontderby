@@ -28,6 +28,17 @@ test('player War Games runs the shared production rack-ledger scorer against thr
 });
 
 
+test('fresh War Games score is internally consistent for match 3 of 3', () => {
+  const html = renderPlayerSandboxPage();
+
+  assert.match(html, /match_number:3/);
+  assert.match(html, /match_count:3/);
+  assert.match(html, /team_score_a:0/);
+  assert.match(html, /team_score_b:0/);
+  assert.match(html, /function fresh\(\)\{return\{perspective:'A',openingDiscipline:'8-ball',A:\{racks:\[\],confirmed:false\},B:\{racks:\[\],confirmed:false\},finalized:false\}\}/);
+});
+
+
 test('War Games uses the same rack interactions as live scoring', () => {
   const html = renderPlayerSandboxPage();
 
