@@ -1,3 +1,5 @@
+import { deriveAdminSeasonTeamEntry } from './adminSeasonTeamEntry.js';
+
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);
@@ -64,18 +66,28 @@ export function createAdminSeasonTeamsRepository(
       const registrationRow = Array.isArray(registrationPayload)
         ? registrationPayload[0]
         : registrationPayload;
+      const registration = registrationRow?.registration ?? registrationRow ?? null;
       const readiness = new Map(
         (Array.isArray(readinessPayload) ? readinessPayload : [])
           .map((row) => [row.player_id, Boolean(row.has_phone)]),
       );
-      const teams = (Array.isArray(candidatesPayload) ? candidatesPayload : []).map((row) => ({
-        ...row,
-        captain_has_phone: row.captain_player_id
-          ? Boolean(readiness.get(row.captain_player_id))
-          : false,
-      }));
+      const teams = (Array.isArray(candidatesPayload) ? candidatesPayload : []).map((row) => {
+        const entry = deriveAdminSeasonTeamEntry(row, registration);
+        return {
+          ...row,
+          captain_has_phone: row.captain_player_id
+            ? Boolean(readiness.get(row.captain_player_id))
+            : false,
+          slot_workflow_status: row.slot_status ?? null,
+          slot_status: entry.reason,
+          entry_status: entry.entryStatus,
+          entry_reason: entry.reason,
+          qualified_for_slot: entry.qualified,
+          can_take_slot: entry.canTakeSlot,
+        };
+      });
       return {
-        registration: registrationRow?.registration ?? registrationRow ?? null,
+        registration,
         teams,
       };
     },

@@ -19,6 +19,7 @@ function statusFor(error) {
     || message.includes('already has an active captain')
     || message.includes('already captains another team')
     || message.includes('Phone number is required')
+    || message.includes('must be qualified before it can take a season slot')
   ) return 409;
   if (message.includes('No team slots') || message.includes('before season publication')) return 409;
   return 400;

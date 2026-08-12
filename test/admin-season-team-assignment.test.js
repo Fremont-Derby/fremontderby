@@ -37,12 +37,22 @@ test('season team assignment migration is capacity-safe, audited, and never copi
 test('season team admin commands require human-selected season and team context', async () => {
   const calls = [];
   const repository = {
-    list(input) { calls.push(['list', input]); return { teams: [] }; },
+    list(input) {
+      calls.push(['list', input]);
+      return {
+        teams: [{
+          candidate_kind: 'returning',
+          team_id: 'team-1',
+          qualified_for_slot: false,
+        }],
+      };
+    },
     add(input) { calls.push(['add', input]); return { teamId: input.teamId }; },
   };
   await listAdminSeasonTeamsCommand({ actorUserId: 'admin', seasonId: 'season-1' }, repository);
   await addAdminSeasonTeamCommand({ actorUserId: 'admin', seasonId: 'season-1', teamId: 'team-1' }, repository);
   assert.deepEqual(calls, [
+    ['list', { actorUserId: 'admin', seasonId: 'season-1' }],
     ['list', { actorUserId: 'admin', seasonId: 'season-1' }],
     ['add', { actorUserId: 'admin', seasonId: 'season-1', teamId: 'team-1' }],
   ]);
@@ -79,6 +89,8 @@ test('season team repository keeps all privileged database calls behind the serv
   const state = await repository.list({ actorUserId: 'admin', seasonId: 'season-1' });
   assert.equal(state.registration.teamCapacity, 8);
   assert.equal(state.teams[0].candidate_kind, 'returning');
+  assert.equal(state.teams[0].entry_status, 'forming');
+  assert.match(state.teams[0].slot_status, /returning priority/i);
   const added = await repository.add({ actorUserId: 'admin', seasonId: 'season-1', teamId: 'team-old' });
   assert.equal(added.slot_id, 'slot-1');
   assert.equal(requests.length, 4);
