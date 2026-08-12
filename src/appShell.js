@@ -3,6 +3,7 @@ const NAV_ITEMS = [
   { href: '/teams', label: 'Teams', key: 'teams' },
   { href: '/schedule', label: 'Schedule', key: 'schedule' },
   { href: '/standings', label: 'Standings', key: 'standings' },
+  { href: '/prizes', label: 'Prizes', key: 'prizes' },
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
@@ -45,7 +46,8 @@ function sectionForPath(pathname) {
     || pathname === '/lineup'
   ) return 'teams';
   if (pathname.startsWith('/schedule')) return 'schedule';
-  if (pathname.startsWith('/standings') || pathname === '/prizes') return 'standings';
+  if (pathname === '/prizes') return 'prizes';
+  if (pathname.startsWith('/standings')) return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
@@ -55,7 +57,7 @@ function sectionForPath(pathname) {
 
 function navLinks(pathname, compact = false) {
   const active = sectionForPath(pathname);
-  return NAV_ITEMS.filter((item) => compact || item.key !== 'messages').map((item) => {
+  return NAV_ITEMS.map((item) => {
     const current = active === item.key;
     const attrs = current ? ' aria-current="page" data-active="true"' : '';
     return `<a href="${item.href}" data-nav-key="${item.key}"${attrs}>${item.label}</a>`;
@@ -138,7 +140,7 @@ export function renderPrimaryNavigation(pathname = '/') {
       </nav>
       ${renderMessageIndicator(pathname)}
       <details class="fd-nav-menu">
-        <summary>Menu</summary>
+        <summary aria-label="Menu">Menu</summary>
         <nav class="fd-nav fd-nav--mobile" aria-label="Primary navigation">
           ${navLinks(pathname, true)}
         </nav>
@@ -416,7 +418,12 @@ const errorPopupScript = `<script data-fd-error-popup-script>
     const dismiss = () => { popup.hidden = true; };
     const scan = () => {
       document.querySelectorAll('[data-tone="error"], [data-state="error"], [data-error="true"]').forEach((node) => {
-        const value = String(node.textContent || '').trim();
+        if (node.hidden || node.getAttribute('hidden') !== null) return;
+        if (node.closest && node.closest('[hidden]')) return;
+        const style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+        if (style && (style.display === 'none' || style.visibility === 'hidden')) return;
+        const explicit = node.getAttribute('data-error-message') || node.querySelector?.('[data-error-message]')?.textContent;
+        const value = String(explicit || node.textContent || '').replace(/\s+/g, ' ').trim();
         if (!value || seen.get(node) === value) return;
         seen.set(node, value);
         show(value);

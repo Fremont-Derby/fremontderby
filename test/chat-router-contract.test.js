@@ -47,7 +47,8 @@ test('shared navigation treats messages as a first-class app page', () => {
   assert.match(shell, /href: '\/messages', label: 'Messages'/);
   assert.match(shell, /'\/messages'/);
   assert.match(shell, /pathname\.startsWith\('\/messages'\)/);
-  assert.match(shell, /compact \|\| item\.key !== 'messages'/);
+  assert.doesNotMatch(shell, /item\.key !== 'messages'/);
+  assert.match(shell, /NAV_ITEMS\.map\(\(item\) =>/);
   assert.match(shell, /data-message-indicator/);
   assert.match(shell, /data-message-badge/);
   assert.match(shell, /data-message-preview/);

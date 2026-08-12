@@ -142,7 +142,7 @@ export function renderPrizesPage() {
 
     <form class="controls" data-form>
       <label>Season ID
-        <input name="seasonId" data-season-id autocomplete="off" />
+        <select name="seasonId" data-season-id><option value="">Loading seasons…</option></select>
       </label>
       <button class="load" type="submit">Load</button>
     </form>
@@ -263,9 +263,36 @@ export function renderPrizesPage() {
       renderPayoutRows(summary.finalized_payouts || [], finalizedBody, finalizedEmpty);
     }
 
+    async function loadSeasons() {
+      const response = await fetch('/api/seasons');
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not load seasons');
+      const seasons = body.seasons || [];
+      const remembered = localStorage.getItem('fd.prizesSeasonId') || '';
+      seasonInput.replaceChildren();
+      if (!seasons.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No seasons published';
+        seasonInput.append(opt);
+        return;
+      }
+      for (const season of seasons) {
+        const opt = document.createElement('option');
+        opt.value = season.id;
+        opt.textContent = season.name + ' — ' + season.status;
+        seasonInput.append(opt);
+      }
+      const preferred = seasons.find((s) => s.id === remembered)
+        || seasons.find((s) => s.status === 'complete')
+        || seasons.find((s) => s.status === 'active')
+        || seasons[0];
+      seasonInput.value = preferred?.id || seasons[0].id;
+    }
+
     async function loadPrizes() {
       const seasonId = seasonInput.value.trim();
-      if (!seasonId) throw new Error('Season ID is required');
+      if (!seasonId) throw new Error('Choose a season first');
       localStorage.setItem('fd.prizesSeasonId', seasonId);
       setStatus('Loading...');
       const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
@@ -290,9 +317,8 @@ export function renderPrizesPage() {
       run(loadPrizes);
     });
 
-    if (seasonInput.value) {
-      run(loadPrizes);
-    }
+    run(async () => { await loadSeasons(); if (seasonInput.value) await loadPrizes(); });
+    seasonInput.addEventListener('change', () => run(loadPrizes));
   </script>
 </body>
 </html>`;

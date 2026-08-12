@@ -269,10 +269,13 @@ export function renderChatPage(env = {}) {
       clearSession();
       layoutEl.hidden = true;
       hidePageState();
-      signedOutTitleEl.textContent = expired ? 'Your sign-in expired' : 'Coordinate league night in one place';
+      const matchupId = new URLSearchParams(location.search).get('matchup');
+      signedOutTitleEl.textContent = expired ? 'Your sign-in expired' : (matchupId ? 'Sign in to open this matchup thread' : 'Coordinate league night in one place');
       signedOutDetailEl.textContent = expired
         ? 'Sign in again to reopen your conversations. Your messages were not changed.'
-        : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.';
+        : (matchupId
+          ? 'After you sign in we will open the matchup conversation linked from the schedule.'
+          : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.');
       signedOutEl.hidden = false;
       setStatus(expired ? 'Sign in again to open messages' : 'Sign in to open messages', expired ? 'error' : 'muted');
     }

@@ -115,11 +115,11 @@ test("environment health endpoint reports ready production Supabase bindings", a
   const body = await response.json();
   assert.equal(body.ok, true);
   assert.equal(body.environment, "production");
-  assert.equal(body.expectedSupabaseProjectRef, "cpiucsxlkicmlbvdvhww");
-  assert.equal(body.supabase.projectRef, "cpiucsxlkicmlbvdvhww");
-  assert.equal(body.supabase.hasPublishableKey, true);
-  assert.equal(body.supabase.hasServiceRoleKey, true);
+  // Public payload stays coarse — no project refs or key-presence flags
+  assert.equal(body.expectedSupabaseProjectRef, undefined);
+  assert.equal(body.supabase, undefined);
   assert.doesNotMatch(JSON.stringify(body), /service-role-key/);
+  assert.doesNotMatch(JSON.stringify(body), /cpiucsxlkicmlbvdvhww/);
 });
 
 test("environment health endpoint fails when production Supabase bindings are missing", async () => {
@@ -132,9 +132,7 @@ test("environment health endpoint fails when production Supabase bindings are mi
   const body = await response.json();
   assert.equal(body.ok, false);
   assert.equal(body.environment, "production");
-  assert.equal(body.supabase.url, null);
-  assert.equal(body.supabase.hasPublishableKey, false);
-  assert.equal(body.supabase.hasServiceRoleKey, false);
+  assert.equal(body.supabase, undefined);
 });
 
 test("scorecard page route returns the phone scorecard UI", async () => {
@@ -1721,6 +1719,7 @@ test("public season list route allows only GET", async () => {
 
 test("team standings handler returns public season standings", async () => {
   const { fetch, calls } = createFetch([
+    { body: [{ id: "season-1", name: "Season 1", status: "active" }] },
     {
       body: [{
         season_id: "season-1",
@@ -1744,8 +1743,9 @@ test("team standings handler returns public season standings", async () => {
 
   assert.equal(response.status, 200);
   assert.equal((await response.json()).standings[0].team_name, "Breakers");
-  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_team_standings");
-  assert.deepEqual(JSON.parse(calls[0].init.body), {
+  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_public_season_registration");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_team_standings");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
     target_season_id: "season-1",
   });
 });
@@ -1765,6 +1765,7 @@ test("team standings route allows only GET", async () => {
 
 test("individual standings handler returns public season standings", async () => {
   const { fetch, calls } = createFetch([
+    { body: [{ id: "season-1", name: "Season 1", status: "active" }] },
     {
       body: [{
         season_id: "season-1",
@@ -1790,8 +1791,9 @@ test("individual standings handler returns public season standings", async () =>
 
   assert.equal(response.status, 200);
   assert.equal((await response.json()).standings[0].display_name, "Kai");
-  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_individual_standings");
-  assert.deepEqual(JSON.parse(calls[0].init.body), {
+  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_public_season_registration");
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_individual_standings");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
     target_season_id: "season-1",
   });
 });

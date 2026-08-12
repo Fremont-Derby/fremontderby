@@ -157,8 +157,19 @@ async function readJsonBody(request) {
   }
 }
 
+function clientErrorMessage(error) {
+  const msg = String(error?.message || "Request failed");
+  if (/invalid input syntax for type uuid/i.test(msg)) {
+    return "That season or match link is invalid.";
+  }
+  if (/Supabase request failed with 400:.*uuid/i.test(msg)) {
+    return "That season or match link is invalid.";
+  }
+  return msg;
+}
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
+  if (/invalid input syntax for type uuid/i.test(String(error?.message || ""))) return 400;
   if (error.message === "Season not found") return 404;
   if (error.message === "Actor is not a league admin") return 403;
   if (error.message.includes("Actor is not a league admin")) return 403;
@@ -214,7 +225,7 @@ export async function handlePublishScheduleRequest(
 
     return jsonResponse(result, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -248,7 +259,7 @@ export async function handleCreateSeasonSetupRequest(
 
     return jsonResponse({ setup }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -263,7 +274,7 @@ export async function handleListAdminSeasonsRequest(
     const seasons = await repository.listAdminSeasons({ actorUserId: actor.id });
     return jsonResponse({ seasons });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -286,7 +297,7 @@ export async function handleGetSeasonSetupRequest(
 
     return jsonResponse({ setup });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -322,7 +333,7 @@ export async function handleUpdateSeasonSetupRequest(
 
     return jsonResponse({ setup });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -341,7 +352,7 @@ export async function handleGetOwnProfileRequest(
 
     return jsonResponse({ profile });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -364,7 +375,7 @@ export async function handleSaveOwnProfileRequest(
 
     return jsonResponse({ profile });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -389,7 +400,7 @@ export async function handleCreateTeamRequest(
 
     return jsonResponse({ application }, 202);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -408,7 +419,7 @@ export async function handleGetOwnTeamRegistrationRequest(
     );
     return jsonResponse({ registration });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -427,7 +438,7 @@ export async function handleWithdrawTeamApplicationRequest(
     );
     return jsonResponse({ application });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -452,7 +463,7 @@ export async function handleRespondToReturningTeamSlotRequest(
     );
     return jsonResponse({ slot });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -471,7 +482,7 @@ export async function handleGetAdminSeasonRegistrationRequest(
     );
     return jsonResponse({ registration });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -500,7 +511,7 @@ export async function handleConfigureSeasonRegistrationRequest(
     );
     return jsonResponse({ registration });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -525,7 +536,7 @@ export async function handleReviewTeamApplicationRequest(
     );
     return jsonResponse({ application });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -551,7 +562,7 @@ export async function handleManageTeamSlotRequest(
     );
     return jsonResponse({ slot });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -575,7 +586,7 @@ export async function handleSeedReturningTeamSlotsRequest(
     );
     return jsonResponse({ slots }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -589,7 +600,7 @@ export async function handleListOwnTeamMembershipRequestsRequest(
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     return jsonResponse({ requests: await repository.listOwn({ actorUserId: actor.id }) });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -605,7 +616,7 @@ export async function handleRequestTeamMembershipRequest(
     const membershipRequest = await repository.requestJoin({ actorUserId: actor.id, teamId });
     return jsonResponse({ membershipRequest }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -629,7 +640,7 @@ export async function handleRespondToTeamMembershipRequest(
     });
     return jsonResponse({ membershipRequest });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -645,7 +656,7 @@ export async function handleCancelTeamMembershipRequest(
     const membershipRequest = await repository.cancel({ actorUserId: actor.id, requestId });
     return jsonResponse({ membershipRequest });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -664,7 +675,7 @@ export async function handleListOwnTeamManagementRequest(
 
     return jsonResponse({ teamManagement });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -683,7 +694,7 @@ export async function handleListOwnTeamTradesRequest(
 
     return jsonResponse({ tradeManagement });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -708,7 +719,7 @@ export async function handleInvitePlayerToTeamRequest(
 
     return jsonResponse({ invitation }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -735,7 +746,7 @@ export async function handleProposeTeamTradeRequest(
 
     return jsonResponse({ trade }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -762,7 +773,7 @@ export async function handleAdminProposeTeamTradeExceptionRequest(
 
     return jsonResponse({ trade }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -787,7 +798,7 @@ export async function handleRespondToTeamInvitationRequest(
 
     return jsonResponse({ invitation });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -812,7 +823,7 @@ export async function handleRespondToTeamTradePlayerRequest(
 
     return jsonResponse({ trade });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -837,7 +848,7 @@ export async function handleApproveTeamTradeCaptainRequest(
 
     return jsonResponse({ trade });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -860,7 +871,7 @@ export async function handleCancelTeamInvitationRequest(
 
     return jsonResponse({ invitation });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -883,7 +894,7 @@ export async function handleRemoveTeamMemberRequest(
 
     return jsonResponse({ membership });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -906,7 +917,7 @@ export async function handleRegisterFreeAgentRequest(
 
     return jsonResponse({ freeAgent }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -931,7 +942,7 @@ export async function handleSetFreeAgentAvailabilityRequest(
 
     return jsonResponse({ availability });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -955,7 +966,7 @@ export async function handleListEligibleFreeAgentsRequest(
 
     return jsonResponse({ freeAgents });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -980,7 +991,7 @@ export async function handleSetRosterAvailabilityRequest(
 
     return jsonResponse({ availability });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1004,7 +1015,7 @@ export async function handleListTeamRoundAvailabilityRequest(
 
     return jsonResponse({ availability });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1030,7 +1041,7 @@ export async function handleSubmitTeamLineupRequest(
 
     return jsonResponse({ lineup });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1054,7 +1065,7 @@ export async function handleListVisibleTeamLineupsRequest(
 
     return jsonResponse({ lineups });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1067,7 +1078,7 @@ export async function handleListPublicSeasonsRequest(
     const seasons = await repository.listPublicSeasons();
     return jsonResponse({ seasons });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1078,10 +1089,14 @@ export async function handleListSeasonScheduleRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
+      return jsonResponse({ error: "Season not found" }, 404);
+    }
     const rounds = await repository.listSeasonSchedule({ seasonId });
     return jsonResponse({ rounds });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1092,6 +1107,10 @@ export async function handleListTeamStandingsRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
+      return jsonResponse({ error: "Season not found" }, 404);
+    }
     const standings = await listTeamStandingsCommand(
       { seasonId },
       repository,
@@ -1099,7 +1118,7 @@ export async function handleListTeamStandingsRequest(
 
     return jsonResponse({ standings });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1110,6 +1129,10 @@ export async function handleListIndividualStandingsRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
+      return jsonResponse({ error: "Season not found" }, 404);
+    }
     const standings = await listIndividualStandingsCommand(
       { seasonId },
       repository,
@@ -1117,7 +1140,7 @@ export async function handleListIndividualStandingsRequest(
 
     return jsonResponse({ standings });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1135,7 +1158,7 @@ export async function handleGetSeasonPrizeSummaryRequest(
 
     return jsonResponse({ summary });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1168,7 +1191,7 @@ export async function handleConfigureSeasonPrizesRequest(
 
     return jsonResponse({ configuration }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1193,7 +1216,7 @@ export async function handleFinalizeSeasonPrizePayoutsRequest(
 
     return jsonResponse({ payouts }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1216,7 +1239,7 @@ export async function handleGetPlayerMatchScorecardRequest(
 
     return jsonResponse({ scorecard });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1241,7 +1264,7 @@ export async function handleRecordPlayerMatchRackRequest(
 
     return jsonResponse({ rack }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1264,7 +1287,7 @@ export async function handleUndoPlayerMatchRackRequest(
 
     return jsonResponse({ undo });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1287,7 +1310,7 @@ export async function handleFinalizePlayerMatchRequest(
 
     return jsonResponse({ match });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1316,7 +1339,7 @@ export async function handleCorrectPlayerMatchRequest(
 
     return jsonResponse({ match });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
@@ -1429,6 +1452,23 @@ export default {
     const seasonPrizesMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/prizes$/,
     );
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const requireSeasonUuid = (value) => {
+      if (!UUID_RE.test(String(value || ""))) {
+        return jsonResponse({ error: "That season or match link is invalid." }, 400);
+      }
+      return null;
+    };
+    // Validate season UUID only for allowed methods; non-GET should 405 first.
+    if (request.method === "GET" || request.method === "HEAD") {
+      for (const m of [seasonScheduleMatch, teamStandingsMatch, individualStandingsMatch, seasonPrizesMatch]) {
+        if (m) {
+          const bad = requireSeasonUuid(m[1]);
+          if (bad) return bad;
+        }
+      }
+    }
+
     const playerMatchScorecardMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/scorecard$/,
     );
@@ -1466,7 +1506,8 @@ export default {
           version: version.id,
           versionTag: version.tag,
           deployedAt: version.timestamp,
-          ...readiness,
+          ok: readiness.ok,
+          environment: readiness.environment,
         },
         readiness.ok ? 200 : 503,
       );
@@ -1995,6 +2036,12 @@ export default {
     }
 
     if (url.pathname === "/api/seasons") {
+      if (request.method === "HEAD") {
+        return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
+      }
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: { allow: "GET, HEAD, OPTIONS", "cache-control": "no-store" } });
+      }
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
