@@ -31,7 +31,7 @@ The Product Librarian / Information Architecture agent owns continuous reconcili
 These product decisions are canonical even when runtime still contains legacy or transitional surfaces:
 
 - **#370 Schedule + availability** — `/schedule` is the canonical date/schedule plus personal dated Available / Unsure / Unavailable surface. `/availability` is transitional only; normal Teams recruiting filters converge under #330.
-- **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains the focused live-scoring child.
+- **#371 Score + Play Tonight** — `/scorecard` is the canonical current-date-default league-night hub. PRs #422/#424 ship human-readable date, scoring-team, team-matchup, and revealed-race selection using only the server-authorized scorable-match read model; `/scorecard/live` remains the focused live-scoring child. Remaining work is captain pre-score availability/sub/lineup preparation, actual-play-date semantics, and final phone/browser validation.
 - **#366 Admin gateway** — `/admin` is the role-aware administration/help gateway. Shared discovery is canonical in `src/appShell.js` after #399/#403. Admin Teams/#372, Admin Support/#361, and remaining League Management consolidation are still open.
 - **#337 Close season / #338 readiness** — PR #412 makes `/season-setup` the canonical operator surface for explicit audited **Close season** after competitive completion, while PRs #417/#419 complete the authoritative Close and Publish readiness checklists on that same lifecycle surface. Cancel/Archive/safe-delete are separate lifecycle work under #414.
 - **#342 prepared-team administration** — PRs #398/#404/#405 completed prepared-team creation, optional captain assignment, and explicit Add players continuation on `/admin/season-teams`. This story is closed; do not recreate those workflows elsewhere.
@@ -57,7 +57,7 @@ These product decisions are canonical even when runtime still contains legacy or
 | `/schedule` | Public visitor / player / captain | See league dates/matchups and mark personal dated availability | Canonical schedule/availability surface after #376/#389; PR #415 only compacts the existing three-state phone control and does not change ownership |
 | `/availability` | Player / captain | Transitional standalone availability editor | Duplicate transitional runtime surface; retire under #370 |
 | `/lineup` | Captain | Build and commit the team's blind lineup | Current authoritative lineup surface; #371 will pull minimum pre-score planning into Score; Test Drive parity is #388. PR #420 only enlarges the existing lineup -> Score handoff touch target and does not change ownership |
-| `/scorecard` | Player / captain / team scorer | Select current or other authorized league-night work and enter scoring | Current picker; expansion under #371 |
+| `/scorecard` | Player / captain / team scorer | Select authorized league-night context and enter the selected revealed race into scoring | Canonical flexible Score hub. PRs #422/#424 ship local-Today default plus date/team/matchup/revealed-race selectors; remaining #371 work is pre-score captain preparation, actual-play-date semantics, and final phone/browser validation |
 | `/scorecard/live` | Player / team scorer | Operate active team-owned rack-ledger scoring | Canonical live-scoring surface; physical/two-human proof remains #326 |
 | `/messages` | Player / captain / admin support participant | Coordinate league/team/direct communication and planned shared admin-support conversations | Canonical communication surface; matchup chat deprecated under #78 |
 | `/standings` | Public visitor / player | View team and individual standings and season results | Canonical standings surface; historical selection remains #180 |
@@ -98,9 +98,9 @@ These product decisions are canonical even when runtime still contains legacy or
 | Captain | See own Forming/Qualified/Accepted/Waitlisted state and opening-night 4-player depth | `/teams` | Missing/planned | #410 | Must be visible from normal Teams in <=2 actions; admin summary belongs on Operations/Season Teams |
 | Player / captain | Find/create/join/manage team relationships and recruit | `/teams` | Implemented core; recruiting expansion open | #131, #181, #182, #330, PR #402 | Teams remains normal roster/recruiting home |
 | Player / captain / admin | Open direct conversation from player/captain context | `/messages` | Core implemented; contextual entry open | #373 | Reuse canonical direct conversation |
-| Captain | Find available eligible subs and commit blind three | `/lineup`; `/scorecard` target hub consumes same state | Dated source shipped; consolidation open | #13, #138, #330, #371, PR #389 | Schedule is availability source; recruiting stays Teams |
+| Captain | Find available eligible subs and commit blind three | `/lineup`; `/scorecard` consumes the same state for selected matchup | Dated source shipped; Score preparation bridge open | #13, #138, #330, #371, PR #389 | Schedule is availability source; recruiting stays Teams; no duplicate nightly roster surface |
 | Captain / league admin exception | Transfer current captain role | Team management; Admin Teams fallback | Open | #182, #372 | No one-night captain role |
-| Player / scorer | Select authorized date/team/matchup/race | `/scorecard` | Current picker implemented; flexible selector open | #141, #371 | Direct Score destination |
+| Player / scorer | Select authorized date/team/matchup/revealed race | `/scorecard` | Implemented core; actual-play-date/final phone proof open | #141, #371, PRs #422/#424 | Score is a direct shared-nav destination; all four selectors are on-page and live scoring is one deliberate action from selected race |
 | Player / team scorer | Score/reconcile/confirm/finalize | `/scorecard/live` | Substantially complete; physical QA open | #14, #73, #321-#326, #344, PR #386 | Intentional focus child of Score |
 | Public visitor / player | View standings | `/standings` | Implemented current season | #16, #17, #180 | Desktop direct; mobile menu <=2 |
 | Player / captain | Coordinate without sharing contact details | `/messages` | Implemented core | #76-#80 | Direct shared navigation |
@@ -124,8 +124,8 @@ These product decisions are canonical even when runtime still contains legacy or
 - Admin unclaimed-player creation and privileged player mutations -> `/admin/players`; normal discovery/recruiting remains `/teams`.
 - Team applications, membership requests, invitations, free-agent participation, normal roster relationships, and participant-facing team-entry status -> `/teams`.
 - Date-keyed personal availability -> `/schedule`; standalone `/availability` is transitional.
-- Team lineup read/commit remains authoritative in lineup domain even as #371 consolidates match-night entry into Score.
-- Scorable-match selection -> `/scorecard`; live scoring -> `/scorecard/live`.
+- Team lineup read/commit remains authoritative in lineup domain while #371 adds a captain pre-score bridge on Score; normal recruiting stays Teams.
+- Authorized league-night context selection -> `/scorecard`; PRs #422/#424 ship date/team/matchup/revealed-race selection without IDs or client-invented pairings. Live scoring -> `/scorecard/live`.
 - Direct/team/league chat -> `/messages`; report resolution -> `/messages/moderation`; matchup chat is legacy under #78.
 - Admin access gateway -> `/admin`.
 - Season setup/publishing/**successful Close season** and authoritative Publish/Close readiness -> `/season-setup`. PR #412 makes Close an explicit audited operator action after competitive completion; PRs #417/#419 complete #338 readiness on the same surface; #414 owns distinct Cancel/Archive/safe-delete actions. Do not create a second season-lifecycle page.
@@ -140,19 +140,21 @@ These product decisions are canonical even when runtime still contains legacy or
 
 ### 2026-08-12 reconciliation
 
-- **PR #419 completed #338:** canonical `/season-setup` now has both authoritative Publish and Close readiness checklists. Publish readiness uses existing setup/season-team read models, distinguishes advisory waiting applications from blockers, and links fixes to existing Season Teams/setup surfaces rather than duplicating mutations. #338 is correctly closed.
-- **PR #420 is presentation/accessibility-only:** the existing lineup -> Score handoff now meets the shared tactile-action minimum. It does not introduce a new story, route, page purpose, authorization boundary, or navigation path.
-- **PR #412 completed the core #337 Close-season story:** `/season-setup` exposes an explicit audited Close season action with readable readiness and preservation confirmation. The function fits the page's existing selected-season lifecycle purpose and is reachable through Admin -> League Management within the <=2-action rule.
+- **PRs #422/#424 advanced #371 without changing canonical ownership:** `/scorecard` now ships a browser-local Today default and human-readable date, scoring-team, team-matchup, and revealed-race selectors using only the existing server-authorized scorable-match response. Fixed blind pairings are not re-assigned client-side, and selecting a revealed race hands off to canonical `/scorecard/live`.
+- **Score page-purpose audit remains clean:** date/team/matchup/race context directly supports the page's one purpose—choose authorized league-night work and enter scoring. Schedule still owns dates + personal availability, Teams still owns roster/recruiting, `/lineup` remains the authoritative blind-lineup surface, and `/scorecard/live` remains focused scoring.
+- **Score <=2-action audit passes:** Score is a direct shared-navigation destination; all shipped selectors are on the page; a selected race reaches live scoring in one deliberate action; empty date/team states retain canonical Schedule/Teams recovery links. Remaining pre-score captain preparation and actual-play-date semantics are already owned by #371.
+- **Open PR #425 / issue #423 is presentation-only and non-overlapping:** it enlarges existing lineup correction controls without creating a new story, route, page purpose, authorization boundary, or navigation path. Do not fold that concurrent lane-owned change into librarian cleanup.
+- **No new orphan/duplicate route from #422/#424:** the changes extend canonical Score rather than recreating Play Tonight. Legacy `/availability`, `/trades`, and matchup-chat cleanup remains #370/#362/#78.
+- **PR #419 completed #338:** canonical `/season-setup` has both authoritative Publish and Close readiness checklists. #338 is correctly closed.
+- **PR #420 is presentation/accessibility-only:** the existing lineup -> Score handoff meets the shared tactile-action minimum without changing ownership.
+- **PR #412 completed the core #337 Close-season story:** `/season-setup` exposes an explicit audited Close season action while preserving league history.
 - **Lifecycle backlog split remains correct:** #338 is complete; #414 owns Cancel/Archive/safe-delete semantics. No lifecycle readiness duplicate issue is needed.
-- **PR #415 is presentation-only:** Schedule's Available / Unsure / Unavailable phone control is more compact, but the user story, canonical page, audience, and navigation path remain unchanged.
-- **PR #404 completed the captain-assignment slice of #342 and advanced #335:** `/admin/season-teams` now assigns existing/unclaimed prepared captains with contact-readiness privacy and activation safeguards. This supports the page's single purpose—selected-season team preparation—rather than creating Admin Teams early.
-- **PR #405 completed the post-create continuation of #342:** Add players is an explicit action from `/admin/season-teams`, but roster mutation remains canonically owned by `/admin/players`. #342 is fully reconciled/closed.
-- **PR #411/#407 introduced the four-state team-entry model:** Forming, Qualified, Accepted, Waitlisted are admin-visible on `/admin/season-teams`; new/current-season teams require captain + 3 active rostered players before slot entry. Returning teams use a distinct Reserve slot path without treating historical roster/captain as current commitment.
-- **Parent #406 is correctly split:** #408 owns returning reservation/release/succession, #409 owns durable waitlist ordering/promotion, and #410 owns participant-facing status plus 4-player opening-night depth. No duplicate issue is needed.
-- **Page-purpose audit:** `/season-setup` remains coherent as selected-season lifecycle management; the readiness checklists directly support its Publish/Close lifecycle actions rather than overloading it. `/admin/season-teams` remains selected-season candidate/slot preparation; `/admin/players` remains player/roster administration; `/teams` remains participant team/roster home; `/profile` remains own identity/contact/status; `/lineup` remains blind lineup preparation.
-- **<=2-action audit:** Publish/Close lifecycle work remains reachable through Admin -> League Management; Profile phone remains one action; Schedule, Teams, Score remain direct navigation. The lineup -> Score continuation is in-context after lineup commitment and therefore not a discoverability dead end. The missing participant team-entry state is already captured by #410 on direct-nav Teams.
-- **No new orphan/duplicate route:** PRs #419/#420 reused existing canonical surfaces and added no top-level page. Legacy `/availability`, `/trades`, and matchup-chat cleanup remains #370/#362/#78.
-- **Backlog vacuum:** #338, #337, and #342 are complete; #335 remains narrowed to existing-captain recovery + authorized detail UI; #406/#408/#409/#410 cover team-slot lifecycle without duplicate cards.
+- **PR #415 is presentation-only:** Schedule's Available / Unsure / Unavailable phone control is more compact, but the story and ownership remain unchanged.
+- **PRs #404/#405 completed #342 and advanced #335:** `/admin/season-teams` owns prepared team/captain/roster continuation; Profile owns own private contact phone; authorized detail/recovery remains #335/#372.
+- **PR #411/#407 introduced the four-state team-entry model:** Forming, Qualified, Accepted, Waitlisted are admin-visible on `/admin/season-teams`; #408/#409/#410 correctly own remaining returning/waitlist/participant slices.
+- **Page-purpose audit:** `/season-setup`, `/admin/season-teams`, `/admin/players`, `/teams`, `/profile`, `/lineup`, and `/scorecard` each retain one distinct purpose for their affected audiences.
+- **<=2-action audit:** Publish/Close remains Admin -> League Management; Profile phone is direct; Schedule, Teams, Score are direct destinations; lineup -> Score and selected Score race -> live scoring are in-context one-action continuations.
+- **Backlog reconciliation:** #371 is accurately narrowed to captain pre-score preparation, actual-play-date semantics, and final phone/browser validation. #423 already owns the open lineup touch-target fix. No new issue was needed.
 
 ## Known catalog work
 
@@ -166,7 +168,7 @@ These product decisions are canonical even when runtime still contains legacy or
 - #335 — private contact recovery + authorized Admin detail UI only; persistence and assignment/activation enforcement are shipped.
 - #370 — retire duplicate `/availability` after final proof.
 - #330 — finish normal Teams recruiting filters using dated availability.
-- #371 — make Score the current-date-default flexible league-night hub.
+- #371 — remaining Score work is captain pre-score availability/sub/lineup preparation, actual-play-date semantics, and final phone/browser validation; date/team/matchup/revealed-race selection shipped in #422/#424.
 - #366 — complete Admin Teams/Admin Support/League Management ownership and retire Profile fallback after proof.
 - #372 — focused Admin Teams management; do not duplicate `/admin/season-teams` season preparation.
 - #373 — contextual Message player/captain deep-links.
