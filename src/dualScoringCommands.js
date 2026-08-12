@@ -29,6 +29,12 @@ function normalizeRackNumber(value) {
   return rackNumber;
 }
 
+function normalizeExpectedRacks(value) {
+  if (value == null) return undefined;
+  if (!Array.isArray(value)) throw new Error('expectedRacks must be an array');
+  return value;
+}
+
 function normalizeOpeningDiscipline(value) {
   const normalized = value === '8' ? '8-ball' : value === '9' ? '9-ball' : value;
   if (!['8-ball', '9-ball'].includes(normalized)) {
@@ -75,7 +81,7 @@ export async function setPlayerMatchOpeningDisciplineCommand(
 }
 
 export async function recordPlayerMatchScoreRackCommand(
-  { actorUserId, playerMatchId, scoringTeamId, winnerSide },
+  { actorUserId, playerMatchId, scoringTeamId, winnerSide, expectedRacks },
   repository,
 ) {
   assertScoringContext({ actorUserId, playerMatchId, scoringTeamId });
@@ -85,11 +91,12 @@ export async function recordPlayerMatchScoreRackCommand(
     playerMatchId,
     scoringTeamId,
     winnerSide: normalizeWinnerSide(winnerSide),
+    expectedRacks: normalizeExpectedRacks(expectedRacks),
   });
 }
 
 export async function updatePlayerMatchScoreRackCommand(
-  { actorUserId, playerMatchId, scoringTeamId, rackNumber, winnerSide },
+  { actorUserId, playerMatchId, scoringTeamId, rackNumber, winnerSide, expectedRacks },
   repository,
 ) {
   assertScoringContext({ actorUserId, playerMatchId, scoringTeamId });
@@ -100,19 +107,26 @@ export async function updatePlayerMatchScoreRackCommand(
     scoringTeamId,
     rackNumber: normalizeRackNumber(rackNumber),
     winnerSide: normalizeWinnerSide(winnerSide),
+    expectedRacks: normalizeExpectedRacks(expectedRacks),
   });
 }
 
 export async function undoPlayerMatchScoreRackCommand(input, repository) {
   assertScoringContext(input);
   assertRepository(repository, 'undoPlayerMatchScoreRack');
-  return repository.undoPlayerMatchScoreRack(input);
+  return repository.undoPlayerMatchScoreRack({
+    ...input,
+    expectedRacks: normalizeExpectedRacks(input.expectedRacks),
+  });
 }
 
 export async function confirmPlayerMatchScoreCommand(input, repository) {
   assertScoringContext(input);
   assertRepository(repository, 'confirmPlayerMatchScore');
-  return repository.confirmPlayerMatchScore(input);
+  return repository.confirmPlayerMatchScore({
+    ...input,
+    expectedRacks: normalizeExpectedRacks(input.expectedRacks),
+  });
 }
 
 export async function finalizeReconciledPlayerMatchCommand(input, repository) {
