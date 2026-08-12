@@ -85,13 +85,14 @@ test('scorecard first view is a compact aligned W/L rack ledger with contained h
   assert.match(html, /Match details/);
 });
 
-test('individual score counts only reconciled matching rack submissions and next rack uses persisted discipline order', () => {
+test('individual score counts only reconciled matching racks and next rack follows this team history', () => {
   const html = renderScorecardPage();
   assert.match(html, /if\(rackState\(own\[i\],opponent\[i\],i\+1\)!=='matched'\)continue/);
   assert.match(html, /if\(side==='A'\)a\+=1/);
   assert.match(html, /if\(side==='B'\)b\+=1/);
   assert.match(html, /opening_block_length\|\|3/);
   assert.match(html, /oppositeGame\(currentScorecard\.opening_discipline\)/);
-  assert.match(html, /Math\.max\(own\.length,opponent\.length\)\+1/);
+  assert.match(html, /const nextRack=own\.length\+1/);
+  assert.doesNotMatch(html, /const nextRack=Math\.max\(own\.length,opponent\.length\)\+1/);
   assert.match(html, /data-next-discipline/);
 });
