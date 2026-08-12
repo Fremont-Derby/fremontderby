@@ -22,6 +22,14 @@ test('standings provides useful no-season and load-failure recovery', () => {
   assert.match(html, /loadButton\.disabled=seasons\.length===0/);
 });
 
+test('registration summary is shown only while the selected season is in registration', () => {
+  const html = renderStandingsPage();
+
+  assert.match(html, /const isRegistration=season\?\.status==='registration';registrationSummary\.hidden=!isRegistration;if\(!isRegistration\)return/);
+  assert.match(html, /Register or join a team/);
+  assert.doesNotMatch(html, /if\(!isRegistration\)\{registerLink\.textContent='View teams'/);
+});
+
 test('standings recovery actions remain keyboard and mobile friendly', () => {
   const html = renderStandingsPage();
 
