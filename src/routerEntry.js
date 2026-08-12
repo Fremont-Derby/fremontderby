@@ -6,6 +6,8 @@ import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
+import { routePlayerContact } from './playerContactHttp.js';
+import { enhanceProfileContact } from './profileContactEnhancer.js';
 import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
@@ -60,6 +62,8 @@ export default {
     }
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse);
+    const playerContactResponse = await routePlayerContact(request, env);
+    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
     if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
@@ -75,7 +79,8 @@ export default {
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
-      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withSeasonRegistration));
+      const withContact = await enhanceProfileContact(withSeasonRegistration);
+      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact));
     }
     return finalizeBrowserResponse(reconciled);
   },
