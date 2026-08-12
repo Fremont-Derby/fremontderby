@@ -235,7 +235,7 @@ begin
   where tm.season_id = target_round.season_id
     and tm.player_id = actor_player_id
     and tm.ends_at is null
-  order by tm.created_at, tm.team_id
+  order by tm.starts_at, tm.team_id
   limit 1;
   if not found then raise exception 'Active roster membership is required before setting availability'; end if;
 
