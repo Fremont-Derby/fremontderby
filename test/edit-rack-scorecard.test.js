@@ -92,6 +92,10 @@ test('repository calls the surgical rack RPC with one target rack', async () => 
 
 test('existing score-racks HTTP endpoint routes rackNumber to edit instead of append', async () => {
   const calls = [];
+  const expectedRacks = [
+    { rackNumber: 1, discipline: '8-ball', winnerSide: 'A' },
+    { rackNumber: 2, discipline: '8-ball', winnerSide: 'A' },
+  ];
   const handlers = createDualScoringHttpHandlers({
     authenticate: async () => ({ id: 'user-1' }),
     createRepository: () => ({
@@ -108,7 +112,7 @@ test('existing score-racks HTTP endpoint routes rackNumber to edit instead of ap
   const request = new Request('https://example.test?scoringTeamId=team-a', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ rackNumber: 2, winnerSide: 'B' }),
+    body: JSON.stringify({ rackNumber: 2, winnerSide: 'B', expectedRacks }),
   });
 
   const response = await handlers.record(request, {}, 'match-1');
@@ -124,6 +128,7 @@ test('existing score-racks HTTP endpoint routes rackNumber to edit instead of ap
       scoringTeamId: 'team-a',
       rackNumber: 2,
       winnerSide: 'B',
+      expectedRacks,
     },
   ]]);
 });

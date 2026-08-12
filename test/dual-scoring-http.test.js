@@ -37,22 +37,22 @@ test('dual-score HTTP handlers forward actor and explicit scoring-team actions',
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { comparison: { histories_match: false } });
 
-  response = await handlers.record(request({ winnerSide: 'A', scoringTeamId: 'team-a' }), {}, 'match-1');
+  response = await handlers.record(request({ winnerSide: 'A', scoringTeamId: 'team-a', expectedRacks: [] }), {}, 'match-1');
   assert.equal(response.status, 201);
   assert.deepEqual(await response.json(), { rack: { rack_number: 1 } });
 
-  response = await handlers.undo(request(), {}, 'match-1');
+  response = await handlers.undo(request({ expectedRacks: [] }), {}, 'match-1');
   assert.equal(response.status, 200);
-  response = await handlers.confirm(request(), {}, 'match-1');
+  response = await handlers.confirm(request({ expectedRacks: [] }), {}, 'match-1');
   assert.equal(response.status, 200);
   response = await handlers.finalize(request(), {}, 'match-1');
   assert.equal(response.status, 200);
 
   assert.deepEqual(calls, [
     ['compare', scoreContext],
-    ['record', { ...scoreContext, winnerSide: 'A' }],
-    ['undo', scoreContext],
-    ['confirm', scoreContext],
+    ['record', { ...scoreContext, winnerSide: 'A', expectedRacks: [] }],
+    ['undo', { ...scoreContext, expectedRacks: [] }],
+    ['confirm', { ...scoreContext, expectedRacks: [] }],
     ['finalize', scoreContext],
   ]);
 });
@@ -87,7 +87,7 @@ test('admin score override HTTP handler requires and forwards dispute resolution
 
 test('dual-score HTTP handlers reject invalid rack input without repository mutation', async () => {
   const { calls, handlers } = harness();
-  const response = await handlers.record(request({ winnerSide: 'X', scoringTeamId: 'team-a' }), {}, 'match-1');
+  const response = await handlers.record(request({ winnerSide: 'X', scoringTeamId: 'team-a', expectedRacks: [] }), {}, 'match-1');
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /winnerSide must be A or B/);
   assert.deepEqual(calls, []);
