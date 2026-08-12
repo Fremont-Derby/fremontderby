@@ -6,8 +6,15 @@ function value(row, camelName, snakeName) {
 
 function availableSlots(registration) {
   const counts = registration?.counts ?? {};
-  const available = Number(counts.availableSlots ?? counts.available_slots ?? 0);
-  return Number.isFinite(available) ? Math.max(0, available) : 0;
+  const explicit = counts.availableSlots ?? counts.available_slots;
+  if (explicit != null) {
+    const available = Number(explicit);
+    return Number.isFinite(available) ? Math.max(0, available) : 0;
+  }
+  const capacity = Number(registration?.teamCapacity ?? registration?.team_capacity ?? 0);
+  const occupied = Number(counts.occupiedSlots ?? counts.occupied_slots ?? 0);
+  if (!Number.isFinite(capacity) || capacity <= 0) return 0;
+  return Math.max(0, capacity - (Number.isFinite(occupied) ? occupied : 0));
 }
 
 export function deriveAdminSeasonTeamEntry(row, registration) {
