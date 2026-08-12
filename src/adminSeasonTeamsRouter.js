@@ -34,6 +34,18 @@ export async function routeAdminSeasonTeams(request, env) {
     );
   }
 
+  const preparedTeams = url.pathname.match(
+    /^\/api\/admin\/seasons\/([^/]+)\/prepared-teams$/,
+  );
+  if (preparedTeams) {
+    if (request.method !== 'POST') return methodNotAllowed();
+    return adminSeasonTeamsHttpHandlers.createPrepared(
+      request,
+      env,
+      decodeURIComponent(preparedTeams[1]),
+    );
+  }
+
   const addTeam = url.pathname.match(
     /^\/api\/admin\/seasons\/([^/]+)\/teams\/([^/]+)\/add$/,
   );
