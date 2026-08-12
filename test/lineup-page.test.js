@@ -6,6 +6,8 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
   const html = renderLineupPage();
 
   assert.match(html, /Fremont Derby Lineup/);
+  assert.match(html, /Pick your three/);
+  assert.doesNotMatch(html, /Pick tonight's players/);
   assert.match(html, /data-team-select/);
   assert.match(html, /data-round-select/);
   assert.doesNotMatch(html, /data-team-id/);
