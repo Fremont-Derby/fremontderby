@@ -152,13 +152,17 @@ begin
       limit 1
     ) captain_membership on true
     left join public.players captain on captain.id = captain_membership.player_id
+  ),
+  combined as (
+    select * from in_season
+    union all
+    select * from returning_teams
+    union all
+    select * from new_teams
   )
-  select * from in_season
-  union all
-  select * from returning_teams
-  union all
-  select * from new_teams
-  order by candidate_kind, team_name;
+  select combined.*
+  from combined
+  order by combined.candidate_kind, combined.team_name;
 end;
 $$;
 
@@ -183,6 +187,7 @@ declare
   target_season public.seasons%rowtype;
   assigned_team_id uuid;
   assigned_slot_id uuid;
+  assigned_captain_player_id uuid;
   occupied_slots integer;
   created_new_team boolean := false;
   initial_status text;
@@ -261,6 +266,31 @@ begin
     end if;
   end if;
 
+  select sts.id into assigned_slot_id
+  from private.season_team_slots sts
+  where sts.season_id = target_season_id
+    and sts.team_id = assigned_team_id
+    and sts.status in ('reserved', 'transferred', 'approved_pending_roster', 'ready', 'confirmed')
+  order by sts.created_at desc
+  limit 1;
+  if assigned_slot_id is not null then
+    return query
+    select sts.id, sts.team_id, target_team.name, sts.status, false
+    from private.season_team_slots sts
+    join public.teams target_team on target_team.id = sts.team_id
+    where sts.id = assigned_slot_id;
+    return;
+  end if;
+
+  select tm.player_id into assigned_captain_player_id
+  from public.team_memberships tm
+  where tm.team_id = assigned_team_id
+    and tm.season_id = target_season_id
+    and tm.role = 'captain'
+    and tm.ends_at is null
+  order by tm.starts_at desc
+  limit 1;
+
   initial_status := case when (
     select count(*)
     from public.team_memberships tm
@@ -273,12 +303,14 @@ begin
     season_id,
     source_team_id,
     team_id,
+    assigned_captain_player_id,
     status,
     last_action_reason
   ) values (
     target_season_id,
     case when source_team.season_id = target_season_id then null else source_team.id end,
     assigned_team_id,
+    assigned_captain_player_id,
     initial_status,
     'Added manually by league admin'
   )
