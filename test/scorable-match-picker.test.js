@@ -64,7 +64,8 @@ test('score picker removes token and UUID entry while making scoring team explic
   const html = renderScorePickerPage();
   assert.match(html, /Score a match/);
   assert.match(html, /No tokens or database IDs required/);
-  assert.match(html, /If you belong to both teams/);
+  assert.match(html, /Scoring team/);
+  assert.match(html, /All my teams/);
   assert.match(html, /\/api\/me\/scorable-matches/);
   assert.match(html, /\/scorecard\/live\?match=/);
   assert.match(html, /&team=/);

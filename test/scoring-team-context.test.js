@@ -54,7 +54,8 @@ test('picker and live scorecard preserve an explicit team choice', () => {
   const live = renderScorecardPage();
   assert.match(picker, /scoring_team_id/);
   assert.match(picker, /scoring_team_name/);
-  assert.match(picker, /If you belong to both teams/);
+  assert.match(picker, /aria-label="Scoring team"/);
+  assert.match(picker, /All my teams/);
   assert.match(live, /params\.get\('team'\)/);
   assert.match(live, /scoringTeamId=/);
   assert.match(live, />Switch match</);

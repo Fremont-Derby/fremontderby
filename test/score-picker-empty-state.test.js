@@ -8,9 +8,10 @@ test('score picker exposes accessible status and useful signed-out actions', () 
 
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /Sign in to score/);
-  assert.match(html, /See tonight’s matchups/);
+  assert.match(html, /Open Schedule/);
   assert.match(html, /href='\/profile'|href="\/profile"|actionLink\('Sign in to score','\/profile'\)/);
-  assert.match(html, /actionLink\('See tonight’s matchups','\/schedule'/);
+  assert.match(html, /actionLink\('Open Schedule','\/schedule',true\)/);
+  assert.doesNotMatch(html, /tonight/i);
 });
 
 test('score picker empty state gives next actions instead of a dead end', () => {
@@ -18,7 +19,7 @@ test('score picker empty state gives next actions instead of a dead end', () => 
 
   assert.match(html, /Nothing ready to score/);
   assert.match(html, /Check my team/);
-  assert.match(html, /actionLink\('See tonight’s matchups','\/schedule'\)/);
+  assert.match(html, /actionLink\('Open Schedule','\/schedule'\)/);
   assert.match(html, /actionLink\('Check my team','\/teams',true\)/);
 });
 
