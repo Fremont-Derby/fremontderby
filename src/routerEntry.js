@@ -5,6 +5,8 @@ import { injectDesignSystem } from './designSystem.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
+import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
+import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 
 async function reconcileProductShell(response, pathname) {
@@ -52,6 +54,8 @@ export default {
     if (url.pathname === '/api/admin/players' && request.method === 'POST') {
       return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env));
     }
+    const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
+    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
     if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse);
     const adminGatewayResponse = routeAdminGateway(request);
@@ -62,6 +66,9 @@ export default {
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') {
       return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled));
+    }
+    if (url.pathname === '/profile' && request.method === 'GET') {
+      return finalizeBrowserResponse(await enhanceProfileSeasonRegistration(reconciled));
     }
     return finalizeBrowserResponse(reconciled);
   },
