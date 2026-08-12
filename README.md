@@ -72,13 +72,14 @@ When a route, page, navigation element, role, or user-facing function changes, r
 
 Current runtime can temporarily lag approved product ownership while focused cleanup stories land. Treat these issues as the durable direction rather than extending the legacy surface:
 
-- **#370 Schedule + availability** — PR #376 shipped the canonical personal date-keyed Available / Unsure / Unavailable check-in directly on `/schedule`, including teamless/free-agent players. Remaining work is to migrate captain/sub consumers to the same source and retire standalone `/availability` only after parity/recovery proof.
+- **#370 Schedule + availability** — PR #376 shipped the canonical personal date-keyed Available / Unsure / Unavailable check-in directly on `/schedule`, including teamless/free-agent players. PR #389 moved captain lineup/substitute discovery to that same date-keyed source. Remaining work is to migrate the normal Teams recruiting filters where applicable and retire standalone `/availability` only after parity/recovery proof.
 - **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains focused live scoring.
 - **#366 Admin gateway** — PR #369 shipped a role-aware `/admin` gateway with Operations, Players, League Management, Moderation, plus safe signed-out/non-admin states. It is not yet fully first-class because shared navigation does not expose Admin, Admin Teams/#372 and Admin Support/#361 remain missing, and Profile still carries fallback admin links to preserve <=2-action reachability.
 - **#362 Trades retirement** — formal player trades are removed from the product. Roster change uses applications, invitations, captain roster management, and admin exceptions; historical trade records may remain for audit/history.
 - **#18 Prize ownership split** — `/prizes` is the public/read-only purse and payout view; privileged prize configuration belongs in Admin → League Management.
 - **#365 Fargo profile identity** — players may enter their own Fargo identifier on Profile; official Fargo rating and robustness are displayed from sourced observations when available. Player-supplied IDs remain distinguishable from verified Fargo identity.
 - **#361 Admin Support** — player questions/operational reports go to the shared admin group through Messages and remain distinct from moderation reports.
+- **#387 Test Drive component parity** — Test Drive / War Games is a QA harness around production components, not a parallel demo implementation. PR #386 made `/scorecard/live` and `/sandbox/player` use the same rack-ledger component/controller with only the adapter swapped; captain/lineup parity remains #388.
 
 Do not create parallel pages to implement these transitions. Follow the canonical ownership in the linked stories and `docs/product-surface-catalog.md`.
 
@@ -174,12 +175,13 @@ Server-side authorization must still enforce actor/team/captain/admin boundaries
 A useful current core workflow to keep healthy is:
 
 ```text
-sign in -> profile -> team -> schedule + dated availability -> blind lineup
--> Score -> generated player match -> live 8/9 rack scoring
--> reconcile -> dual confirm -> finalize -> team standings -> individual standings
+sign in -> profile + current-season registration/payment -> team
+-> schedule + dated availability -> blind lineup -> Score -> generated player match
+-> live 8/9 rack scoring -> reconcile -> dual confirm -> finalize
+-> team standings -> individual standings
 ```
 
-#370/#371 intentionally converge separate Availability and Play Tonight concepts into Schedule and Score. Schedule already owns personal dated check-in after PR #376; do not introduce parallel replacement pages while captain/sub consumers and `/availability` retirement remain open.
+#370/#371 intentionally converge separate Availability and Play Tonight concepts into Schedule and Score. Schedule owns personal dated check-in after PR #376 and captain lineup/sub discovery now consumes the same dated source after PR #389; do not introduce parallel replacement pages while `/availability` retirement and Score consolidation remain open.
 
 The platform should continue beyond any one season or release. Current GitHub issues and milestones determine which gaps matter most now; `AGENTS.md` defines how an autonomous agent should choose among them.
 
@@ -187,13 +189,13 @@ The platform should continue beyond any one season or release. Current GitHub is
 
 - `/` — concise cash-league introduction and primary Join / sign in action; PR #379/#377 shipped the current above-the-fold shape, while #252 still owns deeper current-season practical details
 - `/rules` — public rules
-- `/profile` — Google sign-in and player identity/profile; Fargo self-service #365 and unclaimed-player self-claim #341 belong here; PR #380/#378 makes the existing login persist across normal browser restarts while the underlying Supabase refresh session remains valid
+- `/profile` — Google sign-in, player identity/profile, and own current-season registration/payment status; PR #385/#343 adds Join this season plus Registered / Payment due / Paid / Waived state, Fargo self-service #365 and unclaimed-player self-claim #341 belong here, and PR #380/#378 keeps the login across normal browser restarts while the underlying Supabase refresh session remains valid
 - `/teams` — team creation, requests/invitations, roster management, and normal player/recruiting discovery
-- `/schedule` — league dates, matchup context, and canonical personal dated Available / Unsure / Unavailable check-in after PR #376/#370
-- `/availability` — **transitional duplicate availability surface** pending remaining #370 consumer migration/parity and retirement
-- `/lineup` — current authoritative captain lineup workflow; #371 consolidates match-night entry into Score without changing rules
+- `/schedule` — league dates, matchup context, and canonical personal dated Available / Unsure / Unavailable check-in after PR #376/#370; captain lineup/sub discovery consumes the same dated source after PR #389
+- `/availability` — **transitional duplicate availability surface** pending final #370 parity/recovery proof and retirement
+- `/lineup` — current authoritative captain lineup workflow; #371 consolidates match-night entry into Score without changing rules; Test Drive reuse of the production lineup component is tracked by #388
 - `/scorecard` — current eligible match picker and target flexible league-night hub under #371
-- `/scorecard/live` — live team-owned rack-ledger scoring
+- `/scorecard/live` — live team-owned rack-ledger scoring; PR #386 shares this exact production scorer/controller with Player War Games through separate production/sandbox adapters
 - `/messages` — league, team, direct, and planned admin-support communication; matchup-specific chat is deprecated under #78
 - `/messages/moderation` — moderator/admin message-report review; separate from Admin Support
 - `/standings` — team / individual standings
@@ -206,13 +208,13 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/prizes` — public purse/payout state; privileged configuration is moving to Admin → League Management under #18
 - `/health` — Worker version metadata
 - `/health/environment` — non-secret environment diagnostics
-- `/demo` — public **Test Drive the App** using fictional, non-authoritative data
-- `/sandbox/captain` — fictional captain practice child flow
-- `/sandbox/player` — fictional team-owned scoring/reconciliation practice child flow
+- `/demo` — public **Test Drive the App** using fictional, non-authoritative data; simulated production actions should share production components under #387
+- `/sandbox/captain` — fictional captain practice child flow; production lineup-component parity remains #388
+- `/sandbox/player` — fictional scoring/reconciliation child flow using the same rack-ledger component/controller as `/scorecard/live` after PR #386, with isolated fictional state
 
 `/admin` exists, but it is not yet a first-class shared-navigation destination: `src/appShell.js` still has no Admin nav item/active section. Authorized Profile admin links remain the temporary discoverability bridge and must not be removed until #366 preserves <=2-action reachability through the final Admin gateway.
 
-The approved mobile quick-navigation identity in #239 is **Teams | Schedule | Score | Messages | Profile**. If the runtime still labels the Schedule dock item `Tonight`, treat that as stale transition copy: Play Tonight is conceptually converging into Score/#371, while Schedule owns dates and availability.
+The approved mobile quick-navigation identity in #239 is **Teams | Schedule | Score | Messages | Profile**. The runtime still labels the Schedule dock item `Tonight`; that remains stale transition copy because Play Tonight is conceptually converging into Score/#371 while Schedule owns dates and availability.
 
 Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
