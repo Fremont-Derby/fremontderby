@@ -17,6 +17,17 @@ test('primary navigation marks the current section', () => {
   assert.match(html, /class="fd-nav-menu"/);
 });
 
+test('shared navigation owns Schedule naming and Admin discovery directly', () => {
+  const schedule = renderPrimaryNavigation('/schedule');
+  const dock = schedule.match(/<nav class="fd-mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.match(dock, /fd-mobile-dock__ball" aria-hidden="true">9<\/span>\s*<span>Schedule<\/span>/);
+  assert.doesNotMatch(dock, />Tonight<\/span>/);
+  assert.equal((schedule.match(/href="\/admin" data-nav-key="admin"/g) || []).length, 2);
+
+  const admin = renderPrimaryNavigation('/admin/season-teams');
+  assert.equal((admin.match(/href="\/admin" data-nav-key="admin" aria-current="page" data-active="true">Admin<\/a>/g) || []).length, 2);
+});
+
 test('mobile quick navigation exposes frequent destinations with accessible active state', () => {
   const html = renderPrimaryNavigation('/lineup');
   const dock = html.match(/<nav class="fd-mobile-dock"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -27,6 +38,7 @@ test('mobile quick navigation exposes frequent destinations with accessible acti
   }
   assert.doesNotMatch(dock, /href="\/rules"/);
   assert.doesNotMatch(dock, /href="\/demo"/);
+  assert.doesNotMatch(dock, /data-nav-key="admin"/);
   assert.match(dock, /href="\/teams"[^>]*aria-current="page"/);
   assert.match(dock, /data-nav-key="teams"/);
   assert.match(dock, /data-nav-key="schedule"/);

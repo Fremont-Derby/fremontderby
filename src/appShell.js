@@ -7,12 +7,13 @@ const NAV_ITEMS = [
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
   { href: '/messages', label: 'Messages', key: 'messages' },
+  { href: '/admin', label: 'Admin', key: 'admin' },
   { href: '/profile', label: 'Profile', key: 'profile' },
 ];
 
 const MOBILE_DOCK_ITEMS = [
   { href: '/teams', label: 'Teams', key: 'teams', ball: 'T' },
-  { href: '/schedule', label: 'Tonight', key: 'schedule', ball: '9' },
+  { href: '/schedule', label: 'Schedule', key: 'schedule', ball: '9' },
   { href: '/scorecard', label: 'Score', key: 'score', ball: '8' },
   { href: '/messages', label: 'Messages', key: 'messages', ball: 'M' },
   { href: '/profile', label: 'Profile', key: 'profile', ball: 'P' },
@@ -47,6 +48,7 @@ function sectionForPath(pathname) {
   if (pathname.startsWith('/standings') || pathname === '/prizes') return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
   if (pathname.startsWith('/profile')) return 'profile';
   return null;
 }
