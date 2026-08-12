@@ -24,10 +24,10 @@ export function deriveAdminSeasonTeamEntry(row, registration) {
       qualified: ready,
       canTakeSlot: false,
       reason: ready
-        ? 'Slot secured · initial roster qualified'
+        ? 'Accepted · initial roster qualified'
         : !captainPlayerId
-          ? 'Slot secured · assign a current-season captain'
-          : `Slot secured · need ${missingPlayers} more rostered player${missingPlayers === 1 ? '' : 's'}`,
+          ? 'Accepted · assign a current-season captain'
+          : `Accepted · need ${missingPlayers} more rostered player${missingPlayers === 1 ? '' : 's'}`,
     };
   }
 
@@ -37,8 +37,8 @@ export function deriveAdminSeasonTeamEntry(row, registration) {
       qualified: false,
       canTakeSlot: slotsOpen > 0,
       reason: slotsOpen > 0
-        ? 'Returning priority · reserve a slot to start this season roster'
-        : 'Returning priority · no slot currently open',
+        ? 'Forming · returning priority · reserve a slot to start this season roster'
+        : 'Forming · returning priority · no slot currently open',
     };
   }
 
@@ -63,7 +63,7 @@ export function deriveAdminSeasonTeamEntry(row, registration) {
       entryStatus: 'waitlisted',
       qualified: true,
       canTakeSlot: false,
-      reason: 'Qualified · season is full',
+      reason: 'Waitlisted · qualified but season is full',
     };
   }
 
