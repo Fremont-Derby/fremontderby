@@ -38,13 +38,13 @@ These product decisions are canonical even when runtime still contains legacy or
 - **#406 team-slot governance** — team entry has four plain-language states: **Forming, Qualified, Accepted, Waitlisted**. PR #411/#407 enforces captain + 3 active rostered players before a new/current-season team can take a slot. Returning reservation/release is #408, persistent waitlist ordering/promotion is #409, and participant-facing status plus 4-player opening-night depth is #410.
 - **#341 prepared-player self-claim** — `/profile` owns `Claim existing player`; `/admin/players` owns creation of the prepared Unclaimed identity.
 - **#335 private captain contact** — `/profile` owns the player's private phone editor. PR #404 adds contact-aware captain assignment and season-activation enforcement. Broad admin lists expose readiness only; authorized full-number detail and missing-contact recovery remain open.
-- **#362 Trades retirement** — formal trades are no longer a supported product workflow. Applications, invitations, captain roster management, and admin exceptions replace them.
+- **#362 Trades retirement** — PR #447 retires `/trades` and every formal-trade HTTP entry at the Worker boundary. Applications, membership requests, invitations, captain roster management, and admin membership exceptions are the supported movement model. Historical private trade/audit records remain intact and are not rewritten.
 - **#18 Prize split** — `/prizes` is public/read-only transparency; privileged payout configuration belongs in Admin -> League Management.
 - **#365 Fargo profile identity** — `/profile` owns player-entered Fargo ID and display of sourced official Fargo rating + robustness.
 - **#361 Admin Support** — player questions/operational reports are shared admin-group conversations using Messages and are distinct from `/messages/moderation`.
 - **#182 Captain lifecycle** — teams self-manage the current captain; admin performs the same captain swap only as an exception. There is no reduced one-night captain role.
 - **#373 Contextual messaging** — `Message player` and `Message captain` are links into canonical direct Messages, not new chat types.
-- **#387 Test Drive component parity** — Test Drive / War Games is a QA harness around production components rather than a parallel implementation. Scoring parity shipped in PR #386; captain blind-lineup parity shipped in PR #444. Remaining #387 work is to inventory/classify other Test Drive actions and remove any remaining simulated production behavior that does not share production implementation.
+- **#387 Test Drive component parity** — Test Drive / War Games is a QA harness around production components rather than a parallel implementation. Scoring parity shipped in PR #386; captain blind-lineup parity shipped in PR #444. The remaining workflow inventory/classification is complete on current main; presentation-only and sandbox-only orientation must remain clearly non-authoritative.
 - **#382 site-wide visual/accessibility system** — normal application content uses the approved warm/light page and surface language; dark felt/wood is reserved for shared navigation identity. PR #432 semanticizes the shared styling layer, fixes shared focus and placeholder contrast, and adds reduced-motion/forced-colors guardrails. Remaining visual/browser sign-off is page-specific under #427/#428/#429/#434/#435/#437, not an alternate-theme ownership question.
 
 ## Current top-level page registry
@@ -62,7 +62,6 @@ These product decisions are canonical even when runtime still contains legacy or
 | `/scorecard/live` | Player / team scorer | Operate active team-owned rack-ledger scoring | Canonical live-scoring surface; physical/two-human proof remains #326; visual fidelity remains under #382 |
 | `/messages` | Player / captain / admin support participant | Coordinate league/team/direct communication and planned shared admin-support conversations | Canonical communication surface; matchup chat deprecated under #78; visual sign-off #428 |
 | `/standings` | Public visitor / player | View team and individual standings and season results | Canonical standings surface; historical selection remains #180; visual/accessibility sign-off #434 |
-| `/trades` | Legacy only | Legacy formal trade workflow | Deprecated pending removal under #362 |
 | `/prizes` | Public visitor / player | View purse and payout transparency | Canonical public/read-only prize surface; privileged controls migrate under #18 |
 | `/admin` | Signed-in player / league admin | Route the signed-in user to appropriate league administration/help destinations | Partial gateway; Admin Teams/Admin Support remain #372/#361; visual/recovery sign-off #429 |
 | `/season-setup` | League admin / director | Configure, publish, close, and manage the selected season lifecycle | Canonical lifecycle surface under Admin -> League Management. PR #412 adds explicit audited Close season; PRs #417/#419 complete authoritative Close/Publish readiness; #414 owns Cancel/Archive/safe-delete distinctions; visual sign-off #429 |
@@ -71,7 +70,7 @@ These product decisions are canonical even when runtime still contains legacy or
 | `/admin/players` | League admin / director | Find a player and manage privileged player-level league administration | Canonical player-admin and roster-exception surface; Add players from `/admin/season-teams` deep-links here; visual sign-off #429 |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; separate from Admin Support; recovery/accessibility sign-off rolls into #429 |
 | planned Admin Teams | League admin / director | Manage one team and team-level operational exceptions | Missing runtime surface tracked by #372; must not duplicate season preparation on `/admin/season-teams` |
-| `/demo` | Public visitor / tester | **Test Drive the App** using fictional, non-authoritative data | Canonical public test-drive entry; production-component parity parent #387; scoring shared after #386 and captain lineup shared after #444; public visual sign-off #437 |
+| `/demo` | Public visitor / tester | **Test Drive the App** using fictional, non-authoritative data | Canonical public test-drive entry; production-component parity and workflow ownership inventory are reconciled under #387; public visual sign-off #437 |
 | `/sandbox/captain` | Tester / sandbox user | Practice fictional team formation, roster churn, availability, and lineup work | Test Drive child; lineup drill shares production blind-lineup component/controller after PR #444; other orientation remains fictional-only |
 | `/sandbox/player` | Tester / sandbox user | Practice fictional team-owned scoring and reconciliation | Test Drive child sharing production scoring component/controller after #386 |
 | `/health`, `/health/environment` | Internal / diagnostic | Verify Worker/environment readiness without exposing secrets | Explicit navigation exception |
@@ -113,8 +112,8 @@ These product decisions are canonical even when runtime still contains legacy or
 | Moderator / league admin | Resolve reported message content | `/messages/moderation` | Implemented | #80 | Explicit moderation surface |
 | Player | Enter Fargo ID/view official rating+robustness | `/profile` | Missing/planned | #365, #89/#90 | Profile owns self-service |
 | Public visitor / player | View prize/payout transparency | `/prizes` | Existing mixed surface; split open | #18 | Admin configuration migrates to League Management |
-| Player / captain | Use formal trades | none | Obsolete/removal pending | #362 | Supported movement uses applications/invitations/captain/admin membership workflows |
-| Public visitor / tester | Learn app safely using production-equivalent interactions | `/demo` + child drills | Scoring and captain-lineup parity implemented; remaining inventory open | #387, #388, PRs #386/#444 | Test Drive is not a second product; other actions still need #387 classification |
+| Player / captain | Use formal trades | none | Retired | #362, PR #447 | Supported movement uses applications/requests/invitations/captain/admin membership workflows; historical records remain audit-only |
+| Public visitor / tester | Learn app safely using production-equivalent interactions | `/demo` + child drills | Component parity and workflow inventory reconciled | #387, #388, PRs #386/#444 | Test Drive is not a second product; fictional-only orientation stays non-authoritative |
 
 ## Canonical API/page ownership highlights
 
@@ -134,7 +133,7 @@ These product decisions are canonical even when runtime still contains legacy or
 - **Initial slot qualification is not participant registration:** PR #411's captain + 3 active rostered-player gate lives in season-team entry. #410 separately owns 4 registered-player opening-night depth and participant-facing status.
 - Returning reservation/release -> #408; waitlist persistence/promotion -> #409. These extend the same Teams/League Management ownership and must not create a parallel registration application page.
 - Operations overview -> `/admin/operations`.
-- Trade routes are legacy pending #362.
+- Formal trade page/API ownership is retired under #362/#447; historical private trade/audit data is not a user-facing product surface.
 - Prize configuration migrates to Admin -> League Management under #18; `/prizes` remains public read-only.
 - Shared presentation ownership -> `src/designSystem.js` plus the post-injection accessibility layer; normal content is warm/light and the dark felt treatment is shared-navigation identity only. Page-local legacy themes are transitional and their browser sign-off/removal is tracked under #382 children rather than as separate product surfaces.
 
@@ -142,13 +141,14 @@ These product decisions are canonical even when runtime still contains legacy or
 
 ### 2026-08-12 reconciliation
 
+- **PR #447 retires formal Trades:** the actual Worker entry returns 404 for `/trades` and all formal-trade HTTP entry points before auth/data access. Supported roster movement remains on Teams/admin membership workflows, while the private historical trade/audit records remain untouched.
+- **Season 1 proof no longer teaches Trades:** the end-to-end fixture and closed #20 contract now use the already-supported membership request + captain invitation convergence path instead of an approved-trade placeholder.
+- **#387 workflow inventory is complete on current main:** scoring and captain lineup share production components; remaining captain sandbox actions are classified as presentation-only or fictional sandbox support rather than parallel product implementations.
 - **PR #444 completed #388 Captain War Games lineup parity:** production `/lineup` and the lineup drill inside `/sandbox/captain` now render the same `blindLineupComponent` markup/controller. Only adapters differ: production uses authenticated APIs while War Games uses isolated fictional state. Team formation, practice availability switches, and roster churn remain clearly labeled orientation rather than parallel production behavior.
 - **The shared lineup does not alter canonical ownership or reachability:** `/lineup` remains the sole captain production surface for blind-three preparation; `/sandbox/captain` remains an explicit Test Drive child/navigation exception. Score -> Prepare lineup still reaches the production capability in one in-context action, so the <=2-action audit remains clean.
-- **#387 remains open for the broader Test Drive inventory only:** scoring and captain lineup are now both shared-production implementations. No new parity issue is needed; future work should classify remaining Test Drive actions as shared production component, safe fixture use, or presentation-only orientation before creating child refactors.
 - **PR #443 / #439 changed only truthful Admin recovery semantics inside canonical `/admin`:** no page ownership or reachability change; retry is in-place and Profile recovery remains one action.
 - **PR #441 / #436 corrected Rules copy inside canonical `/rules`:** no new story/page ownership; visual #437 must preserve the corrected rule truth.
-- **No open implementation PR overlaps this cycle.** The current open backlog already owns the visible IA/product gaps discovered in source: `/availability` #370, Trades #362, matchup chat #78, Admin Teams #372, Admin Support #361, contextual messaging #373, visual sign-off #382 children, team-entry governance #408/#409/#410, and remaining Test Drive inventory #387.
-- **No new orphan or duplicate page was introduced by the recent merges.** The most important remaining runtime duplicates are still the previously documented `/availability`, `/trades`, and matchup-chat paths.
+- **No new orphan or duplicate page is introduced by #447.** After Trades retirement, the important known transitional/legacy runtime ownership gaps are `/availability` under #370 and matchup chat under #78.
 
 ## Known catalog work
 
@@ -170,10 +170,8 @@ These product decisions are canonical even when runtime still contains legacy or
 - #382 — parent site-wide visual/accessibility sign-off; shared architecture is complete after #432.
 - #427/#428/#429 — remaining Home/Schedule/Score/Profile, Teams/Messages, and Admin/recovery browser visual/accessibility sign-off.
 - #434/#435/#437 — focused Standings, captain Lineup, and Rules/Test Drive visual/accessibility sign-off discovered after the global layer; these are page-specific cleanup, not new product ownership.
-- #387 — complete the remaining Test Drive workflow inventory/classification. Scoring parity is complete after #386; captain blind-lineup parity is complete after #444/#388.
 - #340/#341 — source/database implementations shipped; exact deployed/live proof remains blocked by release traceability.
 - #361 — shared Admin Support channel via Messages.
-- #362 — remove legacy Trades UI/APIs while preserving history.
 - #363 — exhaustive agent-friendly API reference/lifecycle classification.
 - #18 — split public prize transparency from Admin League Management configuration.
 - #169 — remaining `/admin/operations` signals.
