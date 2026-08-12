@@ -41,6 +41,19 @@ test('initial team slot qualification requires captain plus three current-season
   assert.equal(qualified.canTakeSlot, true);
 });
 
+test('qualification derives open slots from capacity when availableSlots is omitted', () => {
+  const state = deriveAdminSeasonTeamEntry({
+    candidate_kind: 'new',
+    active_roster_count: 3,
+    captain_player_id: 'captain-1',
+  }, {
+    teamCapacity: 8,
+    counts: { occupiedSlots: 6 },
+  });
+  assert.equal(state.entryStatus, 'qualified');
+  assert.equal(state.canTakeSlot, true);
+});
+
 test('qualified team becomes waitlisted when all eight slots are occupied', () => {
   const state = deriveAdminSeasonTeamEntry({
     candidate_kind: 'new',
