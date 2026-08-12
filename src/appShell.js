@@ -30,7 +30,6 @@ const APP_PAGE_PATHS = new Set([
   '/profile',
   '/availability',
   '/teams',
-  '/trades',
   '/messages',
   '/messages/moderation',
 ]);
@@ -41,7 +40,6 @@ function sectionForPath(pathname) {
   if (pathname === '/demo' || pathname.startsWith('/sandbox/')) return 'demo';
   if (
     pathname.startsWith('/teams')
-    || pathname === '/trades'
     || pathname === '/availability'
     || pathname === '/lineup'
   ) return 'teams';
@@ -515,7 +513,7 @@ export function renderNotFoundPage(pathname = '') {
         <path d="M155 281 112 365M485 281l43 84" stroke="#4a3627" stroke-width="18" stroke-linecap="round"/>
         <ellipse cx="322" cy="196" rx="136" ry="105" fill="#d3a46f"/>
         <path d="M220 148c-58-69-111-54-104 12 5 45 43 96 91 111 20-33 27-79 13-123Z" fill="#8f5c39"/>
-        <path d="M424 148c58-69 111-54 104 12-5 45-43 96-91 111-20-33-27-79-13-123Z" fill="#8f5c39"/>
+        <path d="M424 148c58-69 111-54 104 12-5 45-43 96-91 111-20-33 27-79 13-123Z" fill="#8f5c39"/>
         <path d="M250 112c18-38 53-58 72-58s54 20 72 58c-42-20-102-20-144 0Z" fill="#f0ddd0"/>
         <ellipse cx="322" cy="220" rx="78" ry="58" fill="#f0ddd0"/>
         <ellipse cx="322" cy="235" rx="42" ry="28" fill="#4b3325"/>
