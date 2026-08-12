@@ -68,6 +68,18 @@ For normal user-facing product work:
 
 When a route, page, navigation element, role, or user-facing function changes, reconcile the affected story/page mapping and create or update issues for orphaned functions, overloaded pages, duplicate surfaces, dead ends, stale documentation, or two-click reachability violations.
 
+### Approved product-shape transitions still being implemented
+
+Current runtime can temporarily lag approved product ownership while focused cleanup stories land. Treat these issues as the durable direction rather than extending the legacy surface:
+
+- **#366 Admin gateway** — Admin becomes a first-class top-level destination. Operations, Admin Support, and Moderation stay separate; Profile returns to its `me / identity` purpose once the new gateway preserves <=2-action admin reachability.
+- **#362 Trades retirement** — formal player trades are removed from the product. Roster change uses applications, invitations, captain roster management, and admin exceptions; historical trade records may remain for audit/history.
+- **#18 Prize ownership split** — `/prizes` is the public/read-only purse and payout view; privileged prize configuration belongs in Admin → League Management.
+- **#365 Fargo profile identity** — players may enter their own Fargo identifier on Profile; official Fargo rating and robustness are displayed from sourced observations when available. Player-supplied IDs remain distinguishable from verified Fargo identity.
+- **#361 Admin Support** — player questions/operational reports go to the shared admin group through Messages and remain distinct from moderation reports.
+
+Do not create parallel pages to implement these transitions. Follow the canonical ownership in the linked stories and `docs/product-surface-catalog.md`.
+
 ## Product invariants that should not be casually changed
 
 These rules have broad dependencies. If a task appears to conflict with one of them, reconcile the current issue, rules, tests, and product-owner decision before changing behavior.
@@ -169,27 +181,29 @@ The platform should continue beyond any one season or release. Current GitHub is
 
 - `/` — league introduction
 - `/rules` — public rules
-- `/profile` — Google sign-in and player profile
+- `/profile` — Google sign-in and player identity/profile; approved Fargo self-service work is tracked in #365
 - `/teams` — team creation, requests/invitations, roster management, and normal player/recruiting discovery
 - `/schedule` — current/upcoming league night, round, matchup, date/table context, and next-workflow entry points
 - `/availability` — dated roster/free-agent availability and check-in
 - `/lineup` — captain lineup workflow
 - `/scorecard` — eligible match picker
 - `/scorecard/live` — live team-owned rack-ledger scoring
-- `/messages` — league, matchup, team, and player communication
-- `/messages/moderation` — moderator/admin message-report review
+- `/messages` — league, team, direct, and planned admin-support communication; matchup-specific chat is deprecated under #78
+- `/messages/moderation` — moderator/admin message-report review; separate from Admin Support
 - `/standings` — team / individual standings
-- `/season-setup` — league-director season setup and publishing
+- `/season-setup` — league-director season setup and publishing; moving under the Admin → League Management grouping per #366
 - `/admin/season-teams` — league-admin Returning / New / In season team assignment for a selected season
 - `/admin/operations` — league-admin readiness, exception triage, action queue, and operational health
 - `/admin/players` — league-admin player search, role management, competition eligibility, and roster exceptions
-- `/trades` — player trade workflow
-- `/prizes` — purse and payout state
+- `/trades` — **legacy runtime surface pending removal under #362; do not extend as a supported product workflow**
+- `/prizes` — public purse/payout state; privileged configuration is moving to Admin → League Management under #18
 - `/health` — Worker version metadata
 - `/health/environment` — non-secret environment diagnostics
 - `/demo` — public **Test Drive the App** using fictional, non-authoritative data
 - `/sandbox/captain` — fictional captain team-formation, roster-churn, availability, and lineup practice
 - `/sandbox/player` — fictional team-owned scoring and reconciliation practice
+
+A first-class top-level Admin gateway is planned under #366. Until it ships, authorized Profile admin links are the temporary discoverability bridge and must not be removed if doing so would violate the <=2-action rule.
 
 Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
