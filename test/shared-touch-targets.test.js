@@ -23,7 +23,7 @@ test('Messages high-frequency compact actions are at least 44px after shared sty
   assert.match(html, /class="panel-actions"/);
   assert.match(html, /class="block"/);
   assert.match(html, /class="older"/);
-  assert.match(html, /className=['"]report['"]/);
+  assert.match(html, /report\.className\s*=\s*['"]report['"]/);
   assert.match(designSystemStyles, /\.layout \.panel-actions button, \.layout \.block, \.layout \.older, \.layout \.report \{[\s\S]*min-height: 44px !important/);
 });
 
