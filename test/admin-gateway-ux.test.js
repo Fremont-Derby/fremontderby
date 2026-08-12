@@ -48,7 +48,7 @@ test('Admin access failure has direct accessible recovery without exposing privi
   assert.match(html, /href="\/profile">Open Profile<\/a>/);
   assert.match(html, /\.action\{min-height:48px/);
   assert.match(html, /\.recovery-actions\{display:flex/);
-  assert.match(html, /@media\(max-width:620px\)[^}]*\.recovery-actions/s);
+  assert.match(html, /@media\(max-width:620px\)\{.*?\.recovery-actions\{display:grid/s);
 });
 
 test('401 clears the expired access token before showing signed-out recovery', () => {
