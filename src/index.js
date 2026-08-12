@@ -1459,10 +1459,13 @@ export default {
       }
       return null;
     };
-    for (const m of [seasonScheduleMatch, teamStandingsMatch, individualStandingsMatch, seasonPrizesMatch]) {
-      if (m) {
-        const bad = requireSeasonUuid(m[1]);
-        if (bad) return bad;
+    // Validate season UUID only for allowed methods; non-GET should 405 first.
+    if (request.method === "GET" || request.method === "HEAD") {
+      for (const m of [seasonScheduleMatch, teamStandingsMatch, individualStandingsMatch, seasonPrizesMatch]) {
+        if (m) {
+          const bad = requireSeasonUuid(m[1]);
+          if (bad) return bad;
+        }
       }
     }
 
