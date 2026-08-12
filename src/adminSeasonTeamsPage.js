@@ -11,7 +11,7 @@ export function renderAdminSeasonTeamsPage() {
 </head>
 <body>
   <main class="app">
-    <header class="head"><h1>Season teams</h1><p>Create teams, then add them to the selected season when they are ready.</p></header>
+    <header class="head"><h1>Season teams</h1><p>Add teams to the selected season.</p></header>
     <section class="toolbar" aria-label="Season team controls">
       <label>Season<select data-season disabled><option>Loading seasons…</option></select></label>
       <div class="capacity"><strong data-capacity>—</strong><span data-open-slots>Loading team slots…</span></div>
