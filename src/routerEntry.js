@@ -1,7 +1,9 @@
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
+import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
+import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 
 async function reconcileProductShell(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
@@ -43,11 +45,17 @@ export default {
     if (url.pathname === '/api/admin/players' && request.method === 'POST') {
       return handleCreateAdminPlayerRequest(request, env);
     }
+    const dateAvailabilityResponse = await routeDateAvailability(request, env);
+    if (dateAvailabilityResponse) return dateAvailabilityResponse;
     const adminGatewayResponse = routeAdminGateway(request);
     if (adminGatewayResponse) return adminGatewayResponse;
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
     if (adminSeasonTeamsResponse) return adminSeasonTeamsResponse;
     const response = await legacyRouter.fetch(request, env, ctx);
-    return reconcileProductShell(response, url.pathname);
+    const reconciled = await reconcileProductShell(response, url.pathname);
+    if (url.pathname === '/schedule' && request.method === 'GET') {
+      return enhanceScheduleAvailability(reconciled);
+    }
+    return reconciled;
   },
 };
