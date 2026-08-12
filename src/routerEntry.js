@@ -5,6 +5,8 @@ import { injectDesignSystem } from './designSystem.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
+import { routePlayerClaim } from './playerClaimHttp.js';
+import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
@@ -54,6 +56,8 @@ export default {
     if (url.pathname === '/api/admin/players' && request.method === 'POST') {
       return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env));
     }
+    const playerClaimResponse = await routePlayerClaim(request, env);
+    if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
     if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
@@ -68,7 +72,8 @@ export default {
       return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled));
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
-      return finalizeBrowserResponse(await enhanceProfileSeasonRegistration(reconciled));
+      const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
+      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withSeasonRegistration));
     }
     return finalizeBrowserResponse(reconciled);
   },
