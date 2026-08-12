@@ -68,6 +68,9 @@ test('season team repository keeps all privileged database calls behind the serv
         if (url.endsWith('/rpc/list_admin_season_team_candidates')) {
           return jsonResponse([{ candidate_kind: 'returning', team_id: 'team-old', team_name: 'Breakers' }]);
         }
+        if (url.endsWith('/rpc/list_admin_player_contact_readiness')) {
+          return jsonResponse([]);
+        }
         return jsonResponse([{ slot_id: 'slot-1', team_id: 'team-new', team_name: 'Breakers' }]);
       },
     },
@@ -78,12 +81,12 @@ test('season team repository keeps all privileged database calls behind the serv
   assert.equal(state.teams[0].candidate_kind, 'returning');
   const added = await repository.add({ actorUserId: 'admin', seasonId: 'season-1', teamId: 'team-old' });
   assert.equal(added.slot_id, 'slot-1');
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 4);
   for (const request of requests) {
     assert.equal(request.init.headers.authorization, 'Bearer service-secret');
     assert.equal(request.init.headers.apikey, 'service-secret');
   }
-  assert.deepEqual(JSON.parse(requests[2].init.body), {
+  assert.deepEqual(JSON.parse(requests[3].init.body), {
     actor_user_id: 'admin',
     target_season_id: 'season-1',
     candidate_team_id: 'team-old',
