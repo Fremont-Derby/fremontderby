@@ -70,7 +70,7 @@ create or replace function public.set_own_date_availability(
   actor_user_id uuid,
   target_season_id uuid,
   target_availability_date date,
-  availability_status text
+  target_availability_status text
 )
 returns table (
   season_id uuid,
@@ -89,7 +89,7 @@ begin
   if actor_user_id is null then raise exception 'actor_user_id is required'; end if;
   if target_season_id is null then raise exception 'target_season_id is required'; end if;
   if target_availability_date is null then raise exception 'target_availability_date is required'; end if;
-  if availability_status not in ('available', 'unsure', 'unavailable') then
+  if target_availability_status not in ('available', 'unsure', 'unavailable') then
     raise exception 'availability_status must be available, unsure, or unavailable';
   end if;
 
@@ -127,7 +127,7 @@ begin
     target_season_id,
     target_player_id,
     target_availability_date,
-    availability_status,
+    target_availability_status,
     now()
   )
   on conflict on constraint player_date_availability_pkey do update
