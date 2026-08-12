@@ -1,5 +1,6 @@
 import {
   addAdminSeasonTeamCommand,
+  createPreparedAdminSeasonTeamCommand,
   listAdminSeasonTeamsCommand,
 } from './adminSeasonTeamsCommands.js';
 import { createAdminSeasonTeamsRepository } from './adminSeasonTeamsRepository.js';
@@ -11,8 +12,24 @@ function statusFor(error) {
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
   if (message.includes('Season not found') || message.includes('Team not found')) return 404;
+  if (message.includes('already exists')) return 409;
   if (message.includes('No team slots') || message.includes('before season publication')) return 409;
   return 400;
+}
+
+async function readJson(request) {
+  const text = await request.text();
+  if (!text.trim()) return {};
+  try {
+    const body = JSON.parse(text);
+    if (!body || Array.isArray(body) || typeof body !== 'object') {
+      throw new Error('Request body must be a JSON object');
+    }
+    return body;
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error('Request body must be valid JSON');
+    throw error;
+  }
 }
 
 export function createAdminSeasonTeamsHttpHandlers({
@@ -37,6 +54,18 @@ export function createAdminSeasonTeamsHttpHandlers({
           seasonId,
         }, repository);
         return Response.json(state);
+      });
+    },
+
+    createPrepared(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+      return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJson(request);
+        const team = await createPreparedAdminSeasonTeamCommand({
+          actorUserId: actor.id,
+          seasonId,
+          teamName: body.teamName ?? body.team_name,
+        }, repository);
+        return Response.json({ team }, { status: 201 });
       });
     },
 
