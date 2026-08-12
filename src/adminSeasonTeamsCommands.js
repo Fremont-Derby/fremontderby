@@ -17,6 +17,10 @@ function normalizeTeamName(value) {
   return name;
 }
 
+function candidateValue(row, camelName, snakeName) {
+  return row?.[camelName] ?? row?.[snakeName];
+}
+
 export async function listAdminSeasonTeamsCommand(input, repository) {
   requireValue(input.actorUserId, 'actorUserId');
   requireValue(input.seasonId, 'seasonId');
@@ -38,7 +42,28 @@ export async function addAdminSeasonTeamCommand(input, repository) {
   requireValue(input.actorUserId, 'actorUserId');
   requireValue(input.seasonId, 'seasonId');
   requireValue(input.teamId, 'teamId');
+  requireMethod(repository, 'list');
   requireMethod(repository, 'add');
+
+  const state = await repository.list({
+    actorUserId: input.actorUserId,
+    seasonId: input.seasonId,
+  });
+  const candidate = (state?.teams ?? []).find(
+    (row) => candidateValue(row, 'teamId', 'team_id') === input.teamId,
+  );
+  const candidateKind = candidateValue(candidate, 'candidateKind', 'candidate_kind');
+  const qualified = Boolean(
+    candidateValue(candidate, 'qualifiedForSlot', 'qualified_for_slot'),
+  );
+
+  if (candidateKind === 'new' && !qualified) {
+    const reason = candidateValue(candidate, 'entryReason', 'entry_reason');
+    throw new Error(
+      `Team must be qualified before it can take a season slot${reason ? `: ${reason}` : ''}`,
+    );
+  }
+
   return repository.add(input);
 }
 
