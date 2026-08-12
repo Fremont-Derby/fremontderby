@@ -74,7 +74,8 @@ Current runtime can temporarily lag approved product ownership while focused cle
 
 - **#370 Schedule + availability** — PR #376 shipped the canonical personal date-keyed Available / Unsure / Unavailable check-in directly on `/schedule`, including teamless/free-agent players. PR #389 moved captain lineup/substitute discovery to that same date-keyed source. Remaining work is to migrate the normal Teams recruiting filters where applicable and retire standalone `/availability` only after parity/recovery proof.
 - **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains focused live scoring.
-- **#366 Admin gateway** — PR #369 shipped a role-aware `/admin` gateway with Operations, Players, League Management, Moderation, plus safe signed-out/non-admin states. It is not yet fully first-class because shared navigation does not expose Admin, Admin Teams/#372 and Admin Support/#361 remain missing, and Profile still carries fallback admin links to preserve <=2-action reachability.
+- **#366 Admin gateway** — PR #369 shipped a role-aware `/admin` gateway and PR #399 made Admin discoverable from shared desktop navigation and the mobile menu while preserving the five-item quick dock. The gateway remains partial because Admin Teams/#372 and Admin Support/#361 are missing, broader League Management ownership is still consolidating, and Profile retains temporary fallback admin links until final <=2-action reachability is proven.
+- **#342 prepared-team creation** — PR #398 lets league admins create a captainless prepared team from `/admin/season-teams` without database access or a captain account. Prepared teams stay out of season capacity until the existing Add to season action is used; optional captain assignment and polished roster/captain next steps remain open.
 - **#341 prepared-player self-claim** — PR #391 shipped `Claim existing player` on `/profile` for a signed-in user without an owned player identity. Only unclaimed zero-competitive-rack identities are eligible; Profile owns self-claim while `/admin/players` owns creation of the prepared Unclaimed identity. Exact deployed-Worker real-account/phone proof remains open on #341.
 - **#362 Trades retirement** — formal player trades are removed from the product. Roster change uses applications, invitations, captain roster management, and admin exceptions; historical trade records may remain for audit/history.
 - **#18 Prize ownership split** — `/prizes` is the public/read-only purse and payout view; privileged prize configuration belongs in Admin → League Management.
@@ -200,9 +201,9 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/messages` — league, team, direct, and planned admin-support communication; matchup-specific chat is deprecated under #78
 - `/messages/moderation` — moderator/admin message-report review; separate from Admin Support
 - `/standings` — team / individual standings
-- `/admin` — **shipped partial role-aware Admin gateway** from PR #369; first-class shared-nav discovery and remaining destinations are still #366/#372/#361
+- `/admin` — **shipped partial role-aware Admin gateway** from PR #369 and shared-nav destination after PR #399; remaining destination/ownership work is #366/#372/#361
 - `/season-setup` — league-director season setup and publishing, grouped under Admin → League Management
-- `/admin/season-teams` — league-admin Returning / New / In season team assignment for a selected season
+- `/admin/season-teams` — league-admin Returning / New / In season assignment plus captainless prepared-team creation after PR #398/#342; optional captain assignment remains open
 - `/admin/operations` — league-admin readiness, exception triage, action queue, and operational health
 - `/admin/players` — league-admin player search, role management, competition eligibility, roster exceptions, and admin creation of unclaimed players (#340/PR #368); self-claim of those prepared identities belongs on Profile, not here
 - `/trades` — **legacy runtime surface pending removal under #362; do not extend as a supported product workflow**
@@ -213,9 +214,9 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/sandbox/captain` — fictional captain practice child flow; production lineup-component parity remains #388
 - `/sandbox/player` — fictional scoring/reconciliation child flow using the same rack-ledger component/controller as `/scorecard/live` after PR #386, with isolated fictional state
 
-`/admin` exists, but it is not yet a first-class shared-navigation destination: `src/appShell.js` still has no Admin nav item/active section. Authorized Profile admin links remain the temporary discoverability bridge and must not be removed until #366 preserves <=2-action reachability through the final Admin gateway.
+Admin is now discoverable from the shared desktop navigation and mobile menu after PR #399; the constrained five-item quick dock remains **Teams | Schedule | Score | Messages | Profile**. Profile admin links remain a temporary fallback until Admin Teams, Admin Support, and the remaining League Management ownership are complete enough to remove them without a <=2-action regression.
 
-The approved mobile quick-navigation identity in #239 is **Teams | Schedule | Score | Messages | Profile**. The runtime still labels the Schedule dock item `Tonight`; that remains stale transition copy because Play Tonight is conceptually converging into Score/#371 while Schedule owns dates and availability.
+The canonical navigation source should live in `src/appShell.js`. Issue #239 tracks removal of any response-time shell-label/navigation workaround so source definitions and rendered navigation cannot drift.
 
 Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
