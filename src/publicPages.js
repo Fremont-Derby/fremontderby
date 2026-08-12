@@ -126,10 +126,12 @@ export function renderRulesPage() {
     <h2>Playoffs</h2>
     <ul>
       <li>The top four teams advance after the regular season.</li>
-      <li>Every player on a team's playoff roster must have played at least three regular-season rounds for that team.</li>
-      <li>Qualifying teams lock four-player playoff rosters before playoff competition begins; regular-season switching and pickup flexibility ends for the playoffs.</li>
+      <li>Each postseason team matchup uses four active players. A valid four-player lineup must include at least three players with four or more official regular-season matches for that team; every other selected player must have at least three official matches for that team.</li>
+      <li>Postseason eligibility is a pool, not a four-player roster cap. Once a team has three players at 4+ team matches, every additional player with 3+ team matches is eligible to be selected.</li>
+      <li>Qualification is team-specific. Matches played while representing another team do not count toward postseason qualification for this team.</li>
       <li>Semifinals are #1 vs #4 and #2 vs #3.</li>
-      <li>If the championship team score is tied, each captain selects an eligible anchor player for the deciding handicapped match.</li>
+      <li>Before scoring begins, each captain declares one anchor from the four players submitted for that postseason matchup; the anchor is then locked for that matchup.</li>
+      <li>If the four scheduled postseason matches finish tied 2-2, the two pre-declared anchors play the deciding handicapped anchor match.</li>
     </ul>
 
     <h2>Sportsmanship and disputes</h2>
