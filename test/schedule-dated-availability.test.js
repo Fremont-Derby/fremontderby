@@ -84,6 +84,16 @@ test('Schedule enhancement exposes accessible three-state date-wide check-in and
   assert.match(html, /aria-live="polite"/);
 });
 
+test('Schedule keeps the three short availability choices in one compact phone row', async () => {
+  const response = new Response('<!doctype html><style>:root{--line:#333;--muted:#aaa;--gold:#db4}</style><body><select data-season-select></select><select data-round-select></select><div class="matches" data-match-list></div></body>', { headers: { 'content-type': 'text/html' } });
+  const enhanced = await enhanceScheduleAvailability(response);
+  const html = await enhanced.text();
+  assert.match(html, /\.availability-options\{display:grid;grid-template-columns:repeat\(3,1fr\)/);
+  assert.match(html, /@media\(max-width:700px\)[\s\S]*\.availability-options\{gap:5px\}/);
+  assert.doesNotMatch(html, /@media\(max-width:700px\)[\s\S]*\.availability-options\{grid-template-columns:1fr\}/);
+  assert.match(html, /\.availability-option\{min-height:46px/);
+});
+
 test('router entry handles dated availability API and enhances Schedule only', async () => {
   const source = await readFile(routerEntryPath, 'utf8');
   assert.match(source, /routeDateAvailability/);
