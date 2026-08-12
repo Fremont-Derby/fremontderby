@@ -4,7 +4,7 @@ import {
   submitPostseasonLineupCommand,
 } from './playoffCommands.js';
 import { createPlayoffRepository } from './playoffRepository.js';
-import { authenticateSupabaseUser } from './supabaseAuth.js';
+import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -29,6 +29,7 @@ async function readJsonBody(request) {
 }
 
 function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
   const message = error?.message || 'Request failed';
   if (message.includes('Actor is not a league admin')) return 403;
   if (message.includes('Only the active captain')) return 403;

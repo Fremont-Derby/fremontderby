@@ -1,4 +1,4 @@
-import { authenticateSupabaseUser } from './supabaseAuth.js';
+import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createScorableMatchesRepository } from './scorableMatchesRepository.js';
 
 function jsonResponse(body, status = 200) {
@@ -9,6 +9,7 @@ function jsonResponse(body, status = 200) {
 }
 
 function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
   const message = error?.message || 'Request failed';
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
