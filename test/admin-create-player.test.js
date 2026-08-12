@@ -88,5 +88,9 @@ test('router entry intercepts POST admin player creation before legacy GET routi
   assert.match(source, /handleCreateAdminPlayerRequest/);
   assert.match(source, /url\.pathname === '\/api\/admin\/players'/);
   assert.match(source, /request\.method === 'POST'/);
-  assert.match(source, /return handleCreateAdminPlayerRequest\(request, env\)/);
+
+  const handlerIndex = source.indexOf('handleCreateAdminPlayerRequest(request, env)');
+  const legacyIndex = source.indexOf('legacyRouter.fetch(request, env, ctx)');
+  assert.ok(handlerIndex > -1, 'admin create handler invocation is present');
+  assert.ok(legacyIndex > handlerIndex, 'admin create handler intercepts before legacy routing');
 });
