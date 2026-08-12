@@ -10,6 +10,7 @@ test('Admin gateway starts with one truthful access-check state', () => {
   assert.match(html, /data-admin-content hidden/);
   assert.match(html, /data-player-content hidden/);
   assert.match(html, /data-signed-out hidden/);
+  assert.match(html, /data-access-error[^>]*hidden/);
   assert.match(html, /Only tools you can use will appear/);
 });
 
@@ -25,14 +26,34 @@ test('Admin gateway keeps common league tools compact and touch friendly', () =>
   assert.match(html, /:focus-visible/);
 });
 
-test('Admin gateway distinguishes admin, non-admin, and signed-out outcomes', () => {
+test('Admin gateway distinguishes admin, non-admin, signed-out, and indeterminate outcomes', () => {
   const html = renderAdminGatewayPage();
   assert.match(html, /response\.status===401/);
   assert.match(html, /response\.status===403/);
   assert.match(html, /show\(adminContent\)/);
   assert.match(html, /show\(playerContent\)/);
   assert.match(html, /show\(signedOut\)/);
-  assert.match(html, /role="status" aria-live="polite"/);
+  assert.match(html, /show\(accessError\)/);
+  assert.match(html, /Couldn’t verify admin access/);
+  assert.match(html, /No league data was changed/);
+  assert.doesNotMatch(html, /catch\s*\{[^}]*show\(playerContent\)/s);
+});
+
+test('Admin access failure has direct accessible recovery without exposing privileged tools', () => {
+  const html = renderAdminGatewayPage();
+  assert.match(html, /data-access-error[^>]*role="alert"[^>]*aria-live="assertive"/);
+  assert.match(html, /data-retry[^>]*>Try again<\/button>/);
+  assert.match(html, /retryButton\.addEventListener\('click',resolveAccess\)/);
+  assert.match(html, /showLoading\(\)/);
+  assert.match(html, /href="\/profile">Open Profile<\/a>/);
+  assert.match(html, /\.action\{min-height:48px/);
+  assert.match(html, /\.recovery-actions\{display:flex/);
+  assert.match(html, /@media\(max-width:620px\)[^}]*\.recovery-actions/s);
+});
+
+test('401 clears the expired access token before showing signed-out recovery', () => {
+  const html = renderAdminGatewayPage();
+  assert.match(html, /response\.status===401\)\{sessionStorage\.removeItem\('fd\.accessToken'\);show\(signedOut\)/);
 });
 
 test('router serves the Admin gateway through the shared shell', async () => {
