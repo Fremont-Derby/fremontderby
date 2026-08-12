@@ -52,6 +52,8 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
     target_scoring_team_id: scoringTeamId,
   });
 
+  const expectedBody = (expectedRacks) => ({ expected_racks: expectedRacks });
+
   return {
     getPlayerMatchScoreComparison(input) {
       return callRpc('get_player_match_score_comparison', scoringBody(input));
@@ -68,24 +70,36 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
         opening_discipline: openingDiscipline,
       });
     },
-    recordPlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, winnerSide }) {
-      return callRpc('record_player_match_score_rack', {
+    recordPlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, winnerSide, expectedRacks }) {
+      const checked = Array.isArray(expectedRacks);
+      return callRpc(checked ? 'record_player_match_score_rack_checked' : 'record_player_match_score_rack', {
         ...scoringBody({ actorUserId, playerMatchId, scoringTeamId }),
         rack_winner_side: winnerSide,
+        ...(checked ? expectedBody(expectedRacks) : {}),
       });
     },
-    updatePlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, rackNumber, winnerSide }) {
-      return callRpc('update_player_match_score_rack', {
+    updatePlayerMatchScoreRack({ actorUserId, playerMatchId, scoringTeamId, rackNumber, winnerSide, expectedRacks }) {
+      const checked = Array.isArray(expectedRacks);
+      return callRpc(checked ? 'update_player_match_score_rack_checked' : 'update_player_match_score_rack', {
         ...scoringBody({ actorUserId, playerMatchId, scoringTeamId }),
         target_rack_number: rackNumber,
         rack_winner_side: winnerSide,
+        ...(checked ? expectedBody(expectedRacks) : {}),
       });
     },
     undoPlayerMatchScoreRack(input) {
-      return callRpc('undo_player_match_score_rack', scoringBody(input));
+      const checked = Array.isArray(input.expectedRacks);
+      return callRpc(checked ? 'undo_player_match_score_rack_checked' : 'undo_player_match_score_rack', {
+        ...scoringBody(input),
+        ...(checked ? expectedBody(input.expectedRacks) : {}),
+      });
     },
     confirmPlayerMatchScore(input) {
-      return callRpc('confirm_player_match_score', scoringBody(input));
+      const checked = Array.isArray(input.expectedRacks);
+      return callRpc(checked ? 'confirm_player_match_score_checked' : 'confirm_player_match_score', {
+        ...scoringBody(input),
+        ...(checked ? expectedBody(input.expectedRacks) : {}),
+      });
     },
     finalizeReconciledPlayerMatch(input) {
       return callRpc('finalize_reconciled_player_match', scoringBody(input));
