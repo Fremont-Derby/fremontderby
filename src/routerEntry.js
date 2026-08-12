@@ -12,6 +12,8 @@ import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
+import { routeSeasonClose } from './seasonCloseHttp.js';
+import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 
 async function reconcileProductShell(response, pathname) {
@@ -67,6 +69,8 @@ export default {
     if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
     if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse);
+    const seasonCloseResponse = await routeSeasonClose(request, env);
+    if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse);
     const adminGatewayResponse = routeAdminGateway(request);
     if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
@@ -78,6 +82,9 @@ export default {
     }
     if (url.pathname === '/teams' && request.method === 'GET') {
       return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled));
+    }
+    if (url.pathname === '/season-setup' && request.method === 'GET') {
+      return finalizeBrowserResponse(await enhanceSeasonClose(reconciled));
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
