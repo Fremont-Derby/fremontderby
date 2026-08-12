@@ -72,7 +72,7 @@ When a route, page, navigation element, role, or user-facing function changes, r
 
 Current runtime can temporarily lag approved product ownership while focused cleanup stories land. Treat these issues as the durable direction rather than extending the legacy surface:
 
-- **#370 Schedule + availability** — `/schedule` becomes the canonical league-date/matchup plus personal dated availability surface; standalone `/availability` is transitional until parity exists.
+- **#370 Schedule + availability** — PR #376 shipped the canonical personal date-keyed Available / Unsure / Unavailable check-in directly on `/schedule`, including teamless/free-agent players. Remaining work is to migrate captain/sub consumers to the same source and retire standalone `/availability` only after parity/recovery proof.
 - **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains focused live scoring.
 - **#366 Admin gateway** — PR #369 shipped a role-aware `/admin` gateway with Operations, Players, League Management, Moderation, plus safe signed-out/non-admin states. It is not yet fully first-class because shared navigation does not expose Admin, Admin Teams/#372 and Admin Support/#361 remain missing, and Profile still carries fallback admin links to preserve <=2-action reachability.
 - **#362 Trades retirement** — formal player trades are removed from the product. Roster change uses applications, invitations, captain roster management, and admin exceptions; historical trade records may remain for audit/history.
@@ -165,6 +165,8 @@ Add regression coverage when fixing this class of defect.
 
 Authentication is Google -> Supabase Auth -> bearer session. Browser pages should use the authenticated session automatically.
 
+PR #380 / #378 makes the Fremont Derby access/refresh session survive ordinary browser closes and restarts by restoring and mirroring only the browser-safe session tokens through durable browser storage. The short-lived access-token refresh model remains intact; explicit sign-out clears persistent session data, and revoked/invalid underlying refresh sessions remain invalid. This is a usability/persistence layer only: it does **not** replace or weaken server-side authorization, RLS, OAuth scope, or service-role boundaries.
+
 Server-side authorization must still enforce actor/team/captain/admin boundaries, with RLS as an additional boundary. A successful login is not proof that cross-team or privileged actions are safe.
 
 ## High-value end-to-end shape
@@ -172,23 +174,23 @@ Server-side authorization must still enforce actor/team/captain/admin boundaries
 A useful current core workflow to keep healthy is:
 
 ```text
-sign in -> profile -> team -> schedule/availability -> blind lineup
+sign in -> profile -> team -> schedule + dated availability -> blind lineup
 -> Score -> generated player match -> live 8/9 rack scoring
 -> reconcile -> dual confirm -> finalize -> team standings -> individual standings
 ```
 
-#370/#371 are intentionally converging the separate Availability and Play Tonight concepts into Schedule and Score; do not introduce parallel replacement pages while that migration is open.
+#370/#371 intentionally converge separate Availability and Play Tonight concepts into Schedule and Score. Schedule already owns personal dated check-in after PR #376; do not introduce parallel replacement pages while captain/sub consumers and `/availability` retirement remain open.
 
 The platform should continue beyond any one season or release. Current GitHub issues and milestones determine which gaps matter most now; `AGENTS.md` defines how an autonomous agent should choose among them.
 
 ## Main user surfaces
 
-- `/` — league introduction
+- `/` — concise cash-league introduction and primary Join / sign in action; PR #379/#377 shipped the current above-the-fold shape, while #252 still owns deeper current-season practical details
 - `/rules` — public rules
-- `/profile` — Google sign-in and player identity/profile; Fargo self-service #365 and unclaimed-player self-claim #341 belong here
+- `/profile` — Google sign-in and player identity/profile; Fargo self-service #365 and unclaimed-player self-claim #341 belong here; PR #380/#378 makes the existing login persist across normal browser restarts while the underlying Supabase refresh session remains valid
 - `/teams` — team creation, requests/invitations, roster management, and normal player/recruiting discovery
-- `/schedule` — league dates, matchup context, and target home for personal dated availability under #370
-- `/availability` — **transitional standalone availability surface** pending #370 parity/retirement
+- `/schedule` — league dates, matchup context, and canonical personal dated Available / Unsure / Unavailable check-in after PR #376/#370
+- `/availability` — **transitional duplicate availability surface** pending remaining #370 consumer migration/parity and retirement
 - `/lineup` — current authoritative captain lineup workflow; #371 consolidates match-night entry into Score without changing rules
 - `/scorecard` — current eligible match picker and target flexible league-night hub under #371
 - `/scorecard/live` — live team-owned rack-ledger scoring
@@ -209,6 +211,8 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/sandbox/player` — fictional team-owned scoring/reconciliation practice child flow
 
 `/admin` exists, but it is not yet a first-class shared-navigation destination: `src/appShell.js` still has no Admin nav item/active section. Authorized Profile admin links remain the temporary discoverability bridge and must not be removed until #366 preserves <=2-action reachability through the final Admin gateway.
+
+The approved mobile quick-navigation identity in #239 is **Teams | Schedule | Score | Messages | Profile**. If the runtime still labels the Schedule dock item `Tonight`, treat that as stale transition copy: Play Tonight is conceptually converging into Score/#371, while Schedule owns dates and availability.
 
 Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
