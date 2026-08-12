@@ -53,8 +53,8 @@ test('design system is injected after page-local CSS and only into HTML', async 
   assert.equal(await untouched.text(), '{"ok":true}');
 });
 
-test('canonical browser pipeline applies the same design system to public and Test Drive pages', async () => {
-  for (const path of ['/', '/demo']) {
+test('canonical browser pipeline applies one shared design system across primary surfaces', async () => {
+  for (const path of ['/', '/demo', '/schedule', '/teams', '/scorecard', '/messages', '/profile', '/admin']) {
     const response = await routerEntry.fetch(new Request(`https://example.test${path}`), {}, {});
     assert.equal(response.status, 200);
     const html = await response.text();
