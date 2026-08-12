@@ -79,8 +79,8 @@ export function sandboxRackLedgerAdapterSource() {
         match_count:3,
         team_a_name:fixture.teams.A.name,
         team_b_name:fixture.teams.B.name,
-        team_score_a:1,
-        team_score_b:1,
+        team_score_a:0,
+        team_score_b:0,
       }}
       function requireMutable(){if(state.finalized)throw new Error('Practice match is already finalized')}
       function clearOwnConfirmation(){state[ownSide()].confirmed=false}
