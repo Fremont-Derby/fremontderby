@@ -153,6 +153,41 @@ test('release smoke reports safe HTTP routing details when health is not JSON', 
   );
 });
 
+test('release smoke fails fast when Cloudflare challenges a run with no bypass secret', async () => {
+  let fetchCalls = 0;
+  let sleepCalls = 0;
+  const challenge = () => new Response('<!doctype html><title>Just a moment...</title>', {
+    status: 403,
+    headers: {
+      'content-type': 'text/html; charset=UTF-8',
+      server: 'cloudflare',
+      'cf-ray': 'challenge-IAD',
+    },
+  });
+
+  await assert.rejects(
+    () => smokeRelease({
+      baseUrl: 'https://fremontderby.com',
+      expectedEnvironment: 'production',
+      expectedVersionTag: 'abc123',
+      attempts: 30,
+      delayMs: 0,
+      fetchImpl: async () => {
+        fetchCalls += 1;
+        return challenge();
+      },
+      sleep: async () => {
+        sleepCalls += 1;
+      },
+      log: () => {},
+    }),
+    /RELEASE_SMOKE_BYPASS_TOKEN is not configured/,
+  );
+
+  assert.equal(fetchCalls, 2);
+  assert.equal(sleepCalls, 0);
+});
+
 test('release smoke retries old deployments and then accepts the target release', async () => {
   let attempts = 0;
   const result = await smokeRelease({

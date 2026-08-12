@@ -19,6 +19,12 @@ function requestHeaders(accept, bypassToken) {
   return headers;
 }
 
+function isUnbypassedCloudflareChallenge(reason, bypassToken) {
+  if (bypassToken) return false;
+  return /did not return JSON \(HTTP 403,[^)]*server cloudflare/i.test(reason)
+    && /Just a moment/i.test(reason);
+}
+
 async function readJson(response, label) {
   const text = await response.text();
   let body;
@@ -159,6 +165,11 @@ export async function smokeRelease({
       lastReason = result.reason;
     } catch (error) {
       lastReason = error instanceof Error ? error.message : String(error);
+      if (isUnbypassedCloudflareChallenge(lastReason, bypassToken)) {
+        throw new Error(
+          'Cloudflare challenged the release smoke before the Worker and RELEASE_SMOKE_BYPASS_TOKEN is not configured. Configure the matching GitHub Actions secret and narrow Cloudflare x-fremont-release-smoke skip rule, then rerun.',
+        );
+      }
       if (/environment mismatch|readiness failed|wrong service|unexpected release surface/i.test(lastReason)) {
         throw error;
       }
