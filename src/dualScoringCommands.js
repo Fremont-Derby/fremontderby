@@ -35,6 +35,11 @@ function normalizeExpectedRacks(value) {
   return value;
 }
 
+function expectedRacksInput(value) {
+  const expectedRacks = normalizeExpectedRacks(value);
+  return expectedRacks === undefined ? {} : { expectedRacks };
+}
+
 function normalizeOpeningDiscipline(value) {
   const normalized = value === '8' ? '8-ball' : value === '9' ? '9-ball' : value;
   if (!['8-ball', '9-ball'].includes(normalized)) {
@@ -91,7 +96,7 @@ export async function recordPlayerMatchScoreRackCommand(
     playerMatchId,
     scoringTeamId,
     winnerSide: normalizeWinnerSide(winnerSide),
-    expectedRacks: normalizeExpectedRacks(expectedRacks),
+    ...expectedRacksInput(expectedRacks),
   });
 }
 
@@ -107,25 +112,27 @@ export async function updatePlayerMatchScoreRackCommand(
     scoringTeamId,
     rackNumber: normalizeRackNumber(rackNumber),
     winnerSide: normalizeWinnerSide(winnerSide),
-    expectedRacks: normalizeExpectedRacks(expectedRacks),
+    ...expectedRacksInput(expectedRacks),
   });
 }
 
 export async function undoPlayerMatchScoreRackCommand(input, repository) {
   assertScoringContext(input);
   assertRepository(repository, 'undoPlayerMatchScoreRack');
+  const { expectedRacks, ...base } = input;
   return repository.undoPlayerMatchScoreRack({
-    ...input,
-    expectedRacks: normalizeExpectedRacks(input.expectedRacks),
+    ...base,
+    ...expectedRacksInput(expectedRacks),
   });
 }
 
 export async function confirmPlayerMatchScoreCommand(input, repository) {
   assertScoringContext(input);
   assertRepository(repository, 'confirmPlayerMatchScore');
+  const { expectedRacks, ...base } = input;
   return repository.confirmPlayerMatchScore({
-    ...input,
-    expectedRacks: normalizeExpectedRacks(input.expectedRacks),
+    ...base,
+    ...expectedRacksInput(expectedRacks),
   });
 }
 
