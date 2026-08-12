@@ -16,6 +16,30 @@ test('shared design system codifies the approved scoring mock-up visual language
   assert.match(designSystemStyles, /overflow-x: hidden/);
 });
 
+test('shared design system exposes semantic tokens for page convergence', () => {
+  assert.match(designSystemStyles, /--fd-bg-page:/);
+  assert.match(designSystemStyles, /--fd-bg-surface:/);
+  assert.match(designSystemStyles, /--fd-text:/);
+  assert.match(designSystemStyles, /--fd-text-muted:/);
+  assert.match(designSystemStyles, /--fd-border:/);
+  assert.match(designSystemStyles, /--fd-primary:/);
+  assert.match(designSystemStyles, /--fd-accent:/);
+  assert.match(designSystemStyles, /--fd-danger:/);
+  assert.match(designSystemStyles, /--fd-warning:/);
+  assert.match(designSystemStyles, /--fd-success:/);
+  assert.match(designSystemStyles, /--fd-focus:/);
+  assert.match(designSystemStyles, /--fd-control-min:/);
+  assert.match(designSystemStyles, /--fd-content-max:/);
+});
+
+test('legacy adapters cover repeated player and admin page vocabulary', () => {
+  assert.match(designSystemStyles, /\.topbar, \.head, \.heading/);
+  assert.match(designSystemStyles, /\.match, \.metric, \.state, \.state-card, \.page-state/);
+  assert.match(designSystemStyles, /\.action-card/);
+  assert.match(designSystemStyles, /\.layout, \.threads, \.chat, \.composer/);
+  assert.match(designSystemStyles, /\.message\.mine/);
+});
+
 test('design system is injected after page-local CSS and only into HTML', async () => {
   const response = new Response('<!doctype html><html><head><style>body{background:#000}</style></head><body>ok</body></html>', {
     headers: { 'content-type': 'text/html; charset=utf-8' },
@@ -29,12 +53,20 @@ test('design system is injected after page-local CSS and only into HTML', async 
   assert.equal(await untouched.text(), '{"ok":true}');
 });
 
-test('canonical browser pipeline applies the same design system to public and Test Drive pages', async () => {
+test('public pages retain the shared shell and design-system pipeline', async () => {
   for (const path of ['/', '/demo']) {
     const response = await routerEntry.fetch(new Request(`https://example.test${path}`), {}, {});
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 200, path);
     const html = await response.text();
-    assert.match(html, /data-fd-design-system/);
-    assert.match(html, /data-fd-shell/);
+    assert.match(html, /data-fd-design-system/, path);
+    assert.match(html, /data-fd-shell/, path);
+  }
+});
+
+test('primary player and admin surfaces pass through the shared design-system pipeline', async () => {
+  for (const path of ['/schedule', '/teams', '/scorecard', '/messages', '/profile', '/admin']) {
+    const response = await routerEntry.fetch(new Request(`https://example.test${path}`), {}, {});
+    assert.equal(response.status, 200, path);
+    assert.match(await response.text(), /data-fd-design-system/, path);
   }
 });
