@@ -16,7 +16,7 @@ test('Season Teams keeps the authoritative entry reason on an unavailable slot a
 
 test('shared accessibility layer promotes disabled tooltip reasons into visible adjacent notes', async () => {
   assert.match(accessibilityStyles, /\.fd-disabled-reason/);
-  assert.match(accessibilityStyles, /overflow-wrap:anywhere/);
+  assert.match(accessibilityStyles, /overflow-wrap:\s*anywhere/);
   assert.match(accessibilityScript, /button\[disabled\]\[title\]/);
   assert.match(accessibilityScript, /insertAdjacentElement\('afterend', note\)/);
   assert.match(accessibilityScript, /note\.textContent = reason/);
@@ -29,7 +29,7 @@ test('shared accessibility layer promotes disabled tooltip reasons into visible 
   const html = await response.text();
 
   assert.match(html, /data-fd-accessibility-layer/);
-  assert.match(html, /data-fd-accessibility-layer-script/);
+  assert.match(html, /data-fd-disabled-reasons/);
   assert.match(html, /fd-disabled-reason/);
   assert.match(html, /aria-describedby/);
 });
