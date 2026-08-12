@@ -52,6 +52,10 @@ export async function addAdminSeasonTeamCommand(input, repository) {
   const candidate = (state?.teams ?? []).find(
     (row) => candidateValue(row, 'teamId', 'team_id') === input.teamId,
   );
+  if (!candidate) {
+    throw new Error('Team is not available for this season');
+  }
+
   const candidateKind = candidateValue(candidate, 'candidateKind', 'candidate_kind');
   const qualified = Boolean(
     candidateValue(candidate, 'qualifiedForSlot', 'qualified_for_slot'),
