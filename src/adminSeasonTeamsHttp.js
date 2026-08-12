@@ -1,7 +1,9 @@
 import {
   addAdminSeasonTeamCommand,
+  assignAdminTeamCaptainCommand,
   createPreparedAdminSeasonTeamCommand,
   listAdminSeasonTeamsCommand,
+  listAdminTeamCaptainCandidatesCommand,
 } from './adminSeasonTeamsCommands.js';
 import { createAdminSeasonTeamsRepository } from './adminSeasonTeamsRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
@@ -11,8 +13,13 @@ function statusFor(error) {
   if (message.includes('Actor is not a league admin')) return 403;
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
-  if (message.includes('Season not found') || message.includes('Team not found')) return 404;
-  if (message.includes('already exists')) return 409;
+  if (message.includes('Season not found') || message.includes('Team not found') || message.includes('Player not found')) return 404;
+  if (
+    message.includes('already exists')
+    || message.includes('already has an active captain')
+    || message.includes('already captains another team')
+    || message.includes('Phone number is required')
+  ) return 409;
   if (message.includes('No team slots') || message.includes('before season publication')) return 409;
   return 400;
 }
@@ -77,6 +84,42 @@ export function createAdminSeasonTeamsHttpHandlers({
           teamId,
         }, repository);
         return Response.json({ team }, { status: 201 });
+      });
+    },
+
+    listCaptainCandidates(
+      request,
+      env,
+      seasonId,
+      teamId,
+      { fetch: fetchImpl = globalThis.fetch } = {},
+    ) {
+      return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const players = await listAdminTeamCaptainCandidatesCommand({
+          actorUserId: actor.id,
+          seasonId,
+          teamId,
+        }, repository);
+        return Response.json({ players });
+      });
+    },
+
+    assignCaptain(
+      request,
+      env,
+      seasonId,
+      teamId,
+      { fetch: fetchImpl = globalThis.fetch } = {},
+    ) {
+      return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJson(request);
+        const captain = await assignAdminTeamCaptainCommand({
+          actorUserId: actor.id,
+          seasonId,
+          teamId,
+          playerId: body.playerId ?? body.player_id,
+        }, repository);
+        return Response.json({ captain });
       });
     },
   };

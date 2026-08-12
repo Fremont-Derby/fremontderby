@@ -46,6 +46,32 @@ export async function routeAdminSeasonTeams(request, env) {
     );
   }
 
+  const captainCandidates = url.pathname.match(
+    /^\/api\/admin\/seasons\/([^/]+)\/teams\/([^/]+)\/captain-candidates$/,
+  );
+  if (captainCandidates) {
+    if (request.method !== 'GET') return methodNotAllowed();
+    return adminSeasonTeamsHttpHandlers.listCaptainCandidates(
+      request,
+      env,
+      decodeURIComponent(captainCandidates[1]),
+      decodeURIComponent(captainCandidates[2]),
+    );
+  }
+
+  const assignCaptain = url.pathname.match(
+    /^\/api\/admin\/seasons\/([^/]+)\/teams\/([^/]+)\/captain$/,
+  );
+  if (assignCaptain) {
+    if (request.method !== 'POST') return methodNotAllowed();
+    return adminSeasonTeamsHttpHandlers.assignCaptain(
+      request,
+      env,
+      decodeURIComponent(assignCaptain[1]),
+      decodeURIComponent(assignCaptain[2]),
+    );
+  }
+
   const addTeam = url.pathname.match(
     /^\/api\/admin\/seasons\/([^/]+)\/teams\/([^/]+)\/add$/,
   );
