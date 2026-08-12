@@ -51,3 +51,13 @@ test('lineup page keeps the three selected slots and lock action visible on mobi
   assert.match(html, /renderMobileSummary\(\)/);
   assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
 });
+
+test('lineup correction controls meet the phone touch and focus contract', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /\.slot-actions button\{min-width:44px;min-height:44px/);
+  assert.match(html, /\.slot-actions button:focus-visible\{outline:3px solid #9ee5bd;outline-offset:2px\}/);
+  assert.match(html, /\.slot\{grid-template-columns:42px minmax\(0,1fr\)\}/);
+  assert.match(html, /\.slot-actions\{grid-column:2;justify-content:flex-start\}/);
+  assert.doesNotMatch(html, /\.slot-actions button\{min-height:36px/);
+});
