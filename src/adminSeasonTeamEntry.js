@@ -1,0 +1,76 @@
+export const INITIAL_TEAM_ROSTER_MINIMUM = 3;
+
+function value(row, camelName, snakeName) {
+  return row?.[camelName] ?? row?.[snakeName];
+}
+
+function availableSlots(registration) {
+  const counts = registration?.counts ?? {};
+  const available = Number(counts.availableSlots ?? counts.available_slots ?? 0);
+  return Number.isFinite(available) ? Math.max(0, available) : 0;
+}
+
+export function deriveAdminSeasonTeamEntry(row, registration) {
+  const candidateKind = value(row, 'candidateKind', 'candidate_kind') ?? '';
+  const captainPlayerId = value(row, 'captainPlayerId', 'captain_player_id') ?? null;
+  const rosterCount = Number(value(row, 'activeRosterCount', 'active_roster_count') ?? 0);
+  const slotsOpen = availableSlots(registration);
+
+  if (candidateKind === 'in_season') {
+    const missingPlayers = Math.max(0, INITIAL_TEAM_ROSTER_MINIMUM - rosterCount);
+    const ready = Boolean(captainPlayerId) && missingPlayers === 0;
+    return {
+      entryStatus: 'accepted',
+      qualified: ready,
+      canTakeSlot: false,
+      reason: ready
+        ? 'Slot secured · initial roster qualified'
+        : !captainPlayerId
+          ? 'Slot secured · assign a current-season captain'
+          : `Slot secured · need ${missingPlayers} more rostered player${missingPlayers === 1 ? '' : 's'}`,
+    };
+  }
+
+  if (candidateKind === 'returning') {
+    return {
+      entryStatus: 'forming',
+      qualified: false,
+      canTakeSlot: slotsOpen > 0,
+      reason: slotsOpen > 0
+        ? 'Returning priority · reserve a slot to start this season roster'
+        : 'Returning priority · no slot currently open',
+    };
+  }
+
+  const missingPlayers = Math.max(0, INITIAL_TEAM_ROSTER_MINIMUM - rosterCount);
+  const qualified = Boolean(captainPlayerId) && missingPlayers === 0;
+  if (!qualified) {
+    const reasons = [];
+    if (!captainPlayerId) reasons.push('assign a captain');
+    if (missingPlayers > 0) {
+      reasons.push(`add ${missingPlayers} more rostered player${missingPlayers === 1 ? '' : 's'}`);
+    }
+    return {
+      entryStatus: 'forming',
+      qualified: false,
+      canTakeSlot: false,
+      reason: `Forming · ${reasons.join(' · ')}`,
+    };
+  }
+
+  if (slotsOpen <= 0) {
+    return {
+      entryStatus: 'waitlisted',
+      qualified: true,
+      canTakeSlot: false,
+      reason: 'Qualified · season is full',
+    };
+  }
+
+  return {
+    entryStatus: 'qualified',
+    qualified: true,
+    canTakeSlot: true,
+    reason: 'Qualified · ready for a season slot',
+  };
+}
