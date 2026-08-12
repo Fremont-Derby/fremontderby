@@ -41,3 +41,20 @@ export async function addAdminSeasonTeamCommand(input, repository) {
   requireMethod(repository, 'add');
   return repository.add(input);
 }
+
+export async function listAdminTeamCaptainCandidatesCommand(input, repository) {
+  requireValue(input.actorUserId, 'actorUserId');
+  requireValue(input.seasonId, 'seasonId');
+  requireValue(input.teamId, 'teamId');
+  requireMethod(repository, 'listCaptainCandidates');
+  return repository.listCaptainCandidates(input);
+}
+
+export async function assignAdminTeamCaptainCommand(input, repository) {
+  requireValue(input.actorUserId, 'actorUserId');
+  requireValue(input.seasonId, 'seasonId');
+  requireValue(input.teamId, 'teamId');
+  requireValue(input.playerId, 'playerId');
+  requireMethod(repository, 'assignCaptain');
+  return repository.assignCaptain(input);
+}
