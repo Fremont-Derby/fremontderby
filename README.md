@@ -72,7 +72,9 @@ When a route, page, navigation element, role, or user-facing function changes, r
 
 Current runtime can temporarily lag approved product ownership while focused cleanup stories land. Treat these issues as the durable direction rather than extending the legacy surface:
 
-- **#366 Admin gateway** — Admin becomes a first-class top-level destination. Operations, Admin Support, and Moderation stay separate; Profile returns to its `me / identity` purpose once the new gateway preserves <=2-action admin reachability.
+- **#370 Schedule + availability** — `/schedule` becomes the canonical league-date/matchup plus personal dated availability surface; standalone `/availability` is transitional until parity exists.
+- **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains focused live scoring.
+- **#366 Admin gateway** — PR #369 shipped a role-aware `/admin` gateway with Operations, Players, League Management, Moderation, plus safe signed-out/non-admin states. It is not yet fully first-class because shared navigation does not expose Admin, Admin Teams/#372 and Admin Support/#361 remain missing, and Profile still carries fallback admin links to preserve <=2-action reachability.
 - **#362 Trades retirement** — formal player trades are removed from the product. Roster change uses applications, invitations, captain roster management, and admin exceptions; historical trade records may remain for audit/history.
 - **#18 Prize ownership split** — `/prizes` is the public/read-only purse and payout view; privileged prize configuration belongs in Admin → League Management.
 - **#365 Fargo profile identity** — players may enter their own Fargo identifier on Profile; official Fargo rating and robustness are displayed from sourced observations when available. Player-supplied IDs remain distinguishable from verified Fargo identity.
@@ -167,13 +169,15 @@ Server-side authorization must still enforce actor/team/captain/admin boundaries
 
 ## High-value end-to-end shape
 
-A useful core workflow to keep healthy is:
+A useful current core workflow to keep healthy is:
 
 ```text
-sign in -> profile -> season/team -> availability -> blind lineup
--> generated player matches -> score picker -> 8/9 rack scoring
+sign in -> profile -> team -> schedule/availability -> blind lineup
+-> Score -> generated player match -> live 8/9 rack scoring
 -> reconcile -> dual confirm -> finalize -> team standings -> individual standings
 ```
+
+#370/#371 are intentionally converging the separate Availability and Play Tonight concepts into Schedule and Score; do not introduce parallel replacement pages while that migration is open.
 
 The platform should continue beyond any one season or release. Current GitHub issues and milestones determine which gaps matter most now; `AGENTS.md` defines how an autonomous agent should choose among them.
 
@@ -181,29 +185,30 @@ The platform should continue beyond any one season or release. Current GitHub is
 
 - `/` — league introduction
 - `/rules` — public rules
-- `/profile` — Google sign-in and player identity/profile; approved Fargo self-service work is tracked in #365
+- `/profile` — Google sign-in and player identity/profile; Fargo self-service #365 and unclaimed-player self-claim #341 belong here
 - `/teams` — team creation, requests/invitations, roster management, and normal player/recruiting discovery
-- `/schedule` — current/upcoming league night, round, matchup, date/table context, and next-workflow entry points
-- `/availability` — dated roster/free-agent availability and check-in
-- `/lineup` — captain lineup workflow
-- `/scorecard` — eligible match picker
+- `/schedule` — league dates, matchup context, and target home for personal dated availability under #370
+- `/availability` — **transitional standalone availability surface** pending #370 parity/retirement
+- `/lineup` — current authoritative captain lineup workflow; #371 consolidates match-night entry into Score without changing rules
+- `/scorecard` — current eligible match picker and target flexible league-night hub under #371
 - `/scorecard/live` — live team-owned rack-ledger scoring
 - `/messages` — league, team, direct, and planned admin-support communication; matchup-specific chat is deprecated under #78
 - `/messages/moderation` — moderator/admin message-report review; separate from Admin Support
 - `/standings` — team / individual standings
-- `/season-setup` — league-director season setup and publishing; moving under the Admin → League Management grouping per #366
+- `/admin` — **shipped partial role-aware Admin gateway** from PR #369; first-class shared-nav discovery and remaining destinations are still #366/#372/#361
+- `/season-setup` — league-director season setup and publishing, grouped under Admin → League Management
 - `/admin/season-teams` — league-admin Returning / New / In season team assignment for a selected season
 - `/admin/operations` — league-admin readiness, exception triage, action queue, and operational health
-- `/admin/players` — league-admin player search, role management, competition eligibility, and roster exceptions
+- `/admin/players` — league-admin player search, role management, competition eligibility, roster exceptions, and admin creation of unclaimed players (#340/PR #368)
 - `/trades` — **legacy runtime surface pending removal under #362; do not extend as a supported product workflow**
 - `/prizes` — public purse/payout state; privileged configuration is moving to Admin → League Management under #18
 - `/health` — Worker version metadata
 - `/health/environment` — non-secret environment diagnostics
 - `/demo` — public **Test Drive the App** using fictional, non-authoritative data
-- `/sandbox/captain` — fictional captain team-formation, roster-churn, availability, and lineup practice
-- `/sandbox/player` — fictional team-owned scoring and reconciliation practice
+- `/sandbox/captain` — fictional captain practice child flow
+- `/sandbox/player` — fictional team-owned scoring/reconciliation practice child flow
 
-A first-class top-level Admin gateway is planned under #366. Until it ships, authorized Profile admin links are the temporary discoverability bridge and must not be removed if doing so would violate the <=2-action rule.
+`/admin` exists, but it is not yet a first-class shared-navigation destination: `src/appShell.js` still has no Admin nav item/active section. Authorized Profile admin links remain the temporary discoverability bridge and must not be removed until #366 preserves <=2-action reachability through the final Admin gateway.
 
 Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
