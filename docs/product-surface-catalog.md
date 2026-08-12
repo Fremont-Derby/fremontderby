@@ -33,6 +33,7 @@ These product decisions are canonical even when runtime still contains legacy or
 - **#370 Schedule + availability** — `/schedule` is the canonical date/schedule plus personal dated Available / Unsure / Unavailable surface after PR #376. PR #389 moved captain lineup/substitute discovery to the same date-keyed source. `/availability` remains transitional only until final parity/recovery proof and retirement; normal Teams recruiting filters still converge under #330.
 - **#371 Score + Play Tonight** — `/scorecard` becomes the current-date-default league-night hub with alternate date/team/matchup/race selection; `/scorecard/live` remains the focused live-scoring child.
 - **#366 Admin gateway** — `/admin` exists as a role-aware partial gateway after PR #369. It remains partial until shared navigation exposes Admin, Admin Teams/#372 and Admin Support/#361 are present, broader League Management ownership is consolidated, and Profile fallback links can retire without a <=2-action regression.
+- **#341 prepared-player self-claim** — PR #391 shipped `Claim existing player` on `/profile` for signed-in users without an owned player identity. Only unclaimed zero-competitive-rack identities are eligible; admin creation remains `/admin/players`. Exact deployed-Worker real-account/phone proof remains open on #341.
 - **#362 Trades retirement** — formal trades are no longer a supported product workflow. Applications, invitations, captain roster management, and admin exceptions replace them; historical trade/audit records may remain.
 - **#18 Prize split** — `/prizes` is public/read-only transparency; privileged payout configuration belongs in Admin -> League Management.
 - **#365 Fargo profile identity** — `/profile` owns player-entered Fargo ID and display of sourced official Fargo rating + robustness. Player-entered identity remains distinguishable from verified Fargo identity.
@@ -47,7 +48,7 @@ These product decisions are canonical even when runtime still contains legacy or
 | --- | --- | --- | --- |
 | `/` | Public visitor | Understand Fremont Derby and choose the next appropriate league action | Canonical introduction. PR #379 / #377 shipped the concise cash-league-first intro and Join / sign in action; current-season practical details remain #252 |
 | `/rules` | Public visitor / player | Read authoritative user-facing league rules | Canonical rules surface |
-| `/profile` | Player | Sign in and manage own identity, current-season participation/payment, memberships, and personal status | Canonical identity/profile surface. PR #385/#343 shipped Join this season plus Registered / Payment due / Paid / Waived state. Current admin links are a temporary reachability bridge. Fargo self-service is #365; unclaimed identity claiming is #341. PR #380/#378 makes the existing Supabase login survive normal browser restarts while the underlying refresh session remains valid |
+| `/profile` | Player | Sign in and manage own identity, current-season participation/payment, memberships, and personal status | Canonical identity/profile surface. PR #391/#341 ships Claim existing player for signed-in users without an owned player, preserving prepared team/season/rating state when the record has zero competitive racks. PR #385/#343 shipped Join this season plus Registered / Payment due / Paid / Waived state. Current admin links are a temporary reachability bridge. Fargo self-service is #365. PR #380/#378 makes the existing Supabase login survive normal browser restarts while the underlying refresh session remains valid |
 | `/teams` | Player / captain | Find, join, create, manage, and recruit around teams and roster relationships | Canonical normal team/roster surface. Sort/filter/sub discovery remains #330 |
 | `/schedule` | Public visitor / player / captain | See league dates/matchups and mark personal dated availability | PR #376 shipped the three-state date-keyed check-in; PR #389 made captain lineup/sub discovery consume the same dated source. Remaining convergence work is Teams recruiting filters plus retirement of `/availability` under #370/#330 |
 | `/availability` | Player / captain | Transitional standalone availability editor | Duplicate transitional runtime surface; do not extend. Retire after #370 parity/recovery proof |
@@ -62,7 +63,7 @@ These product decisions are canonical even when runtime still contains legacy or
 | `/season-setup` | League admin / director | Configure, publish, and manage the selected season lifecycle | Current season-management surface; groups under Admin -> League Management |
 | `/admin/season-teams` | League admin / director | Populate the selected season from eligible Returning / New / In season teams | Shipped in PR #345/#336; League Management child workflow |
 | `/admin/operations` | League admin / director | See readiness, exceptions, prioritized actions, and operational health | Canonical admin operations/triage; #169 remains open for remaining signals |
-| `/admin/players` | League admin / director | Find a player and manage privileged player-level league administration | Canonical player-administration surface. Roles, eligibility, roster exceptions, and Create player / Unclaimed are shipped; human/live proof remains #316/#340 |
+| `/admin/players` | League admin / director | Find a player and manage privileged player-level league administration | Canonical player-administration surface. Roles, eligibility, roster exceptions, and Create player / Unclaimed are shipped; self-claim of prepared identities belongs on Profile. Human/live proof remains #316/#340 |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; separate from Admin Support |
 | planned Admin Teams | League admin / director | Manage one team and team-level exceptions | Missing runtime surface tracked by #372; normal recruiting remains `/teams` |
 | `/demo` | Public visitor / tester | **Test Drive the App** using fictional, non-authoritative data | Canonical public test-drive entry; simulated production actions should use shared production components under #387 |
@@ -80,7 +81,7 @@ These product decisions are canonical even when runtime still contains legacy or
 | Player | Sign in/manage own profile and identity | `/profile` | Implemented core | #8, #250 | Direct shared navigation |
 | Player | Register for the current season and see own registration/payment state | `/profile` | Implemented source; live phone proof open | #343, PR #385 | Direct Profile card; Join this season and status are reachable in one normal navigation action |
 | Player | Stay signed in across ordinary browser restarts while the Supabase refresh session remains valid | `/profile` for sign-in/sign-out/recovery; shared auth bootstrap applies across HTML pages | Implemented | #378, PR #380 | No extra navigation required after first sign-in; explicit sign-out remains on Profile and invalid/revoked refresh sessions still fail normally |
-| Signed-in user with no owned player | Claim an eligible admin-created zero-rack identity | `/profile` | Missing/planned | #341; creation foundation #340/PR #368 | Claim belongs to onboarding/Profile, not Admin Players |
+| Signed-in user with no owned player | Claim an eligible admin-created zero-rack identity | `/profile` | Implemented source/database; deployed-Worker real-account + phone proof open | #341, PR #391; creation foundation #340/PR #368 | Claim is a secondary identity/onboarding function on Profile and is reachable in one normal navigation action; do not move it into Admin Players |
 | League admin | Create an unclaimed player before signup | `/admin/players` | Source/database shipped; live proof pending | #340, PR #368 | Canonical admin player surface |
 | Player / captain | Find/create/join/manage team relationships and recruit | `/teams` | Implemented core; recruiting expansion open | #131, #181, #182, #330 | Teams remains normal roster/recruiting home |
 | Player / captain / admin | Open direct conversation from a player/captain context | `/messages` | Core messaging implemented; contextual entry open | #373 | Deep-link/reuse canonical direct conversation; do not create page-specific chat |
@@ -108,6 +109,7 @@ The complete endpoint inventory lives in `docs/page-api-user-story-audit.md`; #3
 
 - Profile/account/Fargo self-service -> `/profile`.
 - Own current-season registration/payment read and registration action -> `/profile` via `GET|POST /api/seasons/:season/registration/me` from PR #385/#343; no second team-registration surface should become authoritative.
+- Prepared-player self-claim -> `/profile` via `GET /api/me/player-claim-options` and `POST /api/me/player-claim` from PR #391/#341. `/admin/players` owns creating the Unclaimed record; self-claim must not become a privileged admin-only workflow or a second onboarding page.
 - Browser auth persistence from #378/PR #380 is cross-cutting shell behavior, but Profile remains the canonical sign-in/sign-out/recovery page. The persistence layer must never become a second login page or weaken server authorization.
 - Admin unclaimed-player creation and privileged player mutations -> `/admin/players`; normal player discovery/recruiting must not move there.
 - Team applications, membership requests, invitations, free-agent participation, and normal roster relationships -> `/teams`.
@@ -126,6 +128,8 @@ The complete endpoint inventory lives in `docs/page-api-user-story-audit.md`; #3
 
 ### 2026-08-11 / 2026-08-12 UTC reconciliation
 
+- **PR #391 advanced #341:** Profile now owns the shipped `Claim existing player` flow for a signed-in user without an owned player identity. Search and mutation are limited to unclaimed identities with zero competitive racks and preserve prepared team/season/rating state. The function is directly discoverable through Profile and does not overload the page because it directly supports the page's identity/onboarding purpose. Exact deployed-Worker real-account + phone proof remains open on #341.
+- **PR #392 captured a durable identity-integrity rule:** zero-rack eligibility must reconcile both legacy `public.player_match_racks` and current dual-score rack JSON; finalized-match or match-count shortcuts are not equivalent. This is implementation integrity rather than a new user-facing surface.
 - **PR #385 advanced #343:** Profile now owns a compact current-season card with Join this season and explicit Registered / Payment due / Paid / Waived state. This reinforces Profile's `me / identity / participation status` purpose rather than creating a separate registration page. Human production-phone proof remains on #343/#280.
 - **PR #386 completed scoring component parity for Test Drive:** `/scorecard/live` and `/sandbox/player` now share the exact rack-ledger component/controller with only the adapter swapped. Test Drive remains a child QA/practice surface rather than a second scoring product. The remaining captain/lineup parity is already tracked by #387/#388.
 - **PR #389 advanced #370/#138/#330:** captain lineup/substitute discovery now consumes `player_date_availability` for the selected scheduled date, including available teamless/free-agent players, while temporary legacy compatibility remains behind the same HTTP/RPC shape. The remaining duplicate is standalone `/availability`, plus normal Teams recruiting filters under #330.
@@ -134,7 +138,8 @@ The complete endpoint inventory lives in `docs/page-api-user-story-audit.md`; #3
 - **PR #380 completed #378:** Supabase session persistence survives normal browser restarts through a shared HTML auth bootstrap while Profile remains the canonical sign-in/sign-out/recovery page.
 - **Navigation label mismatch remains:** the approved mobile target in #239 is `Teams | Schedule | Score | Messages | Profile`, while `src/appShell.js` still labels the Schedule dock item `Tonight`. Because Play Tonight is owned conceptually by Score/#371, the `Tonight` label remains stale and is already tracked by #239; no duplicate issue was created.
 - **Admin remains a tracked reachability transition:** `/admin` exists, but shared navigation still has no Admin item/active section. Authorized admins remain within <=2 actions only through temporary Profile links; #366 remains the correct owner.
-- **Two-click result for affected stories:** Profile season registration/payment is one action from the shared shell; Schedule is direct navigation; Score is direct navigation; Player War Games is an explicit Test Drive child/QA exception rather than a required normal workflow. No new normal authorized dead end was introduced by PRs #385/#386/#389.
+- **Two-click result for affected stories:** Profile self-claim and season registration/payment are both one action from the shared shell; Schedule is direct navigation; Score is direct navigation; Player War Games is an explicit Test Drive child/QA exception. No new normal authorized dead end was introduced by PRs #385/#386/#389/#391.
+- **Backlog reconciliation:** #315 was updated after PR #391 because it still listed #340/#341 as wholly unshipped. It now distinguishes shipped source/database identity preparation/claim work from the remaining exact deployed-Worker proof.
 
 ## Known catalog work
 
@@ -148,7 +153,7 @@ The complete endpoint inventory lives in `docs/page-api-user-story-audit.md`; #3
 - #373 — contextual Message player/captain deep-links.
 - #343 — source implementation is merged; remaining work is real-player production-phone proof behind #280.
 - #387/#388 — continue Test Drive production-component parity; scoring is complete, captain lineup remains.
-- #340/#341/#342/#335 — preseason identity, claim, manual team creation, and captain contact.
+- #340/#341 — source/database implementations are shipped; exact deployed-Worker/live proof remains blocked by release traceability. #342/#335 still own manual team creation and captain contact.
 - #361 — shared Admin Support channel via Messages.
 - #362 — remove legacy Trades UI/APIs while preserving history.
 - #363 — exhaustive agent-friendly API reference and lifecycle classification.
