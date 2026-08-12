@@ -21,6 +21,7 @@ GitHub-native agents also receive a thin pointer through [`.github/copilot-instr
 - `AGENTS.md` — durable autonomous operating behavior.
 - `README.md` — stable product/architecture/environment orientation.
 - `docs/product-surface-catalog.md` — canonical index connecting audiences, documented user stories, functions, and page ownership.
+- `docs/page-api-user-story-audit.md` — comprehensive page-by-page audit reference connecting current/planned stories to UI/API ownership and product-owner audit flags.
 - `.github/agents/*.agent.md` — specialist operating profiles, including the Product Librarian / Information Architecture lane.
 - `docs/agent-bootstrap.md` — minimal external-session bootstrap.
 - GitHub issues/milestones/PRs — current priorities, user stories, requirements, blockers, and acceptance criteria.
@@ -50,7 +51,7 @@ npm run build
 
 Fremont Derby treats user stories, page ownership, and navigation as maintained product infrastructure rather than incidental UI details.
 
-The **Product Librarian / Information Architecture** agent at [`.github/agents/product-librarian.agent.md`](.github/agents/product-librarian.agent.md) continuously reconciles this structure. The durable catalog lives at [`docs/product-surface-catalog.md`](docs/product-surface-catalog.md).
+The **Product Librarian / Information Architecture** agent at [`.github/agents/product-librarian.agent.md`](.github/agents/product-librarian.agent.md) continuously reconciles this structure. The durable catalog lives at [`docs/product-surface-catalog.md`](docs/product-surface-catalog.md), with the deeper page/API/story audit at [`docs/page-api-user-story-audit.md`](docs/page-api-user-story-audit.md).
 
 For normal user-facing product work:
 
@@ -99,6 +100,7 @@ The code intentionally uses small modules rather than a framework.
 | Database source of truth | `supabase/migrations/*.sql` | Tables, constraints, RPC functions, triggers, RLS, grants |
 | Tests | `test/*.test.js` | Node `node:test` regression and integration-contract coverage |
 | Product surface catalog | `docs/product-surface-catalog.md` | Audience/story/function/page ownership and discoverability index |
+| Page/API/story audit | `docs/page-api-user-story-audit.md` | Product-owner audit of page stories, current/planned APIs, and IA flags |
 | Cloudflare config | `wrangler.jsonc` | Worker name and non-secret environment bindings |
 | CI | `.github/workflows/ci.yml` | Required validation on PRs and `main` |
 
@@ -168,27 +170,28 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/` — league introduction
 - `/rules` — public rules
 - `/profile` — Google sign-in and player profile
-- `/teams` — team creation, requests/invitations, roster management
+- `/teams` — team creation, requests/invitations, roster management, and normal player/recruiting discovery
 - `/schedule` — current/upcoming league night, round, matchup, date/table context, and next-workflow entry points
-- `/availability` — roster/free-agent availability
+- `/availability` — dated roster/free-agent availability and check-in
 - `/lineup` — captain lineup workflow
 - `/scorecard` — eligible match picker
-- `/scorecard/live` — live rack scoring
+- `/scorecard/live` — live team-owned rack-ledger scoring
 - `/messages` — league, matchup, team, and player communication
 - `/messages/moderation` — moderator/admin message-report review
 - `/standings` — team / individual standings
 - `/season-setup` — league-director season setup and publishing
+- `/admin/season-teams` — league-admin Returning / New / In season team assignment for a selected season
 - `/admin/operations` — league-admin readiness, exception triage, action queue, and operational health
-- `/admin/players` — league-admin player search, role management, and player-level league exceptions
+- `/admin/players` — league-admin player search, role management, competition eligibility, and roster exceptions
 - `/trades` — player trade workflow
 - `/prizes` — purse and payout state
 - `/health` — Worker version metadata
 - `/health/environment` — non-secret environment diagnostics
-- `/demo` — public **Try a League Night** guided test drive using fictional, non-authoritative data
+- `/demo` — public **Test Drive the App** using fictional, non-authoritative data
 - `/sandbox/captain` — fictional captain team-formation, roster-churn, availability, and lineup practice
 - `/sandbox/player` — fictional team-owned scoring and reconciliation practice
 
-Inspect `src/router.js` and `docs/product-surface-catalog.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
+Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
 ## Development commands
 
