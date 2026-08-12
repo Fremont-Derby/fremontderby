@@ -13,6 +13,7 @@ import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnh
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { normalizeShellNavigationLabels } from './shellNavigationLabels.js';
+import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 
 async function reconcileProductShell(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
@@ -76,6 +77,9 @@ export default {
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') {
       return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled));
+    }
+    if (url.pathname === '/teams' && request.method === 'GET') {
+      return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled));
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
