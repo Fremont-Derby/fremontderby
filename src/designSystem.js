@@ -118,9 +118,7 @@ export const designSystemStyles = `
   }
   input::placeholder, textarea::placeholder { color: #929894 !important; }
 
-  .status[data-tone="error"], [data-state="error"], .error, .error-popup, .fd-error-popup {
-    color: #8f271f !important;
-  }
+  .status[data-tone="error"], [data-state="error"], .error, .error-popup, .fd-error-popup { color: #8f271f !important; }
   .error-popup, .fd-error-popup {
     background: #fff5f3 !important;
     border-color: #d85a50 !important;
@@ -184,18 +182,24 @@ export const designSystemStyles = `
   }
 `;
 
-export function injectDesignSystem(response) {
+export async function injectDesignSystem(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
-  return response.text().then((html) => {
-    if (html.includes('data-fd-design-system')) return new Response(html, response);
-    const styled = /<\/head>/i.test(html)
-      ? html.replace(/<\/head>/i, `<style data-fd-design-system>${designSystemStyles}</style>\n</head>`)
-      : html;
-    return new Response(styled, {
+  const headers = new Headers(response.headers);
+  const html = await response.text();
+  if (html.includes('data-fd-design-system')) {
+    return new Response(html, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      headers,
     });
+  }
+  const styled = /<\/head>/i.test(html)
+    ? html.replace(/<\/head>/i, `<style data-fd-design-system>${designSystemStyles}</style>\n</head>`)
+    : html;
+  return new Response(styled, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   });
 }
