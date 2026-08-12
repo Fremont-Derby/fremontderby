@@ -1,12 +1,127 @@
 const PUBLISH_MARKER = 'data-season-publish-readiness';
 
+export function deriveSeasonPublishReadiness(setup = {}, teamState = {}) {
+  const registration = teamState?.registration || {};
+  const teams = Array.isArray(teamState?.teams) ? teamState.teams : [];
+  const counts = registration?.counts || {};
+  const seasonStatus = String(setup?.status || registration?.seasonStatus || '');
+  const capacity = Number(registration?.teamCapacity || 8);
+  const confirmed = Number(counts.confirmedTeams || 0);
+  const confirmedTeams = teams.filter(
+    (team) => (team.slot_workflow_status ?? team.slotWorkflowStatus) === 'confirmed',
+  );
+  const missingCaptain = confirmedTeams.filter(
+    (team) => !(team.captain_player_id ?? team.captainPlayerId),
+  ).length;
+  const missingPhone = confirmedTeams.filter(
+    (team) => (team.captain_player_id ?? team.captainPlayerId)
+      && !(team.captain_has_phone ?? team.captainHasPhone),
+  ).length;
+  const firstRound = setup?.first_round_date || setup?.firstRoundDate || '';
+  const tables = setup?.default_table_numbers || setup?.defaultTableNumbers || [];
+  const interval = Number(setup?.round_interval_days || setup?.roundIntervalDays || 0);
+  const roundCount = Array.isArray(setup?.rounds) ? setup.rounds.length : 0;
+  const waiting = Number(counts.applicationsWaiting || 0);
+
+  const checks = [
+    {
+      key: 'season-status',
+      label: 'Season status',
+      status: ['draft', 'registration'].includes(seasonStatus) ? 'Ready' : 'Blocked',
+      detail: ['draft', 'registration'].includes(seasonStatus)
+        ? seasonStatus
+        : 'Season must still be Draft or Registration.',
+      fix: ['draft', 'registration'].includes(seasonStatus) ? null : 'setup',
+      action: 'Edit setup',
+    },
+    {
+      key: 'confirmed-teams',
+      label: 'Confirmed teams',
+      status: confirmed === capacity ? 'Ready' : 'Blocked',
+      detail: `${confirmed} of ${capacity} confirmed.`,
+      fix: confirmed === capacity ? null : 'teams',
+      action: 'Manage teams',
+    },
+    {
+      key: 'team-captains',
+      label: 'Team captains',
+      status: missingCaptain === 0 && confirmed === capacity ? 'Ready' : 'Blocked',
+      detail: missingCaptain
+        ? `${missingCaptain} confirmed team${missingCaptain === 1 ? '' : 's'} missing a captain.`
+        : 'Captain assigned for every confirmed team.',
+      fix: missingCaptain === 0 && confirmed === capacity ? null : 'teams',
+      action: 'Assign captain',
+    },
+    {
+      key: 'captain-contact',
+      label: 'Captain contact',
+      status: missingPhone === 0 && confirmed === capacity ? 'Ready' : 'Blocked',
+      detail: missingPhone
+        ? `${missingPhone} captain${missingPhone === 1 ? '' : 's'} missing phone contact.`
+        : 'Phone contact on file for every confirmed captain.',
+      fix: missingPhone === 0 && confirmed === capacity ? null : 'teams',
+      action: 'Fix contact',
+    },
+    {
+      key: 'schedule-configuration',
+      label: 'Schedule configuration',
+      status: Boolean(firstRound) && Array.isArray(tables) && tables.length === 4 && interval > 0
+        ? 'Ready'
+        : 'Blocked',
+      detail: Boolean(firstRound) && Array.isArray(tables) && tables.length === 4 && interval > 0
+        ? 'First round, interval, and four tables configured.'
+        : 'Complete the first round date, interval, and four-table setup.',
+      fix: Boolean(firstRound) && Array.isArray(tables) && tables.length === 4 && interval > 0
+        ? null
+        : 'setup',
+      action: 'Edit setup',
+    },
+    {
+      key: 'existing-schedule',
+      label: 'Existing schedule',
+      status: roundCount === 0 ? 'Ready' : 'Blocked',
+      detail: roundCount
+        ? `${roundCount} round${roundCount === 1 ? '' : 's'} already published.`
+        : 'No published rounds yet.',
+      fix: null,
+      action: null,
+    },
+    {
+      key: 'registration-queue',
+      label: 'Registration queue',
+      status: waiting ? 'Needs attention' : 'Ready',
+      detail: waiting
+        ? `${waiting} application${waiting === 1 ? '' : 's'} still waiting for review.`
+        : 'No waiting team applications.',
+      fix: waiting ? 'teams' : null,
+      action: waiting ? 'Review teams' : null,
+    },
+  ];
+
+  const blockedCount = checks.filter((check) => check.status === 'Blocked').length;
+  const readyCount = checks.filter((check) => check.status === 'Ready').length;
+  const attentionCount = checks.filter((check) => check.status === 'Needs attention').length;
+
+  return {
+    canPublish: blockedCount === 0,
+    readyCount,
+    blockedCount,
+    attentionCount,
+    checks,
+  };
+}
+
 export async function enhanceSeasonPublishReadiness(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
   let html = await response.text();
   if (html.includes(PUBLISH_MARKER)) {
-    return new Response(html, { status: response.status, statusText: response.statusText, headers: response.headers });
+    return new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
   }
 
   const ui = `
@@ -30,23 +145,27 @@ export async function enhanceSeasonPublishReadiness(response) {
       <button class="ghost" data-publish-readiness-retry type="button" hidden>Try again</button>
     </section>`;
 
+  const deriveSource = deriveSeasonPublishReadiness.toString();
   const script = `<script data-season-publish-readiness-script>
   (()=>{
-    const selector=document.querySelector('[data-season-selector]');const publish=document.querySelector('[data-publish]');const form=document.querySelector('[data-season-setup-form]');const summary=document.querySelector('[data-publish-readiness-summary]');const state=document.querySelector('[data-publish-readiness-state]');const checklist=document.querySelector('[data-publish-readiness-checklist]');const retry=document.querySelector('[data-publish-readiness-retry]');
-    if(!selector||!publish||!form||!summary||!state||!checklist||!retry)return;form.id=form.id||'season-setup-form';let lastSeason='';let loading=false;let allowed=false;
+    const deriveReadiness=${deriveSource};const selector=document.querySelector('[data-season-selector]');const publish=document.querySelector('[data-publish]');const form=document.querySelector('[data-season-setup-form]');const summary=document.querySelector('[data-publish-readiness-summary]');const state=document.querySelector('[data-publish-readiness-state]');const checklist=document.querySelector('[data-publish-readiness-checklist]');const retry=document.querySelector('[data-publish-readiness-retry]');
+    if(!selector||!publish||!form||!summary||!state||!checklist||!retry)return;form.id=form.id||'season-setup-form';let lastSeason='';let loading=false;
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function request(path){const auth=token();if(!auth)throw new Error('Sign in with Google to manage the season.');const response=await fetch(path,{headers:{authorization:'Bearer '+auth,'content-type':'application/json'}});const text=await response.text();let body={};try{body=text?JSON.parse(text):{}}catch{body={error:text}}if(response.status===401)sessionStorage.removeItem('fd.accessToken');if(!response.ok)throw new Error(body.error||'Request failed');return body}
-    function value(source,snake,camel,fallback){const found=source?.[snake]??source?.[camel];return found==null?fallback:found}
-    function add(label,status,detail,href,action){const row=document.createElement('div');row.className='publish-check';const badge=document.createElement('strong');badge.textContent=status;badge.setAttribute('aria-label',status+': '+label);const copy=document.createElement('span');copy.textContent=label+(detail?' — '+detail:'');row.append(badge,copy);if(href){const link=document.createElement('a');link.href=href;link.textContent=action||'Fix';row.append(link)}checklist.append(row)}
-    function render(setup,teamState){const registration=teamState?.registration||{};const teams=teamState?.teams||[];const seasonStatus=String(setup?.status||registration?.seasonStatus||'');const capacity=Number(registration?.teamCapacity||8);const counts=registration?.counts||{};const confirmed=Number(counts.confirmedTeams||0);const confirmedTeams=teams.filter(team=>(team.slot_workflow_status??team.slotWorkflowStatus)==='confirmed');const missingCaptain=confirmedTeams.filter(team=>!(team.captain_player_id??team.captainPlayerId)).length;const missingPhone=confirmedTeams.filter(team=>(team.captain_player_id??team.captainPlayerId)&&!(team.captain_has_phone??team.captainHasPhone)).length;const firstRound=setup?.first_round_date||setup?.firstRoundDate||'';const tables=setup?.default_table_numbers||setup?.defaultTableNumbers||[];const interval=Number(setup?.round_interval_days||setup?.roundIntervalDays||0);const roundCount=Array.isArray(setup?.rounds)?setup.rounds.length:0;const waiting=Number(counts.applicationsWaiting||0);const blocking=[['Season can publish',['draft','registration'].includes(seasonStatus)],['Team field is full',confirmed===capacity],['Every confirmed team has a captain',missingCaptain===0&&confirmed===capacity],['Every confirmed captain has phone contact',missingPhone===0&&confirmed===capacity],['Schedule setup is complete',Boolean(firstRound)&&Array.isArray(tables)&&tables.length===4&&interval>0],['Schedule has not already been published',roundCount===0]];const readyCount=blocking.filter(([,ok])=>ok).length;const blockedCount=blocking.length-readyCount;summary.textContent=readyCount+' ready • '+blockedCount+' blocked'+(waiting?' • 1 needs attention':'');state.textContent=blockedCount?'Resolve blocked items before publishing.':'Publish blockers are clear. Review any advisory items, then publish when intentional.';checklist.replaceChildren();const teamHref='/admin/season-teams?season='+encodeURIComponent(selector.value);add('Season status',blocking[0][1]?'Ready':'Blocked',blocking[0][1]?seasonStatus:'Season must still be Draft or Registration.',blocking[0][1]?'':'#season-setup-form','Edit setup');add('Confirmed teams',blocking[1][1]?'Ready':'Blocked',confirmed+' of '+capacity+' confirmed.',blocking[1][1]?'':teamHref,'Manage teams');add('Team captains',blocking[2][1]?'Ready':'Blocked',missingCaptain?missingCaptain+' confirmed team'+(missingCaptain===1?'':'s')+' missing a captain.':'Captain assigned for every confirmed team.',blocking[2][1]?'':teamHref,'Assign captain');add('Captain contact',blocking[3][1]?'Ready':'Blocked',missingPhone?missingPhone+' captain'+(missingPhone===1?'':'s')+' missing phone contact.':'Phone contact on file for every confirmed captain.',blocking[3][1]?'':teamHref,'Fix contact');add('Schedule configuration',blocking[4][1]?'Ready':'Blocked',blocking[4][1]?'First round, interval, and four tables configured.':'Complete the first round date, interval, and four-table setup.',blocking[4][1]?'':'#season-setup-form','Edit setup');add('Existing schedule',blocking[5][1]?'Ready':'Blocked',roundCount?roundCount+' round'+(roundCount===1?'':'s')+' already published.':'No published rounds yet.',null);add('Registration queue',waiting?'Needs attention':'Ready',waiting?waiting+' application'+(waiting===1?'':'s')+' still waiting for review.':'No waiting team applications.',waiting?teamHref:null,waiting?'Review teams':null);allowed=blockedCount===0;publish.disabled=!allowed;retry.hidden=true}
-    function reset(message='Choose a season to check publish readiness.'){allowed=false;summary.textContent='Choose a season';state.textContent=message;checklist.replaceChildren();retry.hidden=true;publish.disabled=true}
-    async function refresh(force=false){const seasonId=selector.value;if(!seasonId){lastSeason='';reset();return}if(loading||(!force&&seasonId===lastSeason))return;loading=true;lastSeason=seasonId;allowed=false;publish.disabled=true;retry.hidden=true;summary.textContent='Checking readiness…';state.textContent='Checking publish readiness…';checklist.replaceChildren();try{const [setupBody,teamState]=await Promise.all([request('/api/admin/seasons/'+encodeURIComponent(seasonId)+'/setup'),request('/api/admin/seasons/'+encodeURIComponent(seasonId)+'/team-candidates')]);render(setupBody.setup||{},teamState||{})}catch(error){summary.textContent='Readiness unavailable';state.textContent=error.message;checklist.replaceChildren();retry.hidden=false;publish.disabled=true}finally{loading=false}}
-    retry.addEventListener('click',()=>{lastSeason='';refresh(true)});selector.addEventListener('change',()=>{lastSeason='';refresh(true)});const observer=new MutationObserver(()=>refresh());observer.observe(selector,{childList:true,subtree:true,attributes:true});form.addEventListener('submit',()=>{lastSeason='';setTimeout(()=>refresh(true),0)});publish.addEventListener('click',()=>{allowed=false;publish.disabled=true;lastSeason='';setTimeout(()=>refresh(true),500)});setTimeout(()=>refresh(true),0);
+    function add(check,teamHref){const row=document.createElement('div');row.className='publish-check';const badge=document.createElement('strong');badge.textContent=check.status;badge.setAttribute('aria-label',check.status+': '+check.label);const copy=document.createElement('span');copy.textContent=check.label+(check.detail?' — '+check.detail:'');row.append(badge,copy);const href=check.fix==='teams'?teamHref:check.fix==='setup'?'#season-setup-form':null;if(href){const link=document.createElement('a');link.href=href;link.textContent=check.action||'Fix';row.append(link)}checklist.append(row)}
+    function render(setup,teamState){const readiness=deriveReadiness(setup,teamState);summary.textContent=readiness.readyCount+' ready • '+readiness.blockedCount+' blocked'+(readiness.attentionCount?' • '+readiness.attentionCount+' needs attention':'');state.textContent=readiness.blockedCount?'Resolve blocked items before publishing.':'Publish blockers are clear. Review any advisory items, then publish when intentional.';checklist.replaceChildren();const teamHref='/admin/season-teams?season='+encodeURIComponent(selector.value);for(const check of readiness.checks)add(check,teamHref);publish.disabled=!readiness.canPublish;retry.hidden=true}
+    function reset(message='Choose a season to check publish readiness.'){summary.textContent='Choose a season';state.textContent=message;checklist.replaceChildren();retry.hidden=true;publish.disabled=true}
+    async function refresh(force=false){const seasonId=selector.value;if(!seasonId){lastSeason='';reset();return}if(loading||(!force&&seasonId===lastSeason))return;loading=true;lastSeason=seasonId;publish.disabled=true;retry.hidden=true;summary.textContent='Checking readiness…';state.textContent='Checking publish readiness…';checklist.replaceChildren();try{const [setupBody,teamState]=await Promise.all([request('/api/admin/seasons/'+encodeURIComponent(seasonId)+'/setup'),request('/api/admin/seasons/'+encodeURIComponent(seasonId)+'/team-candidates')]);render(setupBody.setup||{},teamState||{})}catch(error){summary.textContent='Readiness unavailable';state.textContent=error.message;checklist.replaceChildren();retry.hidden=false;publish.disabled=true}finally{loading=false}}
+    retry.addEventListener('click',()=>{lastSeason='';refresh(true)});selector.addEventListener('change',()=>{lastSeason='';refresh(true)});const observer=new MutationObserver(()=>refresh());observer.observe(selector,{childList:true,subtree:true,attributes:true});form.addEventListener('submit',()=>{lastSeason='';setTimeout(()=>refresh(true),0)});publish.addEventListener('click',()=>{publish.disabled=true;lastSeason='';setTimeout(()=>refresh(true),500)});setTimeout(()=>refresh(true),0);
   })();
   </script>`;
 
   html = html.replace('</form>', `</form>${ui}${script}`);
   const headers = new Headers(response.headers);
   headers.delete('content-length');
-  return new Response(html, { status: response.status, statusText: response.statusText, headers });
+  return new Response(html, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
