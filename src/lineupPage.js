@@ -22,7 +22,7 @@ export function renderLineupPage() {
 
     <section class="layout">
       <article class="panel picker-panel">
-        <div class="panel-head"><span>Pick tonight's players</span><span class="badge" data-availability-count>0</span></div>
+        <div class="panel-head"><span>Pick your three</span><span class="badge" data-availability-count>0</span></div>
         <div class="picker">
           <section class="mobile-lineup-summary" data-mobile-lineup-summary aria-label="Current lineup">
             <div class="mobile-lineup-summary-head"><strong>Your three slots</strong><span class="badge" data-mobile-slot-count>0 / 3</span></div>
