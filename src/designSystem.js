@@ -90,7 +90,7 @@ export const designSystemStyles = `
   td { color: var(--fd-ink) !important; }
   tr:nth-child(even) td { background: #fbfbfa; }
 
-  button, .button, a.button, [role="button"] {
+  button, .button, a.button, .score-link, [role="button"] {
     min-height: 46px;
     border-radius: var(--fd-radius-sm) !important;
     border-color: #bfc5c1 !important;

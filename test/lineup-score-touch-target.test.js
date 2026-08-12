@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { designSystemStyles } from '../src/designSystem.js';
+import { renderLineupPage } from '../src/lineupPage.js';
+
+test('lineup score handoff is treated as a touch-friendly shared action', () => {
+  const html = renderLineupPage();
+  assert.match(html, /class="score-link"/);
+  assert.match(html, />Score the three matches<\/a>/);
+  assert.match(designSystemStyles, /button, \.button, a\.button, \.score-link, \[role="button"\] \{\s*min-height: 46px;/);
+});
