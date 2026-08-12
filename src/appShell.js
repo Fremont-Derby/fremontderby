@@ -45,7 +45,8 @@ function sectionForPath(pathname) {
     || pathname === '/lineup'
   ) return 'teams';
   if (pathname.startsWith('/schedule')) return 'schedule';
-  if (pathname.startsWith('/standings') || pathname === '/prizes') return 'standings';
+  if (pathname === '/prizes') return 'prizes';
+  if (pathname.startsWith('/standings')) return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
@@ -416,7 +417,12 @@ const errorPopupScript = `<script data-fd-error-popup-script>
     const dismiss = () => { popup.hidden = true; };
     const scan = () => {
       document.querySelectorAll('[data-tone="error"], [data-state="error"], [data-error="true"]').forEach((node) => {
-        const value = String(node.textContent || '').trim();
+        if (node.hidden || node.getAttribute('hidden') !== null) return;
+        if (node.closest && node.closest('[hidden]')) return;
+        const style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+        if (style && (style.display === 'none' || style.visibility === 'hidden')) return;
+        const explicit = node.getAttribute('data-error-message') || node.querySelector?.('[data-error-message]')?.textContent;
+        const value = String(explicit || node.textContent || '').replace(/\s+/g, ' ').trim();
         if (!value || seen.get(node) === value) return;
         seen.set(node, value);
         show(value);
