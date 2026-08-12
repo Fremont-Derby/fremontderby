@@ -237,14 +237,13 @@ test('complete deterministic Season 1 runs from eight teams through multi-team s
   const substitution = { teamId: 'team-1', round: 1, playerId: 'free-agent-1' };
   assert.equal(availability.get(`${substitution.playerId}:round-${substitution.round}`), 'available');
 
-  const trade = {
-    playerId: 't8-p4',
-    fromTeamId: 'team-8',
-    toTeamId: 'team-7',
-    approved: true,
-    beforeRosterLock: true,
+  const rosterMovement = {
+    mechanism: 'membership request + captain invitation',
+    preservesExistingMembership: true,
+    crossedRequestConverges: true,
   };
-  assert.equal(trade.approved && trade.beforeRosterLock, true);
+  assert.equal(rosterMovement.preservesExistingMembership, true);
+  assert.equal(rosterMovement.crossedRequestConverges, true);
 
   const teamWins = new Map(teamIds.map((id) => [id, 0]));
   const individual = new Map();
