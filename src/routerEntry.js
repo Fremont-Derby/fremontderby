@@ -1,6 +1,7 @@
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
+import { injectDesignSystem } from './designSystem.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
@@ -41,7 +42,8 @@ async function reconcileProductShell(response, pathname) {
 }
 
 async function finalizeBrowserResponse(response) {
-  return injectPersistentAuthSession(response);
+  const designed = await injectDesignSystem(response);
+  return injectPersistentAuthSession(designed);
 }
 
 export default {
