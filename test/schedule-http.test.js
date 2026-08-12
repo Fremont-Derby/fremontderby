@@ -9,6 +9,7 @@ const env = {
 
 test('public schedule handler returns only human-readable schedule data', async () => {
   const responses = [
+    [{ id: 'season-1', name: 'Season 1', status: 'active' }],
     [{ id: 'round-1', round_number: 1, scheduled_on: '2026-09-03', status: 'scheduled', stage: 'regular' }],
     [{ id: 'match-1', round_id: 'round-1', team_a_id: 'team-1', team_b_id: 'team-2', table_number: 1, status: 'scheduled' }],
     [{ id: 'team-1', name: 'Breakers' }, { id: 'team-2', name: 'Rack Pack' }],
