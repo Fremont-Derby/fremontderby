@@ -98,7 +98,7 @@ test('season team page is searchable, tabbed, capacity-aware, and mobile-first',
   assert.match(html, /In season/);
   assert.match(html, /Find a team/);
   assert.match(html, /Add to season/);
-  assert.match(html, /of '+total+' teams/);
+  assert.match(html, /used\+' of '\+total\+' teams'/);
   assert.match(html, /@media\(max-width:520px\)/);
   assert.doesNotMatch(html, /Enter team ID/i);
   assert.doesNotMatch(html, /<table/i);
