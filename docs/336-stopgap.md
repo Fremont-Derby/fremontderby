@@ -1,1 +1,0 @@
-This surface is intended to eliminate direct database edits for assigning teams to a season. If the UI cannot complete the assignment, treat that as a product defect rather than an operator SQL procedure.
