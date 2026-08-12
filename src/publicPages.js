@@ -53,28 +53,16 @@ function pageShell(title, body) {
 
 export function renderIntroPage() {
   return pageShell('Welcome', `
-    <div class="eyebrow">8 teams · 7 rounds · one table at a time</div>
+    <div class="eyebrow">Cash league · 8 teams · 12 weeks</div>
     <h1>Fremont Derby</h1>
-    <p class="lead">A flexible, Fargo-handicapped 8-ball / 9-ball round-robin league with team and singles competition, cash payouts, and very little paperwork.</p>
-
-    <h2>How it works</h2>
-    <p>Eight teams play a seven-round single round robin, so every team plays every other team once. The season spans 12 calendar weeks: seven scheduled rounds plus built-in off and makeup weeks for holidays, conflicts, and rescheduling. League nights have scheduled matchups and reserved tables, but the calendar stays flexible: teams can agree to play early, late, out of order, or somewhere else.</p>
-
-    <h2>Teams and singles</h2>
-    <p>You do not need to join a permanent team to participate. You can play as a free agent or substitute for teams that need a player, and those matches still count toward your individual singles record and eligibility.</p>
-    <p>The regular season is intentionally flexible. A team can play with three players, players can move between teams, and free agents can fill open spots. Team results stay with the team represented in that matchup, while each player's individual history follows the player.</p>
-    <p>To qualify for a team's playoff roster, a player must have played at least three regular-season rounds for that team. To qualify for singles, a player must have played in at least five of the seven regular-season rounds anywhere in the league.</p>
-    <p>The playoffs tighten up: qualifying teams lock in four-player playoff rosters for the championship run.</p>
-
-    <h2>Cash payouts</h2>
-    <p>There are separate team and singles prizes. Regular-season team champions get paid, and the playoff champions earn a larger championship payout. Singles follow the same idea: regular-season individual performance earns a payout, followed by a higher-value singles championship prize.</p>
-    <p>Exact payouts depend on the season's entries and prize pool and will be published for that season rather than promised in advance.</p>
-
-    <p>The goal is simple: show up, play pool, keep your own score, and let the league mostly run itself.</p>
+    <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
+    <p>Eight teams play across a 12-week season. Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
+    <p>Every match also counts toward the <strong>individual cash competition</strong>. Flexible scheduling and simple team management make it easy to use subs and keep matches moving.</p>
+    <p><strong>No team? No problem.</strong> Free agents and subs can still play, build their individual record, and compete for cash.</p>
     <div class="actions">
-      <a class="button demo" href="/demo">Explore the demo season</a>
-      <a class="button primary" href="/rules">Read the rules</a>
-      <a class="button" href="/standings">View standings</a>
+      <a class="button primary" href="/profile">Join / sign in</a>
+      <a class="button demo" href="/demo">Test drive the app</a>
+      <a class="button" href="/rules">Read the rules</a>
     </div>
   `);
 }
