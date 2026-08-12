@@ -55,17 +55,30 @@ test('season close repository uses service-role RPC calls without exposing crede
   assert.deepEqual(JSON.parse(requests[0].init.body), { actor_user_id: 'actor', target_season_id: 'season' });
 });
 
-test('season setup receives explicit accessible Close season workflow', async () => {
+test('season setup receives explicit accessible Close season readiness workflow', async () => {
   const response = new Response('<html><body><main><select data-season-selector><option value="s1">Season 1</option></select></main></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
   const enhanced = await enhanceSeasonClose(response);
   const html = await enhanced.text();
   assert.match(html, /data-season-close-workflow/);
+  assert.match(html, /data-season-close-summary/);
+  assert.match(html, /data-season-close-checklist/);
+  assert.match(html, /aria-label="Close season readiness"/);
+  assert.match(html, /Championship finalized/);
+  assert.match(html, /Postseason matchups resolved/);
+  assert.match(html, /Player matches finalized/);
+  assert.match(html, /isReady\?'Ready':'Blocked'/);
+  assert.match(html, /readyCount\+' ready • '\+blockedCount\+' blocked'/);
+  assert.match(html, /href='\/scorecard'|addCheck\([^\n]+,'\/scorecard'\)/);
+  assert.match(html, /data-season-close-retry/);
+  assert.match(html, />Try again</);
   assert.match(html, />Close season</);
   assert.match(html, /min-height:48px/);
+  assert.match(html, /min-height:44px/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /Closing preserves standings, matches, player history, payments, and audit history/);
   assert.match(html, /close-readiness/);
   assert.match(html, /\/close'/);
+  assert.match(html, /@media\(max-width:620px\)/);
 });
 
 test('router entry owns close API and season setup enhancer before legacy fallthrough', async () => {
