@@ -29,6 +29,19 @@ test('shared product shell uses the canonical Test Drive the App label', async (
   assert.doesNotMatch(html, />Demo<\/a>/);
 });
 
+test('directly decorated admin season-team route inherits the canonical shared-shell label', async () => {
+  const response = await routerEntry.fetch(
+    new Request('https://example.test/admin/season-teams'),
+    {},
+    {},
+  );
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, />Test Drive the App<\/a>/);
+  assert.doesNotMatch(html, />Demo<\/a>/);
+});
+
 test('authorized Profile admin grouping exposes season-team management within two actions', async () => {
   const response = await routerEntry.fetch(new Request('https://example.test/profile'), {}, {});
   const html = await response.text();
