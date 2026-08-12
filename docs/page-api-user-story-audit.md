@@ -318,7 +318,7 @@ Questions for audit:
 
 - **#141 — Replace token/Match-ID entry with eligible match picker.** **Shipped.**
 - **#250 scorecard recovery slice.** **Shipped.** Signed-out/no-ready-match/session/load states provide useful next actions.
-- **#196 — Explicit scoring-team context for multi-team members.** Selection/handoff into live score needs this when membership is ambiguous.
+- **#196 — Explicit scoring-team context for multi-team scorers.** Selection/handoff into live score needs this when membership is ambiguous.
 
 ## Current APIs
 
