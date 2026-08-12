@@ -183,7 +183,7 @@ export async function injectAccessibilityLayer(response) {
     ? html.replace(/<\/head>/i, `<style data-fd-accessibility-layer>${accessibilityStyles}</style>\n</head>`)
     : html;
   enhanced = /<\/body>/i.test(enhanced)
-    ? enhanced.replace(/<\/body>/i, `<script data-fd-accessibility-layer-script>${accessibilityScript}</script>\n</body>`)
+    ? enhanced.replace(/<\/body>/i, `<script data-fd-disabled-reasons>${accessibilityScript}</script>\n</body>`)
     : enhanced;
 
   return new Response(enhanced, {
