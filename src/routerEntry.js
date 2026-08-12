@@ -10,6 +10,7 @@ import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
+import { normalizeShellNavigationLabels } from './shellNavigationLabels.js';
 
 async function reconcileProductShell(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
@@ -47,7 +48,8 @@ async function reconcileProductShell(response, pathname) {
 
 async function finalizeBrowserResponse(response) {
   const designed = await injectDesignSystem(response);
-  return injectPersistentAuthSession(designed);
+  const withCanonicalNavigation = await normalizeShellNavigationLabels(designed);
+  return injectPersistentAuthSession(withCanonicalNavigation);
 }
 
 export default {
