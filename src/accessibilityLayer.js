@@ -16,6 +16,44 @@ export const accessibilityStyles = `
     color: var(--fd-text, #171b19) !important;
   }
 
+  /* The 404 predates the light-theme convergence. Keep the basset/pool art, not the dark page theme. */
+  body:has(main.lost) {
+    background: var(--fd-bg-page, #f3f1ed) !important;
+    color: var(--fd-text, #171b19) !important;
+  }
+  main.lost {
+    width: min(820px, calc(100% - 28px));
+    margin: 0 auto;
+    padding: clamp(24px, 6vw, 64px) 0 72px;
+    color: var(--fd-text, #171b19) !important;
+  }
+  main.lost .hound {
+    padding: clamp(12px, 3vw, 22px);
+    border: 1px solid var(--fd-border, #d7d9d7);
+    border-radius: var(--fd-radius, 16px);
+    background: var(--fd-bg-surface, #ffffff) !important;
+    box-shadow: var(--fd-shadow-soft, 0 3px 10px rgba(25,31,27,.08));
+    filter: none !important;
+  }
+  main.lost .kicker { color: var(--fd-primary, #096238) !important; }
+  main.lost h1 { color: var(--fd-text, #171b19) !important; }
+  main.lost p { color: var(--fd-text-muted, #666b68) !important; }
+  main.lost .path {
+    color: var(--fd-text, #171b19) !important;
+    background: var(--fd-bg-surface, #ffffff) !important;
+    border-color: var(--fd-border-control, #bfc5c1) !important;
+  }
+  main.lost .actions a {
+    color: var(--fd-primary-strong, #074a2b) !important;
+    background: var(--fd-bg-surface, #ffffff) !important;
+    border-color: var(--fd-border-control, #bfc5c1) !important;
+  }
+  main.lost .actions a.primary {
+    color: var(--fd-primary-text, #ffffff) !important;
+    background: var(--fd-primary-strong, #074a2b) !important;
+    border-color: var(--fd-primary-strong, #074a2b) !important;
+  }
+
   input::placeholder,
   textarea::placeholder {
     color: var(--fd-placeholder) !important;
@@ -77,6 +115,9 @@ export const accessibilityStyles = `
     .panel,
     .state,
     .state-card,
+    main.lost .hound,
+    main.lost .path,
+    main.lost .actions a,
     button,
     input,
     select,
