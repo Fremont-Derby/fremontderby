@@ -89,9 +89,9 @@ test('dual scoring repository persists the shared opening discipline with the se
   });
 });
 
-test('live scorecard exposes an accessible 8-first / 9-first control and locks it from shared rack history', () => {
+test('shared live scorecard exposes the approved 8-first / 9-first order control and locks it from shared rack history', () => {
   const html = renderScorecardPage();
-  assert.match(html, /Which game first\?/);
+  assert.match(html, /<strong>Order<\/strong>/);
   assert.match(html, />8 first</);
   assert.match(html, />9 first</);
   assert.match(html, /aria-pressed/);
