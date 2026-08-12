@@ -1,3 +1,4 @@
+import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 
@@ -34,9 +35,13 @@ async function reconcileProductShell(response, pathname) {
 
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') {
+      return handleCreateAdminPlayerRequest(request, env);
+    }
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
     if (adminSeasonTeamsResponse) return adminSeasonTeamsResponse;
     const response = await legacyRouter.fetch(request, env, ctx);
-    return reconcileProductShell(response, new URL(request.url).pathname);
+    return reconcileProductShell(response, url.pathname);
   },
 };
