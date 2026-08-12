@@ -79,7 +79,7 @@ export function createAdminSeasonTeamsRepository(
             ? Boolean(readiness.get(row.captain_player_id))
             : false,
           slot_workflow_status: row.slot_status ?? null,
-          slot_status: entry.entryStatus,
+          slot_status: entry.reason,
           entry_status: entry.entryStatus,
           entry_reason: entry.reason,
           qualified_for_slot: entry.qualified,
