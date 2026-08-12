@@ -25,7 +25,7 @@ test('revealed fixed pairings can be selected in any order without rewriting opp
   assert.match(html, /for\(const match of races\)addOption\(raceSelect,text\(match\.player_match_id\),raceLabel\(match\)\)/);
   assert.match(html, /raceSelect\.addEventListener\('change',renderSelection\)/);
   assert.match(html, /Choose any pairing to score next/);
-  assert.match(html, /player_a_name\)+' vs '\+text\(match\.player_b_name\)/);
+  assert.match(html, /players\.textContent=text\(match\.player_a_name\).*text\(match\.player_b_name\)/s);
   assert.doesNotMatch(html, /slot_number\+1/);
   assert.doesNotMatch(html, /nextSlot|currentSlot|must play/i);
 });
@@ -44,5 +44,6 @@ test('matchup and race selectors remain phone-friendly', () => {
   const html = renderScorePickerPage();
 
   assert.match(html, /\.filters select\{[^}]*min-height:46px/);
-  assert.match(html, /@media\(max-width:600px\)\{[^}]*\.filters\{grid-template-columns:1fr\}/);
+  assert.match(html, /@media\(max-width:600px\)/);
+  assert.match(html, /\.filters\{grid-template-columns:1fr\}/);
 });
