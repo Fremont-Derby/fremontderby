@@ -9,11 +9,29 @@ function requireMethod(repository, name) {
   }
 }
 
+function normalizeTeamName(value) {
+  if (typeof value !== 'string') throw new Error('teamName is required');
+  const name = value.trim();
+  if (!name) throw new Error('teamName is required');
+  if (name.length > 80) throw new Error('teamName must be 80 characters or fewer');
+  return name;
+}
+
 export async function listAdminSeasonTeamsCommand(input, repository) {
   requireValue(input.actorUserId, 'actorUserId');
   requireValue(input.seasonId, 'seasonId');
   requireMethod(repository, 'list');
   return repository.list(input);
+}
+
+export async function createPreparedAdminSeasonTeamCommand(input, repository) {
+  requireValue(input.actorUserId, 'actorUserId');
+  requireValue(input.seasonId, 'seasonId');
+  requireMethod(repository, 'createPrepared');
+  return repository.createPrepared({
+    ...input,
+    teamName: normalizeTeamName(input.teamName),
+  });
 }
 
 export async function addAdminSeasonTeamCommand(input, repository) {
