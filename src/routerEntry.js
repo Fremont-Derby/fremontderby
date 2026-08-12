@@ -1,3 +1,4 @@
+import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
@@ -53,7 +54,8 @@ async function reconcileProductShell(response, pathname) {
 
 async function finalizeBrowserResponse(response) {
   const designed = await injectDesignSystem(response);
-  return injectPersistentAuthSession(designed);
+  const accessible = await injectAccessibilityLayer(designed);
+  return injectPersistentAuthSession(accessible);
 }
 
 export default {
