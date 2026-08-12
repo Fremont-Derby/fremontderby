@@ -3,6 +3,7 @@ import { routeAdminGateway } from './adminGatewayRouter.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
+import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 
 async function reconcileProductShell(response, pathname) {
@@ -39,23 +40,27 @@ async function reconcileProductShell(response, pathname) {
   });
 }
 
+async function finalizeBrowserResponse(response) {
+  return injectPersistentAuthSession(response);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/admin/players' && request.method === 'POST') {
-      return handleCreateAdminPlayerRequest(request, env);
+      return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env));
     }
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
-    if (dateAvailabilityResponse) return dateAvailabilityResponse;
+    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse);
     const adminGatewayResponse = routeAdminGateway(request);
-    if (adminGatewayResponse) return adminGatewayResponse;
+    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
-    if (adminSeasonTeamsResponse) return adminSeasonTeamsResponse;
+    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') {
-      return enhanceScheduleAvailability(reconciled);
+      return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled));
     }
-    return reconciled;
+    return finalizeBrowserResponse(reconciled);
   },
 };
