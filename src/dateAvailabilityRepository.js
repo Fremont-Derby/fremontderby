@@ -50,7 +50,7 @@ export function createDateAvailabilityRepository(env, { fetch: fetchImpl = globa
         actor_user_id: actorUserId,
         target_season_id: seasonId,
         target_availability_date: availabilityDate,
-        availability_status: availabilityStatus,
+        target_availability_status: availabilityStatus,
       });
     },
   };
