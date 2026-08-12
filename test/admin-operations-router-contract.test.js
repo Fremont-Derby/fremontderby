@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const router = fs.readFileSync('src/router.js', 'utf8');
 const packageJson = fs.readFileSync('package.json', 'utf8');
+const syntaxChecker = fs.readFileSync('scripts/check-js-syntax.mjs', 'utf8');
 
 test('Worker routes the admin operations page and authenticated endpoint', () => {
   assert.match(router, /url\.pathname === '\/admin\/operations'/);
@@ -12,12 +13,8 @@ test('Worker routes the admin operations page and authenticated endpoint', () =>
   assert.match(router, /renderAdminOperationsPage/);
 });
 
-test('syntax check includes every admin operations module', () => {
-  for (const file of [
-    'src/adminOperationsHttp.js',
-    'src/adminOperationsPage.js',
-    'src/adminOperationsRepository.js',
-  ]) {
-    assert.match(packageJson, new RegExp(`node --check ${file.replaceAll('.', '\\.')}`));
-  }
+test('syntax check discovers admin operations modules through the src source tree', () => {
+  assert.match(packageJson, /"check": "node scripts\/check-js-syntax\.mjs"/);
+  assert.match(syntaxChecker, /DEFAULT_ROOTS = \['src', 'domain', 'scripts'\]/);
+  assert.match(syntaxChecker, /INCLUDED_EXTENSIONS = new Set\(\['\.js', '\.mjs'\]\)/);
 });
