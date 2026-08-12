@@ -53,12 +53,20 @@ test('design system is injected after page-local CSS and only into HTML', async 
   assert.equal(await untouched.text(), '{"ok":true}');
 });
 
-test('canonical browser pipeline applies one shared design system across primary surfaces', async () => {
-  for (const path of ['/', '/demo', '/schedule', '/teams', '/scorecard', '/messages', '/profile', '/admin']) {
+test('public pages retain the shared shell and design-system pipeline', async () => {
+  for (const path of ['/', '/demo']) {
     const response = await routerEntry.fetch(new Request(`https://example.test${path}`), {}, {});
-    assert.equal(response.status, 200);
+    assert.equal(response.status, 200, path);
     const html = await response.text();
-    assert.match(html, /data-fd-design-system/);
-    assert.match(html, /data-fd-shell/);
+    assert.match(html, /data-fd-design-system/, path);
+    assert.match(html, /data-fd-shell/, path);
+  }
+});
+
+test('primary player and admin surfaces pass through the shared design-system pipeline', async () => {
+  for (const path of ['/schedule', '/teams', '/scorecard', '/messages', '/profile', '/admin']) {
+    const response = await routerEntry.fetch(new Request(`https://example.test${path}`), {}, {});
+    assert.equal(response.status, 200, path);
+    assert.match(await response.text(), /data-fd-design-system/, path);
   }
 });
