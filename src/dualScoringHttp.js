@@ -31,6 +31,8 @@ function statusForError(error) {
     || message.includes('Resolved rack history')
     || message.includes('Opening discipline is locked')
     || message.includes('Rack is not present')
+    || message.includes('Score changed on another device')
+    || message.includes('expectedRacks is required')
   ) return 409;
   return 400;
 }
@@ -46,6 +48,14 @@ async function readJsonBody(request) {
 function scoringTeamFromRequest(request, body = {}) {
   const url = new URL(request.url);
   return body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
+}
+
+function expectedRacksFromBody(body) {
+  const expectedRacks = body.expectedRacks ?? body.expected_racks;
+  if (!Array.isArray(expectedRacks)) {
+    throw new Error('expectedRacks is required; refresh before changing the score');
+  }
+  return expectedRacks;
 }
 
 async function optionalLiveContext(repository, input) {
@@ -117,6 +127,7 @@ export function createDualScoringHttpHandlers({
           }, repository);
           return jsonResponse({ setup });
         }
+        const expectedRacks = expectedRacksFromBody(body);
         const rackNumber = body.rackNumber ?? body.rack_number;
         if (rackNumber != null) {
           const rack = await updatePlayerMatchScoreRackCommand({
@@ -125,6 +136,7 @@ export function createDualScoringHttpHandlers({
             scoringTeamId: scoringTeamFromRequest(request, body),
             rackNumber,
             winnerSide: body.winnerSide ?? body.winner,
+            expectedRacks,
           }, repository);
           return jsonResponse({ rack });
         }
@@ -133,6 +145,7 @@ export function createDualScoringHttpHandlers({
           playerMatchId,
           scoringTeamId: scoringTeamFromRequest(request, body),
           winnerSide: body.winnerSide ?? body.winner,
+          expectedRacks,
         }, repository);
         return jsonResponse({ rack }, 201);
       });
@@ -140,10 +153,12 @@ export function createDualScoringHttpHandlers({
 
     undo(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJsonBody(request);
         const undo = await undoPlayerMatchScoreRackCommand({
           actorUserId: actor.id,
           playerMatchId,
-          scoringTeamId: scoringTeamFromRequest(request),
+          scoringTeamId: scoringTeamFromRequest(request, body),
+          expectedRacks: expectedRacksFromBody(body),
         }, repository);
         return jsonResponse({ undo });
       });
@@ -151,10 +166,12 @@ export function createDualScoringHttpHandlers({
 
     confirm(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJsonBody(request);
         const confirmation = await confirmPlayerMatchScoreCommand({
           actorUserId: actor.id,
           playerMatchId,
-          scoringTeamId: scoringTeamFromRequest(request),
+          scoringTeamId: scoringTeamFromRequest(request, body),
+          expectedRacks: expectedRacksFromBody(body),
         }, repository);
         return jsonResponse({ confirmation });
       });
