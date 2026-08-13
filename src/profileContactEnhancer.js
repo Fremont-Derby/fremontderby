@@ -1,5 +1,5 @@
 const style = `<style data-profile-contact-style>
-  .profile-contact{display:grid;gap:12px;padding:12px}.profile-contact-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.profile-contact-note{color:var(--muted);font-size:.82rem;line-height:1.45}.profile-contact-state{font-size:.82rem;font-weight:900}.profile-contact-state[data-ready="true"]{color:#26734e}.profile-contact-error{color:#9b3129;font-weight:800}.profile-contact button{min-height:48px;padding:0 16px}.profile-contact [hidden]{display:none!important}@media(max-width:600px){.profile-contact-row{grid-template-columns:1fr}.profile-contact button{width:100%}}
+  .profile-contact{display:grid;gap:12px;padding:12px}.profile-contact-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.profile-contact-note{color:var(--muted);font-size:.82rem;line-height:1.45}.profile-contact-state{font-size:.82rem;font-weight:900}.profile-contact-state[data-ready="true"]{color:#26734e}.profile-contact-state[data-required="true"]{padding:10px 12px;border-left:4px solid var(--gold);border-radius:8px;background:#2b2412;color:#ffe8a6;line-height:1.45}.profile-contact-error{color:#9b3129;font-weight:800}.profile-contact button{min-height:48px;padding:0 16px}.profile-contact [hidden]{display:none!important}@media(max-width:600px){.profile-contact-row{grid-template-columns:1fr}.profile-contact button{width:100%}}
 </style>`;
 
 const card = `<article class="panel" data-profile-contact>
@@ -11,7 +11,7 @@ const card = `<article class="panel" data-profile-contact>
       </label>
       <button class="primary" data-contact-save type="submit">Save phone</button>
     </div>
-    <div class="profile-contact-state" data-contact-state></div>
+    <div class="profile-contact-state" data-contact-state role="status" aria-live="polite"></div>
     <div class="profile-contact-note" id="contact-privacy">Your phone number is private league-administration contact information. Other players do not get access to it. A phone number is required before you can serve as an active team captain.</div>
     <div class="profile-contact-error" role="status" aria-live="polite" data-contact-error hidden></div>
   </form>
@@ -20,13 +20,14 @@ const card = `<article class="panel" data-profile-contact>
 const script = `<script data-profile-contact-script>
 (() => {
   const root=document.querySelector('[data-profile-contact]');if(!root)return;
-  const form=root.querySelector('[data-contact-form]');const phone=root.querySelector('[data-contact-phone]');const save=root.querySelector('[data-contact-save]');const badge=root.querySelector('[data-contact-badge]');const state=root.querySelector('[data-contact-state]');const errorEl=root.querySelector('[data-contact-error]');
+  const form=root.querySelector('[data-contact-form]');const phone=root.querySelector('[data-contact-phone]');const save=root.querySelector('[data-contact-save]');const badge=root.querySelector('[data-contact-badge]');const state=root.querySelector('[data-contact-state]');const errorEl=root.querySelector('[data-contact-error]');let activeCaptain=false;
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
   async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
-  async function request(options={},retry=true){const accessToken=token();if(!accessToken)throw new Error('Sign in to manage your contact information.');const response=await fetch('/api/me/contact',{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json'}});if(response.status===401&&retry){await new Promise(resolve=>setTimeout(resolve,250));const refreshed=token();if(refreshed&&refreshed!==accessToken)return request(options,false)}const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body}
-  function render(contact){const ready=Boolean(contact?.hasPhone);phone.value=contact?.phone||'';badge.textContent=ready?'Contact on file':'Phone missing';state.dataset.ready=String(ready);state.textContent=ready?'Phone saved for league administration.':'No phone is on file. Normal player features still work; active captaincy requires a phone.';errorEl.hidden=true}
+  async function requestPath(path,options={},retry=true){const accessToken=token();if(!accessToken)throw new Error('Sign in to manage your contact information.');const response=await fetch(path,{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json'}});if(response.status===401&&retry){await new Promise(resolve=>setTimeout(resolve,250));const refreshed=token();if(refreshed&&refreshed!==accessToken)return requestPath(path,options,false)}const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body}
+  function request(options={},retry=true){return requestPath('/api/me/contact',options,retry)}
+  function render(contact){const ready=Boolean(contact?.hasPhone);phone.value=contact?.phone||'';badge.textContent=ready?'Contact on file':activeCaptain?'Required now':'Phone missing';state.dataset.ready=String(ready);state.dataset.required=String(!ready&&activeCaptain);state.textContent=ready?'Phone saved for league administration.':activeCaptain?'Your captain contact is incomplete. Add and save a phone number here to keep active captaincy available.':'No phone is on file. Normal player features still work; active captaincy requires a phone.';errorEl.hidden=true}
   function showError(error){errorEl.hidden=false;errorEl.textContent=error?.message||'We could not update your phone number. Nothing was changed.';badge.textContent='Could not save'}
-  async function load(){badge.textContent='Checking…';const body=await request({method:'GET'});render(body.contact)}
+  async function load(){badge.textContent='Checking…';const [contactResult,profileResult]=await Promise.allSettled([request({method:'GET'}),requestPath('/api/me/profile',{method:'GET'})]);if(profileResult.status==='fulfilled'){const teams=Array.isArray(profileResult.value?.profile?.teams)?profileResult.value.profile.teams:[];activeCaptain=teams.some(team=>team?.role==='captain')}if(contactResult.status==='rejected')throw contactResult.reason;render(contactResult.value.contact)}
   async function savePhone(){save.disabled=true;save.textContent='Saving…';errorEl.hidden=true;try{const body=await request({method:'PUT',body:JSON.stringify({phone:phone.value.trim()||null})});render(body.contact)}finally{save.disabled=false;save.textContent='Save phone'}}
   form.addEventListener('submit',event=>{event.preventDefault();savePhone().catch(showError)});
   setTimeout(()=>{if(token())load().catch(showError)},0);
