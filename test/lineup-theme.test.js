@@ -8,10 +8,13 @@ test('captain Lineup theme converts normal workflow surfaces to the shared light
   assert.match(lineupThemeStyles, /body\[data-fd-lineup-theme\][\s\S]*color-scheme: light/);
   assert.match(lineupThemeStyles, /\.mobile-lineup-summary,[\s\S]*--fd-bg-surface/);
   assert.match(lineupThemeStyles, /\.badge\.available,[\s\S]*--fd-success-bg/);
+  assert.match(lineupThemeStyles, /\.badge\.available,[\s\S]*border-color: var\(--fd-success\)/);
   assert.match(lineupThemeStyles, /\.badge\.unsure[\s\S]*--fd-warning-bg/);
   assert.match(lineupThemeStyles, /\.badge\.unavailable,[\s\S]*--fd-danger-bg/);
+  assert.match(lineupThemeStyles, /\.load,[\s\S]*--fd-accent-text[\s\S]*--fd-accent[\s\S]*--fd-warning/);
   assert.match(lineupThemeStyles, /\.status\[data-tone="error"\][\s\S]*--fd-danger-bg/);
   assert.match(lineupThemeStyles, /forced-colors: active/);
+  assert.doesNotMatch(lineupThemeStyles, /#9bc9ab|#241e0c|#c59e1b/);
 });
 
 test('Lineup theme is scoped to the canonical captain route and idempotent', async () => {
