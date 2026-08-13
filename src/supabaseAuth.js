@@ -66,6 +66,9 @@ export async function authenticateSupabaseUser(
 
   const token = bearerToken(request);
 
+  // Beta bypass is only for deliberately unauthenticated automation. Once a
+  // caller supplies a bearer token, validate that token and fail normally if
+  // it is invalid rather than escalating to the shared beta actor.
   if (!token && betaAuthBypassEnabled(env)) {
     return resolveBetaBypassActor(env);
   }
@@ -87,9 +90,6 @@ export async function authenticateSupabaseUser(
   });
 
   if (!response.ok) {
-    if (betaAuthBypassEnabled(env)) {
-      return resolveBetaBypassActor(env);
-    }
     throw new AuthError('Invalid bearer token');
   }
 
