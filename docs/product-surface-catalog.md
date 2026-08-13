@@ -12,6 +12,7 @@ This is the canonical index connecting **audiences → user stories → function
 6. Normal authorized pages and primary functions are discoverable within two deliberate navigation actions.
 7. Technical URLs, internal IDs, browser history, and undocumented deep links do not count as discoverability.
 8. Diagnostic, demo/sandbox, moderation-only, and destructive-confirmation substeps may be explicit exceptions.
+9. Normal public league reads use only seasons classified for league purpose; QA/Test Drive seasons stay outside ordinary public Schedule/Standings/Prizes/registration data.
 
 ## Audience groups
 
@@ -31,15 +32,15 @@ This is the canonical index connecting **audiences → user stories → function
 | `/rules` | Public visitor / player | Read authoritative user-facing league rules | Canonical rules surface; rule-copy reconciliation shipped in #436/PR #441 |
 | `/profile` | Player | Sign in and manage own identity, participation/payment status, private contact, self-claim, and personal status | Canonical self-service identity surface; #335/#341/#343/#365 |
 | `/teams` | Public visitor / player / captain | Understand teams and, when signed in, find/join/create/manage/recruit for team relationships | Canonical team/directory/roster surface; #131 is open because signed-out public-directory behavior is currently incomplete; #330/#410 extend recruiting/status |
-| `/schedule` | Public visitor / player / captain | See league dates/matchups and mark personal dated availability | Canonical schedule/availability surface under #370 |
+| `/schedule` | Public visitor / player / captain | See league dates/matchups and mark personal dated availability | Canonical schedule/availability surface under #370; normal public season inputs exclude QA-purpose seasons after PR #561 |
 | `/availability` | Player / captain | Transitional standalone availability editor | Duplicate transitional runtime surface; retire under #370 |
 | `/lineup` | Captain | Build and commit the team's blind lineup | Canonical lineup surface; Score may hand an unrevealed captain matchup here; Test Drive shares the production component |
 | `/scorecard` | Player / captain / team scorer | Select authorized league-night context and continue to lineup preparation or scoring | Canonical flexible Score hub under #371 |
 | `/scorecard/live` | Player / team scorer | Operate active team-owned rack-ledger scoring | Canonical focused live-scoring child; physical/two-human proof remains #326 |
 | `/messages` | Player / captain / admin-support participant | Coordinate league/team/direct communication | Canonical communication surface; matchup chat is deprecated under #78 |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; separate from Admin Support |
-| `/standings` | Public visitor / player | View team and individual standings and season results | Canonical standings surface; historical selection remains #180 |
-| `/prizes` | Public visitor / player | View purse and payout transparency | Canonical public/read-only prize surface; privileged configuration belongs in Admin under #18 |
+| `/standings` | Public visitor / player | View team and individual standings and season results | Canonical standings surface; public reads exclude QA-purpose seasons after PR #561; truthful season-loading controls shipped in PR #562; historical selection remains #180 |
+| `/prizes` | Public visitor / player | View purse and payout transparency | Canonical public/read-only prize surface; public reads exclude QA-purpose seasons after PR #561; mobile/first-paint cleanup shipped in PR #559; privileged configuration belongs in Admin under #18 |
 | `/admin` | Signed-in player / league admin | Route the signed-in user to appropriate administration/help destinations | Canonical Admin gateway; Admin Teams/#372 and Admin Support/#361 remain open |
 | `/admin/seasons` | League admin / director | Find an existing season by human-readable name/status and continue to the correct canonical season surface | Shipped in #519/#525/PR #520. Lookup only; **Admin → Seasons** satisfies the <=2-action rule |
 | `/season-setup` | League admin / director | Configure, publish, close, and manage the selected season lifecycle | Canonical lifecycle surface; #337/#338 shipped; #414 owns cancel/archive/safe-delete distinctions |
@@ -47,7 +48,7 @@ This is the canonical index connecting **audiences → user stories → function
 | `/admin/operations` | League admin / director | See readiness, exceptions, prioritized actions, and operational health | Canonical operations/triage surface; #169/#410 own remaining signals |
 | `/admin/players` | League admin / director | Find a player and manage privileged player-level administration | Canonical player-admin/roster-exception surface; scan-first management shipped in #442/#530 |
 | planned Admin Teams | League admin / director | Manage one team and team-level operational exceptions | Missing surface tracked by #372; must not duplicate `/admin/season-teams` preparation |
-| `/demo` | Public visitor / tester | Test Drive the App using fictional, non-authoritative data | Canonical public test-drive entry; production-component parity complete under #387 |
+| `/demo` | Public visitor / tester | Test Drive the App using fictional, non-authoritative data | Canonical public test-drive entry; production-component parity complete under #387; Test Drive data is not a normal public league-season input |
 | `/sandbox/captain` | Tester / sandbox user | Practice fictional captain workflows | Test Drive child; explicit navigation exception |
 | `/sandbox/player` | Tester / sandbox user | Practice fictional scoring/reconciliation | Test Drive child; explicit navigation exception |
 | `/health`, `/health/environment` | Internal / diagnostic | Verify runtime/environment readiness | Explicit navigation exception |
@@ -57,6 +58,7 @@ This is the canonical index connecting **audiences → user stories → function
 | Audience | Capability / outcome | Canonical page | State | Story / proof | Discoverability |
 | --- | --- | --- | --- | --- | --- |
 | Public visitor | Browse safe team/captain/roster/player directory information | `/teams` | Regression/open | #131 | Route is directly discoverable; signed-out content still needs restoration |
+| Public visitor / player | See legitimate public season data without QA/Test Drive contamination and get a useful default when no season is explicitly selected | Existing `/schedule`, `/standings`, `/prizes` owners | Partial shared policy | #553/#526, PRs #561/#562/#559 | Existing pages remain directly discoverable; PR #561 defines eligible league-season inputs, while #553 still owns one lifecycle-aware default among them |
 | Player / free agent | Mark Available / Unsure / Unavailable for a date | `/schedule` | Implemented; duplicate retirement open | #138/#370 | Direct Schedule control |
 | Player | Manage identity, own registration/payment/contact/Fargo | `/profile` | Implemented core / some proof open | #335/#341/#343/#365 | Direct shared navigation |
 | Player / captain | Find/create/join/manage team relationships and recruit | `/teams` | Implemented core; expansion open | #131/#181/#182/#330 | Direct shared navigation |
@@ -72,7 +74,7 @@ This is the canonical index connecting **audiences → user stories → function
 | League admin | Triage readiness/exceptions | `/admin/operations` | Partial/shipped | #169 | Admin gateway continuation |
 | League admin | Find/administer players | `/admin/players` | Implemented current slices | #316/#340/#442 | Admin gateway continuation |
 | League admin | Manage one team / team-level exceptions | planned Admin Teams | Missing | #372 | Must appear under Admin when implemented |
-| Public visitor / player | View prize/payout transparency | `/prizes` | Public view exists; admin split open | #18 | Direct desktop nav/mobile menu |
+| Public visitor / player | View prize/payout transparency | `/prizes` | Public view exists; admin split open | #18/#557 | Direct desktop nav/mobile menu |
 | Public visitor / tester | Learn app safely using production-equivalent interactions | `/demo` + child drills | Component parity complete | #387/#388 | Test Drive entry is normal public navigation; children are sandbox exceptions |
 | Player / captain | Use formal trades | none | Retired | #362/PR #447 | Supported movement uses team membership workflows instead |
 
@@ -87,23 +89,28 @@ This is the canonical index connecting **audiences → user stories → function
 - Admin access gateway → `/admin`.
 - Existing-season lookup → `/admin/seasons`; lifecycle/configuration → `/season-setup`; selected-season team preparation/slot entry → `/admin/season-teams`; public results → `/standings`.
 - Player administration → `/admin/players`; operations triage → `/admin/operations`; planned team-level exceptions → Admin Teams/#372.
+- Normal public season feeds use league-purpose seasons only after PR #561. QA/Test Drive seasons are excluded from ordinary public registration/standings/prize inputs; #553 still owns deterministic default selection among eligible league seasons.
 - Public prizes → `/prizes`; privileged prize configuration belongs in Admin under #18.
 - Formal trade page/API ownership is retired under #362/#447.
 
-## Current librarian findings — 2026-08-12
+## Current librarian findings — 2026-08-13
 
-- `/admin/seasons` is a shipped canonical surface with one purpose: **find existing seasons**. It does not absorb lifecycle, team-entry, or results behavior. #525 records this contract.
-- #448 is shipped by PR #451; `/admin/season-teams` now presents unavailable Reserve/Add reasons in context without creating another workflow.
+- PR #561 establishes a durable public-season purpose boundary: normal public registration/standings/prize reads admit league-purpose seasons and exclude QA-purpose seasons. This is a shared data-eligibility contract, not a new route or page owner.
+- #553 remains open after PR #561 because it still must align Schedule, Standings, and Prizes on one deterministic lifecycle-aware default among eligible league seasons and preserve explicit user selection.
+- PR #562 fixes a contained Standings truthfulness defect by keeping Season/Load controls disabled while seasons are loading; it does not change standings semantics, page ownership, or navigation.
+- `/admin/seasons` remains a shipped canonical surface with one purpose: **find existing seasons**. It does not absorb lifecycle, team-entry, or results behavior. #525 records this contract.
+- #448 is shipped by PR #451; `/admin/season-teams` presents unavailable Reserve/Add reasons in context without creating another workflow.
 - Source-level visual convergence is broadly complete across canonical public/player/captain/admin surfaces. Parent #382 remains open for representative browser/phone verification and `/scorecard/live` fidelity; source convergence is not the same as browser sign-off.
 - #131 is a real current regression: `/teams` is still canonical, but the signed-out runtime does not satisfy the story's safe public-directory acceptance. Fix it on `/teams`; do not create another public teams page.
 - #531 remains valid source-of-truth cleanup: routed Teams output is canonical today, but the underlying renderer still contains stale legacy destinations/copy and depends on a compatibility enhancer.
-- PR #547/#526 adds scoring-contract proof only and changes no page ownership/navigation.
 - The material known duplicate/legacy runtime ownership gaps remain standalone `/availability` under #370 and deprecated matchup-chat endpoints under #78.
 
 ## Known catalog work
 
 - #238 — exhaustive control-level inventory and ongoing catalog maintenance.
 - #239 — deterministic role-aware <=2-action reachability matrix.
+- #553 — converge Schedule/Standings/Prizes on one lifecycle-aware default among public league seasons; PR #561 already supplies the shared QA-exclusion boundary.
+- #557 — finish real-browser/320px Prizes proof and shared #553 default-policy convergence after PR #559.
 - #131 — restore signed-out public Teams directory/mobile acceptance on the existing `/teams` surface.
 - #531 — remove legacy Teams renderer destinations/copy while preserving routed behavior.
 - #370 — final parity/proof and eventual `/availability` retirement.
