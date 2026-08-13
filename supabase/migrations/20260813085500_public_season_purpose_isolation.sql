@@ -23,15 +23,6 @@ $$;
 comment on column public.seasons.purpose is
   'Season data purpose. league seasons are eligible for normal public surfaces; qa seasons are isolated fixtures for testing/verification.';
 
--- These two production rows were created as explicit QA fixtures during pilot
--- verification. Mark by immutable identity rather than brittle names/player data.
-update public.seasons
-set purpose = 'qa'
-where id in (
-  '97d9f5a0-6c3e-4457-9c95-18e4804b7778'::uuid,
-  'c92580f5-0512-4c81-b858-4baac3683e9b'::uuid
-);
-
 -- Keep the existing registration implementation available only as an internal
 -- helper, then expose the same public contract filtered by season purpose.
 alter function public.list_public_season_registration()
