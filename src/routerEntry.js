@@ -5,6 +5,7 @@ import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
+import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
@@ -38,28 +39,17 @@ function isRetiredTradePath(pathname) {
 }
 
 function retiredTradeResponse(request, pathname) {
-  if (pathname.startsWith('/api/')) {
-    return Response.json({ error: 'Not found' }, { status: 404 });
-  }
-  if (request.method !== 'GET') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
-  }
-  return new Response(
-    decorateHtmlWithShell(renderNotFoundPage(pathname), pathname),
-    {
-      status: 404,
-      headers: {
-        'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'no-store',
-      },
-    },
-  );
+  if (pathname.startsWith('/api/')) return Response.json({ error: 'Not found' }, { status: 404 });
+  if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+  return new Response(decorateHtmlWithShell(renderNotFoundPage(pathname), pathname), {
+    status: 404,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
 }
 
 async function reconcileProductShell(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
-
   const headers = new Headers(response.headers);
   let html = await response.text();
 
@@ -67,7 +57,6 @@ async function reconcileProductShell(response, pathname) {
     const link = '<p style="margin:12px 0"><a href="/admin/season-teams" style="display:inline-flex;min-height:48px;align-items:center;padding:0 16px;border-radius:10px;background:#43bd7d;color:#07110b;font-weight:900;text-decoration:none">Manage season teams</a></p>';
     html = html.replace('</main>', link + '</main>');
   }
-
   if (pathname === '/profile') {
     const playersLink = '<a href="/admin/players">Players</a>';
     const adminGatewayLink = '<a href="/admin">Admin home</a>';
@@ -76,25 +65,20 @@ async function reconcileProductShell(response, pathname) {
     html = html.replace(playersLink, adminGatewayLink + playersLink);
     html = html.replace(moderationLink, seasonTeamsLink + moderationLink);
   }
-
   if (pathname === '/demo') {
     html = html
       .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
       .replace('<h1>Try a League Night</h1>', '<h1>Test Drive the App</h1>');
   }
-
-  return new Response(html, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function finalizeBrowserResponse(response, pathname) {
   const designed = await injectSiteStyles(response);
   const playerThemed = await injectPlayerSurfaceTheme(designed, pathname);
   const standingsThemed = await injectStandingsTheme(playerThemed, pathname);
-  const messagesThemed = await injectMessagesTheme(standingsThemed);
+  const lineupThemed = await injectLineupTheme(standingsThemed, pathname);
+  const messagesThemed = await injectMessagesTheme(lineupThemed);
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
@@ -105,12 +89,8 @@ async function finalizeBrowserResponse(response, pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (isRetiredTradePath(url.pathname)) {
-      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
-    }
-    if (url.pathname === '/api/admin/players' && request.method === 'POST') {
-      return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
-    }
+    if (isRetiredTradePath(url.pathname)) return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const playerContactResponse = await routePlayerContact(request, env);
@@ -127,12 +107,8 @@ export default {
     if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
-    if (url.pathname === '/schedule' && request.method === 'GET') {
-      return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
-    }
-    if (url.pathname === '/teams' && request.method === 'GET') {
-      return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
-    }
+    if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
+    if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
     if (url.pathname === '/season-setup' && request.method === 'GET') {
       const withPublishReadiness = await enhanceSeasonPublishReadiness(reconciled);
       return finalizeBrowserResponse(await enhanceSeasonClose(withPublishReadiness), url.pathname);
