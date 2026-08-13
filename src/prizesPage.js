@@ -12,22 +12,28 @@ export function renderPrizesPage() {
       background: #111316;
       color: #f5f1e9;
       --panel: #191d22;
-      --line: #343c45;
-      --muted: #aab3bb;
+      --line: #4b5560;
+      --muted: #bac2c9;
       --green: #2fa972;
       --gold: #d8ad3f;
       --blue: #4e83d6;
       --red: #d45b50;
+      --focus: #9ee5bd;
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #111316; }
-    button, input { font: inherit; }
+    button, select { font: inherit; }
     button {
-      min-height: 42px;
+      min-height: 44px;
       border-radius: 8px;
       border: 1px solid transparent;
       cursor: pointer;
       font-weight: 850;
+    }
+    button:disabled, select:disabled { cursor: not-allowed; opacity: .62; }
+    button:focus-visible, select:focus-visible, .state-action:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
     }
     .app { width: min(1120px, 100%); margin: 0 auto; padding: 16px; }
     .topbar {
@@ -60,16 +66,42 @@ export function renderPrizesPage() {
       border-bottom: 1px solid var(--line);
     }
     label { display: grid; gap: 6px; color: var(--muted); font-size: .78rem; font-weight: 850; }
-    input {
+    select {
       width: 100%;
-      min-height: 42px;
+      min-height: 44px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #0d1013;
       color: #f5f1e9;
       padding: 0 12px;
     }
-    .load { align-self: end; background: var(--gold); color: #12100a; }
+    .load { align-self: end; background: var(--gold); color: #12100a; padding: 0 16px; }
+    .state-card {
+      display: grid;
+      gap: 10px;
+      margin: 14px 0 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--gold);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+    .state-card[hidden] { display: none; }
+    .state-card p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .state-action {
+      width: max-content;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      background: var(--green);
+      color: #06120d;
+      text-decoration: none;
+      font-weight: 900;
+    }
     .summary {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -90,6 +122,7 @@ export function renderPrizesPage() {
     .metric strong { font-size: 1.35rem; line-height: 1.1; overflow-wrap: anywhere; }
     .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
     .panel {
+      min-width: 0;
       border: 1px solid var(--line);
       border-radius: 8px;
       overflow: hidden;
@@ -112,7 +145,7 @@ export function renderPrizesPage() {
       border-radius: 999px;
       padding: 0 10px;
       background: rgba(78, 131, 214, .18);
-      color: #bcd5ff;
+      color: #c9ddff;
       font-size: .78rem;
       font-weight: 900;
     }
@@ -125,11 +158,32 @@ export function renderPrizesPage() {
     .empty { padding: 16px; color: var(--muted); }
     @media (max-width: 760px) {
       .app { padding: 12px; }
-      .topbar { align-items: flex-start; }
+      .topbar { align-items: flex-start; flex-direction: column; }
       .controls, .summary, .grid { grid-template-columns: 1fr; }
       .status { text-align: left; }
-      .panel { overflow-x: auto; }
-      table { min-width: 520px; }
+      .load, .state-action { width: 100%; }
+      .panel { overflow: hidden; }
+      table { table-layout: auto; }
+      thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+      tbody, tr, td { display: block; width: 100%; }
+      tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 10px 12px; border-bottom: 1px solid var(--line); }
+      tr:last-child { border-bottom: 0; }
+      td { min-width: 0; padding: 7px 4px; border: 0; text-align: left; }
+      td::before { display: block; margin-bottom: 2px; color: var(--muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; }
+      td:nth-child(1)::before { content: 'Pool'; }
+      td:nth-child(2)::before { content: 'Place'; }
+      td:nth-child(3)::before { content: 'Label'; }
+      td:nth-child(4)::before { content: 'Amount'; }
+      td.numeric { text-align: left; }
+    }
+    @media (max-width: 360px) {
+      tr { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+    @media (forced-colors: active) {
+      button, select, .panel, .metric, .state-card, .state-action { border: 1px solid CanvasText; }
     }
   </style>
 </head>
@@ -137,15 +191,21 @@ export function renderPrizesPage() {
   <main class="app">
     <header class="topbar">
       <div class="brand"><span class="mark">$</span><span>Fremont Derby Prizes</span></div>
-      <div class="status" data-status>Ready</div>
+      <div class="status" data-status aria-live="polite">Loading seasons…</div>
     </header>
 
     <form class="controls" data-form>
-      <label>Season ID
-        <select name="seasonId" data-season-id><option value="">Loading seasons…</option></select>
+      <label>Season
+        <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
       </label>
-      <button class="load" type="submit">Load</button>
+      <button class="load" data-load type="submit" disabled>Load prizes</button>
     </form>
+
+    <section class="state-card" data-page-state hidden aria-live="polite">
+      <strong data-state-title></strong>
+      <p data-state-detail></p>
+      <a class="state-action" data-state-action href="/rules">View league rules</a>
+    </section>
 
     <section class="summary" aria-label="Prize summary">
       <div class="metric"><span>Players</span><strong data-player-count>-</strong></div>
@@ -187,7 +247,12 @@ export function renderPrizesPage() {
   <script>
     const form = document.querySelector('[data-form]');
     const seasonInput = document.querySelector('[data-season-id]');
+    const loadButton = document.querySelector('[data-load]');
     const statusEl = document.querySelector('[data-status]');
+    const pageState = document.querySelector('[data-page-state]');
+    const stateTitle = document.querySelector('[data-state-title]');
+    const stateDetail = document.querySelector('[data-state-detail]');
+    const stateAction = document.querySelector('[data-state-action]');
     const projectedBody = document.querySelector('[data-projected-body]');
     const finalizedBody = document.querySelector('[data-finalized-body]');
     const projectedEmpty = document.querySelector('[data-projected-empty]');
@@ -205,12 +270,25 @@ export function renderPrizesPage() {
       configVersion: document.querySelector('[data-config-version]'),
       finalizedCount: document.querySelector('[data-finalized-count]'),
     };
-
-    seasonInput.value = new URLSearchParams(location.search).get('season') || localStorage.getItem('fd.prizesSeasonId') || '';
+    const query = new URLSearchParams(location.search);
+    const requestedSeason = query.get('season') || '';
+    const rememberedSeason = localStorage.getItem('fd.prizesSeasonId') || '';
 
     function setStatus(message, tone) {
       statusEl.textContent = message;
       statusEl.dataset.tone = tone || 'muted';
+    }
+
+    function showState(title, detail, href = '/rules', label = 'View league rules') {
+      stateTitle.textContent = title;
+      stateDetail.textContent = detail;
+      stateAction.href = href;
+      stateAction.textContent = label;
+      pageState.hidden = false;
+    }
+
+    function hideState() {
+      pageState.hidden = true;
     }
 
     function money(cents) {
@@ -263,45 +341,67 @@ export function renderPrizesPage() {
       renderPayoutRows(summary.finalized_payouts || [], finalizedBody, finalizedEmpty);
     }
 
+    function preferredSeason(seasons) {
+      const explicit = seasons.find((season) => season.id === requestedSeason);
+      const remembered = seasons.find((season) => season.id === rememberedSeason);
+      return explicit
+        || remembered
+        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0];
+    }
+
     async function loadSeasons() {
+      setStatus('Loading seasons…');
+      hideState();
+      seasonInput.disabled = true;
+      loadButton.disabled = true;
       const response = await fetch('/api/seasons');
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Could not load seasons');
       const seasons = body.seasons || [];
-      const remembered = localStorage.getItem('fd.prizesSeasonId') || '';
       seasonInput.replaceChildren();
       if (!seasons.length) {
         const opt = document.createElement('option');
         opt.value = '';
-        opt.textContent = 'No seasons published';
+        opt.textContent = 'No public seasons';
         seasonInput.append(opt);
-        return;
+        showState('No season yet', 'Prize information will appear here once a public season is available.');
+        setStatus('No public season yet');
+        return false;
       }
       for (const season of seasons) {
         const opt = document.createElement('option');
         opt.value = season.id;
-        opt.textContent = season.name + ' — ' + season.status;
+        opt.textContent = season.name + ' — ' + String(season.status || 'season');
         seasonInput.append(opt);
       }
-      const preferred = seasons.find((s) => s.id === remembered)
-        || seasons.find((s) => s.status === 'complete')
-        || seasons.find((s) => s.status === 'active')
-        || seasons[0];
+      const preferred = preferredSeason(seasons);
       seasonInput.value = preferred?.id || seasons[0].id;
+      seasonInput.disabled = false;
+      loadButton.disabled = false;
+      return true;
     }
 
     async function loadPrizes() {
       const seasonId = seasonInput.value.trim();
-      if (!seasonId) throw new Error('Choose a season first');
+      if (!seasonId) return;
+      hideState();
       localStorage.setItem('fd.prizesSeasonId', seasonId);
-      setStatus('Loading...');
-      const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
-      const body = await response.json();
-      if (!response.ok) {
-        throw new Error(body.error || 'Prize summary failed');
+      setStatus('Loading prizes…');
+      loadButton.disabled = true;
+      try {
+        const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(body.error || 'Prize summary failed');
+        }
+        renderSummary(body.summary || {});
+        setStatus('Prizes loaded', 'ok');
+      } finally {
+        loadButton.disabled = seasonInput.disabled;
       }
-      renderSummary(body.summary || {});
-      setStatus('Prizes loaded', 'ok');
     }
 
     async function run(action) {
@@ -309,6 +409,7 @@ export function renderPrizesPage() {
         await action();
       } catch (error) {
         setStatus(error.message, 'error');
+        showState('Could not load prizes', error.message, '/prizes', 'Try again');
       }
     }
 
@@ -317,7 +418,10 @@ export function renderPrizesPage() {
       run(loadPrizes);
     });
 
-    run(async () => { await loadSeasons(); if (seasonInput.value) await loadPrizes(); });
+    run(async () => {
+      const hasSeason = await loadSeasons();
+      if (hasSeason) await loadPrizes();
+    });
     seasonInput.addEventListener('change', () => run(loadPrizes));
   </script>
 </body>
