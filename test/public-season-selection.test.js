@@ -11,13 +11,20 @@ const seasons = [
   { id: 'playoffs', status: 'playoffs' },
 ];
 
-test('public season policy preserves explicit and remembered selections before lifecycle defaults', () => {
+test('public season policy keeps explicit selection authoritative and lifecycle relevance ahead of remembered defaults', () => {
   assert.equal(choosePublicSeason(seasons, { explicitId: 'complete' }).id, 'complete');
-  assert.equal(choosePublicSeason(seasons, { rememberedId: 'registration' }).id, 'registration');
+  assert.equal(choosePublicSeason(seasons, { rememberedId: 'registration' }).id, 'active');
   assert.equal(choosePublicSeason(seasons).id, 'active');
   assert.equal(choosePublicSeason(seasons.filter((season) => season.id !== 'active')).id, 'playoffs');
   assert.equal(choosePublicSeason(seasons.filter((season) => !['active', 'playoffs'].includes(season.id))).id, 'registration');
   assert.equal(choosePublicSeason([{ id: 'old', status: 'complete' }]).id, 'old');
+  assert.equal(
+    choosePublicSeason(
+      [{ id: 'future', status: 'draft' }, { id: 'remembered', status: 'draft' }],
+      { rememberedId: 'remembered' },
+    ).id,
+    'remembered',
+  );
   assert.equal(choosePublicSeason([]), null);
 });
 
