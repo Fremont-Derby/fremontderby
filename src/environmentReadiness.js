@@ -3,6 +3,8 @@ const expectedSupabaseProjectRefs = {
   staging: 'oqkkvqkerusepyokzbmt',
 };
 
+const reservedSupabaseProjectRefs = new Set(Object.values(expectedSupabaseProjectRefs));
+
 function normalizeSupabaseUrl(value) {
   if (!value || typeof value !== 'string') return '';
   return value.trim().replace(/\/+$/, '');
@@ -50,10 +52,19 @@ export function environmentReadiness(env = {}) {
   const knownWorkerEnvironment =
     environment in expectedSupabaseProjectRefs || isBeta;
 
+  const betaExpectedProjectConfigured = !isBeta || Boolean(expectedProjectRef);
+  const betaExpectedProjectIsolated = !isBeta
+    || Boolean(expectedProjectRef && !reservedSupabaseProjectRefs.has(expectedProjectRef));
+  const betaActualProjectIsolated = !isBeta
+    || Boolean(projectRef && !reservedSupabaseProjectRefs.has(projectRef));
+
   const projectMatches = isBeta
-    ? (expectedProjectRef
-      ? projectRef === expectedProjectRef
-      : Boolean(projectRef))
+    ? Boolean(
+      expectedProjectRef
+      && betaExpectedProjectIsolated
+      && betaActualProjectIsolated
+      && projectRef === expectedProjectRef
+    )
     : Boolean(expectedProjectRef && projectRef === expectedProjectRef);
 
   const checks = [
@@ -73,6 +84,9 @@ export function environmentReadiness(env = {}) {
 
   if (isBeta) {
     checks.push(
+      check('betaExpectedProjectRefConfigured', betaExpectedProjectConfigured),
+      check('betaExpectedProjectRefIsolated', betaExpectedProjectIsolated, { expectedProjectRef }),
+      check('betaActualProjectIsolated', betaActualProjectIsolated, { projectRef }),
       check('betaAuthBypassFlag', String(env.BETA_AUTH_BYPASS || '').trim() === '1'),
       check('betaActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
     );
