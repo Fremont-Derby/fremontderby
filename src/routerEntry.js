@@ -10,6 +10,7 @@ import { injectMessagesTheme } from './messagesTheme.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
+import { injectPlayerCoreTheme } from './playerCoreTheme.js';
 import { enhanceProfileContact } from './profileContactEnhancer.js';
 import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
@@ -92,7 +93,8 @@ async function finalizeBrowserResponse(response) {
   const messagesThemed = await injectMessagesTheme(designed);
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminThemed = await injectAdminGatewayTheme(teamsThemed);
-  const accessible = await injectAccessibilityLayer(adminThemed);
+  const playerThemed = await injectPlayerCoreTheme(adminThemed);
+  const accessible = await injectAccessibilityLayer(playerThemed);
   return injectPersistentAuthSession(accessible);
 }
 
