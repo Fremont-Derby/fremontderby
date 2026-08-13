@@ -1,6 +1,42 @@
 {
   "label": "demo-league-seed",
-  "description": "Optional demo roster names for a registration or draft season. Applied only when an operator runs scripts/seed-demo-league.mjs with service-role credentials. Does not run on deploy by itself.",
+  "description": "Operator-run mock data for registration and active demo seasons. Dry-run by default. Does not execute on deploy.",
+  "scenarios": {
+    "registration": {
+      "season": {
+        "name": "Demo Registration Season",
+        "leagueNight": "Wednesday",
+        "firstRoundDate": "2026-09-02",
+        "rosterLockRound": 4,
+        "openingBlockLength": 3,
+        "individualMinMatches": 5,
+        "roundIntervalDays": 7,
+        "tableNumbers": [1, 2, 3, 4],
+        "raceChartVersion": "default",
+        "playoffTeamCount": 4,
+        "playoffAnchorTiebreaker": true
+      },
+      "teamCount": 8,
+      "playersPerTeamHint": 3
+    },
+    "active": {
+      "season": {
+        "name": "Demo Active Season",
+        "leagueNight": "Wednesday",
+        "firstRoundDate": "2026-07-08",
+        "rosterLockRound": 4,
+        "openingBlockLength": 3,
+        "individualMinMatches": 5,
+        "roundIntervalDays": 7,
+        "tableNumbers": [1, 2, 3, 4],
+        "raceChartVersion": "default",
+        "playoffTeamCount": 4,
+        "playoffAnchorTiebreaker": true
+      },
+      "publishSchedule": true,
+      "teamCount": 8
+    }
+  },
   "teams": [
     "Corner Pocket",
     "Railbirds",
@@ -9,7 +45,9 @@
     "Safety First",
     "Eight on the Break",
     "Fremont Fargo",
-    "Ballard Backspin",
+    "Ballard Backspin"
+  ],
+  "extraTeams": [
     "Georgetown Ghost Ball",
     "Pinball Wizards",
     "Tilt League",
@@ -39,6 +77,14 @@
     "Dakota Nguyen",
     "Phoenix Reed",
     "Blake Torres",
-    "Charlie Morgan"
+    "Charlie Morgan",
+    "Jessie Alvarez",
+    "Kendall Wu",
+    "Micah Stewart",
+    "Ainsley Ford",
+    "Logan Berg",
+    "Reese Navarro",
+    "Shawn Patel",
+    "Tatum Cross"
   ]
 }
