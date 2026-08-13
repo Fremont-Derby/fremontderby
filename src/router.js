@@ -3,6 +3,7 @@ import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
 import { renderAdminOperationsPage } from './adminOperationsPage.js';
 import { adminPlayersHttpHandlers } from './adminPlayersHttp.js';
 import { renderAdminPlayersPage } from './adminPlayersPage.js';
+import { renderAdminSeasonsPage } from './adminSeasonsPage.js';
 import {
   decorateHtmlWithShell,
   isKnownAppPagePath,
@@ -202,6 +203,11 @@ export default {
     if (url.pathname === '/admin/players') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderAdminPlayersPage(), url.pathname);
+    }
+
+    if (url.pathname === '/admin/seasons') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderAdminSeasonsPage(), url.pathname);
     }
 
     if (url.pathname === '/scorecard') {
