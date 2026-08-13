@@ -9,6 +9,9 @@ test('standings starts in an honest loading state with accessible status', () =>
   assert.match(html, /data-status aria-live="polite">Loading seasons…<\/div>/);
   assert.doesNotMatch(html, /data-status[^>]*>Ready<\/div>/);
   assert.match(html, /data-page-state hidden aria-live="polite"/);
+  assert.match(html, /<select name="seasonId" data-season-id disabled><option value="">Loading seasons…<\/option><\/select>/);
+  assert.match(html, /<button class="load" data-load type="submit" disabled>Load standings<\/button>/);
+  assert.match(html, /loadSeasons\(\)\{setStatus\('Loading seasons\.\.\.'\);hideState\(\);seasonInput\.disabled=true;loadButton\.disabled=true;/);
 });
 
 test('standings provides useful no-season and load-failure recovery', () => {

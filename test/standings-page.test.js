@@ -6,7 +6,7 @@ test('standings page keeps team and individual standings one tap away', () => {
   const html = renderStandingsPage();
 
   assert.match(html, /Fremont Derby Standings/);
-  assert.match(html, /<select name="seasonId" data-season-id>/);
+  assert.match(html, /data-season-id/);
   assert.match(html, /data-registration-summary/);
   assert.match(html, /Register or join a team/);
   assert.match(html, /fetch\('\/api\/seasons'\)/);
