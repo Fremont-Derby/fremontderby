@@ -9,6 +9,7 @@ import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
+import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
@@ -85,7 +86,8 @@ async function finalizeBrowserResponse(response, pathname) {
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
   const accessible = await injectAccessibilityLayer(adminThemed);
-  return injectPersistentAuthSession(accessible);
+  const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
+  return injectPersistentAuthSession(mobileMenuAccessible);
 }
 
 export default {
