@@ -3,7 +3,6 @@ import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
-import { injectDesignSystem } from './designSystem.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
@@ -18,6 +17,7 @@ import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
+import { injectSiteStyles } from './siteStyles.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
 
@@ -87,7 +87,7 @@ async function reconcileProductShell(response, pathname) {
 }
 
 async function finalizeBrowserResponse(response) {
-  const designed = await injectDesignSystem(response);
+  const designed = await injectSiteStyles(response);
   const messagesThemed = await injectMessagesTheme(designed);
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const accessible = await injectAccessibilityLayer(teamsThemed);
