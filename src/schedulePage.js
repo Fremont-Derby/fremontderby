@@ -15,7 +15,7 @@ export function renderSchedulePage() {
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Schedule</span></div><div class="status" data-status>Loading…</div></header>
     <section class="controls" aria-label="Schedule selection">
-      <label>Season<select data-season-select><option value="">Loading seasons…</option></select></label>
+      <label>Season<select data-season-select disabled><option value="">Loading seasons…</option></select></label>
       <label>League night<select data-round-select disabled><option value="">Choose a season</option></select></label>
     </section>
     <section class="round" data-round-panel hidden>
