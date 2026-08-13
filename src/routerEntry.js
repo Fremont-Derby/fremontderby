@@ -18,6 +18,7 @@ import { enhanceProfileContact } from './profileContactEnhancer.js';
 import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
+import { enhancePublicSeasonSelection } from './publicSeasonSelectionEnhancer.js';
 import { injectPublicSurfaceTheme } from './publicSurfaceTheme.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
@@ -76,7 +77,8 @@ async function reconcileProductShell(response, pathname) {
 }
 
 async function finalizeBrowserResponse(response, pathname) {
-  const designed = await injectSiteStyles(response);
+  const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
+  const designed = await injectSiteStyles(seasonSelected);
   const publicThemed = await injectPublicSurfaceTheme(designed, pathname);
   const playerThemed = await injectPlayerSurfaceTheme(publicThemed, pathname);
   const standingsThemed = await injectStandingsTheme(playerThemed, pathname);
