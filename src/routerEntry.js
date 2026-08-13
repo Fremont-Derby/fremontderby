@@ -5,6 +5,7 @@ import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
+import { injectMessagesTheme } from './messagesTheme.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
@@ -86,7 +87,8 @@ async function reconcileProductShell(response, pathname) {
 
 async function finalizeBrowserResponse(response) {
   const designed = await injectSiteStyles(response);
-  const accessible = await injectAccessibilityLayer(designed);
+  const messagesThemed = await injectMessagesTheme(designed);
+  const accessible = await injectAccessibilityLayer(messagesThemed);
   return injectPersistentAuthSession(accessible);
 }
 
