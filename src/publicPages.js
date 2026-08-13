@@ -33,10 +33,11 @@ function pageShell(title, body) {
 
 export function renderIntroPage() {
   return pageShell('Welcome', `
-    <div class="eyebrow">Cash league · 8 teams · 12 weeks</div>
+    <div class="eyebrow">Cash league · 8 teams · 12 weeks · flexible calendar</div>
     <h1>Fremont Derby</h1>
     <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
-    <p>Eight teams play across a 12-week season. Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
+    <p>The 12-week calendar is built around a <strong>seven-match single round robin</strong>: every team plays every other team once, with the remaining calendar space reserved for flexibility, makeup dates, and postseason play.</p>
+    <p>Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
     <p>Every match also counts toward the <strong>individual cash competition</strong>. Flexible scheduling and simple team management make it easy to use subs and keep matches moving.</p>
     <p><strong>No team? No problem.</strong> Free agents and subs can still play, build their individual record, and compete for cash.</p>
     <div class="actions">
@@ -55,7 +56,8 @@ export function renderRulesPage() {
 
     <h2>Season</h2>
     <ul>
-      <li>Eight teams play a seven-match single round robin: every team plays every other team once.</li>
+      <li>The published calendar spans 12 weeks to leave room for flexibility, makeup dates, and postseason play.</li>
+      <li>The regular season is a seven-match single round robin: every team plays every other team once.</li>
       <li>Each team matchup has three individual player matches.</li>
       <li>The published league-night date and reserved tables are the default option, not a requirement.</li>
       <li>Teams may play early, late, out of round order, or at another mutually agreed venue.</li>
