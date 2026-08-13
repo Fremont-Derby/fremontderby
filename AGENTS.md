@@ -79,7 +79,7 @@ Do not create features merely because they appear in this list. Let current evid
 
 ## Maintain the backlog as part of development
 
-GitHub issues are part of the product's memory.
+GitHub issues are part of the product's memory and are the unit of implementation ownership.
 
 When you discover a missing requirement, defect, follow-up, operational risk, UX problem, technical debt item, or logical next capability that should not be solved in the current PR, capture it in GitHub instead of leaving it only in a chat summary.
 
@@ -102,6 +102,62 @@ Continuously reconcile backlog state:
 - link blockers and follow-ups;
 - mark obsolete or contradictory work instead of silently ignoring it;
 - preserve important decisions in the issue or durable docs.
+
+### Card lifecycle for implementation work
+
+Every code, migration, configuration, or durable documentation change intended for merge must have a GitHub issue/card before implementation begins. Small emergency fixes may create the card immediately before the fix, but must not bypass tracking.
+
+Track each implementation card through these stages in the issue body or project state:
+
+1. **Ready** — scope, acceptance criteria, dependencies, and overlap are understood.
+2. **Claimed** — one implementation owner or agent lane is recorded before code changes begin.
+3. **In progress** — a focused branch exists for the card and implementation is underway.
+4. **Handoff / review** — a PR links the card and contains scope, proof, risk, touched surfaces, out-of-scope work, and next reviewer/owner.
+5. **Merge ready** — current `main` and overlapping PRs have been reconciled; required checks are green.
+6. **Merged** — the PR is merged, but the card remains open.
+7. **Verified** — the merged behavior has been validated at the appropriate source/CI/staging/production level and evidence is recorded on the card.
+8. **Closed** — only after acceptance criteria are satisfied and follow-up cards are linked.
+
+Do not use an auto-closing PR keyword such as `Closes #123` as the normal tracking mechanism. Prefer `Tracks #123` or `Refs #123` so merge does not close the card before post-merge verification.
+
+## Parallel agent ownership and branch discipline
+
+JFL, DRU, Codex, Copilot, ChatGPT, and any other implementation agents are peers operating through GitHub. Agent identity does not grant ownership of broad areas of the repository. Ownership is per card and per active branch.
+
+Before editing:
+
+1. claim one card by recording the agent/owner lane on the issue;
+2. sync from current `main`;
+3. search open PRs/issues for overlapping behavior and likely touched surfaces;
+4. create a dedicated feature branch from current `main`, preferably `issue-<number>-<short-slug>`;
+5. keep the branch limited to that card's acceptance criteria.
+
+While implementing:
+
+- Do not commit directly to another agent's active feature branch unless that agent explicitly hands it off on the issue/PR.
+- Do not force-update, rebase, reset, or rewrite another agent's branch history.
+- Do not make sweeping repository-wide formatting, rename, cleanup, dependency, architecture, or style changes as incidental work.
+- Do not rewrite unrelated files merely because they are nearby, noisy, or could be cleaner.
+- Do not revert unfamiliar code to make your branch easier to merge. First determine which card/PR owns it.
+- If new work is outside the current card, create/link a follow-up card rather than silently expanding scope.
+- If two active branches need the same file or behavior, coordinate in the issues/PRs. Prefer splitting ownership by coherent surface, sequencing one card after the other, or handing off a specific change. Do not race two competing implementations to `main`.
+- Shared migrations, schema, auth, routing, global styles, common domain primitives, and package/config files are high-collision surfaces. Treat them as explicit dependencies when another active branch is touching them.
+
+A good branch changes the smallest coherent set of files needed for its card. Broad changes require their own card and deliberate coordination rather than being bundled into a feature PR.
+
+### Clean handoff protocol
+
+When handing work from JFL to DRU, DRU to JFL, or any agent to another:
+
+- push/commit the current coherent state before handoff;
+- link the card and PR/branch;
+- state exactly what is complete, what remains, and what is blocked;
+- list important files/surfaces changed and any known collision risk;
+- record tests/CI already run and failures still present;
+- identify the next exact action and who now owns implementation;
+- do not have both agents continue modifying the same branch after ownership transfers.
+
+The receiving agent starts by reading the card/PR, refreshing `main`, and confirming the handoff is still current before editing.
 
 ## Implementation behavior
 
@@ -144,19 +200,32 @@ A green unit test does not prove a live deployment. A successful login does not 
 
 ## Pull requests and merges
 
+Every implementation PR must link exactly which card(s) it implements. Normally one focused PR implements one primary card. If multiple cards are included, explain why they are inseparable and keep each card's acceptance criteria visible.
+
 Use focused PRs and explain:
 
+- the tracking card using `Tracks #...` or `Refs #...` rather than auto-close syntax;
 - the problem being solved;
+- the implementation owner lane;
 - the user-visible or operational impact;
+- the files/surfaces materially touched so overlapping agents can detect collision risk;
 - important safety, security, data, or compatibility considerations;
 - validation performed;
-- follow-up work intentionally left out.
+- follow-up work intentionally left out;
+- the recommended reviewer/next owner.
 
-Before merging, reconcile `main` and overlapping PRs again because this repository may move while you work.
+Before merging:
+
+1. reconcile current `main` without discarding other agents' merged work;
+2. recheck open PRs/cards for overlap created while the branch was in progress;
+3. resolve conflicts by preserving both intended behaviors or explicitly coordinating ownership — never by blindly taking one side;
+4. confirm required tests/CI are green;
+5. confirm the diff still matches the card and contains no unrelated sweeping cleanup;
+6. update the card to **Merge ready** with the available evidence.
 
 If a PR is contained, safe, fully tested, and green, merge it under the repository's standing authorization. Do not merge known failing work just to show progress.
 
-After merge, reconcile the affected issues and parent checklists.
+After merge, mark the card **Merged** but keep it open. Validate the merged behavior at the appropriate level, record that evidence on the card, mark **Verified**, link any follow-up work, and only then close the card.
 
 ## Platform-specific boundaries
 
@@ -164,9 +233,9 @@ Use the platform best suited to the evidence needed.
 
 **GitHub / coding agents**
 - Read current issues and PRs before coding.
-- Work from current `main`.
+- Claim a card and work from a dedicated focused branch based on current `main`.
 - Prefer small changes with tests.
-- Do not duplicate an existing implementation PR.
+- Do not duplicate an existing implementation PR or modify another agent's active branch without an explicit handoff.
 
 **Supabase / database agents**
 - Treat repository migrations as the durable database source of truth.
@@ -200,7 +269,7 @@ The repository copy is canonical. If an external scheduled ChatGPT task or anoth
 
 This creates two reinforcing loops:
 
-- **delivery loop:** current repo/issues -> choose work -> implement/test/merge -> update backlog/docs;
+- **delivery loop:** current repo/issues -> claim card -> focused branch -> implement/test -> PR/handoff -> merge -> verify -> close/update backlog;
 - **instruction loop:** recurring lesson -> improve repository instructions/bootstrap -> future low-context sessions start smarter.
 
 ## End every session cleanly
@@ -209,7 +278,8 @@ Before ending a work cycle:
 
 - make sure useful discoveries are captured in code, tests, issues, PR notes, or durable docs;
 - avoid leaving an undocumented hosted-only change;
-- update/close issue state accurately;
+- update the active card's owner/stage and leave branch/PR state unambiguous;
+- update/close issue state accurately, never closing merely because code merged;
 - identify the highest-impact next target based on the new repository state;
 - leave enough evidence that another agent can continue without relying on your chat history.
 
