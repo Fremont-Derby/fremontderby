@@ -8,6 +8,10 @@
  *
  * Default: dry-run. Set SEED_APPLY=1 to mutate.
  *
+ * Production deploy hook: scripts/deploy-production.mjs runs this automatically
+ * when SEED_DEMO_ON_DEPLOY=1 and Supabase seed secrets are present in the
+ * deploy environment. Safe to re-run: skips seasons whose names already exist.
+ *
  * Required for apply:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
@@ -17,6 +21,7 @@
  *   SEED_SCENARIO=all|registration|active|players
  *   SEED_SEASON_ID
  *   SEED_DATA_PATH
+ *   SEED_DEMO_ON_DEPLOY=1  — set in deploy env to run after wrangler deploy
  *
  * Requires migration 20260813010000_admin_demo_seed_helpers.sql for phones/messages.
  *
@@ -72,6 +77,30 @@ async function rpc(baseUrl, serviceKey, fn, args) {
 function firstRow(payload) {
   if (Array.isArray(payload)) return payload[0] ?? null;
   return payload;
+}
+
+async function listSeasons(ctx) {
+  const response = await fetch(
+    `${ctx.baseUrl}/rest/v1/seasons?select=id,name,status&order=created_at.desc`,
+    {
+      headers: {
+        apikey: ctx.serviceKey,
+        authorization: `Bearer ${ctx.serviceKey}`,
+        accept: 'application/json',
+      },
+    },
+  );
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`list seasons failed (${response.status}): ${text}`);
+  }
+  return text ? JSON.parse(text) : [];
+}
+
+async function findSeasonByName(ctx, name) {
+  const seasons = await listSeasons(ctx);
+  const needle = String(name || '').trim().toLowerCase();
+  return seasons.find((s) => String(s.name || '').trim().toLowerCase() === needle) || null;
 }
 
 function playerName(entry) {
@@ -345,11 +374,21 @@ async function main() {
 
   const runSeason = async (label, seasonConfig, publish) => {
     console.log(`\nPhase: ${label}`);
+    const existingByName = await findSeasonByName(ctx, seasonConfig.name);
+    if (existingByName && !process.env.SEED_SEASON_ID) {
+      console.log(
+        `  skip: season "${seasonConfig.name}" already exists (${existingByName.id}, ${existingByName.status})`,
+      );
+      return { seasonInfo: { id: existingByName.id, status: existingByName.status, config: seasonConfig }, teams: [], skipped: true };
+    }
     const seasonInfo = await configureSeason(
       ctx,
       seasonConfig,
       process.env.SEED_SEASON_ID || null,
     );
+    if (seasonInfo.skipped) {
+      return { seasonInfo, teams: [], skipped: true };
+    }
     const teams = await createTeamsWithCaptainsAndRosters(
       ctx,
       seasonInfo.id,
