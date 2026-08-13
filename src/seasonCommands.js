@@ -31,6 +31,17 @@ function activeTeamIds(teams) {
   return teamIds;
 }
 
+function persistedScheduleCounts(saved) {
+  const roundCount = Number(saved?.round_count ?? saved?.roundCount);
+  const teamMatchCount = Number(saved?.team_match_count ?? saved?.teamMatchCount);
+
+  if (roundCount !== 7 || teamMatchCount !== 28) {
+    throw new Error('Published season schedule is incomplete');
+  }
+
+  return { roundCount, teamMatchCount };
+}
+
 export async function publishSeasonScheduleCommand(
   {
     seasonId,
@@ -54,6 +65,25 @@ export async function publishSeasonScheduleCommand(
   if (!season) {
     throw new Error('Season not found');
   }
+
+  if (season.status === 'active') {
+    const saved = await repository.savePublishedSchedule({
+      seasonId,
+      actorUserId,
+      previousStatus: season.status,
+      nextStatus: 'active',
+      rounds: [],
+    });
+    const counts = persistedScheduleCounts(saved);
+
+    return {
+      seasonId,
+      status: 'active',
+      ...counts,
+      saved,
+    };
+  }
+
   if (!publishableStatuses.has(season.status)) {
     throw new Error('Season must be draft or registration to publish');
   }
