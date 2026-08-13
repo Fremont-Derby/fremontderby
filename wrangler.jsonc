@@ -19,6 +19,19 @@
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB"
       }
+    },
+    "beta": {
+      "name": "fremontderby-beta",
+      "workers_dev": true,
+      "vars": {
+        "ENVIRONMENT": "beta",
+        "BETA_AUTH_BYPASS": "1",
+        "SUPABASE_URL": "https://REPLACE_BETA_PROJECT.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "REPLACE_BETA_PUBLISHABLE_KEY",
+        "BETA_ACTOR_USER_ID": "REPLACE_BETA_ACTOR_USER_UUID",
+        "BETA_ACTOR_EMAIL": "beta-actor@localhost",
+        "BETA_EXPECTED_SUPABASE_PROJECT_REF": "REPLACE_BETA_PROJECT_REF"
+      }
     }
   }
 }

@@ -10,6 +10,7 @@
     "prebuild": "node scripts/guard-cloudflare-build.mjs",
     "build": "npx wrangler deploy --dry-run --env=\"\" --outdir dist",
     "dev": "npx wrangler dev",
-    "deploy": "node scripts/deploy-production.mjs"
+    "deploy": "node scripts/deploy-production.mjs",
+    "deploy:beta": "node scripts/deploy-beta.mjs"
   }
 }
