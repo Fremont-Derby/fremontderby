@@ -8,6 +8,7 @@ import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
+import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
 import { enhanceProfileContact } from './profileContactEnhancer.js';
@@ -87,9 +88,10 @@ async function reconcileProductShell(response, pathname) {
   });
 }
 
-async function finalizeBrowserResponse(response) {
+async function finalizeBrowserResponse(response, pathname) {
   const designed = await injectSiteStyles(response);
-  const messagesThemed = await injectMessagesTheme(designed);
+  const playerThemed = await injectPlayerSurfaceTheme(designed, pathname);
+  const messagesThemed = await injectMessagesTheme(playerThemed);
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminThemed = await injectAdminGatewayTheme(teamsThemed);
   const accessible = await injectAccessibilityLayer(adminThemed);
@@ -100,42 +102,42 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (isRetiredTradePath(url.pathname)) {
-      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname));
+      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
     }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') {
-      return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env));
+      return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     }
     const playerClaimResponse = await routePlayerClaim(request, env);
-    if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse);
+    if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const playerContactResponse = await routePlayerContact(request, env);
-    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse);
+    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse);
+    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
-    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse);
+    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
     const seasonCloseResponse = await routeSeasonClose(request, env);
-    if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse);
+    if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);
-    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse);
+    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse, url.pathname);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
-    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse);
+    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') {
-      return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled));
+      return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
     }
     if (url.pathname === '/teams' && request.method === 'GET') {
-      return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled));
+      return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
     }
     if (url.pathname === '/season-setup' && request.method === 'GET') {
       const withPublishReadiness = await enhanceSeasonPublishReadiness(reconciled);
-      return finalizeBrowserResponse(await enhanceSeasonClose(withPublishReadiness));
+      return finalizeBrowserResponse(await enhanceSeasonClose(withPublishReadiness), url.pathname);
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
-      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact));
+      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact), url.pathname);
     }
-    return finalizeBrowserResponse(reconciled);
+    return finalizeBrowserResponse(reconciled, url.pathname);
   },
 };
