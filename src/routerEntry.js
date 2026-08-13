@@ -1,4 +1,5 @@
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
+import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
@@ -90,7 +91,8 @@ async function finalizeBrowserResponse(response) {
   const designed = await injectDesignSystem(response);
   const messagesThemed = await injectMessagesTheme(designed);
   const teamsThemed = await injectTeamsTheme(messagesThemed);
-  const accessible = await injectAccessibilityLayer(teamsThemed);
+  const adminThemed = await injectAdminGatewayTheme(teamsThemed);
+  const accessible = await injectAccessibilityLayer(adminThemed);
   return injectPersistentAuthSession(accessible);
 }
 
