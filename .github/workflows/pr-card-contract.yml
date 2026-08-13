@@ -1,0 +1,44 @@
+name: PR card contract
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate PR coordination sections
+        run: node scripts/check-pr-card-contract.mjs
+      - name: Verify referenced cards are open repository issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const matcher = /\b(?:Tracks|Refs)\s+(?:#(\d+)|https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/(\d+))\b/gi;
+            const numbers = [...body.matchAll(matcher)]
+              .map((match) => Number(match[1] || match[2]));
+            const uniqueNumbers = [...new Set(numbers)];
+
+            for (const issueNumber of uniqueNumbers) {
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+              });
+              if (issue.pull_request) {
+                core.setFailed(`#${issueNumber} is a pull request, not an implementation card.`);
+              }
+              if (issue.state !== 'open') {
+                core.setFailed(`#${issueNumber} must remain open through post-merge verification.`);
+              }
+            }
