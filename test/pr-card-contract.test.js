@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+  extractTrackingCardNumbers,
+  validatePullRequestBody,
+} from '../scripts/check-pr-card-contract.mjs';
+
+function validBody(overrides = {}) {
+  const sections = {
+    'Tracking card': 'Tracks #584',
+    'Owner lane / agent': 'Orchestrator / ChatGPT',
+    'Touched surfaces': 'Issue template, PR process workflow, validator, and tests.',
+    'Out of scope': 'Runtime, database, deployment, and product behavior.',
+    Proof: 'Focused unit tests and required repository CI.',
+    Handoff: 'QA / Release reviews the workflow and required check behavior.',
+    ...overrides,
+  };
+
+  return Object.entries(sections)
+    .map(([heading, content]) => `## ${heading}\n${content}`)
+    .join('\n\n');
+}
+
+test('accepts a complete PR body with an open-card style reference', () => {
+  assert.deepEqual(validatePullRequestBody(validBody()), []);
+});
+
+test('extracts and deduplicates Tracks and Refs card numbers', () => {
+  const body = `${validBody()}\n\nRefs #585\nRefs https://github.com/subiki/fremontderby/issues/584`;
+  assert.deepEqual(extractTrackingCardNumbers(body), [584, 585]);
+});
+
+test('rejects missing tracking references and empty template sections', () => {
+  const errors = validatePullRequestBody(validBody({
+    'Tracking card': '<!-- Tracks #123 -->',
+    Proof: '<!-- tests go here -->',
+  }));
+
+  assert.ok(errors.some((error) => error.includes('Tracking card')));
+  assert.ok(errors.some((error) => error.includes('Proof')));
+});
+
+test('rejects automatic close keywords', () => {
+  const errors = validatePullRequestBody(validBody({ 'Tracking card': 'Closes #584\nTracks #584' }));
+  assert.ok(errors.some((error) => error.includes('Automatic close keywords')));
+});
