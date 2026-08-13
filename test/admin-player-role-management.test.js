@@ -92,7 +92,7 @@ test('admin player repository uses service role RPCs and normalizes player rows'
 test('player management page is human-readable, searchable, confirmable, and mobile-safe', () => {
   const html = renderAdminPlayersPage();
   assert.match(html, /Admin · League Management/);
-  assert.match(html, /Search player name/);
+  assert.match(html, /Search players by name or team|Find by player or team name/);
   assert.match(html, /Grant admin/);
   assert.match(html, /Revoke admin/);
   assert.match(html, /confirm\(/);

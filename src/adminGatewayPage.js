@@ -35,8 +35,14 @@ export function renderAdminGatewayPage() {
         <a class="card" data-accent="blue" href="/admin/players">
           <strong>Players</strong><span>Manage player access, eligibility, and roster exceptions.</span><b>Manage players →</b>
         </a>
-        <a class="card" data-accent="gold" href="/season-setup">
-          <strong>League management</strong><span>Manage seasons, teams in season, and league setup.</span><b>Manage league →</b>
+        <a class="card" data-accent="gold" href="/admin/seasons">
+          <strong>Seasons</strong><span>Find seasons by name or status, then open setup or teams.</span><b>Browse seasons →</b>
+        </a>
+        <a class="card" href="/admin/season-teams">
+          <strong>Season teams</strong><span>Look up team names A–Z and manage slots for a season.</span><b>Manage teams →</b>
+        </a>
+        <a class="card" href="/season-setup">
+          <strong>League setup</strong><span>Create and publish seasons, capacity, and schedule.</span><b>Open setup →</b>
         </a>
         <a class="card" data-accent="rose" href="/messages/moderation">
           <strong>Moderation</strong><span>Review reported messages that need an admin decision.</span><b>Review reports →</b>
