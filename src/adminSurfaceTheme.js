@@ -3,6 +3,7 @@ const ADMIN_SURFACES = new Map([
   ['/admin/season-teams', 'season-teams'],
   ['/admin/operations', 'operations'],
   ['/season-setup', 'season-setup'],
+  ['/admin/seasons', 'seasons'],
 ]);
 
 export const adminSurfaceThemeStyles = `
@@ -56,6 +57,7 @@ export const adminSurfaceThemeStyles = `
   body[data-fd-admin-surface] .admin-links a,
   body[data-fd-admin-surface] .recovery a,
   body[data-fd-admin-surface] .links a,
+  body[data-fd-admin-surface] .actions a,
   body[data-fd-admin-surface] .signin,
   body[data-fd-admin-surface] .ghost {
     color: var(--fd-primary-strong) !important;
@@ -68,7 +70,8 @@ export const adminSurfaceThemeStyles = `
   body[data-fd-admin-surface] .action.restore,
   body[data-fd-admin-surface] .action.add,
   body[data-fd-admin-surface] .add,
-  body[data-fd-admin-surface] .create button {
+  body[data-fd-admin-surface] .create button,
+  body[data-fd-admin-surface] .actions a.primary {
     color: var(--fd-primary-text) !important;
     background: var(--fd-primary-strong) !important;
     border-color: var(--fd-primary-strong) !important;
@@ -101,7 +104,7 @@ export const adminSurfaceThemeStyles = `
   body[data-fd-admin-surface] .badge.admin,
   body[data-fd-admin-surface] .badge.unclaimed,
   body[data-fd-admin-surface] .severity[data-severity="warning"] {
-    color: var(--fd-warning-text) !important;
+    color: var(--fd-warning) !important;
     background: var(--fd-warning-bg) !important;
     border-color: var(--fd-warning) !important;
   }
@@ -120,7 +123,7 @@ export const adminSurfaceThemeStyles = `
     border-color: var(--fd-danger) !important;
   }
   body[data-fd-admin-surface] .status[data-tone="warning"] {
-    color: var(--fd-warning-text) !important;
+    color: var(--fd-warning) !important;
     background: var(--fd-warning-bg) !important;
     border-color: var(--fd-warning) !important;
   }
@@ -145,7 +148,7 @@ export const adminSurfaceThemeStyles = `
     border-color: var(--fd-border) !important;
   }
   body[data-fd-admin-surface] .notice {
-    color: var(--fd-warning-text) !important;
+    color: var(--fd-warning) !important;
     background: var(--fd-warning-bg) !important;
     border-color: var(--fd-warning) !important;
   }
@@ -163,6 +166,12 @@ export const adminSurfaceThemeStyles = `
   @media (max-width: 900px) {
     body[data-fd-admin-surface] .app { width: 100% !important; max-width: 100% !important; }
     body[data-fd-admin-surface="season-setup"] .panel { overflow-x: auto; }
+    body[data-fd-admin-surface="seasons"] .head { display: grid !important; }
+    body[data-fd-admin-surface="seasons"] .tools { grid-template-columns: minmax(0, 1fr) !important; }
+  }
+  @media (max-width: 560px) {
+    body[data-fd-admin-surface="seasons"] .actions { display: grid !important; }
+    body[data-fd-admin-surface="seasons"] .actions a { width: 100%; justify-content: center; }
   }
   @media (prefers-reduced-motion: reduce) {
     body[data-fd-admin-surface] *,
