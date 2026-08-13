@@ -19,6 +19,7 @@ import { routeSeasonClose } from './seasonCloseHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
+import { injectTeamsTheme } from './teamsTheme.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -88,7 +89,8 @@ async function reconcileProductShell(response, pathname) {
 async function finalizeBrowserResponse(response) {
   const designed = await injectDesignSystem(response);
   const messagesThemed = await injectMessagesTheme(designed);
-  const accessible = await injectAccessibilityLayer(messagesThemed);
+  const teamsThemed = await injectTeamsTheme(messagesThemed);
+  const accessible = await injectAccessibilityLayer(teamsThemed);
   return injectPersistentAuthSession(accessible);
 }
 
