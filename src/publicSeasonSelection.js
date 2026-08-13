@@ -1,6 +1,7 @@
 // Canonical public-season default policy for Schedule, Standings, and Prizes.
-// Explicit URL choice wins, then a previously explicit remembered choice, then
-// active/playoffs -> registration -> complete -> first remaining public season.
+// Explicit URL choice wins, then lifecycle relevance. A remembered page-local
+// choice is only a safe fallback and must never outrank an active, playoffs,
+// registration, or completed league season.
 export function choosePublicSeason(
   seasons,
   { explicitId = '', rememberedId = '' } = {},
@@ -9,13 +10,13 @@ export function choosePublicSeason(
   const explicit = list.find((season) => season.id === explicitId);
   if (explicit) return explicit;
 
-  const remembered = list.find((season) => season.id === rememberedId);
-  if (remembered) return remembered;
-
   for (const status of ['active', 'playoffs', 'registration', 'complete']) {
     const season = list.find((candidate) => candidate.status === status);
     if (season) return season;
   }
+
+  const remembered = list.find((season) => season.id === rememberedId);
+  if (remembered) return remembered;
 
   return list[0] || null;
 }
