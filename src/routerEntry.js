@@ -21,6 +21,7 @@ import { routeSeasonClose } from './seasonCloseHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { injectSiteStyles } from './siteStyles.js';
+import { injectStandingsTheme } from './standingsTheme.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
 
@@ -92,7 +93,8 @@ async function reconcileProductShell(response, pathname) {
 async function finalizeBrowserResponse(response, pathname) {
   const designed = await injectSiteStyles(response);
   const playerThemed = await injectPlayerSurfaceTheme(designed, pathname);
-  const messagesThemed = await injectMessagesTheme(playerThemed);
+  const standingsThemed = await injectStandingsTheme(playerThemed, pathname);
+  const messagesThemed = await injectMessagesTheme(standingsThemed);
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
