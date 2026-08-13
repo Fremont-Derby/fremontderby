@@ -10,6 +10,7 @@ import { enhanceSeasonClose } from '../src/seasonCloseEnhancer.js';
 import { createSeasonCloseRepository } from '../src/seasonCloseRepository.js';
 
 const migrationPath = new URL('../supabase/migrations/20260812095000_explicit_season_close.sql', import.meta.url);
+const integrityMigrationPath = new URL('../supabase/migrations/20260813095500_complete_league_season_integrity.sql', import.meta.url);
 const routerPath = new URL('../src/routerEntry.js', import.meta.url);
 
 test('season close migration makes complete an explicit audited admin transition', async () => {
@@ -23,6 +24,16 @@ test('season close migration makes complete an explicit audited admin transition
   assert.match(sql, /revoke all on function public\.close_season\(uuid, uuid\)[\s\S]*from public, anon, authenticated/);
   assert.match(sql, /grant execute on function public\.close_season\(uuid, uuid\) to service_role/);
   assert.doesNotMatch(sql, /delete from public\.(matches|rounds|player_matches|player_match_racks|teams)/i);
+});
+
+test('league seasons cannot become complete while team matches are unresolved', async () => {
+  const sql = await readFile(integrityMigrationPath, 'utf8');
+  assert.match(sql, /new\.status = 'complete'/);
+  assert.match(sql, /coalesce\(new\.purpose, 'league'\) = 'league'/);
+  assert.match(sql, /join public\.team_matches tm on tm\.round_id = r\.id/);
+  assert.match(sql, /tm\.status not in \('finalized', 'corrected'\)/);
+  assert.match(sql, /Competitive team matchups still need final results before closing the season/);
+  assert.doesNotMatch(sql, /delete from public\.(seasons|rounds|team_matches|player_matches|player_match_racks)/i);
 });
 
 test('season close commands validate identity and preserve repository boundary', async () => {
