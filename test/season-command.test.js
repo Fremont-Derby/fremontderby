@@ -7,6 +7,7 @@ const teams = Array.from({ length: 8 }, (_, index) => ({ id: `team-${index + 1}`
 function createRepository({
   season = { id: 'season-1', status: 'draft' },
   seasonTeams = teams,
+  savedSchedule,
 } = {}) {
   const calls = [];
 
@@ -22,6 +23,10 @@ function createRepository({
     },
     async savePublishedSchedule(payload) {
       calls.push(['savePublishedSchedule', payload]);
+      if (savedSchedule !== undefined) return savedSchedule;
+      if (payload.previousStatus === 'active') {
+        return { round_count: 7, team_match_count: 28 };
+      }
       return { savedRoundCount: payload.rounds.length };
     },
   };
@@ -114,9 +119,42 @@ test('trusted command can publish from saved season setup defaults', async () =>
   );
 });
 
-test('trusted command rejects already-published seasons before writing', async () => {
+test('trusted command treats an already-active complete schedule as a safe publish retry', async () => {
   const repository = createRepository({
     season: { id: 'season-1', status: 'active' },
+  });
+
+  const result = await publishSeasonScheduleCommand(
+    {
+      seasonId: 'season-1',
+      actorUserId: 'admin-user-1',
+    },
+    repository,
+  );
+
+  assert.deepEqual(result, {
+    seasonId: 'season-1',
+    status: 'active',
+    roundCount: 7,
+    teamMatchCount: 28,
+    saved: { round_count: 7, team_match_count: 28 },
+  });
+  assert.deepEqual(repository.calls, [
+    ['getSeason', 'season-1'],
+    ['savePublishedSchedule', {
+      seasonId: 'season-1',
+      actorUserId: 'admin-user-1',
+      previousStatus: 'active',
+      nextStatus: 'active',
+      rounds: [],
+    }],
+  ]);
+});
+
+test('trusted command fails closed when an active schedule cannot prove complete persisted counts', async () => {
+  const repository = createRepository({
+    season: { id: 'season-1', status: 'active' },
+    savedSchedule: { round_count: 6, team_match_count: 24 },
   });
 
   await assert.rejects(
@@ -124,7 +162,28 @@ test('trusted command rejects already-published seasons before writing', async (
       {
         seasonId: 'season-1',
         actorUserId: 'admin-user-1',
-        firstRoundDate: '2026-09-03',
+      },
+      repository,
+    ),
+    /Published season schedule is incomplete/,
+  );
+
+  assert.equal(
+    repository.calls.some(([name]) => name === 'listSeasonTeams'),
+    false,
+  );
+});
+
+test('trusted command rejects non-publishable lifecycle states before writing', async () => {
+  const repository = createRepository({
+    season: { id: 'season-1', status: 'playoffs' },
+  });
+
+  await assert.rejects(
+    () => publishSeasonScheduleCommand(
+      {
+        seasonId: 'season-1',
+        actorUserId: 'admin-user-1',
       },
       repository,
     ),
