@@ -34,29 +34,49 @@ export function environmentReadiness(env = {}) {
   const environment = env.ENVIRONMENT || 'production';
   const supabaseUrl = normalizeSupabaseUrl(env.SUPABASE_URL);
   const projectRef = supabaseProjectRefFromUrl(supabaseUrl);
-  const expectedProjectRef = expectedSupabaseProjectRefs[environment] || null;
   const hasPublishableKey = configured(env.SUPABASE_PUBLISHABLE_KEY);
   const hasServiceRoleKey = configured(env.SUPABASE_SERVICE_ROLE_KEY);
-  const knownWorkerEnvironment = environment in expectedSupabaseProjectRefs;
   const keysAreDistinct = hasPublishableKey && hasServiceRoleKey
     ? env.SUPABASE_PUBLISHABLE_KEY !== env.SUPABASE_SERVICE_ROLE_KEY
     : null;
+
+  const isBeta = environment === 'beta';
+  const expectedProjectRef = isBeta
+    ? (configured(env.BETA_EXPECTED_SUPABASE_PROJECT_REF)
+      ? env.BETA_EXPECTED_SUPABASE_PROJECT_REF.trim()
+      : null)
+    : (expectedSupabaseProjectRefs[environment] || null);
+
+  const knownWorkerEnvironment =
+    environment in expectedSupabaseProjectRefs || isBeta;
+
+  const projectMatches = isBeta
+    ? (expectedProjectRef
+      ? projectRef === expectedProjectRef
+      : Boolean(projectRef))
+    : Boolean(expectedProjectRef && projectRef === expectedProjectRef);
 
   const checks = [
     check('knownWorkerEnvironment', knownWorkerEnvironment, { environment }),
     check('supabaseUrlConfigured', configured(supabaseUrl)),
     check('supabaseUrlUsesExpectedHost', Boolean(projectRef), { projectRef }),
-    check(
-      'supabaseProjectMatchesEnvironment',
-      Boolean(expectedProjectRef && projectRef === expectedProjectRef),
-      { expectedProjectRef, projectRef },
-    ),
+    check('supabaseProjectMatchesEnvironment', projectMatches, {
+      expectedProjectRef,
+      projectRef,
+    }),
     check('supabasePublishableKeyConfigured', hasPublishableKey),
     check('supabaseServiceRoleKeyConfigured', hasServiceRoleKey),
     check('supabaseKeysAreDistinct', keysAreDistinct === true, {
       evaluated: keysAreDistinct !== null,
     }),
   ];
+
+  if (isBeta) {
+    checks.push(
+      check('betaAuthBypassFlag', String(env.BETA_AUTH_BYPASS || '').trim() === '1'),
+      check('betaActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
+    );
+  }
 
   return {
     ok: checks.every((item) => item.ok),
