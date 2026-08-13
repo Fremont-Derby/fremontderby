@@ -1,5 +1,6 @@
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
+import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
@@ -62,10 +63,11 @@ async function reconcileProductShell(response, pathname) {
   }
   if (pathname === '/profile') {
     const playersLink = '<a href="/admin/players">Players</a>';
+    const playerContactsLink = '<a href="/admin/player-contact">Player contact</a>';
     const adminGatewayLink = '<a href="/admin">Admin home</a>';
     const moderationLink = '<a href="/messages/moderation">Moderation</a>';
     const seasonTeamsLink = '<a href="/admin/season-teams">Season teams</a>';
-    html = html.replace(playersLink, adminGatewayLink + playersLink);
+    html = html.replace(playersLink, adminGatewayLink + playersLink + playerContactsLink);
     html = html.replace(moderationLink, seasonTeamsLink + moderationLink);
   }
   if (pathname === '/demo') {
@@ -96,6 +98,12 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (isRetiredTradePath(url.pathname)) return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    if (url.pathname === '/admin/player-contact') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
