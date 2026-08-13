@@ -50,7 +50,7 @@ export const lineupThemeStyles = `
   body[data-fd-lineup-theme] .badge.paid {
     color: var(--fd-success) !important;
     background: var(--fd-success-bg) !important;
-    border-color: #9bc9ab !important;
+    border-color: var(--fd-success) !important;
   }
   body[data-fd-lineup-theme] .badge.unsure {
     color: var(--fd-warning-text) !important;
@@ -72,9 +72,9 @@ export const lineupThemeStyles = `
   }
   body[data-fd-lineup-theme] .load,
   body[data-fd-lineup-theme] .score-link {
-    color: #241e0c !important;
+    color: var(--fd-accent-text) !important;
     background: var(--fd-accent) !important;
-    border-color: #c59e1b !important;
+    border-color: var(--fd-warning) !important;
     box-shadow: none !important;
   }
   body[data-fd-lineup-theme] .refresh,
