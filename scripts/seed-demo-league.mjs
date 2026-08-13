@@ -1,28 +1,26 @@
 #!/usr/bin/env node
 /**
- * Operator-run mock league seed (full-ish lifecycle).
+ * Operator-run mock league seed — mid-season oriented.
  *
- * Phases (selected with SEED_SCENARIO):
- *   players      — unclaimed players only
- *   registration — season setup + 8 prepared teams + players
- *   active       — registration phase + publish 7-round / 28-match schedule
- *   all          — players on existing season id only, then registration + active
- *                  (active creates a second season when possible)
+ * Builds example players (with phones), captains, rosters, team messages,
+ * a registration season, and/or an active season with a full schedule whose
+ * first rounds fall in the past (half-season calendar).
  *
- * Default: dry-run (no writes). Set SEED_APPLY=1 to mutate.
+ * Default: dry-run. Set SEED_APPLY=1 to mutate.
  *
  * Required for apply:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   SEED_ACTOR_USER_ID   — existing league admin user UUID (audit actor)
+ *   SEED_ACTOR_USER_ID
  *
  * Optional:
- *   SEED_SEASON_ID       — reuse this season for team attach (registration/draft only)
- *   SEED_SCENARIO        — players | registration | active | all (default: all)
- *   SEED_DATA_PATH       — override JSON path
+ *   SEED_SCENARIO=all|registration|active|players
+ *   SEED_SEASON_ID
+ *   SEED_DATA_PATH
  *
- * Not covered here (needs live scoring / captain flows or extra RPCs):
- *   dual rack entry, finalize, prize money amounts, phone numbers, messages
+ * Requires migration 20260813010000_admin_demo_seed_helpers.sql for phones/messages.
+ *
+ * Still not simulated end-to-end: dual rack entry, match finalize, prize $.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -76,21 +74,63 @@ function firstRow(payload) {
   return payload;
 }
 
-async function createPlayers(ctx, names) {
+function playerName(entry) {
+  return typeof entry === 'string' ? entry : entry.name;
+}
+
+function playerPhone(entry) {
+  if (typeof entry === 'string') return null;
+  return entry.phone ?? null;
+}
+
+function teamName(entry) {
+  return typeof entry === 'string' ? entry : entry.name;
+}
+
+function teamRosterSize(entry) {
+  if (typeof entry === 'string') return 3;
+  return Number(entry.rosterSize) || 3;
+}
+
+function teamEdge(entry) {
+  if (typeof entry === 'string') return 'normal';
+  return entry.edge || 'normal';
+}
+
+async function createPlayers(ctx, entries) {
   const created = [];
-  for (const displayName of names) {
+  for (const entry of entries) {
+    const name = playerName(entry);
     try {
       const row = firstRow(
         await rpc(ctx.baseUrl, ctx.serviceKey, 'admin_create_unclaimed_player', {
           actor_user_id: ctx.actorUserId,
-          target_display_name: displayName,
+          target_display_name: name,
           allow_exact_duplicate: false,
         }),
       );
-      created.push({ name: displayName, id: row?.player_id ?? null });
-      console.log(`  player ok: ${displayName}`);
+      const id = row?.player_id ?? null;
+      const phone = playerPhone(entry);
+      if (id && phone) {
+        try {
+          await rpc(ctx.baseUrl, ctx.serviceKey, 'admin_seed_player_phone', {
+            actor_user_id: ctx.actorUserId,
+            target_player_id: id,
+            profile_phone: phone,
+          });
+        } catch (error) {
+          console.error(`  phone skip: ${name} — ${error.message}`);
+        }
+      }
+      created.push({
+        name,
+        id,
+        phone,
+        edge: typeof entry === 'object' ? entry.edge : null,
+      });
+      console.log(`  player ok: ${name}${phone ? ' (phone)' : ' (no phone)'}`);
     } catch (error) {
-      console.error(`  player skip: ${displayName} — ${error.message}`);
+      console.error(`  player skip: ${name} — ${error.message}`);
     }
   }
   return created;
@@ -116,28 +156,122 @@ async function configureSeason(ctx, seasonConfig, existingSeasonId = null) {
   );
   const id = row?.id ?? existingSeasonId;
   console.log(`  season ok: ${seasonConfig.name} (${id}) status=${row?.status ?? 'unknown'}`);
-  return { id, status: row?.status ?? 'registration', row };
+  return { id, status: row?.status ?? 'registration', config: seasonConfig };
 }
 
-async function createPreparedTeams(ctx, seasonId, teamNames) {
-  const created = [];
-  for (const teamName of teamNames) {
+async function createTeamsWithCaptainsAndRosters(ctx, seasonId, teamEntries, players, messages) {
+  const pool = players.filter((p) => p.id);
+  let poolIndex = 0;
+  const take = (n) => {
+    const slice = pool.slice(poolIndex, poolIndex + n);
+    poolIndex += n;
+    return slice;
+  };
+
+  const createdTeams = [];
+  for (const entry of teamEntries) {
+    const name = teamName(entry);
+    const rosterSize = teamRosterSize(entry);
+    const edge = teamEdge(entry);
+    let teamId = null;
     try {
       const row = firstRow(
         await rpc(ctx.baseUrl, ctx.serviceKey, 'admin_create_prepared_team', {
           actor_user_id: ctx.actorUserId,
           target_season_id: seasonId,
-          team_name: teamName,
+          team_name: name,
         }),
       );
-      const id = row?.id ?? null;
-      created.push({ name: teamName, id });
-      console.log(`  team ok: ${teamName} (${id})`);
+      teamId = row?.id ?? null;
+      console.log(`  team ok: ${name} (${teamId}) edge=${edge}`);
     } catch (error) {
-      console.error(`  team skip: ${teamName} — ${error.message}`);
+      console.error(`  team skip: ${name} — ${error.message}`);
+      continue;
     }
+
+    const members = take(Math.max(rosterSize, 1));
+    if (!members.length) {
+      console.error(`  roster skip: ${name} — no players left`);
+      createdTeams.push({ name, id: teamId, edge, captainId: null, members: [] });
+      continue;
+    }
+
+    const captain = members[0];
+    // Ensure captain has phone before active seasons; seed a fallback if missing
+    if (!captain.phone && captain.id) {
+      try {
+        await rpc(ctx.baseUrl, ctx.serviceKey, 'admin_seed_player_phone', {
+          actor_user_id: ctx.actorUserId,
+          target_player_id: captain.id,
+          profile_phone: '2065550199',
+        });
+        captain.phone = '2065550199';
+        console.log(`  phone fallback for captain: ${captain.name}`);
+      } catch (error) {
+        console.error(`  captain phone skip: ${captain.name} — ${error.message}`);
+      }
+    }
+
+    // Roster non-captains first as players, then assign captain
+    for (let i = 1; i < members.length; i += 1) {
+      const member = members[i];
+      try {
+        await rpc(ctx.baseUrl, ctx.serviceKey, 'set_admin_player_team_membership', {
+          actor_user_id: ctx.actorUserId,
+          target_season_id: seasonId,
+          target_team_id: teamId,
+          target_player_id: member.id,
+          active: true,
+          change_reason: 'demo seed roster',
+        });
+        console.log(`  roster ok: ${member.name} → ${name}`);
+      } catch (error) {
+        console.error(`  roster skip: ${member.name} → ${name} — ${error.message}`);
+      }
+    }
+
+    try {
+      await rpc(ctx.baseUrl, ctx.serviceKey, 'admin_assign_team_captain', {
+        actor_user_id: ctx.actorUserId,
+        target_season_id: seasonId,
+        target_team_id: teamId,
+        target_player_id: captain.id,
+      });
+      console.log(`  captain ok: ${captain.name} → ${name}`);
+    } catch (error) {
+      console.error(`  captain skip: ${captain.name} → ${name} — ${error.message}`);
+    }
+
+    if (edge !== 'no-messages' && messages?.length && captain.id) {
+      const body = messages[createdTeams.length % messages.length];
+      try {
+        await rpc(ctx.baseUrl, ctx.serviceKey, 'admin_seed_team_chat_message', {
+          actor_user_id: ctx.actorUserId,
+          target_team_id: teamId,
+          author_player_id: captain.id,
+          message_body: body,
+        });
+        console.log(`  message ok: ${name}`);
+      } catch (error) {
+        console.error(`  message skip: ${name} — ${error.message}`);
+      }
+    }
+
+    createdTeams.push({
+      name,
+      id: teamId,
+      edge,
+      captainId: captain.id,
+      members,
+    });
   }
-  return created;
+
+  const leftover = pool.slice(poolIndex);
+  if (leftover.length) {
+    console.log(`  free agents left unassigned: ${leftover.map((p) => p.name).join(', ')}`);
+  }
+
+  return createdTeams;
 }
 
 function buildRoundsPayload(teamIds, firstRoundDate, intervalDays, tableNumbers) {
@@ -167,6 +301,10 @@ async function publishSchedule(ctx, seasonId, previousStatus, rounds) {
   console.log(
     `  schedule ok: rounds=${row?.round_count ?? '?'} matches=${row?.team_match_count ?? '?'}`,
   );
+  const today = new Date().toISOString().slice(0, 10);
+  const past = rounds.filter((r) => r.scheduledOn < today).length;
+  const future = rounds.filter((r) => r.scheduledOn >= today).length;
+  console.log(`  calendar split: ${past} rounds dated past / ${future} on or after today (half-season feel)`);
   return row;
 }
 
@@ -178,26 +316,20 @@ async function main() {
     : path.join(root, 'config/demo-league-seed.json');
   const data = JSON.parse(await readFile(dataPath, 'utf8'));
 
-  const teams = [...(data.teams || [])];
-  const extraTeams = data.extraTeams || [];
-  const players = data.players || [];
-  const registration = data.scenarios?.registration;
-  const active = data.scenarios?.active;
-
   console.log(`Seed file: ${dataPath}`);
   console.log(`Scenario: ${scenario}`);
   console.log(`Mode: ${apply ? 'APPLY' : 'DRY-RUN (set SEED_APPLY=1 to mutate)'}`);
-  console.log(`Players: ${players.length}`);
-  console.log(`Core teams (8 for schedule): ${teams.length}`);
-  console.log(`Extra teams: ${extraTeams.length}`);
+  console.log(`Players: ${(data.players || []).length}`);
+  console.log(`Teams: ${(data.teams || []).length}`);
 
   if (!apply) {
-    console.log('\nPlanned lifecycle coverage:');
-    console.log('  1. Unclaimed players (admin_create_unclaimed_player)');
-    console.log('  2. Registration/draft season setup (configure_season_setup)');
-    console.log('  3. Eight prepared teams (admin_create_prepared_team)');
-    console.log('  4. Optional second active season + publish_season_schedule (7 rounds / 28 matches)');
-    console.log('  5. NOT auto-seeded: dual rack scoring, finalize, prizes $, phones, messages');
+    console.log('\nPlanned coverage:');
+    console.log('  - Unclaimed players with mixed phones / no-phone free agent');
+    console.log('  - Edge names: short, long, similar');
+    console.log('  - Eight teams with captains + varied roster sizes (2–5)');
+    console.log('  - Team chat messages (except no-messages team)');
+    console.log('  - Registration season and/or mid-season active schedule (past + future rounds)');
+    console.log('  - NOT scored/finalized match results or prize dollars');
     console.log('\nNo database writes performed.');
     return;
   }
@@ -208,36 +340,33 @@ async function main() {
     actorUserId: required('SEED_ACTOR_USER_ID'),
   };
 
-  if (scenario === 'players' || scenario === 'all' || scenario === 'registration' || scenario === 'active') {
-    console.log('\nPhase: players');
-    await createPlayers(ctx, players);
-  }
+  console.log('\nPhase: players + phones');
+  const players = await createPlayers(ctx, data.players || []);
 
-  if (scenario === 'registration' || scenario === 'all' || scenario === 'active') {
-    console.log('\nPhase: registration season + teams');
-    const existingId = process.env.SEED_SEASON_ID || null;
+  const runSeason = async (label, seasonConfig, publish) => {
+    console.log(`\nPhase: ${label}`);
     const seasonInfo = await configureSeason(
       ctx,
-      registration.season,
-      existingId,
+      seasonConfig,
+      process.env.SEED_SEASON_ID || null,
     );
-    const teamRows = await createPreparedTeams(ctx, seasonInfo.id, teams);
-    const readyIds = teamRows.map((t) => t.id).filter(Boolean);
-    console.log(`  prepared teams with ids: ${readyIds.length}`);
-
-    if (scenario === 'active' || scenario === 'all') {
-      if (readyIds.length !== 8) {
-        console.error(
-          `  cannot publish schedule: need exactly 8 team ids, have ${readyIds.length}. Fix team creates or use a clean registration season.`,
-        );
-      } else if (scenario === 'active') {
-        // Publish on the same season (registration -> active)
-        console.log('\nPhase: publish schedule on registration season (becomes active)');
+    const teams = await createTeamsWithCaptainsAndRosters(
+      ctx,
+      seasonInfo.id,
+      data.teams || [],
+      players,
+      data.messages || [],
+    );
+    const ids = teams.map((t) => t.id).filter(Boolean);
+    if (publish) {
+      if (ids.length !== 8) {
+        console.error(`  cannot publish: need 8 teams, have ${ids.length}`);
+      } else {
         const rounds = buildRoundsPayload(
-          readyIds,
-          registration.season.firstRoundDate,
-          registration.season.roundIntervalDays,
-          registration.season.tableNumbers,
+          ids,
+          seasonConfig.firstRoundDate,
+          seasonConfig.roundIntervalDays,
+          seasonConfig.tableNumbers,
         );
         await publishSchedule(
           ctx,
@@ -245,42 +374,28 @@ async function main() {
           seasonInfo.status || 'registration',
           rounds,
         );
-      } else {
-        // scenario all: try a second season for active demo with extra name
-        console.log('\nPhase: active demo season + schedule');
-        try {
-          const activeInfo = await configureSeason(ctx, active.season, null);
-          const activeTeams = await createPreparedTeams(ctx, activeInfo.id, teams.map((n) => `${n} · Active`));
-          const activeIds = activeTeams.map((t) => t.id).filter(Boolean);
-          if (activeIds.length === 8) {
-            const rounds = buildRoundsPayload(
-              activeIds,
-              active.season.firstRoundDate,
-              active.season.roundIntervalDays,
-              active.season.tableNumbers,
-            );
-            await publishSchedule(
-              ctx,
-              activeInfo.id,
-              activeInfo.status || 'registration',
-              rounds,
-            );
-          } else {
-            console.error(`  active season teams incomplete (${activeIds.length}/8); schedule not published`);
-          }
-        } catch (error) {
-          console.error(`  active season phase failed: ${error.message}`);
-          console.error('  (Often caused by an existing registration season lock — set SEED_SEASON_ID or SEED_SCENARIO=active on a clean season.)');
-        }
       }
+    }
+    return { seasonInfo, teams };
+  };
+
+  if (scenario === 'registration') {
+    await runSeason('registration season', data.scenarios.registration.season, false);
+  } else if (scenario === 'active') {
+    await runSeason('mid-season active', data.scenarios.activeHalf.season, true);
+  } else if (scenario === 'all') {
+    await runSeason('mid-season active', data.scenarios.activeHalf.season, true);
+    // second season may fail if only one registration allowed — best effort
+    try {
+      process.env.SEED_SEASON_ID = '';
+      await runSeason('registration season', data.scenarios.registration.season, false);
+    } catch (error) {
+      console.error(`  registration season skipped: ${error.message}`);
     }
   }
 
   console.log('\nDone.');
-  console.log('Next manual/product steps for a full league night path:');
-  console.log('  - Assign captains and roster players onto teams');
-  console.log('  - Enter dual rack ledgers and finalize matchups');
-  console.log('  - Configure prize amounts if money UI should be non-zero');
+  console.log('Remaining for true end-to-end nights: dual rack scoring + finalize + prize config.');
 }
 
 main().catch((error) => {

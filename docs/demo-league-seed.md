@@ -1,43 +1,38 @@
 # Demo league seed (operator-run)
 
-Mock data helper for **players**, **prepared teams**, **season setup**, and optional **schedule publication** (7 rounds / 28 matches).
-
-## Default
-Dry-run only:
-
-```bash
-node scripts/seed-demo-league.mjs
-```
+Mid-season oriented mock data: players, phones, captains, rosters, team messages, and schedules.
 
 ## Apply
 ```bash
-export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+# Apply migration 20260813010000_admin_demo_seed_helpers.sql first (phones/messages helpers).
+export SUPABASE_URL="..."
 export SUPABASE_SERVICE_ROLE_KEY="..."
-export SEED_ACTOR_USER_ID="..."          # existing league admin user UUID
-export SEED_SCENARIO=all                 # players | registration | active | all
-# optional: export SEED_SEASON_ID="..."  # reuse one draft/registration season
+export SEED_ACTOR_USER_ID="..."
+export SEED_SCENARIO=active   # players | registration | active | all
 export SEED_APPLY=1
 node scripts/seed-demo-league.mjs
 ```
 
-## Lifecycle coverage
+## Coverage
 
-| Phase | Covered by script |
-|------|-------------------|
-| Unclaimed players | Yes |
-| Season setup (registration/draft) | Yes (`configure_season_setup`) |
-| Eight prepared teams | Yes |
-| Publish schedule (active) | Yes (`publish_season_schedule` + domain round-robin) |
-| Captain assignment | No — Admin UI / separate RPC |
-| Roster membership | No — Admin UI / separate RPC |
-| Dual rack scoring + finalize | No — live scoring path |
-| Prize dollar amounts | No — admin prize config |
-| Phones / messages | No |
+| Area | Seeded |
+|------|--------|
+| Unclaimed players | Yes (edge names included) |
+| Phones | Yes (via `admin_seed_player_phone`; one intentional no-phone free agent) |
+| Prepared teams (8) | Yes |
+| Captains | Yes (phone required for active) |
+| Rosters | Yes (sizes 2–5 by team) |
+| Team chat messages | Yes (one team intentionally silent) |
+| Schedule 7×28 | Yes on `active` / `all` |
+| Half-season calendar | Yes — first rounds dated in the past |
+| Dual rack scores / finalize | No |
+| Prize dollar amounts | No |
+| Auth users / Google accounts | No |
 
-## Data file
-Edit `config/demo-league-seed.json` for names and season setup fields.
-
-## Notes
-- Prepared teams require a **draft** or **registration** season.
-- Publication requires **exactly eight** team ids and builds **seven** rounds / **twenty-eight** matches.
-- Does not run automatically on Cloudflare deploy.
+## Edge cases in the data file
+- Short roster (2) and deep bench (5)
+- Short display name (`Q`) and long display name
+- Similar names (`Jordan Lee` vs `Jordan Lee (sub)`)
+- Free agents left unassigned
+- Player with no phone
+- Team with no seeded messages
