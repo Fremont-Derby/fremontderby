@@ -6,7 +6,7 @@ import routerEntry from '../src/routerEntry.js';
 
 test('Admin gateway starts with one truthful access-check state', () => {
   const html = renderAdminGatewayPage();
-  assert.match(html, /Checking your access/);
+  assert.match(html, /Loading…|Loading/);
   assert.match(html, /data-admin-content hidden/);
   assert.match(html, /data-player-content hidden/);
   assert.match(html, /data-signed-out hidden/);

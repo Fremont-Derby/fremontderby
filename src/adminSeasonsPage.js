@@ -65,7 +65,7 @@ export function renderAdminSeasonsPage() {
         <div class="results-meta" role="status" aria-live="polite" data-results-meta></div>
         <div class="letter-index" data-letter-index role="group" aria-label="Jump to season name letter"></div>
       </div>
-      <div class="status" role="status" aria-live="polite" data-status>Checking admin access…</div>
+      <div class="status" role="status" aria-live="polite" data-status></div>
       <div class="list" id="admin-season-list" data-list hidden></div>
       <div class="empty" data-empty hidden>No seasons match that search.</div>
     </section>

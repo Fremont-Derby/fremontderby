@@ -22,8 +22,8 @@ export function renderAdminGatewayPage() {
     </section>
 
     <section class="state" data-loading role="status" aria-live="polite" aria-atomic="true">
-      <strong>Checking your access…</strong>
-      <p>We’ll show the right admin options for your account.</p>
+      <strong>Loading…</strong>
+      <p>Preparing admin tools.</p>
     </section>
 
     <section data-admin-content hidden aria-labelledby="admin-tools-title">
