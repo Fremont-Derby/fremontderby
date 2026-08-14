@@ -1,6 +1,6 @@
 export const sharedRackLedgerScorecardStyles = `
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;overflow-x:hidden}input,select,textarea{font-size:16px}
+  body{margin:0;min-height:100vh;min-height:100dvh;overflow-x:hidden}input,select,textarea{font-size:16px}
   button,summary{font:inherit;min-height:48px;border:1px solid transparent;border-radius:11px;padding:9px 12px;font-weight:850;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   button:disabled{opacity:.42;cursor:not-allowed}
   .scorecard-app{width:min(760px,100%);margin:auto;padding:10px 8px max(20px,env(safe-area-inset-bottom))}
