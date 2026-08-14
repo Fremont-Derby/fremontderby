@@ -50,6 +50,20 @@ Use this lifecycle on every implementation card:
 
 Use `Tracks #123` or `Refs #123` in PRs. Do not normally use `Closes #123`, because the merge itself is not the final verification stage.
 
+## Collaboration label contract
+
+Use labels as the backlog index and the card body/comments as the durable evidence.
+
+| Family | Cardinality | Purpose |
+|---|---:|---|
+| `agent:*` | Exactly one | Current implementation owner, including `agent:unclaimed` |
+| `stage:*` | Exactly one | Current lifecycle stage |
+| `priority:*` | Exactly one | P0 through P3 ordering |
+| `area:*` | One or more | Product or technical surface |
+| Coordination flags | Optional | Blocker, collision, human action, or pending handoff |
+
+Replace mutually exclusive owner/stage/priority labels instead of stacking them. Existing cards adopt the contract when next touched; new cards default to `agent:unclaimed`, `stage:ready`, and `priority:p2`. The label manifest is repository-owned in `.github/collaboration-labels.json`; the sync workflow creates missing definitions and updates drift without deleting unrelated labels.
+
 ## Claim before code
 
 Before JFL, DRU, or another agent starts implementation:
@@ -119,27 +133,41 @@ For useful unrelated discoveries, create/link a follow-up card. This keeps revie
 
 ## Clean handoff protocol
 
-A handoff is an ownership transfer, not an invitation for both agents to keep editing.
+A handoff is an ownership transfer or review request, not an invitation for two agents to edit concurrently.
 
-The outgoing agent must:
+### Outgoing handoff
 
-- commit and push the current coherent state;
-- link the card and branch/PR;
-- state what is complete and what remains;
-- list important files/surfaces touched;
-- record tests/CI already run and any known failures;
-- call out migration/schema/auth/global-style or other collision risks;
-- identify the next exact action;
-- name the incoming owner.
+The outgoing agent commits and pushes a coherent state, sets `stage:handoff`, adds the target `handoff:*` label, and leaves a new issue or PR comment using this structure:
 
-The incoming agent must:
+```markdown
+### Agent handoff
 
-- read the card and PR before editing;
-- refresh current `main` and check whether anything changed since the handoff;
-- confirm ownership on the card;
-- continue on the handed-off branch only if ownership was explicitly transferred; otherwise create its own branch/card.
+- Outgoing owner:
+- Requested incoming owner/reviewer:
+- Card:
+- Branch/PR:
+- Completed:
+- Remaining:
+- Touched surfaces:
+- Proof and known failures:
+- Risks/blockers/collision concerns:
+- Exact next action:
+```
 
-After ownership transfers, the outgoing agent stops changing that branch unless ownership is transferred back.
+During an ownership transfer, the outgoing `agent:*` label remains until acceptance. For review-only work, the implementation owner never changes.
+
+### Incoming acceptance
+
+The incoming implementation owner must:
+
+1. read the current card, PR, and relevant repository state;
+2. verify the handoff remains current;
+3. post an explicit acceptance comment;
+4. replace the outgoing `agent:*` label with its own;
+5. remove the `handoff:*` label and set `stage:in-progress`;
+6. only then edit the handed-off branch.
+
+After acceptance, the outgoing agent stops editing unless ownership is transferred back. A reviewer instead records findings/completion without changing the implementation owner label.
 
 ## GitHub is the communication bus
 

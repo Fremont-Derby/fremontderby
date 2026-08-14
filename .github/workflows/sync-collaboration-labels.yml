@@ -1,0 +1,29 @@
+name: Sync collaboration labels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/collaboration-labels.json
+      - .github/workflows/sync-collaboration-labels.yml
+      - scripts/collaboration-labels.mjs
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate collaboration label manifest
+        run: npm run labels:check
+      - name: Create or update collaboration labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/collaboration-labels.mjs --sync
