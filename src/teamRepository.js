@@ -1,3 +1,4 @@
+import { formatPlayerPickerLabel, markDuplicateNames } from './playerPickerLabel.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
@@ -264,16 +265,32 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
           `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date&status=eq.registration&order=created_at.desc`,
           { method: 'GET', headers },
         );
-        const players = await requestJson(
+        const playersRaw = await requestJson(
           fetchImpl,
-          `${supabaseUrl}/rest/v1/players?select=id,display_name&order=display_name.asc`,
+          `${supabaseUrl}/rest/v1/players?select=id,display_name,user_id,created_at&order=display_name.asc`,
           { method: 'GET', headers },
         );
+        const normalized = Array.isArray(playersRaw)
+          ? playersRaw.map((row) => ({
+              playerId: row.id,
+              id: row.id,
+              displayName: row.display_name,
+              display_name: row.display_name,
+              hasLogin: Boolean(row.user_id),
+              user_id: row.user_id,
+              createdAt: row.created_at,
+              created_at: row.created_at,
+            }))
+          : [];
+        const players = markDuplicateNames(normalized).map((player) => ({
+          ...player,
+          label: formatPlayerPickerLabel(player),
+        }));
 
         enrichedManagement = {
           ...management,
           open_seasons: Array.isArray(openSeasons) ? openSeasons : [],
-          players: Array.isArray(players) ? players : [],
+          players,
         };
       } catch {
         // Team management remains useful even if optional picker data is unavailable.

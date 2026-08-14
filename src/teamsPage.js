@@ -96,6 +96,194 @@ export function renderTeamsPage() {
     function nextCaptainMatchup(teams){const contexts=[];for(const team of teams){for(const round of team.lineupRounds||[]){contexts.push({team,round})}}contexts.sort((left,right)=>String(left.round.scheduledOn||'9999-12-31').localeCompare(String(right.round.scheduledOn||'9999-12-31'))||Number(left.round.roundNumber)-Number(right.round.roundNumber));const today=new Date().toISOString().slice(0,10);const open=contexts.filter((item)=>!['finalized','corrected'].includes(item.round.teamMatchStatus));return open.find((item)=>!item.round.scheduledOn||item.round.scheduledOn>=today)||open[0]||contexts[0]||null}
     function renderLeagueNightHub(data,scorable){const teams=data.captain_teams||[];const liveMatches=(scorable||[]).filter((m)=>String(m.status||m.match_status||'')==='in_progress');const readyMatches=scorable||[];function paintScoreCard(match){if(!hubScore)return;if(!match){hubScore.href='/scorecard';if(hubScoreLabel)hubScoreLabel.textContent='During play';if(hubScoreTitle)hubScoreTitle.textContent='Score a match';if(hubScoreMeta)hubScoreMeta.textContent='Open a ready matchup and keep both scores together.';if(hubScoreCta)hubScoreCta.textContent='Open scoring →';return}const live=String(match.status||match.match_status||'')==='in_progress';const matchId=match.playerMatchId||match.player_match_id||match.teamMatchId||match.team_match_id||'';const teamId=match.scoringTeamId||match.scoring_team_id||match.teamId||'';const teamName=match.scoringTeamName||match.scoring_team_name||match.teamName||'Your team';const qs=new URLSearchParams();if(matchId)qs.set('match',matchId);if(teamId)qs.set('team',teamId);if(teamName)qs.set('teamName',teamName);hubScore.href='/scorecard'+(qs.toString()?('?'+qs.toString()):'');if(hubScoreLabel)hubScoreLabel.textContent=live?'Live now':'Ready to score';if(hubScoreTitle)hubScoreTitle.textContent=live?'Score live':'Score this match';if(hubScoreMeta)hubScoreMeta.textContent=(match.opponentName||match.opponent_name||match.matchupLabel||'Your matchup')+(live?' · in progress':' · open scoring');if(hubScoreCta)hubScoreCta.textContent=live?'Continue scoring →':'Start scoring →'}
 const context=nextCaptainMatchup(teams);if(context){const team=context.team;const round=context.round;hubTeamEl.textContent=team.teamName;hubLabel.textContent='Next matchup';hubMatchup.textContent='Round '+round.roundNumber+' vs '+(round.opponentName||'Opponent');hubMatchupMeta.textContent=dateLabel(round.scheduledOn)+' · Table '+round.tableNumber;hubLineupCta.textContent='Build lineup →';hubLineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);if(hubReadyCheck){hubReadyCheck.dataset.teamId=team.teamId;hubReadyCheck.dataset.roundId=round.roundId;hubReadyCheck.disabled=false;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';}hubChat.href='/messages?team='+encodeURIComponent(team.teamId);hubManage.href='/trades';hubManageTitle.textContent='Roster & trades';hubManageMeta.textContent='Handle invites, requests, and player moves.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}if(teams.length){hubTeamEl.textContent=teams[0].teamName;hubLabel.textContent='Captain tools';hubMatchup.textContent='No published matchup yet';hubMatchupMeta.textContent='Your next round will appear here as soon as it is scheduled.';hubLineupCta.textContent='Review lineups →';hubLineup.href='/lineup';hubChat.href='/messages?team='+encodeURIComponent(teams[0].teamId);hubManage.href='/trades';hubManageTitle.textContent='Roster & trades';hubManageMeta.textContent='Handle invites, requests, and player moves.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}hubTeamEl.textContent='Player';hubLabel.textContent='Your next step';hubMatchup.textContent='Find your team';hubMatchupMeta.textContent='Request to join a team or apply for an open team slot.';hubLineupCta.textContent='Join or apply →';hubLineup.href='#join-teams';hubManage.href='#join-teams';hubManageTitle.textContent='Join a team';hubManageMeta.textContent='See open teams and send a request to the captain.';hubManageCta.textContent='View teams →';paintScoreCard(liveMatches[0]||readyMatches[0]||null)}
+
+    function playerOptionLabel(player){
+      if(player&&player.label)return player.label;
+      const name=player&&player.displayName||player&&player.display_name||'Player';
+      const parts=[];
+      if(player&&player.hasLogin)parts.push('Account linked');
+      else if(player&&player.hasLogin===false)parts.push('Unclaimed');
+      if(player&&player.isDuplicateName){
+        const id=String(player.playerId||player.id||'');
+        if(id)parts.push('#'+id.slice(-4));
+      }
+      const created=player&&(player.createdAt||player.created_at);
+      if(created){const y=String(created).slice(0,4);if(/^\d{4}$/.test(y))parts.push('Added '+y)}
+      return parts.length?name+' — '+parts.join(' · '):name;
+    }
+    function fillPlayerSelect(select,players){
+      if(!select)return;
+      const previous=select.value;
+      select.replaceChildren();
+      const blank=document.createElement('option');
+      blank.value='';
+      blank.textContent='Choose a player…';
+      select.append(blank);
+      const list=Array.isArray(players)?players:[];
+      for(const player of list){
+        const option=document.createElement('option');
+        option.value=player.playerId||player.id||'';
+        option.textContent=playerOptionLabel(player);
+        select.append(option);
+      }
+      if(previous&&Array.from(select.options).some((item)=>item.value===previous))select.value=previous;
+    }
+    function renderInvitations(items){
+      if(!invitationsEl)return;
+      invitationsEl.replaceChildren();
+      if(!items.length){invitationsEl.append(empty('No open invitations.'));return}
+      for(const item of items){
+        const row=document.createElement('div');
+        row.className='card';
+        row.append(node('strong',item.teamName||'Team'),node('div',(item.seasonName||'')+(item.status?' · '+item.status:''),'muted'));
+        const actions=document.createElement('div');
+        actions.className='actions';
+        if(item.invitationId){
+          actions.append(actionButton('Accept','primary',{respondInvitation:item.invitationId,response:'accepted'}));
+          actions.append(actionButton('Decline','ghost',{respondInvitation:item.invitationId,response:'declined'}));
+        }
+        row.append(actions);
+        invitationsEl.append(row);
+      }
+    }
+    function renderCaptainTeams(teams){
+      if(!captainTeamsEl)return;
+      captainTeamsEl.replaceChildren();
+      if(!teams.length){captainTeamsEl.append(empty('You are not captaining a team yet.'));return}
+      for(const team of teams){
+        const card=document.createElement('div');
+        card.className='card';
+        card.append(node('h2',team.teamName||'Team'));
+        card.append(node('div',(team.seasonName||'')+(team.role?' · '+team.role:''),'muted'));
+        const members=Array.isArray(team.members)?team.members:(Array.isArray(team.roster)?team.roster:[]);
+        if(members.length){
+          const list=document.createElement('ul');
+          for(const member of members){
+            const li=document.createElement('li');
+            li.textContent=playerOptionLabel({
+              displayName:member.displayName||member.display_name||member.playerName,
+              hasLogin:member.hasLogin,
+              playerId:member.playerId||member.id,
+              isDuplicateName:false,
+            });
+            list.append(li);
+          }
+          card.append(list);
+        }
+        const invite=document.createElement('div');
+        invite.className='invite-row';
+        const label=document.createElement('label');
+        label.textContent='Invite a player';
+        const select=document.createElement('select');
+        select.dataset.invitePlayerSelect=team.teamId||team.id||'';
+        fillPlayerSelect(select,playerDirectory);
+        label.append(select);
+        const button=actionButton('Send invite','primary',{inviteTeam:team.teamId||team.id||''});
+        invite.append(label,button);
+        card.append(invite);
+        captainTeamsEl.append(card);
+      }
+    }
+    function renderJoinTeams(items){
+      if(!joinTeamsEl)return;
+      joinTeamsEl.replaceChildren();
+      if(!items.length){joinTeamsEl.append(empty('No teams are open to join right now.'));return}
+      for(const team of items){
+        const row=document.createElement('div');
+        row.className='card';
+        row.append(node('strong',team.teamName||'Team'),node('div',team.seasonName||'','muted'));
+        row.append(actionButton('Request to join','primary',{requestMembership:team.teamId||team.id||''}));
+        joinTeamsEl.append(row);
+      }
+    }
+    function renderPlayerRequests(items){
+      if(!playerRequestsEl)return;
+      playerRequestsEl.replaceChildren();
+      if(!items.length){playerRequestsEl.append(empty('No membership requests from you.'));return}
+      for(const item of items){
+        const row=document.createElement('div');
+        row.className='card';
+        row.append(node('strong',item.teamName||'Team'),node('div',item.status||'','muted'));
+        if(item.requestId)row.append(actionButton('Cancel request','ghost',{cancelMembershipRequest:item.requestId}));
+        playerRequestsEl.append(row);
+      }
+    }
+    function renderCaptainRequests(items){
+      if(!captainRequestsEl)return;
+      captainRequestsEl.replaceChildren();
+      if(!items.length){captainRequestsEl.append(empty('No pending join requests for your teams.'));return}
+      for(const item of items){
+        const row=document.createElement('div');
+        row.className='card';
+        const who=item.playerDisplayName||item.displayName||'Player';
+        row.append(node('strong',who+' → '+(item.teamName||'Team')));
+        row.append(node('div',playerOptionLabel({
+          displayName:who,
+          hasLogin:item.hasLogin,
+          registrationStatus:item.registrationStatus,
+          paymentStatus:item.paymentStatus,
+          playerId:item.playerId,
+          isDuplicateName:Boolean(item.isDuplicateName),
+          createdAt:item.createdAt,
+        }),'muted'));
+        const actions=document.createElement('div');
+        actions.className='actions';
+        if(item.requestId){
+          actions.append(actionButton('Approve','primary',{respondMembershipRequest:item.requestId,response:'approved'}));
+          actions.append(actionButton('Decline','ghost',{respondMembershipRequest:item.requestId,response:'declined'}));
+        }
+        row.append(actions);
+        captainRequestsEl.append(row);
+      }
+    }
+    function renderSeasonOptions(seasons){
+      if(!seasonSelect)return;
+      const previous=seasonSelect.value||localStorage.getItem('fd.teamsSeasonId')||'';
+      seasonSelect.replaceChildren();
+      if(!seasons.length){
+        const option=document.createElement('option');
+        option.value='';
+        option.textContent='No registration season open';
+        seasonSelect.append(option);
+        seasonSelect.disabled=true;
+        if(createTeamButton)createTeamButton.disabled=true;
+        if(seasonHelp)seasonHelp.textContent='Team registration is not open right now.';
+        return;
+      }
+      seasonSelect.disabled=false;
+      if(createTeamButton)createTeamButton.disabled=false;
+      for(const season of seasons){
+        const option=document.createElement('option');
+        option.value=season.seasonId||season.id;
+        option.textContent=season.name||season.seasonName||'Season';
+        seasonSelect.append(option);
+      }
+      if(previous&&Array.from(seasonSelect.options).some((item)=>item.value===previous))seasonSelect.value=previous;
+      if(seasonHelp)seasonHelp.textContent='Choose the open registration season for your team application.';
+    }
+    function renderRegistrationSummary(season){
+      if(!registrationSummaryEl)return;
+      if(!season||!Object.keys(season).length){
+        registrationSummaryEl.textContent='Team registration is not open right now.';
+        return;
+      }
+      registrationSummaryEl.textContent=(season.name||'Season')+' · registration '+(season.status||'open');
+    }
+    async function loadRegistration(){
+      try{
+        const season=publicSeasons[0]||null;
+        renderRegistrationSummary(season);
+      }catch{
+        renderRegistrationSummary(null);
+      }
+    }
+    function node(tag,text,className){
+      const el=document.createElement(tag);
+      if(text!=null)el.textContent=text;
+      if(className)el.className=className;
+      return el;
+    }
+
 function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);renderInvitations(data.invitations||[]);renderCaptainTeams(data.captain_teams||[])}function renderMembershipRequests(data){renderJoinTeams(data.joinable_teams||[]);renderPlayerRequests(data.player_requests||[]);renderCaptainRequests(data.captain_requests||[])}
     async function loadTeams(opts={}){const quiet=Boolean(opts&&opts.quiet);const token=sessionStorage.getItem('fd.accessToken')||'';const scorablePromise=token?fetch('/api/me/scorable-matches',{headers:{authorization:'Bearer '+token}}).then(async(r)=>{try{const b=await r.json();return r.ok?(b.matches||[]):[]}catch{return[]}}).catch(()=>[]):Promise.resolve([]);const [teamsBody,requestsBody,seasonsBody,scorable]=await Promise.all([api('/api/me/teams',{method:'GET'}),api('/api/me/team-membership-requests',{method:'GET'}),api('/api/seasons',{method:'GET'}),scorablePromise]);if(teamsBody&&teamsBody.__notModified){if(!quiet)setStatus('Teams up to date','ok');return teamsBody}const data=teamsBody.teamManagement||{captain_teams:[],invitations:[],open_seasons:[],players:[]};playerDirectory=data.players||[];publicSeasons=(seasonsBody.seasons||[]).filter((season)=>season.status==='registration');renderSeasonOptions(publicSeasons);renderManagement(data,scorable);renderMembershipRequests(requestsBody.requests||{});await loadRegistration();return data}
     async function loadInitialTeams(){showPageState('loading');try{await loadTeams();showTeamContent();setStatus('Teams loaded','ok')}catch(error){if(error.name==='SessionExpiredError')showPageState('expired');else showPageState('failure')}}
