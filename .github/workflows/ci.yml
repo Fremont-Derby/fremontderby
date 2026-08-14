@@ -39,6 +39,29 @@ jobs:
       - name: Enforce test-file floor
         run: node scripts/count-tests.mjs
 
+  accessibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run rendered WCAG2AA gate
+        id: accessibility
+        shell: bash
+        run: |
+          set +e
+          npm run a11y 2>&1 | tee accessibility-output.txt
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Upload failing accessibility output
+        if: failure() && steps.accessibility.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-output
+          path: accessibility-output.txt
+          retention-days: 1
+
   test-season1:
     runs-on: ubuntu-latest
     steps:
