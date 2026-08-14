@@ -53,3 +53,17 @@ Pull requests and pushes run a dedicated `test-season1` job (`npm run test:seaso
 
 - Membership `list_joinable_team_registration` must keep **full arrays** (not first-row unwrap).
 - Season close HTTP status mapping is unit-tested for auth/404/409 paths.
+
+## Live ops checklist (QA lanes)
+
+Goal of DRU/JFL: **signed-out normal-path QA** (create/find flows with ordinary names — not fuzzing).
+
+Before treating a lane as open-auth ready:
+
+1. DNS resolves for `dru.fremontderby.com` / `jfl.fremontderby.com`
+2. `/health/environment` returns matching `environment` (`dru`|`jfl`) and `ok: true`
+3. Admin/API without bearer works only on those lanes; production/gamma still 401
+4. Worker secrets from `wrangler.jsonc` `secrets.required` are provisioned (`BETA_ACTOR_USER_ID` included)
+5. Prefer `wrangler deploy --env <lane>` (or branch deploy) so custom domains + vars ship together — ad-hoc domain attach alone is not durable
+
+If domain restore Actions fail, check `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` repository secrets and Cloudflare Workers Builds for `fremontderby-dru` / `fremontderby-jfl`.
