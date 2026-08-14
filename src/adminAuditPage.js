@@ -62,9 +62,12 @@ export function renderAdminAuditPage() {
       try{return new Date(value).toLocaleString()}catch{return String(value)}
     }
     function render(events){
-      listEl.replaceChildren();
-      if(!events.length){listEl.textContent='No audit events yet.';return}
-      for(const event of events){
+      if(!events.length){
+        listEl.replaceChildren();
+        listEl.textContent='No audit events yet.';
+        return;
+      }
+      function buildAuditCard(event){
         const card=document.createElement('article');
         card.className='item';
         const head=document.createElement('header');
@@ -95,7 +98,17 @@ export function renderAdminAuditPage() {
           details.append(summary,pre);
           card.append(details);
         }
-        listEl.append(card);
+        return card;
+      }
+      if(window.fdStableList){
+        window.fdStableList(listEl,events,{
+          key:(e)=>String(e.id||e.eventId||(e.action+e.createdAt+e.entityId)),
+          signature:(e)=>[e.action,e.reason,e.createdAt,e.actorDisplayName].join('|'),
+          render:(e)=>buildAuditCard(e),
+        });
+      }else{
+        listEl.replaceChildren();
+        for(const event of events) listEl.append(buildAuditCard(event));
       }
     }
     async function load(){

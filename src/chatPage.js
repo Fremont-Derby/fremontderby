@@ -712,6 +712,7 @@ export function renderChatPage(env = {}) {
       candidates = Array.isArray(candidateBody.candidates) ? candidateBody.candidates : [];
       renderCandidates();
       const params = new URLSearchParams(location.search);
+      const requestedPlayerId = params.get('player') || params.get('with') || '';
       const requestedKey = params.get('direct')
         ? 'direct:' + params.get('direct')
         : (params.get('team')
@@ -719,12 +720,38 @@ export function renderChatPage(env = {}) {
           : (params.get('league')
             ? 'league:' + params.get('league')
             : (params.get('matchup') ? 'matchup:' + params.get('matchup') : '')));
+      let playerThreadKey = '';
+      if (requestedPlayerId) {
+        const hit = threads.find((thread) => thread.type === 'direct' && String(thread.otherPlayerId || '') === String(requestedPlayerId));
+        if (hit) playerThreadKey = hit.key;
+      }
       const existing = preserveSelection && threads.some((thread) => thread.key === currentKey) ? currentKey : '';
       const initial = existing
+        || playerThreadKey
         || (threads.some((thread) => thread.key === requestedKey) ? requestedKey : '')
         || threads[0]?.key
         || '';
       await selectThread(initial);
+      // Deep-link: start a new DM when player id is known but no thread exists yet.
+      if (requestedPlayerId && !playerThreadKey && candidates.length) {
+        const match = candidates.find((c) => String(c.player_id || c.playerId || '') === String(requestedPlayerId));
+        if (match) {
+          const value = String(match.season_id || match.seasonId || '') + '|' + String(match.player_id || match.playerId || '');
+          if (candidateSelectEl) {
+            // ensure option exists
+            let found = false;
+            for (const opt of candidateSelectEl.options) { if (opt.value === value) { found = true; break; } }
+            if (!found) {
+              const option = document.createElement('option');
+              option.value = value;
+              option.textContent = match.display_name || match.displayName || 'Player';
+              candidateSelectEl.append(option);
+            }
+            candidateSelectEl.value = value;
+            newDirectFormEl.hidden = false;
+          }
+        }
+      }
       setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
     }
     async function refreshThreadMetadata() {
