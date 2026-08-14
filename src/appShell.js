@@ -48,7 +48,11 @@ function sectionForPath(pathname) {
   if (pathname.startsWith('/standings')) return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
+  if (
+    pathname === '/admin'
+    || pathname.startsWith('/admin/')
+    || pathname === '/season-setup'
+  ) return 'admin';
   if (pathname.startsWith('/profile')) return 'profile';
   return null;
 }
