@@ -18,6 +18,14 @@ The normal promotion path is:
 
 The existing `staging` environment may remain during migration, but gamma becomes the canonical integrated pre-production lane once the new topology is proven.
 
+## Configuration ownership
+
+`wrangler.jsonc` is the source of truth for Worker names, public custom domains, `workers.dev` exposure, environment identity, and committed non-secret variables. Do not maintain competing copies of those settings in Cloudflare click-ops.
+
+Secret **names** are also declared in `wrangler.jsonc` through `secrets.required`. Secret **values** remain outside Git in Cloudflare's secret store (or local `.dev.vars`/`.env` files). A deployment must fail rather than publish a lane whose declared required secrets have not been provisioned.
+
+The three non-production Supabase projects are provisioned separately. Until their project refs and credentials exist, the beta/gamma Workers are intentionally not deployable; do not substitute production or legacy staging credentials to make a deploy pass.
+
 ## Local
 - Runs with `wrangler dev`.
 - Uses local/test data only.
@@ -77,9 +85,12 @@ Rules:
 | `SUPABASE_URL` | yes | environment-specific Supabase project URL |
 | `SUPABASE_PUBLISHABLE_KEY` | yes | client-safe Supabase key |
 | `SUPABASE_SERVICE_ROLE_KEY` | **no** | trusted Worker operations for that environment only |
-| expected project ref | yes | fail-closed environment/project identity check |
+| `EXPECTED_SUPABASE_PROJECT_REF` | yes | fail-closed environment/project identity check |
+| `BETA_AUTH_BYPASS` | yes | explicit beta-only auth bypass switch; forbidden in gamma/production |
+| `BETA_ACTOR_USER_ID` | **no** | isolated beta test actor identity |
+| `BETA_ACTOR_EMAIL` | yes | isolated beta test actor display email |
 
-Real credentials are configured outside Git. `SUPABASE_SERVICE_ROLE_KEY` must never be exposed to browser code.
+Real credentials are configured outside Git. `SUPABASE_SERVICE_ROLE_KEY` and `BETA_ACTOR_USER_ID` must never be exposed to browser code.
 
 ## Promotion and branch rules
 
@@ -126,9 +137,9 @@ Emergency bypass, if GitHub account capabilities require one to exist, must be e
 The endpoint must not return credential values. It should return HTTP 200 only when all readiness checks pass and HTTP 503 otherwise.
 
 ## Implementation/cutover plan
-1. Add Wrangler environments for `beta-jfl`, `beta-dru`, and `gamma` while preserving current production behavior.
+1. Add Wrangler environments and repository-owned custom domains for `beta-jfl`, `beta-dru`, and `gamma` while preserving current production behavior.
 2. Provision isolated Supabase projects for both beta lanes and gamma; apply current migrations.
-3. Configure Cloudflare Worker secrets/variables and custom domains for all three non-production lanes.
+3. Provision the secret values declared by `wrangler.jsonc` for all three non-production lanes; do not duplicate code-owned routes/domains/vars in dashboard click-ops.
 4. Add branch-triggered deploy workflows and environment identity guards.
 5. Add deterministic seed/reset for both beta sandboxes.
 6. Add manual production-to-gamma refresh with fail-closed target validation and privacy handling.
