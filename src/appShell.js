@@ -10,7 +10,8 @@ const NAV_ITEMS = [
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
-  { href: '/messages', label: 'Messages', key: 'messages' },
+  { href: '/messages',
+  '/notifications', '/notifications', label: 'Messages', key: 'messages' },
   { href: '/admin', label: 'Admin', key: 'admin' },
   { href: '/profile', label: 'Profile', key: 'profile' },
 ];
