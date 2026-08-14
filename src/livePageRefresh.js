@@ -77,6 +77,13 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
 
 
   // WHY: session body cache makes repeat visits feel instant while ETags keep backend cheap.
+  function isSensitiveUrl(url) {
+    // WHY: never persist contact/PII JSON in sessionStorage.
+    const path = String(url || '');
+    return /\/api\/me\/contact\b/.test(path)
+      || /\/api\/admin\/players\/[^/]+\/contact\b/.test(path)
+      || /[?&]reveal=/.test(path);
+  }
   function etagKey(url) {
     return 'fd.etag:' + String(url);
   }
@@ -95,6 +102,7 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
   }
 
   function writeCache(url, body) {
+    if (isSensitiveUrl(url)) return;
     try {
       sessionStorage.setItem(bodyKey(url), JSON.stringify(body));
     } catch {}
@@ -113,7 +121,7 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
     } catch {}
     const response = await fetch(url, { ...options, headers });
     const etag = response.headers.get('etag');
-    if (etag) {
+    if (etag && !isSensitiveUrl(url)) {
       try { sessionStorage.setItem(key, etag); } catch {}
     }
     if (response.status === 304) {

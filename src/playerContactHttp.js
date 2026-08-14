@@ -1,13 +1,21 @@
+import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   getAdminPlayerContactCommand,
   getOwnPlayerContactCommand,
   setOwnPlayerContactCommand,
 } from './playerContactCommands.js';
 import { createPlayerContactRepository } from './playerContactRepository.js';
-import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
 function json(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+  return Response.json(body, {
+    status,
+    headers: {
+      'cache-control': 'no-store, no-cache, private',
+      pragma: 'no-cache',
+      // WHY: contact payloads must never be shared or bf-cached.
+      vary: 'Authorization',
+    },
+  });
 }
 
 export function playerContactErrorStatus(error) {
@@ -21,12 +29,32 @@ export function playerContactErrorStatus(error) {
   return 502;
 }
 
-function normalizeContact(contact) {
-  if (!contact) return { phone: null, hasPhone: false };
-  return {
-    phone: contact.phone ?? null,
-    hasPhone: Boolean(contact.has_phone ?? contact.hasPhone),
-  };
+/** Mask to last 4 digits only — never echo full phone unless explicitly revealed. */
+export function maskPhone(phone) {
+  if (!phone || typeof phone !== 'string') return null;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  const last = digits.slice(-4);
+  return `••••${last}`;
+}
+
+/**
+ * @param {object|null} contact
+ * @param {{ reveal?: boolean }} [options]
+ */
+export function normalizeContact(contact, options = {}) {
+  if (!contact) {
+    return { phone: null, phoneMasked: null, hasPhone: false };
+  }
+  const raw = contact.phone ?? null;
+  const hasPhone = Boolean(contact.has_phone ?? contact.hasPhone ?? raw);
+  const phoneMasked = hasPhone ? maskPhone(raw) || '••••' : null;
+  if (options.reveal) {
+    return { phone: raw, phoneMasked, hasPhone };
+  }
+  // WHY: default responses omit the full number so shoulder-surfing and casual
+  // network inspection do not expose contact details on profile load.
+  return { phone: null, phoneMasked, hasPhone };
 }
 
 export async function routePlayerContact(
@@ -40,6 +68,8 @@ export async function routePlayerContact(
   if (!own && !adminMatch) return null;
   if (own && !['GET', 'PUT'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
   if (adminMatch && request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+
+  const reveal = url.searchParams.get('reveal') === '1' || url.searchParams.get('reveal') === 'true';
 
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
@@ -55,14 +85,14 @@ export async function routePlayerContact(
         contact: {
           playerId: contact.player_id ?? contact.playerId,
           displayName: contact.display_name ?? contact.displayName,
-          ...normalizeContact(contact),
+          ...normalizeContact(contact, { reveal }),
         },
       });
     }
 
     if (request.method === 'GET') {
       const contact = await getOwnPlayerContactCommand({ actorUserId: actor.id }, repository);
-      return json({ contact: normalizeContact(contact) });
+      return json({ contact: normalizeContact(contact, { reveal }) });
     }
 
     const body = await request.json().catch(() => ({}));
@@ -70,7 +100,8 @@ export async function routePlayerContact(
       actorUserId: actor.id,
       phone: body.phone ?? null,
     }, repository);
-    return json({ contact: normalizeContact(contact) });
+    // After save, still default to masked in the response body.
+    return json({ contact: normalizeContact(contact, { reveal: false }) });
   } catch (error) {
     return json({ error: error.message }, playerContactErrorStatus(error));
   }
