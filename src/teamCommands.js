@@ -272,17 +272,87 @@ function normalizePracticeField(value, fieldName) {
   return cleaned;
 }
 
+function normalizePracticeRecurrence(value) {
+  if (value == null || value === '') return null;
+  const cleaned = String(value).trim().toLowerCase();
+  if (!cleaned) return null;
+  if (cleaned !== 'weekly' && cleaned !== 'once') {
+    throw new Error('practiceRecurrence must be weekly or once');
+  }
+  return cleaned;
+}
+
+function normalizePracticeOn(value, recurrence) {
+  if (recurrence !== 'once') return null;
+  if (value == null || value === '') {
+    throw new Error('practiceOn is required for a one-off practice');
+  }
+  const cleaned = String(value).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+    throw new Error('practiceOn must be a date (YYYY-MM-DD)');
+  }
+  return cleaned;
+}
+
+export function formatTeamPracticeAnnouncement(practice) {
+  const location = practice?.practiceLocation || practice?.practice_location;
+  const schedule = practice?.practiceSchedule || practice?.practice_schedule;
+  const recurrence = practice?.practiceRecurrence || practice?.practice_recurrence;
+  const on = practice?.practiceOn || practice?.practice_on;
+  const teamName = practice?.teamName || practice?.team_name || 'the team';
+
+  if (!location && !schedule && !recurrence) {
+    return `Practice for ${teamName} was cleared by the captain.`;
+  }
+
+  const bits = [`Practice update for ${teamName}:`];
+  if (recurrence === 'weekly') bits.push('Weekly practice');
+  else if (recurrence === 'once') bits.push(on ? `One-off practice on ${on}` : 'One-off practice');
+  if (location) bits.push(`Location: ${location}`);
+  if (schedule) bits.push(`Time: ${schedule}`);
+  return bits.join(' · ');
+}
+
 export async function updateTeamPracticeCommand(
-  { actorUserId, teamId, practiceLocation, practiceSchedule },
+  { actorUserId, teamId, practiceLocation, practiceSchedule, practiceRecurrence, practiceOn },
   repository,
+  { chatRepository } = {},
 ) {
   if (!actorUserId) throw new Error('actorUserId is required');
   if (!teamId) throw new Error('teamId is required');
   assertRepositoryMethod(repository, 'updateTeamPractice');
-  return repository.updateTeamPractice({
+
+  const recurrence = normalizePracticeRecurrence(practiceRecurrence);
+  const location = normalizePracticeField(practiceLocation, 'practiceLocation');
+  const schedule = normalizePracticeField(practiceSchedule, 'practiceSchedule');
+  const on = normalizePracticeOn(practiceOn, recurrence);
+
+  // If any detail is set, require recurrence so teammates know weekly vs once.
+  if ((location || schedule || on) && !recurrence) {
+    throw new Error('Choose weekly or one-off practice');
+  }
+
+  const practice = await repository.updateTeamPractice({
     actorUserId,
     teamId,
-    practiceLocation: normalizePracticeField(practiceLocation, 'practiceLocation'),
-    practiceSchedule: normalizePracticeField(practiceSchedule, 'practiceSchedule'),
+    practiceLocation: location,
+    practiceSchedule: schedule,
+    practiceRecurrence: recurrence,
+    practiceOn: on,
   });
+
+  if (chatRepository && typeof chatRepository.sendTeamMessage === 'function') {
+    try {
+      await chatRepository.sendTeamMessage({
+        actorUserId,
+        teamId,
+        body: formatTeamPracticeAnnouncement(practice),
+        clientMessageId: null,
+      });
+    } catch {
+      // Practice save should succeed even if chat notify fails.
+    }
+  }
+
+  return practice;
 }
