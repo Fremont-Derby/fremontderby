@@ -1,29 +1,61 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { assertCloudflareBuildContext } from '../scripts/guard-cloudflare-build.mjs';
+import {
+  assertCloudflareBuildContext,
+  branchAllowedForLane,
+  resolveBuildLane,
+} from '../scripts/guard-cloudflare-build.mjs';
 
-test('Cloudflare Workers Builds allow the production main branch', () => {
+test('production Workers Builds allow main only', () => {
   assert.doesNotThrow(() => assertCloudflareBuildContext({
     WORKERS_CI: '1',
     WORKERS_CI_BRANCH: 'main',
+    FREMONT_BUILD_LANE: 'production',
   }));
-});
-
-test('Cloudflare Workers Builds reject non-main branches before Wrangler runs', () => {
   assert.throws(
     () => assertCloudflareBuildContext({
       WORKERS_CI: '1',
-      WORKERS_CI_BRANCH: 'feature/example',
+      WORKERS_CI_BRANCH: 'jfl/issue-1-test',
+      FREMONT_BUILD_LANE: 'production',
     }),
-    /Refusing Cloudflare build from non-main branch/,
+    /Refusing Cloudflare production build/,
   );
+});
+
+test('jfl Workers Builds allow jfl namespace and reject production branch names', () => {
+  assert.doesNotThrow(() => assertCloudflareBuildContext({
+    WORKERS_CI: '1',
+    WORKERS_CI_BRANCH: 'jfl/issue-586-season-setup',
+    FREMONT_BUILD_LANE: 'jfl',
+  }));
+  assert.doesNotThrow(() => assertCloudflareBuildContext({
+    WORKERS_CI: '1',
+    WORKERS_CI_BRANCH: 'fremontderby-jfl',
+    FREMONT_BUILD_LANE: 'jfl',
+  }));
+  assert.throws(
+    () => assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'main',
+      FREMONT_BUILD_LANE: 'jfl',
+    }),
+    /Refusing Cloudflare jfl build/,
+  );
+});
+
+test('dru and gamma allowlists are namespaced', () => {
+  assert.equal(branchAllowedForLane('dru/issue-1-x', 'dru'), true);
+  assert.equal(branchAllowedForLane('gamma/issue-1-x', 'gamma'), true);
+  assert.equal(branchAllowedForLane('jfl/issue-1-x', 'dru'), false);
+  assert.equal(resolveBuildLane({ FREMONT_BUILD_LANE: 'DRU' }), 'dru');
 });
 
 test('Cloudflare Workers Builds fail closed when branch metadata is absent', () => {
   assert.throws(
     () => assertCloudflareBuildContext({
       WORKERS_CI: '1',
+      FREMONT_BUILD_LANE: 'production',
     }),
     /did not provide WORKERS_CI_BRANCH/,
   );
