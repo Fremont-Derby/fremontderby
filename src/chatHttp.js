@@ -49,7 +49,7 @@ async function readJsonBody(request) {
   }
 }
 
-function statusForError(error) {
+export function chatStatusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/Team not found/i.test(error.message)) return 404;
   if (/Player not found|Direct conversation not found|Chat message not found|Chat report not found|Team matchup not found/i.test(error.message)) return 404;
@@ -153,7 +153,7 @@ export async function handleMessageNotificationSummaryRequest(
       previews: messagePreviews({ teams, direct, league, matchups }),
     });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -167,7 +167,7 @@ export async function handleListChatThreadsRequest(
     const threads = await listChatThreadsCommand({ actorUserId: actor.id }, repository);
     return jsonResponse({ threads: Array.isArray(threads) ? threads : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -188,7 +188,7 @@ export async function handleListTeamMessagesRequest(
     }, repository);
     return jsonResponse({ messages: Array.isArray(messages) ? messages : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -209,7 +209,7 @@ export async function handleSendTeamMessageRequest(
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -229,7 +229,7 @@ export async function handleMarkTeamChatReadRequest(
     }, repository);
     return jsonResponse({ readState });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -254,7 +254,7 @@ export async function handleListDirectMessageCandidatesRequest(
     );
     return jsonResponse({ candidates: Array.isArray(candidates) ? candidates : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -271,7 +271,7 @@ export async function handleListDirectMessageInboxRequest(
     );
     return jsonResponse({ conversations: Array.isArray(conversations) ? conversations : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -290,7 +290,7 @@ export async function handleStartDirectConversationRequest(
     }, repository);
     return jsonResponse({ conversation }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -312,7 +312,7 @@ export async function handleListDirectMessagesRequest(
     }, repository);
     return jsonResponse({ messages: Array.isArray(messages) ? messages : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -333,7 +333,7 @@ export async function handleSendDirectMessageRequest(
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -353,7 +353,7 @@ export async function handleMarkDirectChatReadRequest(
     }, repository);
     return jsonResponse({ readState });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -371,7 +371,7 @@ export async function handleBlockPlayerChatRequest(
     }, repository);
     return jsonResponse({ block }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -389,7 +389,7 @@ export async function handleUnblockPlayerChatRequest(
     }, repository);
     return jsonResponse({ unblocked: Boolean(unblocked) });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -406,7 +406,7 @@ export async function handleListBlockedChatPlayersRequest(
     );
     return jsonResponse({ players: Array.isArray(players) ? players : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -430,7 +430,7 @@ export async function handleListLeagueChatThreadsRequest(
     const threads = await listLeagueChatThreadsCommand({ actorUserId: actor.id }, repository);
     return jsonResponse({ threads: Array.isArray(threads) ? threads : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -449,7 +449,7 @@ export async function handleListLeagueMessagesRequest(
     }, repository);
     return jsonResponse({ messages: Array.isArray(messages) ? messages : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -465,7 +465,7 @@ export async function handleSendLeagueMessageRequest(
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -480,7 +480,7 @@ export async function handleMarkLeagueChatReadRequest(
     }, repository);
     return jsonResponse({ readState });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -499,7 +499,7 @@ export async function handleReportChatMessageRequest(
     }, repository);
     return jsonResponse({ report }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -514,7 +514,7 @@ export async function handleListChatReportsRequest(
     }, repository);
     return jsonResponse({ reports: Array.isArray(reports) ? reports : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -533,7 +533,7 @@ export async function handleModerateChatReportRequest(
     }, repository);
     return jsonResponse({ result });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -555,7 +555,7 @@ export async function handleListMatchupChatThreadsRequest(
     const threads = await listMatchupChatThreadsCommand({ actorUserId: actor.id }, repository);
     return jsonResponse({ threads: Array.isArray(threads) ? threads : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -574,7 +574,7 @@ export async function handleListMatchupMessagesRequest(
     }, repository);
     return jsonResponse({ messages: Array.isArray(messages) ? messages : [] });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -590,7 +590,7 @@ export async function handleSendMatchupMessageRequest(
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 
@@ -605,7 +605,7 @@ export async function handleMarkMatchupChatReadRequest(
     }, repository);
     return jsonResponse({ readState });
   } catch (error) {
-    return jsonResponse({ error: error.message }, statusForError(error));
+    return jsonResponse({ error: error.message }, chatStatusForError(error));
   }
 }
 

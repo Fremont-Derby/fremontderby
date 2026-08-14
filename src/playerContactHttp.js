@@ -10,7 +10,7 @@ function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-function errorStatus(error) {
+export function playerContactErrorStatus(error) {
   if (error instanceof AuthError) return error.status;
   if (/Actor is not a league admin/i.test(error.message)) return 403;
   if (/Player profile is required|Player not found/i.test(error.message)) return 404;
@@ -72,6 +72,6 @@ export async function routePlayerContact(
     }, repository);
     return json({ contact: normalizeContact(contact) });
   } catch (error) {
-    return json({ error: error.message }, errorStatus(error));
+    return json({ error: error.message }, playerContactErrorStatus(error));
   }
 }

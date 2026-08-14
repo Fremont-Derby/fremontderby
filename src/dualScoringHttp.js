@@ -15,7 +15,7 @@ function jsonResponse(body, status = 200, headers = {}) {
   return Response.json(body, { status, headers });
 }
 
-function statusForError(error) {
+export function dualScoringStatusForError(error) {
   const message = error?.message || 'Request failed';
   if (message.includes('Actor is not a league admin')) return 403;
   if (message.includes('not an active member of the scoring team')) return 403;
@@ -116,7 +116,7 @@ export function createDualScoringHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return jsonResponse({ error: error.message }, statusForError(error));
+      return jsonResponse({ error: error.message }, dualScoringStatusForError(error));
     }
   }
 
