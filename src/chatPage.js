@@ -246,7 +246,11 @@ export function renderChatPage(env = {}) {
 
     function token() { return sessionStorage.getItem('fd.accessToken') || ''; }
     function refreshToken() { return sessionStorage.getItem('fd.refreshToken') || ''; }
-    function setStatus(message, tone) {
+    function setStatus(message, tone, opts = {}) {
+      if (window.fdSetStatus) {
+        window.fdSetStatus(statusEl, message, tone || 'muted', opts);
+        return;
+      }
       statusEl.textContent = message;
       statusEl.dataset.tone = tone || 'muted';
     }

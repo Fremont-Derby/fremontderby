@@ -27,7 +27,7 @@ export function renderSchedulePage() {
       </div>
       <div class="matches" data-match-list></div>
     </section>
-    <div class="empty" data-empty hidden>No schedule has been published for this season yet. <a href="/standings">View standings</a></div>
+    <div class="empty" data-empty hidden>No schedule has been published for this season yet. <a href="/standings">View standings</a> · <a href="/teams">Teams</a> · <a href="/players">Players</a></div>
   </main>
   <script>
     const seasonSelect=document.querySelector('[data-season-select]');const roundSelect=document.querySelector('[data-round-select]');const statusEl=document.querySelector('[data-status]');const panel=document.querySelector('[data-round-panel]');const roundKicker=document.querySelector('[data-round-kicker]');const roundTitle=document.querySelector('[data-round-title]');const roundDate=document.querySelector('[data-round-date]');const roundStatus=document.querySelector('[data-round-status]');const matchList=document.querySelector('[data-match-list]');const emptyEl=document.querySelector('[data-empty]');const query=new URLSearchParams(location.search);const requestedSeason=query.get('season')||localStorage.getItem('fd.scheduleSeasonId')||'';const requestedRound=query.get('round')||localStorage.getItem('fd.scheduleRoundId')||'';let seasons=[];let rounds=[];
