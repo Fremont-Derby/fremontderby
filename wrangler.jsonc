@@ -26,6 +26,7 @@
   "env": {
     "staging": {
       "workers_dev": false,
+      "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "staging",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
@@ -36,6 +37,7 @@
     "jfl": {
       "name": "fremontderby-jfl",
       "workers_dev": false,
+      "preview_urls": false,
       "routes": [
         {
           "pattern": "jfl.fremontderby.com",
@@ -48,7 +50,8 @@
       "vars": {
         "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "jfl-actor@localhost"
+        "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
+        "SUPABASE_SCHEMA": "jfl"
       },
       "secrets": {
         "required": [
@@ -63,6 +66,7 @@
     "dru": {
       "name": "fremontderby-dru",
       "workers_dev": false,
+      "preview_urls": false,
       "routes": [
         {
           "pattern": "dru.fremontderby.com",
@@ -75,7 +79,8 @@
       "vars": {
         "ENVIRONMENT": "dru",
         "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "dru-actor@localhost"
+        "BETA_ACTOR_EMAIL": "dru-actor@fremontderby.com",
+        "SUPABASE_SCHEMA": "dru"
       },
       "secrets": {
         "required": [
@@ -90,6 +95,7 @@
     "gamma": {
       "name": "fremontderby-gamma",
       "workers_dev": false,
+      "preview_urls": false,
       "routes": [
         {
           "pattern": "gamma.fremontderby.com",
@@ -101,7 +107,8 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
-        "BETA_AUTH_BYPASS": "0"
+        "BETA_AUTH_BYPASS": "0",
+        "SUPABASE_SCHEMA": "gamma"
       },
       "secrets": {
         "required": [

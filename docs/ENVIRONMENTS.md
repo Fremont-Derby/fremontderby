@@ -7,9 +7,9 @@ Fremont Derby uses explicit release lanes so independent testing can happen with
 | Lane | Git branch | Public host | Data | Purpose |
 |---|---|---|---|---|
 | Local | feature/local | local only | local/test only | development |
-| JFL | `fremontderby-jfl` | `https://jfl.fremontderby.com` | isolated JFL sandbox Supabase project | independent JFL testing |
-| DRU | `fremontderby-dru` | `https://dru.fremontderby.com` | isolated DRU sandbox Supabase project | independent DRU testing |
-| Gamma | `fremontderby-gamma` | `https://gamma.fremontderby.com` | isolated gamma Supabase project | integrated release-candidate testing |
+| JFL | `fremontderby-jfl` | `https://jfl.fremontderby.com` | shared staging Supabase project, isolated `jfl` schema | independent JFL testing |
+| DRU | `fremontderby-dru` | `https://dru.fremontderby.com` | shared staging Supabase project, isolated `dru` schema | independent DRU testing |
+| Gamma | `fremontderby-gamma` | `https://gamma.fremontderby.com` | shared staging Supabase project, isolated `gamma` schema | integrated release-candidate testing |
 | Production | `main` | `https://fremontderby.com` | production Supabase project | live league |
 
 The normal promotion path is:
@@ -24,7 +24,7 @@ The existing `staging` environment may remain during migration, but gamma become
 
 Secret **names** are also declared in `wrangler.jsonc` through `secrets.required`. Secret **values** remain outside Git in Cloudflare's secret store (or local `.dev.vars`/`.env` files). A deployment must fail rather than publish a lane whose declared required secrets have not been provisioned.
 
-The three non-production Supabase projects are provisioned separately. Until their project refs and credentials exist, the JFL/DRU/gamma Workers are intentionally not deployable; do not substitute production or legacy staging credentials to make a deploy pass.
+JFL, DRU, and gamma share the non-production Supabase project `${stagingRef}` to stay within the free plan. They are partitioned into independent `jfl`, `dru`, and `gamma` schemas. Every Worker REST/RPC request carries the matching PostgREST profile, and readiness fails closed on a project or schema mismatch.
 
 ## Local
 - Runs with `wrangler dev`.
@@ -36,7 +36,7 @@ The three non-production Supabase projects are provisioned separately. Until the
 - Cloudflare Worker environment: `jfl` (`fremontderby-jfl`).
 - Public hostname: `https://jfl.fremontderby.com`.
 - Deploys only from `fremontderby-jfl` after CI.
-- Uses its own Supabase project and sandbox data.
+- Uses the shared staging project with its own schema and sandbox data.
 - May support test actors/auth bypass only when explicitly hard-gated to this environment.
 - Can be seeded/reset without affecting DRU, gamma, staging, or production.
 
@@ -45,7 +45,7 @@ The three non-production Supabase projects are provisioned separately. Until the
 - Cloudflare Worker environment: `dru` (`fremontderby-dru`).
 - Public hostname: `https://dru.fremontderby.com`.
 - Deploys only from `fremontderby-dru` after CI.
-- Uses its own Supabase project and sandbox data.
+- Uses the shared staging project with its own schema and sandbox data.
 - May support test actors/auth bypass only when explicitly hard-gated to this environment.
 - Can be seeded/reset without affecting JFL, gamma, staging, or production.
 
@@ -54,7 +54,7 @@ The three non-production Supabase projects are provisioned separately. Until the
 - Cloudflare Worker environment: `gamma` (`fremontderby-gamma`).
 - Public hostname: `https://gamma.fremontderby.com`.
 - Deploys only from `fremontderby-gamma` after CI.
-- Uses its own Supabase project.
+- Uses the shared staging project with the isolated `gamma` schema.
 - Gamma is the integration/release-candidate environment; auth and runtime behavior should be production-like.
 - Auth bypass is forbidden in gamma.
 - Gamma never points directly at the production database and never receives production service-role/write credentials.
@@ -92,6 +92,7 @@ Rules:
 | `SUPABASE_PUBLISHABLE_KEY` | yes | client-safe Supabase key |
 | `SUPABASE_SERVICE_ROLE_KEY` | **no** | trusted Worker operations for that environment only |
 | `EXPECTED_SUPABASE_PROJECT_REF` | yes | fail-closed environment/project identity check |
+| `SUPABASE_SCHEMA` | yes | exact PostgREST profile (`jfl`, `dru`, or `gamma`) for shared-staging isolation |
 | `BETA_AUTH_BYPASS` | yes | legacy-named switch for JFL/DRU test auth only; forbidden in gamma/production |
 | `BETA_ACTOR_USER_ID` | **no** | isolated JFL/DRU test actor identity |
 | `BETA_ACTOR_EMAIL` | yes | isolated JFL/DRU test actor display email |
@@ -125,8 +126,8 @@ Real credentials are configured outside Git. `SUPABASE_SERVICE_ROLE_KEY` and `BE
 Emergency bypass, if GitHub account capabilities require one to exist, must be explicit, exceptional, auditable, and immediately reconciled back through the normal branch chain.
 
 ## Safety invariants
-- JFL, DRU, gamma, and production must use distinct Supabase projects.
-- A JFL/DRU/gamma Worker must fail closed if configured with the production project ref.
+- Production uses its dedicated Supabase project. JFL, DRU, and gamma use distinct schemas in the shared staging project.
+- A JFL/DRU/gamma Worker must fail closed if configured with the production project ref or the wrong staging schema.
 - A JFL/DRU/gamma Worker must never contain production service-role/write credentials.
 - Test-auth bypass is permitted only in explicitly isolated JFL/DRU lanes and must fail closed in gamma/production.
 - Gamma refresh can read/export production through a dedicated operator workflow but the gamma runtime cannot write to production.
@@ -144,10 +145,10 @@ The endpoint must not return credential values. It should return HTTP 200 only w
 
 ## Implementation/cutover plan
 1. Add Wrangler environments and repository-owned custom domains for JFL, DRU, and gamma while preserving current production behavior.
-2. Provision isolated Supabase projects for JFL, DRU, and gamma; apply current migrations.
+2. Provision isolated `jfl`, `dru`, and `gamma` schemas in the shared staging project; apply current migrations to each schema.
 3. Provision the secret values declared by `wrangler.jsonc` for all three non-production lanes; do not duplicate code-owned routes/domains/vars in dashboard click-ops.
 4. Use branch-triggered deploy workflows and environment identity guards.
-5. Add deterministic seed/reset for JFL and DRU sandboxes.
+5. Add deterministic schema-scoped seed/reset for JFL and DRU sandboxes.
 6. Add manual production-to-gamma refresh with fail-closed target validation and privacy handling.
 7. Add gamma smoke/E2E promotion gates.
 8. Configure GitHub branch/ruleset protection for `fremontderby-gamma` and `main`.
@@ -159,33 +160,3 @@ The endpoint must not return credential values. It should return HTTP 200 only w
 - #245 — green pre-merge validation and traceable production releases.
 - #35 — hosted Supabase/environment isolation proof.
 - #545 and #572 — historical single-beta approach, superseded by this topology.
-
-## Live verification contract
-
-`wrangler.jsonc` declares the desired topology. **Live proof** is required before closing platform or open-auth cards:
-
-1. Public DNS resolves for the lane hostname.
-2. `GET /health/environment` returns the **lane** name (`jfl`, `dru`, or `gamma`), not `production`, unless the host is production.
-3. Open-auth is allowed **only** on JFL/DRU when explicitly configured; production and gamma must return **401** on admin APIs without a bearer.
-4. A merged migration on `main` is not applied until the **target lane database** has run it and live probes pass.
-
-Ad-hoc Cloudflare domain attach without `wrangler deploy --env <lane>` is insufficient for durable DNS. Prefer branch deploys (`fremontderby-jfl` / `fremontderby-dru` / `fremontderby-gamma`) so routes and env vars publish together.
-
-See also `docs/platform-capabilities.md`.
-
-
-## Provisioning lane secrets
-
-Lane deploys fail closed until required secrets exist on the Worker:
-
-```bash
-npx wrangler secret put SUPABASE_URL --env dru
-npx wrangler secret put SUPABASE_PUBLISHABLE_KEY --env dru
-npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env dru
-npx wrangler secret put EXPECTED_SUPABASE_PROJECT_REF --env dru
-npx wrangler secret put BETA_ACTOR_USER_ID --env dru
-```
-
-Use `--env jfl` / `--env gamma` with the matching isolated project values. Gamma must not set open-auth actor bypass secrets for production-like behavior.
-
-After secrets are set, deploy with `npm run deploy:dru` (from `fremontderby-dru`) or the **Deploy release lanes** GitHub Action.
