@@ -76,9 +76,33 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
   }
 
 
+  // WHY: session body cache makes repeat visits feel instant while ETags keep backend cheap.
   function etagKey(url) {
     return 'fd.etag:' + String(url);
   }
+  function bodyKey(url) {
+    return 'fd.body:' + String(url);
+  }
+
+  function readCache(url) {
+    try {
+      const raw = sessionStorage.getItem(bodyKey(url));
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCache(url, body) {
+    try {
+      sessionStorage.setItem(bodyKey(url), JSON.stringify(body));
+    } catch {}
+  }
+
+  window.fdReadCachedJson = function fdReadCachedJson(url) {
+    return readCache(url);
+  };
 
   window.fdConditionalFetch = async function fdConditionalFetch(url, options = {}) {
     const headers = new Headers(options.headers || {});
@@ -93,14 +117,18 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
       try { sessionStorage.setItem(key, etag); } catch {}
     }
     if (response.status === 304) {
-      return { response, notModified: true, body: null };
+      const cached = readCache(url);
+      return { response, notModified: true, body: cached, fromCache: Boolean(cached) };
     }
     let body = null;
     const text = await response.text();
     if (text) {
       try { body = JSON.parse(text); } catch { body = text; }
     }
-    return { response, notModified: false, body };
+    if (response.ok && body && typeof body === 'object') {
+      writeCache(url, body);
+    }
+    return { response, notModified: false, body, fromCache: false };
   };
 
   window.fdLiveRefresh = {

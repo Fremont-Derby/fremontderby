@@ -1719,9 +1719,7 @@ test("public season list route allows only GET", async () => {
 
 test("team standings handler returns public season standings", async () => {
   const { fetch, calls } = createFetch([
-    { body: [{ id: "season-1", name: "Season 1", status: "active" }] },
-    { body: [{ id: "match-1", status: "finalized" }] },
-    { body: [{ id: "round-1", status: "finalized" }] },
+    { body: [{ id: "season-1" }] },
     {
       body: [{
         season_id: "season-1",
@@ -1735,6 +1733,8 @@ test("team standings handler returns public season standings", async () => {
         match_points: 3,
       }],
     },
+    { body: [{ id: "match-1", status: "finalized" }] },
+    { body: [{ id: "round-1", status: "finalized" }] },
   ]);
 
   const response = await handleListTeamStandingsRequest(
@@ -1747,11 +1747,11 @@ test("team standings handler returns public season standings", async () => {
   assert.equal(response.status, 200);
   assert.ok(response.headers.get("etag")?.startsWith("W/"));
   assert.equal((await response.json()).standings[0].team_name, "Breakers");
-  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_public_season_registration");
-  assert.match(calls[1].url, /team_matches/);
-  assert.match(calls[2].url, /rounds/);
-  assert.equal(calls[3].url, "https://project.supabase.co/rest/v1/rpc/list_team_standings");
-  assert.deepEqual(JSON.parse(calls[3].init.body), {
+  assert.match(calls[0].url, /seasons\?/);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_team_standings");
+  assert.match(calls[2].url, /team_matches/);
+  assert.match(calls[3].url, /rounds/);
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
     target_season_id: "season-1",
   });
 });
@@ -1771,9 +1771,7 @@ test("team standings route allows only GET", async () => {
 
 test("individual standings handler returns public season standings", async () => {
   const { fetch, calls } = createFetch([
-    { body: [{ id: "season-1", name: "Season 1", status: "active" }] },
-    { body: [{ id: "match-1", status: "finalized" }] },
-    { body: [{ id: "round-1", status: "finalized" }] },
+    { body: [{ id: "season-1" }] },
     {
       body: [{
         season_id: "season-1",
@@ -1789,6 +1787,8 @@ test("individual standings handler returns public season standings", async () =>
         win_percentage: "0.8000",
       }],
     },
+    { body: [{ id: "match-1", status: "finalized" }] },
+    { body: [{ id: "round-1", status: "finalized" }] },
   ]);
 
   const response = await handleListIndividualStandingsRequest(
@@ -1801,11 +1801,11 @@ test("individual standings handler returns public season standings", async () =>
   assert.equal(response.status, 200);
   assert.ok(response.headers.get("etag")?.startsWith("W/"));
   assert.equal((await response.json()).standings[0].display_name, "Kai");
-  assert.equal(calls[0].url, "https://project.supabase.co/rest/v1/rpc/list_public_season_registration");
-  assert.match(calls[1].url, /team_matches/);
-  assert.match(calls[2].url, /rounds/);
-  assert.equal(calls[3].url, "https://project.supabase.co/rest/v1/rpc/list_individual_standings");
-  assert.deepEqual(JSON.parse(calls[3].init.body), {
+  assert.match(calls[0].url, /seasons\?/);
+  assert.equal(calls[1].url, "https://project.supabase.co/rest/v1/rpc/list_individual_standings");
+  assert.match(calls[2].url, /team_matches/);
+  assert.match(calls[3].url, /rounds/);
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
     target_season_id: "season-1",
   });
 });

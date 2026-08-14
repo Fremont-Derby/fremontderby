@@ -473,6 +473,22 @@ const shellScript = `<script data-fd-message-indicator-script>
     window.addEventListener('focus', refresh);
     window.addEventListener('fd:messages-read', refresh);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    // WHY: warm public season payloads during idle so next navigation feels instant.
+    const prefetchPublic = () => {
+      if (!window.fdConditionalFetch) return;
+      const seasonId = localStorage.getItem('fd.scheduleSeasonId') || localStorage.getItem('fd.standingsSeasonId');
+      if (!seasonId) return;
+      const paths = [
+        '/api/seasons/' + encodeURIComponent(seasonId) + '/schedule',
+        '/api/seasons/' + encodeURIComponent(seasonId) + '/team-standings',
+      ];
+      paths.forEach((path) => {
+        window.fdConditionalFetch(path).catch(() => {});
+      });
+    };
+    if ('requestIdleCallback' in window) requestIdleCallback(() => prefetchPublic(), { timeout: 4000 });
+    else setTimeout(prefetchPublic, 2500);
+
     notifications.addEventListener('mouseenter', () => setOpen(true));
     notifications.addEventListener('mouseleave', () => {
       if (!notifications.contains(document.activeElement)) setOpen(false);

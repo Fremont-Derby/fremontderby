@@ -15,6 +15,7 @@ import { renderScorePickerPage } from '../src/scorePickerPage.js';
 test('recommendation: client conditional fetch is available to pages', () => {
   assert.match(livePageRefreshScript, /fdConditionalFetch/);
   assert.match(livePageRefreshScript, /if-none-match/);
+  assert.match(livePageRefreshScript, /fdReadCachedJson/);
   assert.match(renderSchedulePage(), /fdConditionalFetch/);
   assert.match(renderStandingsPage(), /fdConditionalFetch/);
   assert.match(renderTeamsPage(), /fdConditionalFetch/);
@@ -41,7 +42,7 @@ test('recommendation: weak version can 304 without body build', async () => {
     new Request('https://example.test/x', { headers: { 'if-none-match': etag } }),
     {
       scope: 'schedule:s',
-      version,
+      getVersion: async () => version,
       buildBody: async () => {
         built += 1;
         return { rounds: [] };

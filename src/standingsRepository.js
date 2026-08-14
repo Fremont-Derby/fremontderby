@@ -137,6 +137,20 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
       }));
     },
 
+    async seasonExists({ seasonId }) {
+      // WHY: cheaper than listPublicSeasons (full registration RPC) just to 404-check.
+      const params = new URLSearchParams({
+        select: 'id',
+        id: `eq.${seasonId}`,
+        limit: '1',
+      });
+      const rows = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/seasons?${params}`, {
+        method: 'GET',
+        headers,
+      });
+      return Array.isArray(rows) && rows.length > 0;
+    },
+
     async getSeasonScheduleVersion({ seasonId }) {
       const roundParams = new URLSearchParams({
         select: 'id,round_number,scheduled_on,status,stage',
@@ -144,7 +158,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         order: 'round_number.asc',
       });
       const matchParams = new URLSearchParams({
-        select: 'id,round_id,status,table_number,team_a_id,team_b_id',
+        select: 'id,round_id,status,table_number',
         season_id: `eq.${seasonId}`,
         order: 'id.asc',
       });
