@@ -6,7 +6,7 @@
  */
 import { fileURLToPath } from 'node:url';
 
-const BINDINGS = Object.freeze([
+export const WORKER_DOMAIN_BINDINGS = Object.freeze([
   { hostname: 'fremontderby.com', service: 'fremontderby-prod' },
   { hostname: 'dru.fremontderby.com', service: 'fremontderby-dru' },
   { hostname: 'jfl.fremontderby.com', service: 'fremontderby-jfl' },
@@ -73,7 +73,7 @@ async function main() {
   const byHost = new Map(existing.map((row) => [row.hostname, row]));
   const results = [];
 
-  for (const lane of BINDINGS) {
+  for (const lane of WORKER_DOMAIN_BINDINGS) {
     const current = byHost.get(lane.hostname);
     if (current && current.service === lane.service) {
       console.log(`OK already correct: ${lane.hostname} -> ${lane.service}`);

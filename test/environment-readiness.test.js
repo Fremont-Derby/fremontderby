@@ -125,3 +125,39 @@ test('readiness reports missing production bindings without exposing secret valu
   assert.equal(readiness.supabase.hasServiceRoleKey, true);
   assert.doesNotMatch(serialized, /server-only-secret/);
 });
+
+test('missing ENVIRONMENT defaults readiness identity to production', () => {
+  const readiness = environmentReadiness({
+    SUPABASE_URL: 'https://cpiucsxlkicmlbvdvhww.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+  });
+  assert.equal(readiness.environment, 'production');
+});
+
+test('blank ENVIRONMENT string still defaults to production', () => {
+  const readiness = environmentReadiness({
+    ENVIRONMENT: '   ',
+    SUPABASE_URL: 'https://cpiucsxlkicmlbvdvhww.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+  });
+  assert.equal(readiness.environment, 'production');
+});
+
+test('dru readiness requires bypass flag and actor when configured as test lane', () => {
+  const base = isolatedEnv('dru', 'druprojectref12345678901');
+  delete base.BETA_AUTH_BYPASS;
+  delete base.BETA_ACTOR_USER_ID;
+  const without = environmentReadiness(base);
+  assert.equal(without.ok, false);
+  assert.equal(without.checks.find((c) => c.name === 'testAuthBypassFlag')?.ok, false);
+
+  const withBypass = environmentReadiness({
+    ...base,
+    BETA_AUTH_BYPASS: '1',
+    BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000099',
+  });
+  assert.equal(withBypass.checks.find((c) => c.name === 'testAuthBypassFlag')?.ok, true);
+  assert.equal(withBypass.checks.find((c) => c.name === 'testActorUserIdConfigured')?.ok, true);
+});
