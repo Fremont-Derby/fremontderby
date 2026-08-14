@@ -70,3 +70,26 @@ test('listPublicSeasons uses RPC payload when available', async () => {
   const seasons = await repository.listPublicSeasons();
   assert.equal(seasons[0].teamCount, 8);
 });
+
+test('listPublicSeasons falls back when RPC returns opaque 401', async () => {
+  const repository = createStandingsRepository(
+    {
+      ENVIRONMENT: 'production',
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+    },
+    {
+      fetch: async (url) => {
+        if (String(url).includes('list_public_season_registration')) {
+          return new Response(JSON.stringify({ message: 'Invalid API key' }), { status: 401 });
+        }
+        if (String(url).includes('/rest/v1/seasons')) {
+          return new Response(JSON.stringify([{ id: 's3', name: 'Fallback', status: 'registration' }]), { status: 200 });
+        }
+        return new Response('{}', { status: 500 });
+      },
+    },
+  );
+  const seasons = await repository.listPublicSeasons();
+  assert.equal(seasons[0].id, 's3');
+});
