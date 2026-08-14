@@ -6,14 +6,14 @@ declare
   template constant text := $lane_template$
 create schema __LANE__;
 revoke all on schema __LANE__ from public;
-grant usage on schema __LANE__ to anon, authenticated, service_role;
+grant usage on schema __LANE__ to __ANON__, __AUTHENTICATED__, service_role;
 
 -- Replayed from supabase/migrations/20260809235600_identity_and_rosters.sql
 create extension if not exists pgcrypto;
 
 create schema if not exists __LANE___private;
 revoke all on schema __LANE___private from public;
-grant usage on schema __LANE___private to authenticated;
+grant usage on schema __LANE___private to __AUTHENTICATED__;
 
 create table __LANE__.players (
   id uuid primary key default gen_random_uuid(),
@@ -106,8 +106,8 @@ $$;
 
 revoke all on function __LANE___private.current_player_id() from public;
 revoke all on function __LANE___private.is_team_captain(uuid) from public;
-grant execute on function __LANE___private.current_player_id() to authenticated;
-grant execute on function __LANE___private.is_team_captain(uuid) to authenticated;
+grant execute on function __LANE___private.current_player_id() to __AUTHENTICATED__;
+grant execute on function __LANE___private.is_team_captain(uuid) to __AUTHENTICATED__;
 
 alter table __LANE__.players enable row level security;
 alter table __LANE__.player_ratings enable row level security;
@@ -115,57 +115,57 @@ alter table __LANE__.seasons enable row level security;
 alter table __LANE__.teams enable row level security;
 alter table __LANE__.team_memberships enable row level security;
 
-grant select on __LANE__.players, __LANE__.player_ratings, __LANE__.seasons, __LANE__.teams, __LANE__.team_memberships to anon, authenticated;
-grant insert (user_id, display_name) on __LANE__.players to authenticated;
-grant update (display_name) on __LANE__.players to authenticated;
-grant insert (season_id, name, created_by) on __LANE__.teams to authenticated;
-grant insert (season_id, team_id, player_id, role) on __LANE__.team_memberships to authenticated;
+grant select on __LANE__.players, __LANE__.player_ratings, __LANE__.seasons, __LANE__.teams, __LANE__.team_memberships to __ANON__, __AUTHENTICATED__;
+grant insert (user_id, display_name) on __LANE__.players to __AUTHENTICATED__;
+grant update (display_name) on __LANE__.players to __AUTHENTICATED__;
+grant insert (season_id, name, created_by) on __LANE__.teams to __AUTHENTICATED__;
+grant insert (season_id, team_id, player_id, role) on __LANE__.team_memberships to __AUTHENTICATED__;
 grant all on __LANE__.players, __LANE__.player_ratings, __LANE__.seasons, __LANE__.teams, __LANE__.team_memberships to service_role;
 
 create policy "Players are publicly readable"
 on __LANE__.players for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Users create their own player profile"
 on __LANE__.players for insert
-to authenticated
+to __AUTHENTICATED__
 with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
 
 create policy "Users update their own player profile"
 on __LANE__.players for update
-to authenticated
+to __AUTHENTICATED__
 using ((select auth.uid()) is not null and (select auth.uid()) = user_id)
 with check ((select auth.uid()) is not null and (select auth.uid()) = user_id);
 
 create policy "Ratings are publicly readable"
 on __LANE__.player_ratings for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Seasons are publicly readable"
 on __LANE__.seasons for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Teams are publicly readable"
 on __LANE__.teams for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Authenticated users can create teams"
 on __LANE__.teams for insert
-to authenticated
+to __AUTHENTICATED__
 with check ((select auth.uid()) is not null and (select auth.uid()) = created_by);
 
 create policy "Memberships are publicly readable"
 on __LANE__.team_memberships for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Team creator can bootstrap own captain membership"
 on __LANE__.team_memberships for insert
-to authenticated
+to __AUTHENTICATED__
 with check (
   role = 'captain'
   and player_id = (select __LANE___private.current_player_id())
@@ -211,9 +211,9 @@ create table __LANE___private.payment_status (
   primary key (season_id, player_id)
 );
 
-revoke all on table __LANE___private.league_admins from public, anon, authenticated;
-revoke all on table __LANE___private.player_contacts from public, anon, authenticated;
-revoke all on table __LANE___private.payment_status from public, anon, authenticated;
+revoke all on table __LANE___private.league_admins from public, __ANON__, __AUTHENTICATED__;
+revoke all on table __LANE___private.player_contacts from public, __ANON__, __AUTHENTICATED__;
+revoke all on table __LANE___private.payment_status from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.league_admins, __LANE___private.player_contacts, __LANE___private.payment_status to service_role;
 
 create or replace function __LANE___private.is_league_admin()
@@ -245,14 +245,14 @@ $$;
 
 revoke all on function __LANE___private.is_league_admin() from public;
 revoke all on function __LANE___private.active_team_roster_count(uuid) from public;
-grant execute on function __LANE___private.is_league_admin() to authenticated;
-grant execute on function __LANE___private.active_team_roster_count(uuid) to authenticated;
+grant execute on function __LANE___private.is_league_admin() to __AUTHENTICATED__;
+grant execute on function __LANE___private.active_team_roster_count(uuid) to __AUTHENTICATED__;
 
-grant update (ends_at) on __LANE__.team_memberships to authenticated;
+grant update (ends_at) on __LANE__.team_memberships to __AUTHENTICATED__;
 
 create policy "Captains can add roster players to own team"
 on __LANE__.team_memberships for insert
-to authenticated
+to __AUTHENTICATED__
 with check (
   role = 'player'
   and (select __LANE___private.is_team_captain(team_id))
@@ -261,7 +261,7 @@ with check (
 
 create policy "Captains can end roster player memberships on own team"
 on __LANE__.team_memberships for update
-to authenticated
+to __AUTHENTICATED__
 using (
   role = 'player'
   and ends_at is null
@@ -283,7 +283,7 @@ comment on table __LANE___private.payment_status is
   'Private per-player payment status. Aggregate prize and purse data belongs in public read models.';
 
 comment on function __LANE___private.is_league_admin() is
-  'Returns whether the authenticated Supabase user has league-admin authority.';
+  'Returns whether the __AUTHENTICATED__ Supabase user has league-admin authority.';
 
 
 -- Replayed from supabase/migrations/20260810003000_schedule_publication.sql
@@ -334,17 +334,17 @@ create unique index team_matches_unique_pair_per_round
 alter table __LANE__.rounds enable row level security;
 alter table __LANE__.team_matches enable row level security;
 
-grant select on __LANE__.rounds, __LANE__.team_matches to anon, authenticated;
+grant select on __LANE__.rounds, __LANE__.team_matches to __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.rounds, __LANE__.team_matches to service_role;
 
 create policy "Rounds are publicly readable"
 on __LANE__.rounds for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Team matches are publicly readable"
 on __LANE__.team_matches for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 comment on table __LANE__.rounds is
@@ -363,7 +363,7 @@ revoke all on table
   __LANE__.seasons,
   __LANE__.teams,
   __LANE__.team_memberships
-from anon, authenticated;
+from __ANON__, __AUTHENTICATED__;
 
 grant select on
   __LANE__.players,
@@ -371,12 +371,12 @@ grant select on
   __LANE__.seasons,
   __LANE__.teams,
   __LANE__.team_memberships
-to anon, authenticated;
+to __ANON__, __AUTHENTICATED__;
 
-grant insert (user_id, display_name) on __LANE__.players to authenticated;
-grant update (display_name) on __LANE__.players to authenticated;
-grant insert (season_id, name, created_by) on __LANE__.teams to authenticated;
-grant insert (season_id, team_id, player_id, role) on __LANE__.team_memberships to authenticated;
+grant insert (user_id, display_name) on __LANE__.players to __AUTHENTICATED__;
+grant update (display_name) on __LANE__.players to __AUTHENTICATED__;
+grant insert (season_id, name, created_by) on __LANE__.teams to __AUTHENTICATED__;
+grant insert (season_id, team_id, player_id, role) on __LANE__.team_memberships to __AUTHENTICATED__;
 
 
 -- Replayed from supabase/migrations/20260810004500_publish_schedule_rpc.sql
@@ -502,7 +502,7 @@ end;
 $$;
 
 revoke all on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
   to service_role;
 
@@ -641,7 +641,7 @@ end;
 $$;
 
 revoke all on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
   to service_role;
 
@@ -668,7 +668,7 @@ create index audit_events_entity_idx
 create index audit_events_actor_idx
   on __LANE___private.audit_events (actor_user_id, created_at);
 
-revoke all on table __LANE___private.audit_events from public, anon, authenticated;
+revoke all on table __LANE___private.audit_events from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.audit_events to service_role;
 
 create or replace function __LANE__.publish_season_schedule(
@@ -821,7 +821,7 @@ end;
 $$;
 
 revoke all on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
   to service_role;
 
@@ -881,12 +881,12 @@ end;
 $$;
 
 revoke all on function __LANE__.upsert_player_profile(uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.upsert_player_profile(uuid, text)
   to service_role;
 
 comment on function __LANE__.upsert_player_profile(uuid, text) is
-  'Service-role-only profile self-service boundary. The Worker passes the authenticated actor user id; only display_name is mutable.';
+  'Service-role-only profile self-service boundary. The Worker passes the __AUTHENTICATED__ actor user id; only display_name is mutable.';
 
 
 -- Replayed from supabase/migrations/20260810014500_team_creation_rpc.sql
@@ -971,12 +971,12 @@ end;
 $$;
 
 revoke all on function __LANE__.create_team_with_captain(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.create_team_with_captain(uuid, uuid, text)
   to service_role;
 
 comment on function __LANE__.create_team_with_captain(uuid, uuid, text) is
-  'Service-role-only team creation boundary. The authenticated actor must already have a player profile and becomes captain.';
+  'Service-role-only team creation boundary. The __AUTHENTICATED__ actor must already have a player profile and becomes captain.';
 
 
 -- Replayed from supabase/migrations/20260810020000_team_invitations.sql
@@ -1002,7 +1002,7 @@ create unique index one_pending_team_invitation_per_player
 create index team_invitations_invited_player_idx
   on __LANE___private.team_invitations (invited_player_id, status, created_at);
 
-revoke all on table __LANE___private.team_invitations from public, anon, authenticated;
+revoke all on table __LANE___private.team_invitations from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.team_invitations to service_role;
 
 create or replace function __LANE__.invite_player_to_team(
@@ -1229,12 +1229,12 @@ end;
 $$;
 
 revoke all on function __LANE__.invite_player_to_team(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.invite_player_to_team(uuid, uuid, uuid)
   to service_role;
 
 revoke all on function __LANE__.respond_to_team_invitation(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.respond_to_team_invitation(uuid, uuid, text)
   to service_role;
 
@@ -1413,12 +1413,12 @@ end;
 $$;
 
 revoke all on function __LANE__.cancel_team_invitation(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.cancel_team_invitation(uuid, uuid)
   to service_role;
 
 revoke all on function __LANE__.remove_team_member(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.remove_team_member(uuid, uuid)
   to service_role;
 
@@ -1435,7 +1435,7 @@ on __LANE__.team_memberships;
 
 create policy "Team creator can bootstrap own captain membership"
 on __LANE__.team_memberships for insert
-to authenticated
+to __AUTHENTICATED__
 with check (
   role = 'captain'
   and player_id = (select __LANE___private.current_player_id())
@@ -1484,14 +1484,14 @@ create table __LANE___private.free_agent_availability (
 
 alter table __LANE__.season_players enable row level security;
 
-grant select on __LANE__.season_players to anon, authenticated;
+grant select on __LANE__.season_players to __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.season_players to service_role;
-revoke all on table __LANE___private.free_agent_availability from public, anon, authenticated;
+revoke all on table __LANE___private.free_agent_availability from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.free_agent_availability to service_role;
 
 create policy "Season players are publicly readable"
 on __LANE__.season_players for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create or replace function __LANE__.register_free_agent(
@@ -1649,12 +1649,12 @@ end;
 $$;
 
 revoke all on function __LANE__.register_free_agent(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.register_free_agent(uuid, uuid)
   to service_role;
 
 revoke all on function __LANE__.set_free_agent_availability(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_free_agent_availability(uuid, uuid, text)
   to service_role;
 
@@ -1665,10 +1665,10 @@ comment on table __LANE___private.free_agent_availability is
   'Private free-agent availability by round. Captains see eligible availability only through trusted read models.';
 
 comment on function __LANE__.register_free_agent(uuid, uuid) is
-  'Service-role-only self-service boundary for registering the authenticated actor as a season free agent.';
+  'Service-role-only self-service boundary for registering the __AUTHENTICATED__ actor as a season free agent.';
 
 comment on function __LANE__.set_free_agent_availability(uuid, uuid, text) is
-  'Service-role-only self-service boundary for the authenticated free agent to set round availability.';
+  'Service-role-only self-service boundary for the __AUTHENTICATED__ free agent to set round availability.';
 
 
 -- Replayed from supabase/migrations/20260810031500_eligible_free_agents.sql
@@ -1795,7 +1795,7 @@ end;
 $$;
 
 revoke all on function __LANE__.list_eligible_free_agents(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_eligible_free_agents(uuid, uuid, uuid)
   to service_role;
 
@@ -1824,7 +1824,7 @@ create table __LANE___private.roster_availability (
 create index roster_availability_team_round_idx
   on __LANE___private.roster_availability (round_id, team_id);
 
-revoke all on table __LANE___private.roster_availability from public, anon, authenticated;
+revoke all on table __LANE___private.roster_availability from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.roster_availability to service_role;
 
 create or replace function __LANE__.set_roster_availability(
@@ -2088,12 +2088,12 @@ end;
 $$;
 
 revoke all on function __LANE__.set_roster_availability(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_roster_availability(uuid, uuid, text)
   to service_role;
 
 revoke all on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
   to service_role;
 
@@ -2159,8 +2159,8 @@ create unique index one_lineup_player_per_round
 create unique index one_lineup_slot_per_team_round
   on __LANE___private.team_lineup_slots (round_id, team_id, slot_number);
 
-revoke all on table __LANE___private.team_lineups from public, anon, authenticated;
-revoke all on table __LANE___private.team_lineup_slots from public, anon, authenticated;
+revoke all on table __LANE___private.team_lineups from public, __ANON__, __AUTHENTICATED__;
+revoke all on table __LANE___private.team_lineup_slots from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.team_lineups, __LANE___private.team_lineup_slots to service_role;
 
 create or replace function __LANE__.submit_team_lineup(
@@ -2434,7 +2434,7 @@ end;
 $$;
 
 revoke all on function __LANE__.submit_team_lineup(uuid, uuid, uuid, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.submit_team_lineup(uuid, uuid, uuid, jsonb)
   to service_role;
 
@@ -2577,7 +2577,7 @@ end;
 $$;
 
 revoke all on function __LANE__.list_visible_team_lineups(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_visible_team_lineups(uuid, uuid, uuid)
   to service_role;
 
@@ -2641,17 +2641,17 @@ create table __LANE__.team_match_forfeits (
 alter table __LANE__.player_matches enable row level security;
 alter table __LANE__.team_match_forfeits enable row level security;
 
-grant select on __LANE__.player_matches, __LANE__.team_match_forfeits to anon, authenticated;
+grant select on __LANE__.player_matches, __LANE__.team_match_forfeits to __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.player_matches, __LANE__.team_match_forfeits to service_role;
 
 create policy "Player matches are publicly readable"
 on __LANE__.player_matches for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Team match forfeits are publicly readable"
 on __LANE__.team_match_forfeits for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create or replace function __LANE___private.rebuild_generated_team_match_results(
@@ -2925,12 +2925,12 @@ create table __LANE__.season_race_chart_bands (
 
 alter table __LANE__.season_race_chart_bands enable row level security;
 
-grant select on __LANE__.season_race_chart_bands to anon, authenticated;
+grant select on __LANE__.season_race_chart_bands to __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.season_race_chart_bands to service_role;
 
 create policy "Race chart bands are publicly readable"
 on __LANE__.season_race_chart_bands for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 alter table __LANE__.player_matches
@@ -3032,12 +3032,12 @@ create table __LANE__.player_match_racks (
 
 alter table __LANE__.player_match_racks enable row level security;
 
-grant select on __LANE__.player_match_racks to anon, authenticated;
+grant select on __LANE__.player_match_racks to __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.player_match_racks to service_role;
 
 create policy "Player match racks are publicly readable"
 on __LANE__.player_match_racks for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create or replace function __LANE___private.can_score_player_match(
@@ -3383,12 +3383,12 @@ end;
 $$;
 
 revoke all on function __LANE__.get_player_match_scorecard(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_player_match_scorecard(uuid, uuid)
   to service_role;
 
 revoke all on function __LANE__.record_player_match_rack(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.record_player_match_rack(uuid, uuid, text)
   to service_role;
 
@@ -3513,7 +3513,7 @@ end;
 $$;
 
 revoke all on function __LANE__.finalize_player_match(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.finalize_player_match(uuid, uuid)
   to service_role;
 
@@ -3659,7 +3659,7 @@ end;
 $$;
 
 revoke all on function __LANE__.undo_player_match_rack(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.undo_player_match_rack(uuid, uuid)
   to service_role;
 
@@ -3934,7 +3934,7 @@ as $$
 $$;
 
 revoke all on function __LANE__.list_team_standings(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_standings(uuid)
   to service_role;
 
@@ -4096,7 +4096,7 @@ as $$
 $$;
 
 revoke all on function __LANE__.list_individual_standings(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_individual_standings(uuid)
   to service_role;
 
@@ -4378,7 +4378,7 @@ end;
 $$;
 
 revoke all on function __LANE__.correct_player_match(uuid, uuid, text, integer, integer, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.correct_player_match(uuid, uuid, text, integer, integer, text, jsonb)
   to service_role;
 
@@ -4533,7 +4533,7 @@ end;
 $$;
 
 revoke all on function __LANE__.list_visible_team_lineups(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_visible_team_lineups(uuid, uuid, uuid)
   to service_role;
 
@@ -4611,12 +4611,12 @@ as $$
 $$;
 
 revoke all on function __LANE__.get_own_player_profile(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_own_player_profile(uuid)
   to service_role;
 
 comment on function __LANE__.get_own_player_profile(uuid) is
-  'Service-role-only profile read model for the authenticated actor, including public rating, team membership, and season participation summaries.';
+  'Service-role-only profile read model for the __AUTHENTICATED__ actor, including public rating, team membership, and season participation summaries.';
 
 
 -- Replayed from supabase/migrations/20260810110000_team_management_read_model.sql
@@ -4732,12 +4732,12 @@ as $$
 $$;
 
 revoke all on function __LANE__.get_own_team_management(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_own_team_management(uuid)
   to service_role;
 
 comment on function __LANE__.get_own_team_management(uuid) is
-  'Service-role-only team-management read model for the authenticated actor, including captained teams, active roster, pending outgoing invitations, and pending incoming invitations.';
+  'Service-role-only team-management read model for the __AUTHENTICATED__ actor, including captained teams, active roster, pending outgoing invitations, and pending incoming invitations.';
 
 
 -- Replayed from supabase/migrations/20260810113000_prize_payouts.sql
@@ -4784,23 +4784,23 @@ alter table __LANE__.season_prize_payout_templates enable row level security;
 alter table __LANE__.season_final_prize_payouts enable row level security;
 
 grant select on __LANE__.season_prize_configurations, __LANE__.season_prize_payout_templates, __LANE__.season_final_prize_payouts
-  to anon, authenticated;
+  to __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.season_prize_configurations, __LANE__.season_prize_payout_templates, __LANE__.season_final_prize_payouts
   to service_role;
 
 create policy "Prize configurations are publicly readable"
 on __LANE__.season_prize_configurations for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Prize payout templates are publicly readable"
 on __LANE__.season_prize_payout_templates for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create policy "Final prize payouts are publicly readable"
 on __LANE__.season_final_prize_payouts for select
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (true);
 
 create or replace function __LANE___private.prevent_final_prize_payout_mutation()
@@ -5349,17 +5349,17 @@ as $$
 $$;
 
 revoke all on function __LANE__.configure_season_prizes(uuid, uuid, integer, integer, integer, integer, integer, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.configure_season_prizes(uuid, uuid, integer, integer, integer, integer, integer, jsonb)
   to service_role;
 
 revoke all on function __LANE__.finalize_season_prize_payouts(uuid, uuid, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.finalize_season_prize_payouts(uuid, uuid, jsonb)
   to service_role;
 
 revoke all on function __LANE__.get_season_prize_summary(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_season_prize_summary(uuid)
   to service_role;
 
@@ -5741,12 +5741,12 @@ end;
 $$;
 
 revoke all on function __LANE__.configure_season_setup(uuid, uuid, text, text, date, integer, integer, integer, integer, integer[], text, integer, boolean)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.configure_season_setup(uuid, uuid, text, text, date, integer, integer, integer, integer, integer[], text, integer, boolean)
   to service_role;
 
 revoke all on function __LANE__.get_season_setup(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_season_setup(uuid, uuid)
   to service_role;
 
@@ -5793,7 +5793,7 @@ create index team_trades_player_pending_idx
 create index team_trades_team_idx
   on __LANE___private.team_trades (requesting_team_id, requested_team_id, created_at);
 
-revoke all on table __LANE___private.team_trades from public, anon, authenticated;
+revoke all on table __LANE___private.team_trades from public, __ANON__, __AUTHENTICATED__;
 grant all on table __LANE___private.team_trades to service_role;
 
 create or replace function __LANE___private.season_roster_lock_has_passed(
@@ -6472,27 +6472,27 @@ as $$
 $$;
 
 revoke all on function __LANE__.propose_team_trade(uuid, uuid, uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.propose_team_trade(uuid, uuid, uuid, uuid, uuid)
   to service_role;
 
 revoke all on function __LANE__.admin_propose_team_trade_exception(uuid, uuid, uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.admin_propose_team_trade_exception(uuid, uuid, uuid, uuid, uuid)
   to service_role;
 
 revoke all on function __LANE__.respond_to_team_trade_player(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.respond_to_team_trade_player(uuid, uuid, text)
   to service_role;
 
 revoke all on function __LANE__.approve_team_trade_captain(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.approve_team_trade_captain(uuid, uuid, text)
   to service_role;
 
 revoke all on function __LANE__.get_own_team_trades(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_own_team_trades(uuid)
   to service_role;
 
@@ -6528,7 +6528,7 @@ create table __LANE___private.player_match_score_submissions (
   unique (player_match_id, tracker_player_id)
 );
 
-revoke all on __LANE___private.player_match_score_submissions from public, anon, authenticated;
+revoke all on __LANE___private.player_match_score_submissions from public, __ANON__, __AUTHENTICATED__;
 grant all on __LANE___private.player_match_score_submissions to service_role;
 
 create index player_match_score_submissions_match_idx
@@ -6656,7 +6656,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.record_player_match_score_rack(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function __LANE__.record_player_match_score_rack(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.record_player_match_score_rack(uuid, uuid, text) to service_role;
 
 create or replace function __LANE__.undo_player_match_score_rack(
@@ -6722,7 +6722,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.undo_player_match_score_rack(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.undo_player_match_score_rack(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.undo_player_match_score_rack(uuid, uuid) to service_role;
 
 create or replace function __LANE__.confirm_player_match_score(
@@ -6802,7 +6802,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.confirm_player_match_score(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.confirm_player_match_score(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.confirm_player_match_score(uuid, uuid) to service_role;
 
 create or replace function __LANE__.get_player_match_score_comparison(
@@ -6877,7 +6877,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.get_player_match_score_comparison(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.get_player_match_score_comparison(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_player_match_score_comparison(uuid, uuid) to service_role;
 
 comment on table __LANE___private.player_match_score_submissions is
@@ -7119,7 +7119,7 @@ end;
 $$;
 
 revoke all on function __LANE__.finalize_reconciled_player_match(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.finalize_reconciled_player_match(uuid, uuid)
   to service_role;
 
@@ -7342,7 +7342,7 @@ end;
 $$;
 
 revoke all on function __LANE__.admin_override_reconciled_player_match(uuid, uuid, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.admin_override_reconciled_player_match(uuid, uuid, text, jsonb)
   to service_role;
 
@@ -7520,7 +7520,7 @@ end;
 $$;
 
 revoke all on function __LANE__.start_season_playoffs(uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.start_season_playoffs(uuid, uuid)
 to service_role;
@@ -7769,7 +7769,7 @@ end;
 $$;
 
 revoke all on function __LANE__.advance_season_to_championship(uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.advance_season_to_championship(uuid, uuid)
 to service_role;
@@ -7872,7 +7872,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.register_for_season(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function __LANE__.register_for_season(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.register_for_season(uuid, uuid, text) to service_role;
 
 create or replace function __LANE__.get_own_season_registration(
@@ -7912,13 +7912,13 @@ as $$
   limit 1;
 $$;
 
-revoke all on function __LANE__.get_own_season_registration(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.get_own_season_registration(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_own_season_registration(uuid, uuid) to service_role;
 
 comment on function __LANE__.register_for_season(uuid, uuid, text) is
   'Service-role-only self-registration boundary. Creates one durable player/season registration and initializes private payment status without exposing payment data publicly.';
 comment on function __LANE__.get_own_season_registration(uuid, uuid) is
-  'Service-role-only read boundary for an authenticated player to see their own season registration and payment status.';
+  'Service-role-only read boundary for an __AUTHENTICATED__ player to see their own season registration and payment status.';
 
 
 -- Replayed from supabase/migrations/20260810230000_three_player_weekly_lineups.sql
@@ -8212,7 +8212,7 @@ end;
 $$;
 
 revoke all on function __LANE__.submit_team_lineup(uuid, uuid, uuid, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.submit_team_lineup(uuid, uuid, uuid, jsonb)
   to service_role;
 
@@ -8641,7 +8641,7 @@ as $$
 $$;
 
 revoke all on function __LANE__.list_team_standings(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_standings(uuid)
   to service_role;
 
@@ -8696,25 +8696,25 @@ $$;
 revoke all on function __LANE___private.match_player_for_user(uuid, __LANE__.player_matches) from public;
 
 comment on function __LANE___private.match_player_for_user(uuid, __LANE__.player_matches) is
-  'Resolves an authenticated scorer to the active player slot owned by their current team. Any active teammate may maintain that team side of the dual score; opposing or unrelated players resolve to null.';
+  'Resolves an __AUTHENTICATED__ scorer to the active player slot owned by their current team. Any active teammate may maintain that team side of the dual score; opposing or unrelated players resolve to null.';
 
 comment on table __LANE___private.player_match_score_submissions is
-  'One independent rack history per side of a player match. tracker_player_id identifies the active match participant whose team owns the history; any authenticated active teammate on that team may maintain it through trusted RPCs.';
+  'One independent rack history per side of a player match. tracker_player_id identifies the active match participant whose team owns the history; any __AUTHENTICATED__ active teammate on that team may maintain it through trusted RPCs.';
 
 comment on function __LANE__.record_player_match_score_rack(uuid, uuid, text) is
-  'Service-role-only boundary allowing an authenticated active teammate to append one rack only to their own team side of a player match score history.';
+  'Service-role-only boundary allowing an __AUTHENTICATED__ active teammate to append one rack only to their own team side of a player match score history.';
 
 comment on function __LANE__.undo_player_match_score_rack(uuid, uuid) is
-  'Service-role-only boundary allowing an authenticated active teammate to undo only the latest rack on their own team side of an unfinalized score history.';
+  'Service-role-only boundary allowing an __AUTHENTICATED__ active teammate to undo only the latest rack on their own team side of an unfinalized score history.';
 
 comment on function __LANE__.confirm_player_match_score(uuid, uuid) is
-  'Service-role-only boundary allowing an authenticated active teammate to confirm only their own team side of the completed score history.';
+  'Service-role-only boundary allowing an __AUTHENTICATED__ active teammate to confirm only their own team side of the completed score history.';
 
 comment on function __LANE__.get_player_match_score_comparison(uuid, uuid) is
   'Service-role-only comparison of both team-maintained score histories. The caller may view both histories but their editable tracker side is resolved strictly from active team membership.';
 
 comment on function __LANE__.finalize_reconciled_player_match(uuid, uuid) is
-  'Service-role-only atomic finalizer callable by an authenticated member of either participating team after both team-owned histories match and are confirmed.';
+  'Service-role-only atomic finalizer callable by an __AUTHENTICATED__ member of either participating team after both team-owned histories match and are confirmed.';
 
 
 -- Replayed from supabase/migrations/20260810235254_fix_upsert_player_profile_user_id_ambiguity.sql
@@ -8766,12 +8766,12 @@ end;
 $$;
 
 revoke all on function __LANE__.upsert_player_profile(uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.upsert_player_profile(uuid, text)
   to service_role;
 
 comment on function __LANE__.upsert_player_profile(uuid, text) is
-  'Service-role-only profile self-service boundary. The Worker passes the authenticated actor user id; only display_name is mutable.';
+  'Service-role-only profile self-service boundary. The Worker passes the __AUTHENTICATED__ actor user id; only display_name is mutable.';
 
 
 -- Replayed from supabase/migrations/20260811010000_team_chat_foundation.sql
@@ -8809,7 +8809,7 @@ alter table __LANE__.team_chat_messages enable row level security;
 alter table __LANE__.team_chat_reads enable row level security;
 
 revoke all on __LANE__.team_chat_messages, __LANE__.team_chat_reads
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant all on __LANE__.team_chat_messages, __LANE__.team_chat_reads
   to service_role;
 
@@ -9079,13 +9079,13 @@ end;
 $$;
 
 revoke all on function __LANE__.get_my_team_chat_inbox(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.list_team_chat_messages(uuid, uuid, timestamptz, integer)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.send_team_chat_message(uuid, uuid, text, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.mark_team_chat_read(uuid, uuid, timestamptz)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.get_my_team_chat_inbox(uuid) to service_role;
 grant execute on function __LANE__.list_team_chat_messages(uuid, uuid, timestamptz, integer)
@@ -9096,21 +9096,21 @@ grant execute on function __LANE__.mark_team_chat_read(uuid, uuid, timestamptz)
   to service_role;
 
 comment on table __LANE__.team_chat_messages is
-  'Private team chat. Worker-authenticated service-role RPCs enforce membership windows; browser roles have no direct access.';
+  'Private team chat. Worker-__AUTHENTICATED__ service-role RPCs enforce membership windows; browser roles have no direct access.';
 
 
 -- Replayed from supabase/migrations/20260811011500_team_chat_advisor_hardening.sql
 create policy "Browser roles cannot access team chat messages"
 on __LANE__.team_chat_messages
 for all
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (false)
 with check (false);
 
 create policy "Browser roles cannot access team chat reads"
 on __LANE__.team_chat_reads
 for all
-to anon, authenticated
+to __ANON__, __AUTHENTICATED__
 using (false)
 with check (false);
 
@@ -9290,13 +9290,13 @@ revoke all on function __LANE__.list_scorable_player_matches(uuid) from public;
 grant execute on function __LANE__.list_scorable_player_matches(uuid) to service_role;
 
 comment on function __LANE__.list_scorable_player_matches(uuid) is
-  'Service-role-only read model listing revealed, unfinished player matches an authenticated active teammate may score for their own team side.';
+  'Service-role-only read model listing revealed, unfinished player matches an __AUTHENTICATED__ active teammate may score for their own team side.';
 
 
 -- Replayed from supabase/migrations/20260811020100_harden_scorable_match_picker.sql
 revoke execute on function __LANE__.list_scorable_player_matches(uuid) from public;
-revoke execute on function __LANE__.list_scorable_player_matches(uuid) from anon;
-revoke execute on function __LANE__.list_scorable_player_matches(uuid) from authenticated;
+revoke execute on function __LANE__.list_scorable_player_matches(uuid) from __ANON__;
+revoke execute on function __LANE__.list_scorable_player_matches(uuid) from __AUTHENTICATED__;
 grant execute on function __LANE__.list_scorable_player_matches(uuid) to service_role;
 
 
@@ -9372,7 +9372,7 @@ revoke all on
   __LANE__.direct_messages,
   __LANE__.direct_chat_reads,
   __LANE__.player_chat_blocks
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 
 grant all on
   __LANE__.direct_conversations,
@@ -9382,16 +9382,16 @@ grant all on
 to service_role;
 
 create policy "Browser roles cannot access direct conversations"
-on __LANE__.direct_conversations for all to anon, authenticated
+on __LANE__.direct_conversations for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 create policy "Browser roles cannot access direct messages"
-on __LANE__.direct_messages for all to anon, authenticated
+on __LANE__.direct_messages for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 create policy "Browser roles cannot access direct read state"
-on __LANE__.direct_chat_reads for all to anon, authenticated
+on __LANE__.direct_chat_reads for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 create policy "Browser roles cannot access player blocks"
-on __LANE__.player_chat_blocks for all to anon, authenticated
+on __LANE__.player_chat_blocks for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 
 create or replace function __LANE___private.is_active_season_participant(
@@ -9429,7 +9429,7 @@ as $$
 $$;
 
 revoke all on function __LANE___private.is_active_season_participant(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.is_active_season_participant(uuid, uuid)
   to service_role;
 
@@ -9967,23 +9967,23 @@ end;
 $$;
 
 revoke all on function __LANE__.list_direct_message_candidates(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.get_my_direct_message_inbox(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.start_direct_conversation(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.list_direct_messages(uuid, uuid, timestamptz, uuid, integer)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.send_direct_message(uuid, uuid, text, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.mark_direct_chat_read(uuid, uuid, timestamptz)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.block_player_chat(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.unblock_player_chat(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.list_blocked_chat_players(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.list_direct_message_candidates(uuid) to service_role;
 grant execute on function __LANE__.get_my_direct_message_inbox(uuid) to service_role;
@@ -10182,8 +10182,8 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.get_my_direct_message_inbox(uuid) from public, anon, authenticated;
-revoke all on function __LANE__.send_direct_message(uuid, uuid, text, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.get_my_direct_message_inbox(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.send_direct_message(uuid, uuid, text, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_my_direct_message_inbox(uuid) to service_role;
 grant execute on function __LANE__.send_direct_message(uuid, uuid, text, uuid) to service_role;
 
@@ -10267,18 +10267,18 @@ alter table __LANE__.league_chat_reads enable row level security;
 alter table __LANE__.chat_message_reports enable row level security;
 
 create policy "Browser roles cannot access league chat messages"
-on __LANE__.league_chat_messages for all to anon, authenticated
+on __LANE__.league_chat_messages for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 create policy "Browser roles cannot access league chat reads"
-on __LANE__.league_chat_reads for all to anon, authenticated
+on __LANE__.league_chat_reads for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 create policy "Browser roles cannot access chat message reports"
-on __LANE__.chat_message_reports for all to anon, authenticated
+on __LANE__.chat_message_reports for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 
-revoke all on table __LANE__.league_chat_messages from public, anon, authenticated;
-revoke all on table __LANE__.league_chat_reads from public, anon, authenticated;
-revoke all on table __LANE__.chat_message_reports from public, anon, authenticated;
+revoke all on table __LANE__.league_chat_messages from public, __ANON__, __AUTHENTICATED__;
+revoke all on table __LANE__.league_chat_reads from public, __ANON__, __AUTHENTICATED__;
+revoke all on table __LANE__.chat_message_reports from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update, delete on table __LANE__.league_chat_messages to service_role;
 grant select, insert, update, delete on table __LANE__.league_chat_reads to service_role;
 grant select, insert, update, delete on table __LANE__.chat_message_reports to service_role;
@@ -10745,16 +10745,16 @@ begin
 end;
 $$;
 
-revoke all on function __LANE___private.is_season_chat_participant(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE___private.is_season_chat_participant(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.is_season_chat_participant(uuid, uuid) to service_role;
 
-revoke all on function __LANE__.get_my_league_chat_inbox(uuid) from public, anon, authenticated;
-revoke all on function __LANE__.list_league_chat_messages(uuid, uuid, timestamptz, uuid, integer) from public, anon, authenticated;
-revoke all on function __LANE__.send_league_chat_message(uuid, uuid, text, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.mark_league_chat_read(uuid, uuid, timestamptz) from public, anon, authenticated;
-revoke all on function __LANE__.report_chat_message(uuid, text, uuid, text, text) from public, anon, authenticated;
-revoke all on function __LANE__.list_chat_message_reports(uuid, integer) from public, anon, authenticated;
-revoke all on function __LANE__.moderate_chat_message_report(uuid, uuid, text, text, boolean) from public, anon, authenticated;
+revoke all on function __LANE__.get_my_league_chat_inbox(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.list_league_chat_messages(uuid, uuid, timestamptz, uuid, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.send_league_chat_message(uuid, uuid, text, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.mark_league_chat_read(uuid, uuid, timestamptz) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.report_chat_message(uuid, text, uuid, text, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.list_chat_message_reports(uuid, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.moderate_chat_message_report(uuid, uuid, text, text, boolean) from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.get_my_league_chat_inbox(uuid) to service_role;
 grant execute on function __LANE__.list_league_chat_messages(uuid, uuid, timestamptz, uuid, integer) to service_role;
@@ -11192,7 +11192,7 @@ create table __LANE___private.team_membership_requests (
 );
 
 alter table __LANE___private.team_membership_requests enable row level security;
-revoke all on __LANE___private.team_membership_requests from public, anon, authenticated;
+revoke all on __LANE___private.team_membership_requests from public, __ANON__, __AUTHENTICATED__;
 
 create unique index one_pending_membership_request_per_team
   on __LANE___private.team_membership_requests (season_id, team_id, player_id)
@@ -11449,10 +11449,10 @@ select player_rows.rows, captain_rows.rows
 from player_rows cross join captain_rows;
 $$;
 
-revoke all on function __LANE__.request_team_membership(uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.cancel_team_membership_request(uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.get_own_team_membership_requests(uuid) from public, anon, authenticated;
+revoke all on function __LANE__.request_team_membership(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.cancel_team_membership_request(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.get_own_team_membership_requests(uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.request_team_membership(uuid, uuid) to service_role;
 grant execute on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) to service_role;
 grant execute on function __LANE__.cancel_team_membership_request(uuid, uuid) to service_role;
@@ -11492,13 +11492,13 @@ create index matchup_chat_reads_player_idx on __LANE__.matchup_chat_reads (playe
 alter table __LANE__.matchup_chat_messages enable row level security;
 alter table __LANE__.matchup_chat_reads enable row level security;
 create policy "Browser roles cannot access matchup chat messages"
-on __LANE__.matchup_chat_messages for all to anon, authenticated
+on __LANE__.matchup_chat_messages for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
 create policy "Browser roles cannot access matchup chat reads"
-on __LANE__.matchup_chat_reads for all to anon, authenticated
+on __LANE__.matchup_chat_reads for all to __ANON__, __AUTHENTICATED__
 using (false) with check (false);
-revoke all on table __LANE__.matchup_chat_messages from public, anon, authenticated;
-revoke all on table __LANE__.matchup_chat_reads from public, anon, authenticated;
+revoke all on table __LANE__.matchup_chat_messages from public, __ANON__, __AUTHENTICATED__;
+revoke all on table __LANE__.matchup_chat_reads from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update, delete on table __LANE__.matchup_chat_messages to service_role;
 grant select, insert, update, delete on table __LANE__.matchup_chat_reads to service_role;
 
@@ -11893,13 +11893,13 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.get_my_matchup_chat_inbox(uuid) from public, anon, authenticated;
-revoke all on function __LANE__.list_matchup_chat_messages(uuid, uuid, timestamptz, uuid, integer) from public, anon, authenticated;
-revoke all on function __LANE__.send_matchup_chat_message(uuid, uuid, text, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.mark_matchup_chat_read(uuid, uuid, timestamptz) from public, anon, authenticated;
-revoke all on function __LANE__.report_chat_message(uuid, text, uuid, text, text) from public, anon, authenticated;
-revoke all on function __LANE__.list_chat_message_reports(uuid, integer) from public, anon, authenticated;
-revoke all on function __LANE__.moderate_chat_message_report(uuid, uuid, text, text, boolean) from public, anon, authenticated;
+revoke all on function __LANE__.get_my_matchup_chat_inbox(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.list_matchup_chat_messages(uuid, uuid, timestamptz, uuid, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.send_matchup_chat_message(uuid, uuid, text, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.mark_matchup_chat_read(uuid, uuid, timestamptz) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.report_chat_message(uuid, text, uuid, text, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.list_chat_message_reports(uuid, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.moderate_chat_message_report(uuid, uuid, text, text, boolean) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_my_matchup_chat_inbox(uuid) to service_role;
 grant execute on function __LANE__.list_matchup_chat_messages(uuid, uuid, timestamptz, uuid, integer) to service_role;
 grant execute on function __LANE__.send_matchup_chat_message(uuid, uuid, text, uuid) to service_role;
@@ -11929,7 +11929,7 @@ create table __LANE___private.captaincy_transfers (
 );
 
 alter table __LANE___private.captaincy_transfers enable row level security;
-revoke all on __LANE___private.captaincy_transfers from public, anon, authenticated;
+revoke all on __LANE___private.captaincy_transfers from public, __ANON__, __AUTHENTICATED__;
 
 create unique index one_pending_captaincy_transfer_per_team
   on __LANE___private.captaincy_transfers (season_id, team_id)
@@ -12269,11 +12269,11 @@ select outgoing_rows.rows, incoming_rows.rows
 from outgoing_rows cross join incoming_rows;
 $$;
 
-revoke all on function __LANE__.create_team_with_captain(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.request_captaincy_transfer(uuid, uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.respond_to_captaincy_transfer(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.cancel_captaincy_transfer(uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.get_own_captaincy_transfers(uuid) from public, anon, authenticated;
+revoke all on function __LANE__.create_team_with_captain(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.request_captaincy_transfer(uuid, uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.respond_to_captaincy_transfer(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.cancel_captaincy_transfer(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.get_own_captaincy_transfers(uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.create_team_with_captain(uuid, uuid, text) to service_role;
 grant execute on function __LANE__.request_captaincy_transfer(uuid, uuid, uuid, text) to service_role;
 grant execute on function __LANE__.respond_to_captaincy_transfer(uuid, uuid, text) to service_role;
@@ -12306,7 +12306,7 @@ create table if not exists __LANE___private.postseason_anchor_tiebreakers (
 );
 
 alter table __LANE___private.postseason_anchor_tiebreakers enable row level security;
-revoke all on __LANE___private.postseason_anchor_tiebreakers from public, anon, authenticated;
+revoke all on __LANE___private.postseason_anchor_tiebreakers from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update, delete on __LANE___private.postseason_anchor_tiebreakers to service_role;
 
 create or replace function __LANE___private.rebuild_generated_team_match_results(target_team_match_id uuid)
@@ -12535,7 +12535,7 @@ end;
 $$;
 
 revoke all on function __LANE__.submit_postseason_lineup(uuid, uuid, uuid, uuid[], uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.submit_postseason_lineup(uuid, uuid, uuid, uuid[], uuid)
 to service_role;
 
@@ -12781,7 +12781,7 @@ end;
 $$;
 
 revoke all on function __LANE__.advance_season_to_championship(uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.advance_season_to_championship(uuid, uuid)
 to service_role;
 
@@ -12845,7 +12845,7 @@ end;
 $$;
 
 revoke all on function __LANE___private.auto_register_new_player_for_open_season()
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.auto_register_new_player_for_open_season()
   to service_role;
 
@@ -13514,25 +13514,25 @@ end;
 $$;
 
 revoke all on function __LANE__.send_team_chat_message(uuid, uuid, text, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.mark_team_chat_read(uuid, uuid, timestamptz)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.start_direct_conversation(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.send_direct_message(uuid, uuid, text, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.mark_direct_chat_read(uuid, uuid, timestamptz)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.block_player_chat(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.send_league_chat_message(uuid, uuid, text, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.mark_league_chat_read(uuid, uuid, timestamptz)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.send_matchup_chat_message(uuid, uuid, text, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.mark_matchup_chat_read(uuid, uuid, timestamptz)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.send_team_chat_message(uuid, uuid, text, uuid)
   to service_role;
@@ -13685,8 +13685,8 @@ create index if not exists team_applications_review_queue_idx
 alter table __LANE___private.season_team_slots enable row level security;
 alter table __LANE___private.team_applications enable row level security;
 
-revoke all on __LANE___private.season_team_slots from public, anon, authenticated;
-revoke all on __LANE___private.team_applications from public, anon, authenticated;
+revoke all on __LANE___private.season_team_slots from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.team_applications from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update, delete on __LANE___private.season_team_slots to service_role;
 grant select, insert, update, delete on __LANE___private.team_applications to service_role;
 
@@ -15048,24 +15048,24 @@ where sts.status in ('approved_pending_roster', 'ready')
       and ta.status in ('applied', 'deferred', 'approved_pending_roster', 'ready', 'confirmed')
   );
 
-revoke execute on function __LANE___private.expire_season_team_registration(uuid) from public, anon, authenticated;
-revoke execute on function __LANE___private.refresh_team_slot_readiness(uuid) from public, anon, authenticated;
-revoke execute on function __LANE___private.refresh_team_slot_readiness_trigger() from public, anon, authenticated;
+revoke execute on function __LANE___private.expire_season_team_registration(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE___private.refresh_team_slot_readiness(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE___private.refresh_team_slot_readiness_trigger() from public, __ANON__, __AUTHENTICATED__;
 
-revoke execute on function __LANE__.configure_season_registration(uuid, uuid, integer, integer, timestamptz, integer) from public, anon, authenticated;
-revoke execute on function __LANE__.submit_team_application(uuid, uuid, text) from public, anon, authenticated;
-revoke execute on function __LANE__.withdraw_team_application(uuid, uuid) from public, anon, authenticated;
-revoke execute on function __LANE__.admin_review_team_application(uuid, uuid, text, text) from public, anon, authenticated;
-revoke execute on function __LANE__.admin_manage_team_slot(uuid, uuid, text, text, integer) from public, anon, authenticated;
-revoke execute on function __LANE__.seed_returning_team_slots(uuid, uuid, uuid) from public, anon, authenticated;
-revoke execute on function __LANE__.respond_to_returning_team_slot(uuid, uuid, text, uuid) from public, anon, authenticated;
-revoke execute on function __LANE__.list_public_season_registration() from public, anon, authenticated;
-revoke execute on function __LANE__.list_joinable_team_registration() from public, anon, authenticated;
-revoke execute on function __LANE__.list_publishable_season_teams(uuid, uuid) from public, anon, authenticated;
-revoke execute on function __LANE__.get_own_team_registration(uuid, uuid) from public, anon, authenticated;
-revoke execute on function __LANE__.get_admin_season_registration(uuid, uuid) from public, anon, authenticated;
-revoke execute on function __LANE__.create_team_with_captain(uuid, uuid, text) from public, anon, authenticated;
-revoke execute on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb) from public, anon, authenticated;
+revoke execute on function __LANE__.configure_season_registration(uuid, uuid, integer, integer, timestamptz, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.submit_team_application(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.withdraw_team_application(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.admin_review_team_application(uuid, uuid, text, text) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.admin_manage_team_slot(uuid, uuid, text, text, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.seed_returning_team_slots(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.respond_to_returning_team_slot(uuid, uuid, text, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.list_public_season_registration() from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.list_joinable_team_registration() from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.list_publishable_season_teams(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.get_own_team_registration(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.get_admin_season_registration(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.create_team_with_captain(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb) from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.configure_season_registration(uuid, uuid, integer, integer, timestamptz, integer) to service_role;
 grant execute on function __LANE__.submit_team_application(uuid, uuid, text) to service_role;
@@ -15588,11 +15588,11 @@ begin
   end loop;
 end $$;
 
-revoke execute on function __LANE___private.committed_team_roster_count(uuid, uuid) from public, anon, authenticated;
-revoke execute on function __LANE___private.refresh_team_slots_for_season_player_trigger() from public, anon, authenticated;
-revoke execute on function __LANE___private.enforce_committed_roster_on_slot_confirmation_trigger() from public, anon, authenticated;
-revoke execute on function __LANE___private.enforce_viable_teams_before_season_publication_trigger() from public, anon, authenticated;
-revoke execute on function __LANE__.list_public_season_registration() from public, anon, authenticated;
+revoke execute on function __LANE___private.committed_team_roster_count(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE___private.refresh_team_slots_for_season_player_trigger() from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE___private.enforce_committed_roster_on_slot_confirmation_trigger() from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE___private.enforce_viable_teams_before_season_publication_trigger() from public, __ANON__, __AUTHENTICATED__;
+revoke execute on function __LANE__.list_public_season_registration() from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_public_season_registration() to service_role;
 
 
@@ -15844,9 +15844,9 @@ end;
 $$;
 
 revoke execute on function __LANE___private.auto_register_rostered_member_trigger()
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke execute on function __LANE__.list_public_season_registration()
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_public_season_registration() to service_role;
 
 
@@ -15872,7 +15872,7 @@ create index if not exists sandbox_feedback_review_queue_idx
   on __LANE___private.sandbox_feedback(status, created_at desc);
 
 alter table __LANE___private.sandbox_feedback enable row level security;
-revoke all on __LANE___private.sandbox_feedback from public, anon, authenticated;
+revoke all on __LANE___private.sandbox_feedback from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update on __LANE___private.sandbox_feedback to service_role;
 
 create or replace function __LANE__.submit_sandbox_feedback(
@@ -16026,9 +16026,9 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.submit_sandbox_feedback(uuid, text, text, jsonb, text) from public, anon, authenticated;
-revoke all on function __LANE__.list_sandbox_feedback(uuid, text, integer) from public, anon, authenticated;
-revoke all on function __LANE__.resolve_sandbox_feedback(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.submit_sandbox_feedback(uuid, text, text, jsonb, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.list_sandbox_feedback(uuid, text, integer) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.resolve_sandbox_feedback(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.submit_sandbox_feedback(uuid, text, text, jsonb, text) to service_role;
 grant execute on function __LANE__.list_sandbox_feedback(uuid, text, integer) to service_role;
 grant execute on function __LANE__.resolve_sandbox_feedback(uuid, uuid) to service_role;
@@ -16748,12 +16748,12 @@ begin
 end;
 $function$;
 
-revoke all on function __LANE__.register_for_season(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.request_team_membership(uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.invite_player_to_team(uuid, uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.respond_to_team_invitation(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.submit_postseason_lineup(uuid, uuid, uuid, uuid[], uuid) from public, anon, authenticated;
+revoke all on function __LANE__.register_for_season(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.request_team_membership(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.invite_player_to_team(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.respond_to_team_invitation(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.submit_postseason_lineup(uuid, uuid, uuid, uuid[], uuid) from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.register_for_season(uuid, uuid, text) to service_role;
 grant execute on function __LANE__.request_team_membership(uuid, uuid) to service_role;
@@ -17122,10 +17122,10 @@ begin
 end;
 $function$;
 
-revoke all on function __LANE__.request_team_membership(uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.invite_player_to_team(uuid, uuid, uuid) from public, anon, authenticated;
-revoke all on function __LANE__.respond_to_team_invitation(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function __LANE__.request_team_membership(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.invite_player_to_team(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.respond_to_team_invitation(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.request_team_membership(uuid, uuid) to service_role;
 grant execute on function __LANE__.respond_to_team_membership_request(uuid, uuid, text) to service_role;
 grant execute on function __LANE__.invite_player_to_team(uuid, uuid, uuid) to service_role;
@@ -17196,7 +17196,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.create_team_with_captain(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function __LANE__.create_team_with_captain(uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.create_team_with_captain(uuid, uuid, text) to service_role;
 
 -- Replayed from supabase/migrations/20260811120500_explicit_scoring_team_context.sql
@@ -17230,7 +17230,7 @@ begin
   return case when target_scoring_team_id = target_match.team_a_id then target_match.player_a_id else target_match.player_b_id end;
 end;
 $$;
-revoke all on function __LANE___private.match_tracker_for_scoring_team(uuid, __LANE__.player_matches, uuid) from public, anon, authenticated;
+revoke all on function __LANE___private.match_tracker_for_scoring_team(uuid, __LANE__.player_matches, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.match_tracker_for_scoring_team(uuid, __LANE__.player_matches, uuid) to service_role;
 
 drop function if exists __LANE__.get_player_match_score_comparison(uuid, uuid);
@@ -17265,7 +17265,7 @@ begin
     (own_history = opponent_history and jsonb_array_length(own_history) > 0 and own_submission.confirmed_at is not null and opponent_submission.confirmed_at is not null);
 end;
 $$;
-revoke all on function __LANE__.get_player_match_score_comparison(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.get_player_match_score_comparison(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_player_match_score_comparison(uuid, uuid, uuid) to service_role;
 
 drop function if exists __LANE__.record_player_match_score_rack(uuid, uuid, text);
@@ -17310,7 +17310,7 @@ begin
     (next_score_a >= target_match.race_to_a or next_score_b >= target_match.race_to_b);
 end;
 $$;
-revoke all on function __LANE__.record_player_match_score_rack(uuid, uuid, uuid, text) from public, anon, authenticated;
+revoke all on function __LANE__.record_player_match_score_rack(uuid, uuid, uuid, text) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.record_player_match_score_rack(uuid, uuid, uuid, text) to service_role;
 
 drop function if exists __LANE__.undo_player_match_score_rack(uuid, uuid);
@@ -17330,7 +17330,7 @@ begin
   insert into __LANE___private.audit_events(actor_user_id,action,entity_type,entity_id,before_state,after_state) values(actor_user_id,'player_match.team_score_rack_undo','player_match',target_player_match_id,jsonb_build_object('scoringTeamId',target_scoring_team_id,'trackerPlayerId',tracker_id,'racks',submission.racks),jsonb_build_object('scoringTeamId',target_scoring_team_id,'trackerPlayerId',tracker_id,'racks',next_racks));
   return query select target_player_match_id,target_scoring_team_id,tracker_id,rack_count,next_score_a,next_score_b;
 end; $$;
-revoke all on function __LANE__.undo_player_match_score_rack(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.undo_player_match_score_rack(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.undo_player_match_score_rack(uuid, uuid, uuid) to service_role;
 
 drop function if exists __LANE__.confirm_player_match_score(uuid, uuid);
@@ -17351,7 +17351,7 @@ begin
   insert into __LANE___private.audit_events(actor_user_id,action,entity_type,entity_id,before_state,after_state) values(actor_user_id,'player_match.team_score_confirm','player_match',target_player_match_id,jsonb_build_object('scoringTeamId',target_scoring_team_id,'trackerPlayerId',tracker_id),jsonb_build_object('scoringTeamId',target_scoring_team_id,'trackerPlayerId',tracker_id,'confirmedAt',confirmed_time));
   return query select target_player_match_id,target_scoring_team_id,tracker_id,confirmed_time,(opponent_submission.id is not null and opponent_submission.racks=submission.racks),(opponent_submission.confirmed_at is not null and submission.confirmed_at is not null);
 end; $$;
-revoke all on function __LANE__.confirm_player_match_score(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.confirm_player_match_score(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.confirm_player_match_score(uuid, uuid, uuid) to service_role;
 
 drop function if exists __LANE__.finalize_reconciled_player_match(uuid, uuid);
@@ -17380,7 +17380,7 @@ begin
   insert into __LANE___private.audit_events(actor_user_id,action,entity_type,entity_id,before_state,after_state) values(actor_user_id,'player_match.finalize_reconciled','player_match',target_player_match_id,jsonb_build_object('match',to_jsonb(target_match),'canonicalRacks',canonical_before,'teamASubmission',to_jsonb(submission_a),'teamBSubmission',to_jsonb(submission_b),'scoringTeamId',target_scoring_team_id),jsonb_build_object('match',to_jsonb(finalized_match),'reconciledRacks',reconciled_racks,'scoringTeamId',target_scoring_team_id));
   return query select finalized_match.id,finalized_match.status,finalized_match.winner_side,finalized_match.winner_player_id,finalized_match.score_a,finalized_match.score_b,finalized_match.finalized_at;
 end; $$;
-revoke all on function __LANE__.finalize_reconciled_player_match(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.finalize_reconciled_player_match(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.finalize_reconciled_player_match(uuid, uuid, uuid) to service_role;
 
 drop function if exists __LANE__.list_scorable_player_matches(uuid);
@@ -17398,7 +17398,7 @@ language sql stable security definer set search_path = '' as $$
   where pm.status not in('finalized','corrected')
   order by case when r.scheduled_on>=current_date then 0 else 1 end,abs(r.scheduled_on-current_date),r.round_number,pm.slot_number,tm.team_id;
 $$;
-revoke all on function __LANE__.list_scorable_player_matches(uuid) from public, anon, authenticated;
+revoke all on function __LANE__.list_scorable_player_matches(uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_scorable_player_matches(uuid) to service_role;
 
 
@@ -17623,7 +17623,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.finalize_reconciled_player_match(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.finalize_reconciled_player_match(uuid, uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.finalize_reconciled_player_match(uuid, uuid, uuid) to service_role;
 
 
@@ -17829,7 +17829,7 @@ end;
 $$;
 
 revoke all on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
 to service_role;
 
@@ -18056,7 +18056,7 @@ end;
 $$;
 
 revoke all on function __LANE__.submit_team_lineup(uuid, uuid, uuid, jsonb)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.submit_team_lineup(uuid, uuid, uuid, jsonb)
 to service_role;
 
@@ -18081,7 +18081,7 @@ create index team_match_player_choices_team_idx
   on __LANE___private.team_match_player_choices (team_id);
 
 alter table __LANE___private.team_match_player_choices enable row level security;
-revoke all on table __LANE___private.team_match_player_choices from public, anon, authenticated;
+revoke all on table __LANE___private.team_match_player_choices from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update, delete on table __LANE___private.team_match_player_choices to service_role;
 
 create function __LANE__.list_my_team_match_choices(actor_user_id uuid)
@@ -18242,11 +18242,11 @@ end;
 $$;
 
 revoke all on function __LANE__.list_my_team_match_choices(uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_my_team_match_choices(uuid) to service_role;
 
 revoke all on function __LANE__.choose_team_match_team(uuid, uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.choose_team_match_team(uuid, uuid, uuid) to service_role;
 
 create function __LANE___private.enforce_one_player_per_team_match()
@@ -18529,7 +18529,7 @@ end;
 $$;
 
 revoke all on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
 to service_role;
 
@@ -18558,17 +18558,17 @@ alter table __LANE___private.team_lineup_slots enable row level security;
 alter table __LANE___private.team_lineups enable row level security;
 alter table __LANE___private.team_trades enable row level security;
 
-revoke all on __LANE___private.audit_events from public, anon, authenticated;
-revoke all on __LANE___private.free_agent_availability from public, anon, authenticated;
-revoke all on __LANE___private.league_admins from public, anon, authenticated;
-revoke all on __LANE___private.payment_status from public, anon, authenticated;
-revoke all on __LANE___private.player_contacts from public, anon, authenticated;
-revoke all on __LANE___private.player_match_score_submissions from public, anon, authenticated;
-revoke all on __LANE___private.roster_availability from public, anon, authenticated;
-revoke all on __LANE___private.team_invitations from public, anon, authenticated;
-revoke all on __LANE___private.team_lineup_slots from public, anon, authenticated;
-revoke all on __LANE___private.team_lineups from public, anon, authenticated;
-revoke all on __LANE___private.team_trades from public, anon, authenticated;
+revoke all on __LANE___private.audit_events from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.free_agent_availability from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.league_admins from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.payment_status from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.player_contacts from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.player_match_score_submissions from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.roster_availability from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.team_invitations from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.team_lineup_slots from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.team_lineups from public, __ANON__, __AUTHENTICATED__;
+revoke all on __LANE___private.team_trades from public, __ANON__, __AUTHENTICATED__;
 
 -- No browser policies are intentionally added. Trusted Worker/RPC flows continue to
 -- operate with service_role while ordinary browser roles remain denied by grants + RLS.
@@ -18722,10 +18722,10 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.list_admin_players(uuid) from public, anon, authenticated;
+revoke all on function __LANE__.list_admin_players(uuid) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_admin_players(uuid) to service_role;
 
-revoke all on function __LANE__.set_league_admin_role(uuid, uuid, boolean, text) from public, anon, authenticated;
+revoke all on function __LANE__.set_league_admin_role(uuid, uuid, boolean, text) from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_league_admin_role(uuid, uuid, boolean, text) to service_role;
 
 comment on function __LANE__.list_admin_players(uuid) is
@@ -18756,7 +18756,7 @@ create index player_competition_restrictions_player_history_idx
   on __LANE___private.player_competition_restrictions (player_id, season_id, restricted_at desc);
 
 alter table __LANE___private.player_competition_restrictions enable row level security;
-revoke all on __LANE___private.player_competition_restrictions from public, anon, authenticated;
+revoke all on __LANE___private.player_competition_restrictions from public, __ANON__, __AUTHENTICATED__;
 grant select, insert, update on __LANE___private.player_competition_restrictions to service_role;
 
 create or replace function __LANE___private.active_player_competition_restriction(
@@ -18778,7 +18778,7 @@ as $$
 $$;
 
 revoke all on function __LANE___private.active_player_competition_restriction(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.active_player_competition_restriction(uuid, uuid)
   to service_role;
 
@@ -19029,10 +19029,10 @@ end;
 $$;
 
 revoke all on function __LANE__.list_admin_players_for_management(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_admin_players_for_management(uuid) to service_role;
 revoke all on function __LANE__.set_player_competition_eligibility(uuid, uuid, uuid, boolean, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_player_competition_eligibility(uuid, uuid, uuid, boolean, text)
   to service_role;
 
@@ -19101,8 +19101,8 @@ begin
 end;
 $$;
 
-revoke all on function __LANE___private.reject_ineligible_lineup_slot() from public, anon, authenticated;
-revoke all on function __LANE___private.reject_ineligible_score_advance() from public, anon, authenticated;
+revoke all on function __LANE___private.reject_ineligible_lineup_slot() from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE___private.reject_ineligible_score_advance() from public, __ANON__, __AUTHENTICATED__;
 
 drop trigger if exists team_lineup_slots_competition_eligibility on __LANE___private.team_lineup_slots;
 create trigger team_lineup_slots_competition_eligibility
@@ -19393,11 +19393,11 @@ end;
 $$;
 
 revoke all on function __LANE__.list_admin_roster_teams(uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_admin_roster_teams(uuid) to service_role;
 
 revoke all on function __LANE__.set_admin_player_team_membership(uuid, uuid, uuid, uuid, boolean, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_admin_player_team_membership(uuid, uuid, uuid, uuid, boolean, text)
   to service_role;
 
@@ -19504,7 +19504,7 @@ end;
 $$;
 
 revoke all on function __LANE__.set_player_match_opening_discipline(uuid, uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_player_match_opening_discipline(uuid, uuid, uuid, text)
   to service_role;
 
@@ -19580,7 +19580,7 @@ end;
 $$;
 
 revoke all on function __LANE__.get_player_match_live_context(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_player_match_live_context(uuid, uuid)
   to service_role;
 
@@ -19716,7 +19716,7 @@ end;
 $$;
 
 revoke all on function __LANE__.update_player_match_score_rack(uuid, uuid, uuid, integer, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.update_player_match_score_rack(uuid, uuid, uuid, integer, text)
   to service_role;
 
@@ -20066,9 +20066,9 @@ end;
 $$;
 
 revoke all on function __LANE__.list_admin_season_team_candidates(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.admin_add_team_to_season(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_admin_season_team_candidates(uuid, uuid)
   to service_role;
 grant execute on function __LANE__.admin_add_team_to_season(uuid, uuid, uuid)
@@ -20118,7 +20118,7 @@ end;
 $$;
 
 revoke all on function __LANE___private.assert_expected_score_history(uuid, uuid, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.assert_expected_score_history(uuid, uuid, jsonb)
   to service_role;
 
@@ -20176,7 +20176,7 @@ end;
 $$;
 
 revoke all on function __LANE__.record_player_match_score_rack_checked(uuid, uuid, uuid, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.record_player_match_score_rack_checked(uuid, uuid, uuid, text, jsonb)
   to service_role;
 
@@ -20237,7 +20237,7 @@ end;
 $$;
 
 revoke all on function __LANE__.update_player_match_score_rack_checked(uuid, uuid, uuid, integer, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.update_player_match_score_rack_checked(uuid, uuid, uuid, integer, text, jsonb)
   to service_role;
 
@@ -20290,7 +20290,7 @@ end;
 $$;
 
 revoke all on function __LANE__.undo_player_match_score_rack_checked(uuid, uuid, uuid, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.undo_player_match_score_rack_checked(uuid, uuid, uuid, jsonb)
   to service_role;
 
@@ -20343,7 +20343,7 @@ end;
 $$;
 
 revoke all on function __LANE__.confirm_player_match_score_checked(uuid, uuid, uuid, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.confirm_player_match_score_checked(uuid, uuid, uuid, jsonb)
   to service_role;
 
@@ -20423,7 +20423,7 @@ end;
 $$;
 
 revoke all on function __LANE__.admin_create_unclaimed_player(uuid, text, boolean)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.admin_create_unclaimed_player(uuid, text, boolean)
   to service_role;
 
@@ -20578,21 +20578,21 @@ end;
 $$;
 
 revoke all on function __LANE__.get_own_date_availability(uuid, uuid, date)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_own_date_availability(uuid, uuid, date)
   to service_role;
 
 revoke all on function __LANE__.set_own_date_availability(uuid, uuid, date, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_own_date_availability(uuid, uuid, date, text)
   to service_role;
 
 comment on table __LANE___private.player_date_availability is
   'One personal availability check-in per registered player, season, and calendar date. Missing rows mean unsure.';
 comment on function __LANE__.get_own_date_availability(uuid, uuid, date) is
-  'Service-role-only read of the authenticated actor player date-wide availability. Missing response is unsure.';
+  'Service-role-only read of the __AUTHENTICATED__ actor player date-wide availability. Missing response is unsure.';
 comment on function __LANE__.set_own_date_availability(uuid, uuid, date, text) is
-  'Service-role-only write of the authenticated actor player date-wide availability for a scheduled league date.';
+  'Service-role-only write of the __AUTHENTICATED__ actor player date-wide availability for a scheduled league date.';
 
 
 -- Replayed from supabase/migrations/20260812043500_lineup_date_availability_bridge.sql
@@ -20722,7 +20722,7 @@ end;
 $$;
 
 revoke all on function __LANE__.set_own_date_availability(uuid, uuid, date, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_own_date_availability(uuid, uuid, date, text)
   to service_role;
 
@@ -20860,7 +20860,7 @@ end;
 $$;
 
 revoke all on function __LANE__.set_roster_availability(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_roster_availability(uuid, uuid, text)
   to service_role;
 
@@ -20935,7 +20935,7 @@ end;
 $$;
 
 revoke all on function __LANE__.set_free_agent_availability(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.set_free_agent_availability(uuid, uuid, text)
   to service_role;
 
@@ -21159,7 +21159,7 @@ end;
 $$;
 
 revoke all on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_round_availability(uuid, uuid, uuid)
   to service_role;
 
@@ -21348,12 +21348,12 @@ end;
 $$;
 
 revoke all on function __LANE__.get_player_claim_options(uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.get_player_claim_options(uuid, text)
   to service_role;
 
 revoke all on function __LANE__.claim_unclaimed_player(uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.claim_unclaimed_player(uuid, uuid)
   to service_role;
 
@@ -21441,7 +21441,7 @@ end;
 $$;
 
 revoke all on function __LANE__.admin_create_prepared_team(uuid, uuid, text)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.admin_create_prepared_team(uuid, uuid, text)
   to service_role;
 
@@ -21587,10 +21587,10 @@ begin
 end;
 $$;
 
-revoke all on function __LANE__.get_own_player_phone(uuid) from public, anon, authenticated;
-revoke all on function __LANE__.set_own_player_phone(uuid, text) from public, anon, authenticated;
-revoke all on function __LANE__.list_admin_player_contact_readiness(uuid) from public, anon, authenticated;
-revoke all on function __LANE__.get_admin_player_phone(uuid, uuid) from public, anon, authenticated;
+revoke all on function __LANE__.get_own_player_phone(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.set_own_player_phone(uuid, text) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.list_admin_player_contact_readiness(uuid) from public, __ANON__, __AUTHENTICATED__;
+revoke all on function __LANE__.get_admin_player_phone(uuid, uuid) from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.get_own_player_phone(uuid) to service_role;
 grant execute on function __LANE__.set_own_player_phone(uuid, text) to service_role;
@@ -21598,9 +21598,9 @@ grant execute on function __LANE__.list_admin_player_contact_readiness(uuid) to 
 grant execute on function __LANE__.get_admin_player_phone(uuid, uuid) to service_role;
 
 comment on function __LANE__.get_own_player_phone(uuid) is
-  'Service-role-only read of the authenticated player own private phone contact.';
+  'Service-role-only read of the __AUTHENTICATED__ player own private phone contact.';
 comment on function __LANE__.set_own_player_phone(uuid, text) is
-  'Service-role-only update of the authenticated player own private phone contact; audit history records readiness only, never the phone value.';
+  'Service-role-only update of the __AUTHENTICATED__ player own private phone contact; audit history records readiness only, never the phone value.';
 comment on function __LANE__.list_admin_player_contact_readiness(uuid) is
   'Service-role-only league-admin contact readiness list; broad results expose only whether a phone exists.';
 comment on function __LANE__.get_admin_player_phone(uuid, uuid) is
@@ -21893,9 +21893,9 @@ before update of status on __LANE__.seasons
 for each row execute function __LANE___private.enforce_captain_contact_before_season_activation();
 
 revoke all on function __LANE__.list_admin_team_captain_candidates(uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.admin_assign_team_captain(uuid, uuid, uuid, uuid)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.list_admin_team_captain_candidates(uuid, uuid, uuid)
   to service_role;
 grant execute on function __LANE__.admin_assign_team_captain(uuid, uuid, uuid, uuid)
@@ -21927,7 +21927,7 @@ begin
 end;
 $$;
 
-revoke all on function __LANE___private.guard_explicit_season_close() from public, anon, authenticated;
+revoke all on function __LANE___private.guard_explicit_season_close() from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE___private.guard_explicit_season_close() to service_role;
 
 drop trigger if exists guard_explicit_season_close on __LANE__.seasons;
@@ -22099,9 +22099,9 @@ end;
 $$;
 
 revoke all on function __LANE__.get_season_close_readiness(uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 revoke all on function __LANE__.close_season(uuid, uuid)
-from public, anon, authenticated;
+from public, __ANON__, __AUTHENTICATED__;
 
 grant execute on function __LANE__.get_season_close_readiness(uuid, uuid) to service_role;
 grant execute on function __LANE__.close_season(uuid, uuid) to service_role;
@@ -22239,7 +22239,7 @@ end;
 $$;
 
 revoke all on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
-  from public, anon, authenticated;
+  from public, __ANON__, __AUTHENTICATED__;
 grant execute on function __LANE__.publish_season_schedule(uuid, uuid, text, jsonb)
   to service_role;
 
@@ -22279,7 +22279,7 @@ alter function __LANE__.list_public_season_registration()
   rename to list_all_season_registration_internal;
 
 revoke execute on function __LANE__.list_all_season_registration_internal()
-  from public, anon, authenticated, service_role;
+  from public, __ANON__, __AUTHENTICATED__, service_role;
 
 create function __LANE__.list_public_season_registration()
 returns table(
@@ -22314,8 +22314,8 @@ as $$
 $$;
 
 revoke all on function __LANE__.list_public_season_registration() from public;
-revoke all on function __LANE__.list_public_season_registration() from anon;
-revoke all on function __LANE__.list_public_season_registration() from authenticated;
+revoke all on function __LANE__.list_public_season_registration() from __ANON__;
+revoke all on function __LANE__.list_public_season_registration() from __AUTHENTICATED__;
 grant execute on function __LANE__.list_public_season_registration() to service_role;
 
 -- Standings are public read models. Preserve their established implementation
@@ -22325,7 +22325,7 @@ alter function __LANE__.list_team_standings(uuid)
   rename to list_team_standings_internal;
 
 revoke execute on function __LANE__.list_team_standings_internal(uuid)
-  from public, anon, authenticated, service_role;
+  from public, __ANON__, __AUTHENTICATED__, service_role;
 
 create function __LANE__.list_team_standings(target_season_id uuid)
 returns table(
@@ -22363,15 +22363,15 @@ as $$
 $$;
 
 revoke all on function __LANE__.list_team_standings(uuid) from public;
-revoke all on function __LANE__.list_team_standings(uuid) from anon;
-revoke all on function __LANE__.list_team_standings(uuid) from authenticated;
+revoke all on function __LANE__.list_team_standings(uuid) from __ANON__;
+revoke all on function __LANE__.list_team_standings(uuid) from __AUTHENTICATED__;
 grant execute on function __LANE__.list_team_standings(uuid) to service_role;
 
 alter function __LANE__.list_individual_standings(uuid)
   rename to list_individual_standings_internal;
 
 revoke execute on function __LANE__.list_individual_standings_internal(uuid)
-  from public, anon, authenticated, service_role;
+  from public, __ANON__, __AUTHENTICATED__, service_role;
 
 create function __LANE__.list_individual_standings(target_season_id uuid)
 returns table(
@@ -22406,8 +22406,8 @@ as $$
 $$;
 
 revoke all on function __LANE__.list_individual_standings(uuid) from public;
-revoke all on function __LANE__.list_individual_standings(uuid) from anon;
-revoke all on function __LANE__.list_individual_standings(uuid) from authenticated;
+revoke all on function __LANE__.list_individual_standings(uuid) from __ANON__;
+revoke all on function __LANE__.list_individual_standings(uuid) from __AUTHENTICATED__;
 grant execute on function __LANE__.list_individual_standings(uuid) to service_role;
 
 -- Prize summaries are likewise a normal public surface. Administrative prize
@@ -22416,7 +22416,7 @@ alter function __LANE__.get_season_prize_summary(uuid)
   rename to get_season_prize_summary_internal;
 
 revoke execute on function __LANE__.get_season_prize_summary_internal(uuid)
-  from public, anon, authenticated, service_role;
+  from public, __ANON__, __AUTHENTICATED__, service_role;
 
 create function __LANE__.get_season_prize_summary(target_season_id uuid)
 returns table(
@@ -22456,8 +22456,8 @@ as $$
 $$;
 
 revoke all on function __LANE__.get_season_prize_summary(uuid) from public;
-revoke all on function __LANE__.get_season_prize_summary(uuid) from anon;
-revoke all on function __LANE__.get_season_prize_summary(uuid) from authenticated;
+revoke all on function __LANE__.get_season_prize_summary(uuid) from __ANON__;
+revoke all on function __LANE__.get_season_prize_summary(uuid) from __AUTHENTICATED__;
 grant execute on function __LANE__.get_season_prize_summary(uuid) to service_role;
 
 
@@ -31855,7 +31855,13 @@ begin
       raise exception 'Refusing to overwrite existing schema for lane %', lane;
     end if;
 
-    execute replace(template, '__LANE__', lane);
+    execute replace(
+      replace(
+        replace(template, '__LANE__', lane),
+        '__AUTHENTICATED__', 'authenticated'
+      ),
+      '__ANON__', 'anon'
+    );
 
     select count(*) into table_count
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
