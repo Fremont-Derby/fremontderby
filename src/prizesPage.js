@@ -201,6 +201,8 @@ export function renderPrizesPage() {
         <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
       </label>
       <a class="ghost" href="/standings" style="min-height:44px;display:inline-flex;align-items:center">Standings</a>
+      <a class="ghost" href="/teams" style="min-height:44px;display:inline-flex;align-items:center">Teams</a>
+      <a class="ghost" href="/players" style="min-height:44px;display:inline-flex;align-items:center">Players</a>
       <button class="load" data-load type="submit" disabled>Load prizes</button>
     </form>
 

@@ -48,6 +48,10 @@ export function renderPlayoffsPage() {
       <label>Season<select data-season disabled><option>Loading…</option></select></label>
       <button type="button" class="ghost" data-refresh>Refresh</button>
       <a class="ghost" href="/schedule" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Full schedule</a>
+      <a class="ghost" href="/scorecard" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Score</a>
+      <a class="ghost" href="/teams" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Teams</a>
+      <a class="ghost" href="/players" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Players</a>
+      <a class="ghost" href="/standings" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Standings</a>
     </div>
     <section class="admin" data-admin hidden>
       <strong>League admin</strong>
