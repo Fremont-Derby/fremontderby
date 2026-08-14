@@ -123,7 +123,7 @@ export function renderAdminSeasonsPage() {
     }
     function filteredSeasons() {
       const query = normalize(searchEl.value);
-      const tokens = query.split(/[ \t\n\r]+/).filter(Boolean);
+          const tokens = query.trim().split(new RegExp('[ \\t\\n\\r]+')).filter(Boolean);
       const status = statusFilterEl.value;
       let list = sortedSeasons(seasons).filter((season) => {
         if (status && String(season.status || '') !== status) return false;
