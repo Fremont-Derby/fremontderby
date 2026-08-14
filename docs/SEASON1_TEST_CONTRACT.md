@@ -11,6 +11,7 @@ npm run lint
 npm run check
 npm test
 npm run test:season1
+npm run test:floor
 npm run labels:check
 npm run build
 ```
