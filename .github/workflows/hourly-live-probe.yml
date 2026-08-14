@@ -1,0 +1,63 @@
+# Backup deterministic probe when GitHub-hosted/self-hosted runners are available.
+# Primary hourly probe is Cloudflare Cron (src/hourlyProbe.js) — does not need GH runners.
+name: Hourly live probe
+
+on:
+  schedule:
+    # Top of each hour UTC (may lag; CF cron is the reliable path)
+    - cron: '5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe production routes
+        id: probe
+        shell: bash
+        run: |
+          set +e
+          HOST="${PROBE_HOST:-https://fremontderby.com}"
+          PATHS="/ /schedule /teams /playoffs /trades /prizes /admin/audit /notifications"
+          FAIL=0
+          REPORT=""
+          for p in $PATHS; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$HOST$p" || echo "000")
+            echo "$CODE $HOST$p"
+            REPORT="${REPORT}"$'\n'"- \`$CODE\` $HOST$p"
+            case "$CODE" in
+              2*|3*) ;;
+              *) FAIL=1 ;;
+            esac
+          done
+          echo "fail=$FAIL" >> "$GITHUB_OUTPUT"
+          {
+            echo "report<<EOF"
+            echo "### Hourly live probe (GitHub Actions)"
+            echo "Host: $HOST"
+            echo "$REPORT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Comment on tracking issue when failing
+        if: steps.probe.outputs.fail == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = process.env.PROBE_ISSUE || '806';
+            const body = `${{ steps.probe.outputs.report }}
+
+            _Posted by GitHub Actions hourly probe (no LLM). Runners required for this path._
+            `;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(issue),
+              body,
+            });
