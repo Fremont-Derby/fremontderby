@@ -1,3 +1,4 @@
+import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 function safeJson(value) {
   return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
 }
@@ -37,7 +38,7 @@ export function renderAdminOperationsPage(env = {}) {
   <section class="panel" data-broadcast>
       <h2>League broadcast</h2>
       <p class="muted">Send a notice to all active players (or the selected season). Appears in Notifications.</p>
-      <label>Title<input data-broadcast-title maxlength="120" placeholder="Weather / venue update" /></label>
+      <label>Title<input data-broadcast-title data-safe-ac-candidates='["Weather update","Venue change","Payment deadline","Schedule change","Registration open","Playoff brackets posted"]' maxlength="120" placeholder="Weather / venue update" /></label>
       <label>Message<textarea data-broadcast-body maxlength="500" rows="3"></textarea></label>
       <button type="button" class="primary" data-broadcast-send>Send broadcast</button>
     </section>
@@ -77,6 +78,7 @@ export function renderAdminOperationsPage(env = {}) {
       });
     }
     </script>
+${safeAutocompleteClientScript}
 </body>
 </html>`;
 }
