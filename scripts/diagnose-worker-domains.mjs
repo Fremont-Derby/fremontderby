@@ -17,28 +17,46 @@ async function cf(path) {
   return { response, payload };
 }
 
-const { response, payload } = await cf('/workers/domains');
-console.log(JSON.stringify({
-  status: response.status,
-  success: payload.success,
-  domains: (payload.result || []).map((row) => ({
-    hostname: row.hostname,
-    service: row.service,
-    environment: row.environment,
-    id: row.id,
-  })),
-  errors: payload.errors,
-}, null, 2));
+const expected = new Map([
+  ['fremontderby.com', 'fremontderby-prod'],
+  ['dru.fremontderby.com', 'fremontderby-dru'],
+  ['jfl.fremontderby.com', 'fremontderby-jfl'],
+  ['gamma.fremontderby.com', 'fremontderby-gamma'],
+]);
 
-for (const script of ['fremontderby', 'fremontderby-dru', 'fremontderby-jfl', 'fremontderby-gamma', 'fremontderby-prod']) {
+const { response, payload } = await cf('/workers/domains');
+const domains = (payload.result || []).map((row) => ({
+  hostname: row.hostname,
+  service: row.service,
+  environment: row.environment,
+  id: row.id,
+}));
+
+console.log(JSON.stringify({ status: response.status, success: payload.success, domains, errors: payload.errors }, null, 2));
+
+for (const script of ['fremontderby', 'fremontderby-prod', 'fremontderby-dru', 'fremontderby-jfl', 'fremontderby-gamma']) {
   const r = await cf(`/workers/scripts/${encodeURIComponent(script)}`);
-  const ok = r.response.ok
   console.log(JSON.stringify({
     script,
     status: r.response.status,
-    ok,
-    id: r.payload?.result?.id,
+    ok: r.response.ok,
     modified: r.payload?.result?.modified_on,
-    errors: r.payload?.errors,
-  }))
+  }));
 }
+
+let failed = 0;
+for (const [hostname, service] of expected) {
+  const row = domains.find((d) => d.hostname === hostname);
+  if (!row) {
+    console.error(`MISSING binding: ${hostname} (expected ${service})`);
+    failed += 1;
+    continue;
+  }
+  if (row.service !== service) {
+    console.error(`MISROUTE: ${hostname} -> ${row.service} (expected ${service})`);
+    failed += 1;
+  } else {
+    console.log(`OK ${hostname} -> ${row.service}`);
+  }
+}
+if (failed) process.exit(1);

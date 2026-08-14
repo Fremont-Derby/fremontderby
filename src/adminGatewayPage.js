@@ -33,13 +33,13 @@ export function renderAdminGatewayPage() {
           <strong>Operations</strong><span>See what needs attention before league night.</span><b>Open operations →</b>
         </a>
         <a class="card" data-accent="blue" href="/admin/players">
-          <strong>Players</strong><span>Manage player access, eligibility, and roster exceptions.</span><b>Manage players →</b>
+          <strong>Players</strong><span>Search players A–Z, manage access, eligibility, and roster exceptions.</span><b>Manage players →</b>
         </a>
         <a class="card" data-accent="gold" href="/admin/seasons">
-          <strong>Seasons</strong><span>Find seasons by name or status, then open setup or teams.</span><b>Browse seasons →</b>
+          <strong>Seasons</strong><span>Search seasons by name, letter, or status — then open setup or teams.</span><b>Browse seasons →</b>
         </a>
         <a class="card" href="/admin/season-teams">
-          <strong>Season teams</strong><span>Look up team names A–Z and manage slots for a season.</span><b>Manage teams →</b>
+          <strong>Season teams</strong><span>Jump team names A–Z and manage roster slots for a season.</span><b>Manage teams →</b>
         </a>
         <a class="card" href="/season-setup">
           <strong>League setup</strong><span>Create and publish seasons, capacity, and schedule.</span><b>Open setup →</b>
