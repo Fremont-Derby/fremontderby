@@ -19,6 +19,8 @@ Secret **values** are never readable via the GitHub API. Agents may only exercis
 | Attach custom domains to lane Workers | `scripts/restore-lane-custom-domains.mjs` + workflow | Hourly schedule + `workflow_dispatch` |
 | Disable `*.workers.dev` | `scripts/disable-workers-dev.mjs` | Does **not** manage custom domains |
 | Deploy lane from matching branch | CI `deploy-nonproduction` on `fremontderby-{jfl,dru,gamma}` | Requires Worker secrets already provisioned |
+| Deploy lane from main (controlled) | Workflow **Deploy release lanes** (`workflow_dispatch`) | Requires Worker secrets already provisioned |
+| Lane identity monitor | Workflow **Lane health monitor** (hourly) | Fails if public host `environment` mismatches |
 
 ## Cloudflare / data (human or provisioned secrets required)
 
