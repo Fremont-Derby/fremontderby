@@ -50,13 +50,27 @@ export function renderAdminGatewayPage() {
         <a class="card" data-accent="rose" href="/messages/moderation">
           <strong>Moderation</strong><span>Review reported messages that need an admin decision.</span><b>Review reports →</b>
         </a>
+        <a class="card" data-accent="gold" href="/prizes">
+          <strong>Prizes</strong><span>Review prize summary and finalize season payouts when ready.</span><b>Open prizes →</b>
+        </a>
+        <a class="card" href="/playoffs">
+          <strong>Playoffs</strong><span>Bracket, lineup, and postseason match progress.</span><b>Open playoffs →</b>
+        </a>
+        <a class="card" data-accent="blue" href="/players">
+          <strong>Public player directory</strong><span>Same A–Z roster captains use for recruiting (no phone numbers).</span><b>Browse players →</b>
+        </a>
       </div>
     </section>
 
     <section class="state support" data-player-content hidden>
       <strong>Need help from a league admin?</strong>
       <p>Admin support is being consolidated into Messages. For now, open Messages to contact someone you already coordinate with.</p>
-      <a class="action" href="/messages">Open messages</a>
+      <div class="recovery-actions">
+        <a class="action" href="/messages">Open messages</a>
+        <a class="action secondary" href="/teams">Teams</a>
+        <a class="action secondary" href="/players">Players</a>
+        <a class="action secondary" href="/schedule">Schedule</a>
+      </div>
     </section>
 
     <section class="state" data-signed-out hidden>
@@ -91,24 +105,39 @@ export function renderAdminGatewayPage() {
       target.hidden=false;
     }
 
-    function showLoading(){
-      show(loading);
-      status.textContent='';
-      delete status.dataset.tone;
+    function setStatus(message,tone){
+      if(window.fdSetStatus){window.fdSetStatus(status,message,tone||'',{});return;}
+      status.textContent=message||'';
+      if(tone) status.dataset.tone=tone; else delete status.dataset.tone;
     }
 
-    async function resolveAccess(){
+    function showLoading(quiet){
+      // Prefer a calm status line over a full-page "Opening admin tools…" takeover when possible.
+      if(!quiet){
+        loading.hidden=false;
+        adminContent.hidden=true;playerContent.hidden=true;signedOut.hidden=true;accessError.hidden=true;
+        const title=loading.querySelector('strong');
+        const copy=loading.querySelector('p');
+        if(title) title.textContent='Opening admin tools';
+        if(copy) copy.textContent='Confirming your access. This only takes a moment.';
+      }
+      setStatus(quiet?'':'Opening admin tools…','muted');
+    }
+
+    async function resolveAccess(opts){
+      const quiet=Boolean(opts&&opts.quiet);
       const accessToken=token();
-      if(!accessToken){show(signedOut);return;}
-      showLoading();
+      if(!accessToken){show(signedOut);setStatus('');return;}
+      showLoading(quiet);
       try{
         const response=await fetch('/api/admin/players',{headers:{authorization:'Bearer '+accessToken}});
-        if(response.ok){show(adminContent);return;}
-        if(response.status===401){sessionStorage.removeItem('fd.accessToken');show(signedOut);status.textContent='Your sign-in may have expired.';return;}
-        if(response.status===403){show(playerContent);return;}
+        if(response.ok){show(adminContent);setStatus('Admin tools ready','ok');return;}
+        if(response.status===401){sessionStorage.removeItem('fd.accessToken');show(signedOut);setStatus((window.fdFriendlyError?window.fdFriendlyError(new Error('sign-in expired')):'Your sign-in may have expired.'),'error');return;}
+        if(response.status===403){show(playerContent);setStatus('Player account — use Messages for admin help','muted');return;}
         throw new Error('access check failed');
-      }catch{
+      }catch(error){
         show(accessError);
+        setStatus((window.fdFriendlyError?window.fdFriendlyError(error):'Could not verify admin access'),'error');
       }
     }
 
