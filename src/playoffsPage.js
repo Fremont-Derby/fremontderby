@@ -112,14 +112,71 @@ export function renderPlayoffsPage() {
           score.href='/scorecard?match='+encodeURIComponent(match.teamMatchId||'');
           score.textContent=(match.status==='finalized'||match.status==='corrected')?'View final':'Score';
           score.className=(match.status==='finalized'||match.status==='corrected')?'':'primary';
-          const lineup=document.createElement('a');
-          lineup.href='/lineup?teamMatch='+encodeURIComponent(match.teamMatchId||'');
-          lineup.textContent='Lineup';
           const msgs=document.createElement('a');
           msgs.href='/messages?matchup='+encodeURIComponent(match.teamMatchId||'');
           msgs.textContent='Messages';
-          actions.append(score,lineup);
+          actions.append(score,msgs);
           card.append(actions);
+          if(token() && match.teamMatchId){
+            const post=document.createElement('div');
+            post.style.cssText='margin-top:10px;display:grid;gap:8px';
+            post.innerHTML='<strong style="font-size:.85rem">Postseason lineup (4 + anchor)</strong>';
+            const teamSel=document.createElement('select');
+            teamSel.innerHTML='<option value="">Your team for this match…</option>';
+            for(const ct of (window.__fdCaptainTeams||[])){
+              const id=ct.teamId||ct.team_id;
+              const name=ct.teamName||ct.team_name||'Team';
+              if(id) teamSel.innerHTML+='<option value="'+id+'">'+name+'</option>';
+            }
+            const playerBox=document.createElement('div');
+            playerBox.style.cssText='display:grid;gap:4px;font-size:.85rem';
+            const anchorSel=document.createElement('select');
+            anchorSel.innerHTML='<option value="">Anchor player…</option>';
+            const submit=document.createElement('button');
+            submit.type='button';
+            submit.className='primary';
+            submit.textContent='Submit postseason lineup';
+            function rosterFor(teamId){
+              const team=(window.__fdCaptainTeams||[]).find((t)=>(t.teamId||t.team_id)===teamId);
+              return Array.isArray(team&&team.roster)?team.roster:[];
+            }
+            function paintPlayers(){
+              playerBox.replaceChildren();
+              anchorSel.innerHTML='<option value="">Anchor player…</option>';
+              const roster=rosterFor(teamSel.value);
+              for(const p of roster){
+                const id=p.playerId||p.player_id;
+                const name=p.displayName||p.display_name||'Player';
+                if(!id)continue;
+                const lab=document.createElement('label');
+                lab.style.display='flex';lab.style.gap='8px';lab.style.alignItems='center';
+                const cb=document.createElement('input');
+                cb.type='checkbox';cb.value=id;cb.dataset.playerName=name;
+                lab.append(cb,document.createTextNode(name+(p.role==='captain'?' (C)':'')));
+                playerBox.append(lab);
+                const opt=document.createElement('option');opt.value=id;opt.textContent=name;anchorSel.append(opt);
+              }
+            }
+            teamSel.addEventListener('change',paintPlayers);
+            submit.addEventListener('click',async()=>{
+              try{
+                const teamId=teamSel.value;
+                const boxes=[...playerBox.querySelectorAll('input[type=checkbox]:checked')].map((el)=>el.value);
+                const anchorPlayerId=anchorSel.value;
+                if(!teamId)throw new Error('Choose your team');
+                if(boxes.length!==4)throw new Error('Select exactly four players');
+                if(!anchorPlayerId||!boxes.includes(anchorPlayerId))throw new Error('Anchor must be one of the four');
+                setStatus('Submitting postseason lineup…');
+                await authApi('/api/team-matches/'+encodeURIComponent(match.teamMatchId)+'/postseason-lineup',{
+                  method:'POST',
+                  body:JSON.stringify({teamId,playerIds:boxes,anchorPlayerId}),
+                });
+                setStatus('Postseason lineup submitted','ok');
+              }catch(e){setStatus(e.message,'error')}
+            });
+            post.append(teamSel,playerBox,anchorSel,submit);
+            card.append(post);
+          }
           matches.append(card);
         }
         section.append(head,matches);
@@ -151,6 +208,12 @@ export function renderPlayoffsPage() {
       seasonEl.disabled=false;
       await loadBracket();
       adminEl.hidden=!token();
+      if(token()){
+        try{
+          const tm=await authApi('/api/me/teams');
+          window.__fdCaptainTeams=(tm.teamManagement&&tm.teamManagement.captain_teams)||[];
+        }catch{window.__fdCaptainTeams=[]}
+      }
     }
     async function loadBracket(){
       const id=seasonEl.value;

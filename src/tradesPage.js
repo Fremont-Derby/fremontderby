@@ -1,5 +1,4 @@
 import { livePageRefreshScript } from './livePageRefresh.js';
-import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 
 export function renderTradesPage() {
   return `<!doctype html>
@@ -9,8 +8,8 @@ export function renderTradesPage() {
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Fremont Derby Trades</title>
   <style>
-    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#111316;color:#f5f1e9;--panel:#191d22;--line:#343c45;--muted:#aab3bb;--green:#2fa972;--gold:#d8ad3f;--red:#d45b50}
-    *{box-sizing:border-box}button,a,select,input{touch-action:manipulation;font:inherit}
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#111316;color:#f5f1e9;--panel:#191d22;--line:#343c45;--muted:#aab3bb;--green:#2fa972}
+    *{box-sizing:border-box}button,select,a{font:inherit;touch-action:manipulation}
     body{margin:0;min-height:100vh;background:#111316}
     .app{width:min(1120px,100%);margin:auto;padding:16px}
     .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line)}
@@ -21,11 +20,9 @@ export function renderTradesPage() {
     .panel{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     label{display:grid;gap:6px;color:var(--muted);font-size:.78rem;font-weight:850}
-    select,input,button{min-height:44px;border-radius:8px;border:1px solid var(--line);background:#0d1013;color:#f5f1e9;padding:0 12px}
+    select,button{min-height:44px;border-radius:8px;border:1px solid var(--line);background:#0d1013;color:#f5f1e9;padding:0 12px}
     button.primary{background:var(--green);border-color:var(--green);color:#06120d;font-weight:950;cursor:pointer}
     button.ghost{background:transparent;cursor:pointer}
-    table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:.86rem}
-    .empty{padding:16px;color:var(--muted)}
     .note{color:var(--muted);line-height:1.5}
     .actions{display:flex;gap:8px;flex-wrap:wrap}
     @media(max-width:720px){.grid{grid-template-columns:1fr}.status{text-align:left}}
@@ -37,18 +34,18 @@ export function renderTradesPage() {
       <div class="brand"><span class="mark">9</span><span>Trades</span></div>
       <div class="status" data-status>Loading…</div>
     </header>
-    <p class="note">Captains propose swaps. Both players and both captains must accept before the roster move completes. Sign in on Profile first.</p>
+    <p class="note">Captains propose a player-for-player swap. Both players and both captains must accept. Captains are not tradable.</p>
     <section class="panel">
       <h2>Propose a trade</h2>
       <form class="grid" data-trade-form>
         <label>My team<select data-team-id required></select></label>
-        <label>My player ID<input data-offered-player-id required placeholder="Player UUID on your roster" autocomplete="off" /></label>
-        <label>Other team ID<input data-requested-team-id required placeholder="Team UUID" autocomplete="off" /></label>
-        <label>Other player ID<input data-requested-player-id required placeholder="Player UUID on other team" autocomplete="off" /></label>
+        <label>My player (non-captain)<select data-offered-player-id required></select></label>
+        <label>Other team<select data-requested-team-id required></select></label>
+        <label>Their player (non-captain)<select data-requested-player-id required></select></label>
         <div class="actions" style="grid-column:1/-1">
           <button class="primary" type="submit">Propose trade</button>
           <button class="ghost" type="button" data-refresh>Refresh</button>
-          <a class="ghost" href="/teams" style="display:inline-flex;align-items:center;color:#9ee5bd">Open Teams</a>
+          <a href="/teams" style="color:#9ee5bd;align-self:center">Teams</a>
         </div>
       </form>
     </section>
@@ -58,22 +55,21 @@ export function renderTradesPage() {
         <span data-trade-count>0</span>
       </div>
       <div data-trades-list></div>
-      <div class="empty" data-trades-empty>No trades yet.</div>
+      <div class="note" data-trades-empty>No trades yet.</div>
     </section>
   </main>
   ${livePageRefreshScript}
-  ${safeAutocompleteClientScript}
   <script>
     const statusEl=document.querySelector('[data-status]');
     const teamSelect=document.querySelector('[data-team-id]');
-    const offeredPlayerInput=document.querySelector('[data-offered-player-id]');
-    const requestedTeamInput=document.querySelector('[data-requested-team-id]');
-    
-    
+    const offeredSelect=document.querySelector('[data-offered-player-id]');
+    const otherTeamSelect=document.querySelector('[data-requested-team-id]');
+    const requestedSelect=document.querySelector('[data-requested-player-id]');
     const listEl=document.querySelector('[data-trades-list]');
     const emptyEl=document.querySelector('[data-trades-empty]');
     const countEl=document.querySelector('[data-trade-count]');
     let captainTeams=[];
+    let counterparties=[];
     function setStatus(m,t){statusEl.textContent=m;statusEl.dataset.tone=t||'muted'}
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function api(path,options={}){
@@ -84,100 +80,106 @@ export function renderTradesPage() {
       if(!response.ok)throw new Error(body.error||'Request failed');
       return body;
     }
-    function fillSelect(select,rows,map){
+    function fillSelect(select,rows,map,emptyLabel){
       select.replaceChildren();
-      const placeholder=document.createElement('option');
-      placeholder.value='';
-      placeholder.textContent='Select…';
-      select.append(placeholder);
+      const ph=document.createElement('option');
+      ph.value='';
+      ph.textContent=emptyLabel||'Select…';
+      select.append(ph);
       for(const row of rows){
-        const opt=document.createElement('option');
         const mapped=map(row);
+        if(!mapped.value)continue;
+        const opt=document.createElement('option');
         opt.value=mapped.value;
         opt.textContent=mapped.label;
         select.append(opt);
       }
     }
+    function selectedTeam(){
+      return captainTeams.find((t)=>(t.teamId||t.team_id)===teamSelect.value)||null;
+    }
+    function fillOfferedPlayers(){
+      const team=selectedTeam();
+      const roster=Array.isArray(team&&team.roster)?team.roster:[];
+      const players=roster.filter((p)=>String(p.role||'player')==='player');
+      fillSelect(offeredSelect,players,(p)=>({
+        value:p.playerId||p.player_id,
+        label:p.displayName||p.display_name||'Player',
+      }),players.length?'Select player…':'No non-captain players on roster');
+    }
+    async function loadCounterparties(){
+      const team=selectedTeam();
+      const seasonId=team&&(team.seasonId||team.season_id);
+      counterparties=[];
+      fillSelect(otherTeamSelect,[],()=>({}),'Select other team…');
+      fillSelect(requestedSelect,[],()=>({}),'Select their player…');
+      if(!seasonId)return;
+      const body=await api('/api/seasons/'+encodeURIComponent(seasonId)+'/trade-counterparties');
+      counterparties=body.teams||[];
+      fillSelect(otherTeamSelect,counterparties,(t)=>({
+        value:t.teamId,
+        label:t.teamName+(t.players&&t.players.length?(' · '+t.players.length+' players'):''),
+      }),counterparties.length?'Select other team…':'No other teams in season');
+    }
+    function fillRequestedPlayers(){
+      const team=counterparties.find((t)=>t.teamId===otherTeamSelect.value);
+      const players=(team&&team.players)||[];
+      fillSelect(requestedSelect,players,(p)=>({
+        value:p.playerId,
+        label:p.displayName||'Player',
+      }),players.length?'Select player…':'No non-captain players');
+    }
     async function loadTeams(){
       const body=await api('/api/me/teams');
-      const management=body.teamManagement||{};
-      const list=management.captain_teams||management.captainTeams||[];
-      captainTeams=list;
-      fillSelect(teamSelect,list,(t)=>({
-        value:t.teamId||t.team_id||t.id,
-        label:(t.teamName||t.team_name||t.name||'Team')+(t.seasonName?(' · '+t.seasonName):'')
-      }));
-      if(list[0])teamSelect.value=list[0].teamId||list[0].team_id||list[0].id||'';
-      // Player IDs still required by trade RPC; keep text fields for offered/requested players.
-      
-
+      captainTeams=(body.teamManagement&&body.teamManagement.captain_teams)||[];
+      fillSelect(teamSelect,captainTeams,(t)=>({
+        value:t.teamId||t.team_id,
+        label:(t.teamName||t.team_name||'Team')+(t.seasonName?(' · '+t.seasonName):''),
+      }),captainTeams.length?'Select team…':'No captained teams');
+      if(captainTeams[0])teamSelect.value=captainTeams[0].teamId||captainTeams[0].team_id||'';
+      fillOfferedPlayers();
+      await loadCounterparties();
     }
-    async function loadRosterOptions(){ /* reserved for future roster select enrichment */ }
     function renderTrades(trades){
       listEl.replaceChildren();
       countEl.textContent=String(trades.length);
       emptyEl.hidden=trades.length>0;
       for(const trade of trades){
         const card=document.createElement('article');
-        card.style.borderBottom='1px solid var(--line)';
-        card.style.padding='10px 0';
-        const title=document.createElement('strong');
-        title.textContent=String(trade.status||'pending');
-        const detail=document.createElement('div');
-        detail.className='note';
-        detail.textContent=[
-          trade.season_name||trade.seasonName||'',
-          (trade.offered_player_name||trade.offeredPlayerName||'Player')+' ↔ '+(trade.requested_player_name||trade.requestedPlayerName||'Player'),
-          'Player: '+(trade.player_response||trade.playerResponse||'—'),
-          'Captain: '+(trade.captain_response||trade.captainResponse||'—')
-        ].filter(Boolean).join(' · ');
-        card.append(title,detail);
-        const actions=document.createElement('div');
-        actions.className='actions';
+        card.style.cssText='border-bottom:1px solid var(--line);padding:10px 0';
+        card.innerHTML='<strong>'+String(trade.status||'pending')+'</strong><div class="note">'
+          +[(trade.season_name||trade.seasonName||''),
+            (trade.offered_player_name||trade.offeredPlayerName||'Player')+' ↔ '+(trade.requested_player_name||trade.requestedPlayerName||'Player'),
+            'Player: '+(trade.player_response||trade.playerResponse||'—'),
+            'Captain: '+(trade.captain_response||trade.captainResponse||'—')].filter(Boolean).join(' · ')+'</div>';
         const id=trade.id||trade.tradeId;
         if(id){
-          const accept=document.createElement('button');
-          accept.type='button';accept.className='primary';accept.textContent='Player accept';
-          accept.onclick=()=>respondPlayer(id,'accepted');
-          const reject=document.createElement('button');
-          reject.type='button';reject.className='ghost';reject.textContent='Player reject';
-          reject.onclick=()=>respondPlayer(id,'rejected');
-          const capOk=document.createElement('button');
-          capOk.type='button';capOk.className='primary';capOk.textContent='Captain approve';
-          capOk.onclick=()=>respondCaptain(id,'approved');
-          const capNo=document.createElement('button');
-          capNo.type='button';capNo.className='ghost';capNo.textContent='Captain reject';
-          capNo.onclick=()=>respondCaptain(id,'rejected');
-          actions.append(accept,reject,capOk,capNo);
+          const actions=document.createElement('div');
+          actions.className='actions';
+          const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>fn().catch((e)=>setStatus(e.message,'error'));return b};
+          actions.append(
+            mk('Player accept','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'accepted'})}).then(loadTrades)),
+            mk('Player reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
+            mk('Captain approve','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/captain-approval',{method:'POST',body:JSON.stringify({response:'approved'})}).then(loadTrades)),
+            mk('Captain reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/captain-approval',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
+          );
+          card.append(actions);
         }
-        card.append(actions);
         listEl.append(card);
       }
     }
-    async function respondPlayer(tradeId,response){
-      setStatus('Saving player response…');
-      await api('/api/team-trades/'+encodeURIComponent(tradeId)+'/player-response',{method:'POST',body:JSON.stringify({response})});
-      await loadTrades();
-      setStatus('Player response saved','ok');
-    }
-    async function respondCaptain(tradeId,response){
-      setStatus('Saving captain response…');
-      await api('/api/team-trades/'+encodeURIComponent(tradeId)+'/captain-approval',{method:'POST',body:JSON.stringify({response})});
-      await loadTrades();
-      setStatus('Captain response saved','ok');
-    }
     async function loadTrades(){
       const body=await api('/api/me/trades');
-      const trades=(body.tradeManagement&&body.tradeManagement.trades)||body.trades||[];
+      const trades=(body.tradeManagement&&body.tradeManagement.trades)||[];
       renderTrades(Array.isArray(trades)?trades:[]);
     }
     async function propose(event){
       event.preventDefault();
       const teamId=teamSelect.value;
-      const offeredPlayerId=document.querySelector('[data-offered-player-id]').value.trim();
-      const requestedTeamId=requestedTeamInput.value.trim();
-      const requestedPlayerId=document.querySelector('[data-requested-player-id]').value.trim();
-      if(!teamId||!offeredPlayerId||!requestedTeamId||!requestedPlayerId)throw new Error('Fill team, both players, and other team id.');
+      const offeredPlayerId=offeredSelect.value;
+      const requestedTeamId=otherTeamSelect.value;
+      const requestedPlayerId=requestedSelect.value;
+      if(!teamId||!offeredPlayerId||!requestedTeamId||!requestedPlayerId)throw new Error('Choose team and both players.');
       setStatus('Proposing trade…');
       await api('/api/teams/'+encodeURIComponent(teamId)+'/trades',{
         method:'POST',
@@ -195,7 +197,8 @@ export function renderTradesPage() {
     }
     document.querySelector('[data-trade-form]').addEventListener('submit',(e)=>propose(e).catch((err)=>setStatus(err.message,'error')));
     document.querySelector('[data-refresh]').addEventListener('click',()=>boot().catch((err)=>setStatus(err.message,'error')));
-    teamSelect.addEventListener('change',()=>loadRosterOptions().catch(()=>{}));
+    teamSelect.addEventListener('change',()=>{fillOfferedPlayers();loadCounterparties().catch((e)=>setStatus(e.message,'error'))});
+    otherTeamSelect.addEventListener('change',fillRequestedPlayers);
     boot().catch((err)=>setStatus(err.message,'error'));
     if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>loadTrades().catch(()=>{}),{intervalMs:20000,immediate:false});
   </script>

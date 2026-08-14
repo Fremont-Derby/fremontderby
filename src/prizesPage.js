@@ -222,6 +222,12 @@ export function renderPrizesPage() {
       <div class="metric"><span>Individual pool</span><strong data-individual-pool>-</strong></div>
     </section>
 
+    <section class="panel" data-admin-finalize hidden>
+      <div class="panel-head"><span>Admin finalize</span></div>
+      <p class="muted">Locks payouts for this season using the current projected table. Requires league admin sign-in.</p>
+      <button type="button" class="load" data-finalize>Finalize projected payouts</button>
+    </section>
+
     <section class="grid">
       <article class="panel">
         <div class="panel-head"><span>Projected payouts</span><span class="badge" data-config-version>-</span></div>
@@ -277,6 +283,9 @@ export function renderPrizesPage() {
     const query = new URLSearchParams(location.search);
     const requestedSeason = query.get('season') || '';
     const rememberedSeason = localStorage.getItem('fd.prizesSeasonId') || '';
+    let lastSummary = null;
+    const finalizePanel = document.querySelector('[data-admin-finalize]');
+    const finalizeBtn = document.querySelector('[data-finalize]');
 
     function setStatus(message, tone) {
       statusEl.textContent = message;
@@ -343,6 +352,10 @@ export function renderPrizesPage() {
 
       renderPayoutRows(summary.projected_payouts || [], projectedBody, projectedEmpty);
       renderPayoutRows(summary.finalized_payouts || [], finalizedBody, finalizedEmpty);
+      lastSummary = summary;
+      if (finalizePanel) {
+        finalizePanel.hidden = !sessionStorage.getItem('fd.accessToken');
+      }
     }
 
     function preferredSeason(seasons) {
@@ -427,6 +440,34 @@ export function renderPrizesPage() {
       if (hasSeason) await loadPrizes();
     });
     seasonInput.addEventListener('change', () => run(loadPrizes));
+    if (finalizeBtn) {
+      finalizeBtn.addEventListener('click', () => run(async () => {
+        const token = sessionStorage.getItem('fd.accessToken');
+        if (!token) throw new Error('Sign in on Profile as a league admin first.');
+        const seasonId = seasonInput.value;
+        if (!seasonId) throw new Error('Choose a season');
+        const projected = (lastSummary && lastSummary.projected_payouts) || [];
+        if (!projected.length) throw new Error('No projected payouts to finalize');
+        if (!confirm('Finalize ' + projected.length + ' projected payout rows for this season?')) return;
+        setStatus('Finalizing prizes…');
+        const response = await fetch('/api/admin/seasons/' + encodeURIComponent(seasonId) + '/prizes/finalize', {
+          method: 'POST',
+          headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            finalizedPayouts: projected.map((row) => ({
+              pool: row.pool,
+              place: row.place,
+              label: row.label,
+              amountCents: row.amount_cents ?? row.amountCents,
+            })),
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || 'Finalize failed');
+        await loadPrizes();
+        setStatus('Prize payouts finalized', 'ok');
+      }));
+    }
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>run(()=>loadPrizes(opts)),{intervalMs:30000,immediate:false});
   </script>
 </body>
