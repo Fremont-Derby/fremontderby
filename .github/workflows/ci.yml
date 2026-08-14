@@ -36,13 +36,25 @@ jobs:
           retention-days: 1
       - run: npm run build
 
+  accessibility:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run rendered WCAG2AA checks
+        run: npm run a11y
+
   deploy-nonproduction:
     if: >-
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/fremontderby-jfl' ||
        github.ref == 'refs/heads/fremontderby-dru' ||
        github.ref == 'refs/heads/fremontderby-gamma')
-    needs: test
+    needs: [test, accessibility]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,7 +84,7 @@ jobs:
 
   production-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test
+    needs: [test, accessibility]
     runs-on: ubuntu-latest
     concurrency:
       group: production-smoke-main
