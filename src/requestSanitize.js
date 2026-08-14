@@ -182,6 +182,12 @@ export function safeClientErrorMessage(error) {
   if (/invalid input syntax for type uuid|Invalid .*id/i.test(msg)) {
     return 'That link or id is invalid.';
   }
+  // Pending migration / missing RPC or column — clearer than a generic failure.
+  if (
+    /PGRST202|Could not find the function|column .* does not exist|42703/i.test(msg)
+  ) {
+    return 'This action needs a database update that is not applied yet. Nothing was changed.';
+  }
   if (
     /supabase|postgrest|permission denied|schema|column reference|ambiguous|postgres|PGRST|RPC|relation |duplicate key|violates|statement timeout|service role|stack|at Object\.|at Module/i.test(
       msg,
