@@ -1,17 +1,27 @@
 name: Restore lane custom domains
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
-    - cron: '47 * * * *'
-  push:
-    branches: [main]
+    inputs:
+      confirm:
+        description: 'I understand this break-glass action mutates Worker custom-domain bindings'
+        required: true
+        type: boolean
+        default: false
+concurrency:
+  group: restore-lane-custom-domains
+  cancel-in-progress: false
 jobs:
   restore:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
+      - name: Require explicit mutation confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "true" ]; then
+            echo 'Refusing to mutate custom domains without explicit confirmation.'
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -23,4 +33,3 @@ jobs:
         run: node scripts/restore-lane-custom-domains.mjs
       - name: Assert lane environment identities
         run: node scripts/assert-lane-health.mjs
-        continue-on-error: true
