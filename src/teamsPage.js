@@ -70,6 +70,17 @@ export function renderTeamsPage() {
           <span class="action-cta" data-hub-manage-cta>Manage team →</span>
         </a>
       </div>
+      <div class="checklist-panel" data-night-checklist hidden>
+        <h2>League night checklist</h2>
+        <p class="muted" data-checklist-copy>Next matchup steps in order.</p>
+        <ul class="checklist" data-checklist-items></ul>
+        <div class="sub-board" data-sub-board hidden>
+          <h3>Eligible subs</h3>
+          <p class="muted">Free agents already eligible for this matchup under league rules.</p>
+          <div data-sub-list></div>
+          <button type="button" class="ghost" data-refresh-subs>Refresh subs</button>
+        </div>
+      </div>
     </section>
     <form class="setup" data-create-form>
       <label>Season<select name="seasonId" data-season-select><option value="">Loading open season…</option></select></label>
@@ -95,6 +106,98 @@ export function renderTeamsPage() {
     function lineupDeadlineLabel(value){if(!value)return'';const deadline=new Date(value);if(Number.isNaN(deadline.getTime()))return'';const now=Date.now();const ms=deadline.getTime()-now;const abs=Math.abs(ms);const hours=Math.round(abs/3600000);if(ms<0)return hours<=48?('Lineup overdue'+(hours?' · '+hours+'h':'')):'Lineup overdue';if(ms<=2*3600000)return'Lineup due soon · under 2h';if(ms<=24*3600000)return'Lineup due in '+Math.max(1,hours)+'h';const days=Math.round(ms/86400000);return'Lineup due in '+days+'d'}
     function dateLabel(value){if(!value)return'Date TBD';const date=new Date(value+'T12:00:00');return new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric'}).format(date)}
     function nextCaptainMatchup(teams){const contexts=[];for(const team of teams){for(const round of team.lineupRounds||[]){contexts.push({team,round})}}contexts.sort((left,right)=>String(left.round.scheduledOn||'9999-12-31').localeCompare(String(right.round.scheduledOn||'9999-12-31'))||Number(left.round.roundNumber)-Number(right.round.roundNumber));const today=new Date().toISOString().slice(0,10);const open=contexts.filter((item)=>!['finalized','corrected'].includes(item.round.teamMatchStatus));return open.find((item)=>!item.round.scheduledOn||item.round.scheduledOn>=today)||open[0]||contexts[0]||null}
+    
+    function checklistItem(label,detail,href,tone){
+      const li=document.createElement('li');
+      li.dataset.tone=tone||'muted';
+      const title=document.createElement('strong');
+      title.textContent=label;
+      const meta=document.createElement('span');
+      meta.className='muted';
+      meta.textContent=detail;
+      li.append(title,meta);
+      if(href){
+        const a=document.createElement('a');
+        a.href=href;
+        a.textContent='Open';
+        li.append(a);
+      }
+      return li;
+    }
+    function renderLeagueNightChecklist(context){
+      const panel=document.querySelector('[data-night-checklist]');
+      const list=document.querySelector('[data-checklist-items]');
+      const copy=document.querySelector('[data-checklist-copy]');
+      const subBoard=document.querySelector('[data-sub-board]');
+      if(!panel||!list)return;
+      if(!context){panel.hidden=true;if(subBoard)subBoard.hidden=true;return}
+      const team=context.team;
+      const round=context.round;
+      panel.hidden=false;
+      const due=lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at);
+      const status=String(round.teamMatchStatus||'');
+      const lineupDone=['in_progress','finalized','corrected'].includes(status);
+      list.replaceChildren();
+      list.append(checklistItem(
+        '1. Check-in',
+        'Ask the roster for available / unsure / out for this date.',
+        '/availability',
+        'ok'
+      ));
+      list.append(checklistItem(
+        '2. Lock lineup',
+        lineupDone?('Match status: '+status):(due||'Build and lock three before the deadline.'),
+        '/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId),
+        lineupDone?'ok':(due&&due.indexOf('overdue')>=0?'error':'warning')
+      ));
+      list.append(checklistItem(
+        '3. Ready check',
+        'Pulse the roster so people thumbs-up for tonight.',
+        null,
+        'muted'
+      ));
+      list.append(checklistItem(
+        '4. Eligible subs',
+        'See free agents you can legally put in for this matchup.',
+        null,
+        'muted'
+      ));
+      if(copy)copy.textContent='Round '+(round.roundNumber||'')+' vs '+(round.opponentName||'Opponent')+(due?(' · '+due):'');
+      if(subBoard){
+        subBoard.hidden=false;
+        subBoard.dataset.teamId=team.teamId||'';
+        subBoard.dataset.roundId=round.roundId||'';
+        loadEligibleSubs(team.teamId,round.roundId);
+      }
+    }
+    async function loadEligibleSubs(teamId,roundId){
+      const list=document.querySelector('[data-sub-list]');
+      if(!list||!teamId||!roundId)return;
+      list.textContent='Loading eligible subs…';
+      try{
+        const token=sessionStorage.getItem('fd.accessToken')||'';
+        if(!token){list.textContent='Sign in to view eligible subs.';return}
+        const response=await fetch('/api/teams/'+encodeURIComponent(teamId)+'/rounds/'+encodeURIComponent(roundId)+'/eligible-free-agents',{headers:{authorization:'Bearer '+token}});
+        const body=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(body.error||'Could not load free agents');
+        const rows=body.freeAgents||body.free_agents||[];
+        list.replaceChildren();
+        if(!rows.length){list.textContent='No eligible free agents for this matchup right now.';return}
+        for(const row of rows){
+          const card=document.createElement('div');
+          card.className='sub-card';
+          const name=row.display_name||row.displayName||'Player';
+          const bits=[name];
+          if(row.fargo_rating!=null||row.fargoRating!=null)bits.push('Fargo '+(row.fargo_rating??row.fargoRating));
+          if(row.availability_status||row.availabilityStatus)bits.push(row.availability_status||row.availabilityStatus);
+          card.textContent=bits.join(' · ');
+          list.append(card);
+        }
+      }catch(error){
+        list.textContent=error.message||'Could not load subs.';
+      }
+    }
+
     function renderLeagueNightHub(data,scorable){const teams=data.captain_teams||[];const liveMatches=(scorable||[]).filter((m)=>String(m.status||m.match_status||'')==='in_progress');const readyMatches=scorable||[];function paintScoreCard(match){if(!hubScore)return;if(!match){hubScore.href='/scorecard';if(hubScoreLabel)hubScoreLabel.textContent='During play';if(hubScoreTitle)hubScoreTitle.textContent='Score a match';if(hubScoreMeta)hubScoreMeta.textContent='Open a ready matchup and keep both scores together.';if(hubScoreCta)hubScoreCta.textContent='Open scoring →';return}const live=String(match.status||match.match_status||'')==='in_progress';const matchId=match.playerMatchId||match.player_match_id||match.teamMatchId||match.team_match_id||'';const teamId=match.scoringTeamId||match.scoring_team_id||match.teamId||'';const teamName=match.scoringTeamName||match.scoring_team_name||match.teamName||'Your team';const qs=new URLSearchParams();if(matchId)qs.set('match',matchId);if(teamId)qs.set('team',teamId);if(teamName)qs.set('teamName',teamName);hubScore.href='/scorecard'+(qs.toString()?('?'+qs.toString()):'');if(hubScoreLabel)hubScoreLabel.textContent=live?'Live now':'Ready to score';if(hubScoreTitle)hubScoreTitle.textContent=live?'Score live':'Score this match';if(hubScoreMeta)hubScoreMeta.textContent=(match.opponentName||match.opponent_name||match.matchupLabel||'Your matchup')+(live?' · in progress':' · open scoring');if(hubScoreCta)hubScoreCta.textContent=live?'Continue scoring →':'Start scoring →'}
 const context=nextCaptainMatchup(teams);if(context){const team=context.team;const round=context.round;hubTeamEl.textContent=team.teamName;hubLabel.textContent='Next matchup';hubMatchup.textContent='Round '+round.roundNumber+' vs '+(round.opponentName||'Opponent');hubMatchupMeta.textContent=[dateLabel(round.scheduledOn),round.tableNumber?('Table '+round.tableNumber):'',lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at)].filter(Boolean).join(' · ');hubLineupCta.textContent=(function(){const due=lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at);if(due&&due.indexOf('overdue')>=0)return'Lock lineup now →';if(due&&due.indexOf('due soon')>=0)return'Finish lineup →';return'Build lineup →'})();hubLineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);if(hubReadyCheck){hubReadyCheck.dataset.teamId=team.teamId;hubReadyCheck.dataset.roundId=round.roundId;hubReadyCheck.disabled=false;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';}hubChat.href='/messages?team='+encodeURIComponent(team.teamId);hubManage.href='/trades';hubManageTitle.textContent='Roster & trades';hubManageMeta.textContent='Handle invites, requests, and player moves.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}if(teams.length){hubTeamEl.textContent=teams[0].teamName;hubLabel.textContent='Captain tools';hubMatchup.textContent='No published matchup yet';hubMatchupMeta.textContent='Your next round will appear here as soon as it is scheduled.';hubLineupCta.textContent='Review lineups →';hubLineup.href='/lineup';hubChat.href='/messages?team='+encodeURIComponent(teams[0].teamId);hubManage.href='/trades';hubManageTitle.textContent='Roster & trades';hubManageMeta.textContent='Handle invites, requests, and player moves.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}hubTeamEl.textContent='Player';hubLabel.textContent='Your next step';hubMatchup.textContent='Find your team';hubMatchupMeta.textContent='Request to join a team or apply for an open team slot.';hubLineupCta.textContent='Join or apply →';hubLineup.href='#join-teams';hubManage.href='#join-teams';hubManageTitle.textContent='Join a team';hubManageMeta.textContent='See open teams and send a request to the captain.';hubManageCta.textContent='View teams →';paintScoreCard(liveMatches[0]||readyMatches[0]||null)}
 
@@ -411,7 +514,7 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
     async function requestMembership(teamId){setStatus('Sending join request...');await api('/api/teams/'+encodeURIComponent(teamId)+'/membership-request',{method:'POST',body:'{}'});await loadTeams();setStatus('Join request sent','ok')}async function cancelMembershipRequest(requestId){setStatus('Canceling join request...');await api('/api/team-membership-requests/'+encodeURIComponent(requestId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Join request canceled','ok')}async function respondToMembershipRequest(requestId,response){setStatus(response==='approved'?'Approving player...':'Declining request...');await api('/api/team-membership-requests/'+encodeURIComponent(requestId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus(response==='approved'?'Player added to team':'Request declined','ok')}
     async function cancelInvitation(invitationId){setStatus('Canceling invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Invitation canceled','ok')}async function removeMember(membershipId){setStatus('Removing member...');await api('/api/team-memberships/'+encodeURIComponent(membershipId)+'/remove',{method:'POST',body:'{}'});await loadTeams();setStatus('Roster updated','ok')}async function respondToInvitation(invitationId,response){setStatus(response==='accepted'?'Accepting invitation...':'Declining invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus('Invitation '+response,'ok')}async function run(action){try{await action()}catch(error){if(error.name==='SessionExpiredError')showPageState('expired');else setStatus(error.message,'error')}}
     createForm.addEventListener('submit',(event)=>{event.preventDefault();run(applyForTeam)});seasonSelect.addEventListener('change',()=>{if(seasonSelect.value)localStorage.setItem('fd.teamsSeasonId',seasonSelect.value);run(loadRegistration)});document.querySelector('[data-refresh]').addEventListener('click',()=>run(async()=>{await loadTeams();setStatus('Teams loaded','ok')}));document.addEventListener('click',(event)=>{const button=event.target.closest('button');if(!button)return;if(button.hasAttribute('data-retry'))loadInitialTeams();
-    if(button.dataset.savePractice)run(()=>savePractice(button.dataset.savePractice));if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response));if(button.dataset.requestMembership)run(()=>requestMembership(button.dataset.requestMembership));if(button.dataset.cancelMembershipRequest)run(()=>cancelMembershipRequest(button.dataset.cancelMembershipRequest));if(button.dataset.respondMembershipRequest)run(()=>respondToMembershipRequest(button.dataset.respondMembershipRequest,button.dataset.response));if(button.dataset.withdrawApplication)run(()=>withdrawApplication(button.dataset.withdrawApplication));if(button.dataset.respondSlot)run(()=>respondToSlot(button.dataset.respondSlot,button.dataset.slotAction))});
+    if(button.dataset.refreshSubs!=null||button.hasAttribute('data-refresh-subs')){const board=document.querySelector('[data-sub-board]');if(board)run(()=>loadEligibleSubs(board.dataset.teamId,board.dataset.roundId));return}if(button.dataset.savePractice)run(()=>savePractice(button.dataset.savePractice));if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response));if(button.dataset.requestMembership)run(()=>requestMembership(button.dataset.requestMembership));if(button.dataset.cancelMembershipRequest)run(()=>cancelMembershipRequest(button.dataset.cancelMembershipRequest));if(button.dataset.respondMembershipRequest)run(()=>respondToMembershipRequest(button.dataset.respondMembershipRequest,button.dataset.response));if(button.dataset.withdrawApplication)run(()=>withdrawApplication(button.dataset.withdrawApplication));if(button.dataset.respondSlot)run(()=>respondToSlot(button.dataset.respondSlot,button.dataset.slotAction))});
     if(accessToken())loadInitialTeams();else showPageState('signedout')
   
     if(hubReadyCheck){hubReadyCheck.addEventListener('click',async()=>{const teamId=hubReadyCheck.dataset.teamId;const roundId=hubReadyCheck.dataset.roundId;if(!teamId||!roundId){setStatus('Pick a published matchup first so the ready check has a league night.','error');return}hubReadyCheck.disabled=true;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Sending…';try{const token=sessionStorage.getItem('fd.accessToken')||'';if(!token)throw new Error('Sign in to start a ready check.');const response=await fetch('/api/teams/ready-checks',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({teamId,roundId})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'Could not start ready check');setStatus('Ready check sent — teammates will see a prompt when they open the app.','ok');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Ready check sent';}catch(error){setStatus(error.message||'Could not start ready check','error');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';hubReadyCheck.disabled=false}})}

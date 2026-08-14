@@ -69,6 +69,10 @@ import {
   respondToTeamTradePlayerCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
+import {
+  proposeTeamMatchMakeupCommand,
+  respondTeamMatchMakeupCommand,
+} from './makeupCommands.js';
 import { createTeamMembershipRequestRepository } from './teamMembershipRequestRepository.js';
 import { createTeamRepository } from './teamRepository.js';
 import {
@@ -727,6 +731,59 @@ export async function handleUpdateTeamPracticeRequest(
       { chatRepository },
     );
     return jsonResponse({ practice });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+export async function handleProposeTeamMatchMakeupRequest(
+  request,
+  env,
+  teamMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const makeup = await proposeTeamMatchMakeupCommand(
+      {
+        actorUserId: actor.id,
+        teamMatchId,
+        makeupOn: body.makeupOn ?? body.makeup_on,
+        makeupLocation: body.makeupLocation ?? body.makeup_location ?? null,
+        makeupNote: body.makeupNote ?? body.makeup_note ?? null,
+      },
+      repository,
+    );
+    return jsonResponse({ makeup }, 201);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleRespondTeamMatchMakeupRequest(
+  request,
+  env,
+  teamMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const makeup = await respondTeamMatchMakeupCommand(
+      {
+        actorUserId: actor.id,
+        teamMatchId,
+        response: body.response ?? body.status,
+      },
+      repository,
+    );
+    return jsonResponse({ makeup });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1490,6 +1547,12 @@ export default {
     const teamPracticeMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/practice$/,
     );
+    const teamMatchMakeupProposeMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/makeup$/,
+    );
+    const teamMatchMakeupRespondMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/makeup\/respond$/,
+    );
     const teamInvitationMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/invitations$/,
     );
@@ -1963,6 +2026,22 @@ export default {
         request,
         env,
         decodeURIComponent(teamPracticeMatch[1]),
+      );
+    }
+
+    if (teamMatchMakeupProposeMatch) {
+      return handleProposeTeamMatchMakeupRequest(
+        request,
+        env,
+        decodeURIComponent(teamMatchMakeupProposeMatch[1]),
+      );
+    }
+
+    if (teamMatchMakeupRespondMatch) {
+      return handleRespondTeamMatchMakeupRequest(
+        request,
+        env,
+        decodeURIComponent(teamMatchMakeupRespondMatch[1]),
       );
     }
 

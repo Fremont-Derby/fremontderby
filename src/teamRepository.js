@@ -460,6 +460,51 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       };
     },
 
+
+    async proposeTeamMatchMakeup({ actorUserId, teamMatchId, makeupOn, makeupLocation, makeupNote }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/propose_team_match_makeup`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_match_id: teamMatchId,
+          makeup_on: makeupOn,
+          makeup_location: makeupLocation,
+          makeup_note: makeupNote,
+        }),
+      });
+      const row = Array.isArray(result) ? result[0] : result;
+      return {
+        teamMatchId: row?.team_match_id ?? teamMatchId,
+        makeupOn: row?.makeup_on ?? null,
+        makeupLocation: row?.makeup_location ?? null,
+        makeupStatus: row?.makeup_status ?? null,
+        makeupNote: row?.makeup_note ?? null,
+        makeupProposedByTeamId: row?.makeup_proposed_by_team_id ?? null,
+      };
+    },
+
+    async respondTeamMatchMakeup({ actorUserId, teamMatchId, response }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/respond_team_match_makeup`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_match_id: teamMatchId,
+          response,
+        }),
+      });
+      const row = Array.isArray(result) ? result[0] : result;
+      return {
+        teamMatchId: row?.team_match_id ?? teamMatchId,
+        makeupOn: row?.makeup_on ?? null,
+        makeupLocation: row?.makeup_location ?? null,
+        makeupStatus: row?.makeup_status ?? null,
+        makeupNote: row?.makeup_note ?? null,
+        makeupProposedByTeamId: row?.makeup_proposed_by_team_id ?? null,
+      };
+    },
+
     async invitePlayerToTeam({ actorUserId, teamId, playerId }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/invite_player_to_team`, {
         method: 'POST',
