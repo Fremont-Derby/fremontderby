@@ -12,6 +12,13 @@ export function renderAvailabilityPage() {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">A</span><span>League night check-in</span></div><div class="status" data-status role="status" aria-live="polite">Loading check-in…</div></header>
+    <nav data-shortcuts aria-label="League night shortcuts" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px">
+      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Schedule</a>
+      <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Lineup</a>
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Teams</a>
+      <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Messages</a>
+      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Score</a>
+    </nav>
     <section class="recovery" data-recovery aria-live="polite">
       <h1 data-recovery-title>Finding your next league night…</h1>
       <p data-recovery-copy>Check in so your captain knows who will be there tonight.</p>

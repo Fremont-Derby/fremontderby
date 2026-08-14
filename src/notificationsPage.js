@@ -14,6 +14,8 @@ export function renderNotificationsPage() {
     .item{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel)}
     .item[data-unread="true"]{border-color:#9ee5bd}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .actions a,button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:10px;text-decoration:none}
+    @media(max-width:720px){.actions{flex-direction:column;align-items:stretch}.app{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}
   </style>
 </head>
 <body>
@@ -27,6 +29,8 @@ export function renderNotificationsPage() {
       <a class="ghost" href="/messages">Open messages</a>
       <a class="ghost" href="/teams">Teams</a>
       <a class="ghost" href="/players">Players</a>
+      <a class="ghost" href="/schedule">Schedule</a>
+      <a class="ghost" href="/scorecard">Score</a>
     </div>
     <section class="list" data-list></section>
   </main>
