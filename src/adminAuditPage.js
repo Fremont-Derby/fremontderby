@@ -111,9 +111,10 @@ export function renderAdminAuditPage() {
         for(const event of events) listEl.append(buildAuditCard(event));
       }
     }
-    async function load(){
+    async function load(opts={}){
+      const quiet=Boolean(opts&&opts.quiet);
       if(!token()){setStatus('Sign in required','muted');listEl.textContent='Open Profile and sign in as a league admin.';return}
-      setStatus('Loading audit log…');
+      if(!quiet) setStatus('Loading audit log…');
       const prefix=prefixEl.value.trim();
       const qs=prefix?('?prefix='+encodeURIComponent(prefix)):'';
       const body=await api('/api/admin/audit-events'+qs);
@@ -129,7 +130,7 @@ export function renderAdminAuditPage() {
     });
     prefixEl.addEventListener('change',()=>load().catch((e)=>setStatus(e.message,'error')));
     load().catch((e)=>setStatus(e.message,'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load().catch(()=>{}),{intervalMs:15000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:15000,immediate:false});
   </script>
 </body>
 </html>`;

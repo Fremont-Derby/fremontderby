@@ -382,12 +382,15 @@ export function renderProfilePage(env = {}) {
       );
     }
 
-    async function loadProfile() {
-      setStatus('Loading profile…');
-      setHistoryLoading();
+    async function loadProfile(opts = {}) {
+      const quiet = Boolean(opts && opts.quiet);
+      if (!quiet) {
+        setStatus('Loading profile…');
+        setHistoryLoading();
+      }
       const body = await api('/api/me/profile', { method: 'GET' });
       renderProfile(body.profile);
-      setStatus('Profile loaded', 'ok');
+      if (!quiet) setStatus('Profile loaded', 'ok');
     }
 
     function safeNextPath() {
@@ -482,7 +485,7 @@ export function renderProfilePage(env = {}) {
       }
       if (returnedFromGoogle || token()) {
         await loadProfile();
-        if (window.fdLiveRefresh) window.fdLiveRefresh.register(() => loadProfile().catch(() => {}), { intervalMs: 45000, immediate: false });
+        if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch(() => {}), { intervalMs: 45000, immediate: false });
         await refreshAdminAccess();
       }
     });
