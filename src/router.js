@@ -1,5 +1,6 @@
 import { createRequestNonce, htmlSecurityHeaders, apiSecurityHeaders } from './securityHeaders.js';
 import app from './index.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderDesignSystemCatalogPage } from './designSystemCatalogPage.js';
 import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
 import { renderAdminOperationsPage } from './adminOperationsPage.js';
@@ -183,6 +184,10 @@ export default {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderTradesPage(), url.pathname);
     }
+    if (url.pathname === '/players') {
+      return htmlResponse(renderPlayersDirectoryPage(), url.pathname);
+    }
+
     if (url.pathname === '/schedule') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderSchedulePage(), url.pathname);
