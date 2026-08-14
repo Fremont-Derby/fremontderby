@@ -84,12 +84,12 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
 
     async listSeasonSchedule({ seasonId }) {
       const roundParams = new URLSearchParams({
-        select: 'id,round_number,scheduled_on,status,stage',
+        select: 'id,round_number,scheduled_on,status,stage,lineup_deadline_at',
         season_id: `eq.${seasonId}`,
         order: 'scheduled_on.asc,round_number.asc',
       });
       const matchParams = new URLSearchParams({
-        select: 'id,round_id,team_a_id,team_b_id,table_number,status',
+        select: 'id,round_id,team_a_id,team_b_id,table_number,status,makeup_on,makeup_location,makeup_status,makeup_note,makeup_proposed_by_team_id',
         season_id: `eq.${seasonId}`,
         order: 'round_id.asc,table_number.asc',
       });
@@ -120,10 +120,17 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         const matches = matchesByRoundId.get(match.round_id) ?? [];
         matches.push({
           teamMatchId: match.id,
+          teamAId: match.team_a_id,
+          teamBId: match.team_b_id,
           teamAName: teamsById.get(match.team_a_id) ?? 'Team',
           teamBName: teamsById.get(match.team_b_id) ?? 'Team',
           tableNumber: match.table_number,
           status: match.status,
+          makeupOn: match.makeup_on ?? null,
+          makeupLocation: match.makeup_location ?? null,
+          makeupStatus: match.makeup_status ?? null,
+          makeupNote: match.makeup_note ?? null,
+          makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
         });
         matchesByRoundId.set(match.round_id, matches);
       }
@@ -133,6 +140,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         scheduledOn: round.scheduled_on,
         status: round.status,
         stage: round.stage,
+        lineupDeadlineAt: round.lineup_deadline_at ?? null,
         matches: matchesByRoundId.get(round.id) ?? [],
       }));
     },
