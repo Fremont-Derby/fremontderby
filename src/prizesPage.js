@@ -187,7 +187,7 @@ export function renderPrizesPage() {
     @media (forced-colors: active) {
       button, select, .panel, .metric, .state-card, .state-action { border: 1px solid CanvasText; }
     }
-  </style>
+  @media(max-width:720px){.app,main{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
   <main class="app">

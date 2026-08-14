@@ -79,3 +79,5 @@ Error strings for users go through `friendlyErrorMessage` (offline, 503, rate li
 - `window.fdQuietRun(action, { quiet, statusEl, loadingMessage, surfaceQuietErrors })` — try/catch with `fdFriendlyError`.
 - `register(fn, { statusEl, softFail })` — after 2+ quiet failures shows “Update delayed — retrying…” then “Last update failed — will retry.”; clears on success.
 - Local `setStatus` wrappers should delegate to `fdSetStatus` when present so quiet polls never flash Loading.
+
+- Profile surfaces Fargo rating detail and linked ID when present (#365 partial; write path still backend).
