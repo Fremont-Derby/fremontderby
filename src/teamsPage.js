@@ -620,7 +620,65 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
     async function cancelInvitation(invitationId){setStatus('Canceling invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Invitation canceled','ok')}async function removeMember(membershipId){setStatus('Removing member...');await api('/api/team-memberships/'+encodeURIComponent(membershipId)+'/remove',{method:'POST',body:'{}'});await loadTeams();setStatus('Roster updated','ok')}async function respondToInvitation(invitationId,response){setStatus(response==='accepted'?'Accepting invitation...':'Declining invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus('Invitation '+response,'ok')}async function run(action){try{await action()}catch(error){if(error.name==='SessionExpiredError')showPageState('expired');else setStatus(error.message,'error')}}
     createForm.addEventListener('submit',(event)=>{event.preventDefault();run(applyForTeam)});seasonSelect.addEventListener('change',()=>{if(seasonSelect.value)localStorage.setItem('fd.teamsSeasonId',seasonSelect.value);run(loadRegistration)});document.querySelector('[data-refresh]').addEventListener('click',()=>run(async()=>{await loadTeams();setStatus('Teams loaded','ok')}));document.addEventListener('click',(event)=>{const button=event.target.closest('button');if(!button)return;if(button.hasAttribute('data-retry'))loadInitialTeams();
     if(button.dataset.refreshSubs!=null||button.hasAttribute('data-refresh-subs')){const board=document.querySelector('[data-sub-board]');if(board)run(()=>loadEligibleSubs(board.dataset.teamId,board.dataset.roundId));return}if(button.dataset.savePractice)run(()=>savePractice(button.dataset.savePractice));if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response));if(button.dataset.requestMembership)run(()=>requestMembership(button.dataset.requestMembership));if(button.dataset.cancelMembershipRequest)run(()=>cancelMembershipRequest(button.dataset.cancelMembershipRequest));if(button.dataset.respondMembershipRequest)run(()=>respondToMembershipRequest(button.dataset.respondMembershipRequest,button.dataset.response));if(button.dataset.withdrawApplication)run(()=>withdrawApplication(button.dataset.withdrawApplication));if(button.dataset.respondSlot)run(()=>respondToSlot(button.dataset.respondSlot,button.dataset.slotAction))});
-    if(accessToken())loadInitialTeams();else showPageState('signedout')
+    async function loadPublicTeamDirectory(){
+      showPageState('loading');
+      try{
+        const seasonsRes=await fetch('/api/seasons');
+        const seasonsBody=await seasonsRes.json().catch(()=>({}));
+        if(!seasonsRes.ok)throw new Error(seasonsBody.error||'Could not load seasons');
+        const seasons=seasonsBody.seasons||[];
+        const season=seasons.find((s)=>s.status==='active')||seasons.find((s)=>s.status==='registration')||seasons[0];
+        showTeamContent();
+        // Hide management-only panels for public view when possible
+        if(createForm) createForm.hidden=true;
+        if(!season){
+          setStatus('No published season yet.','muted');
+          if(joinTeamsEl){joinTeamsEl.replaceChildren();joinTeamsEl.append(empty('No season is published yet.'));}
+          return;
+        }
+        const standingsRes=await fetch('/api/seasons/'+encodeURIComponent(season.id)+'/team-standings');
+        const standingsBody=await standingsRes.json().catch(()=>({}));
+        if(!standingsRes.ok)throw new Error(standingsBody.error||'Could not load teams');
+        const teams=standingsBody.standings||[];
+        if(joinTeamsEl){
+          joinTeamsEl.replaceChildren();
+          const head=document.createElement('div');
+          head.className='card';
+          head.append(node('strong',(season.name||'Season')+' · public team directory'),node('div','Sign in to join, invite, or manage a roster.','muted'));
+          joinTeamsEl.append(head);
+          if(!teams.length){
+            joinTeamsEl.append(empty('No teams listed for this season yet.'));
+          }else{
+            for(const row of teams){
+              const card=document.createElement('div');
+              card.className='card';
+              card.append(node('strong',row.team_name||'Team'));
+              const meta=[row.team_wins!=null?(row.team_wins+'-'+row.team_losses):'', row.standing_points!=null?('Pts '+row.standing_points):'', row.games_played!=null?(row.games_played+' played'):''].filter(Boolean).join(' · ');
+              if(meta) card.append(node('div',meta,'muted'));
+              const actions=document.createElement('div');
+              actions.className='actions';
+              const signin=document.createElement('a');
+              signin.href='/profile';
+              signin.textContent='Sign in to join';
+              signin.style.cssText='display:inline-flex;align-items:center;min-height:44px;color:#9ee5bd;text-decoration:none';
+              actions.append(signin);
+              const st=document.createElement('a');
+              st.href='/standings?season='+encodeURIComponent(season.id);
+              st.textContent='Standings';
+              st.style.cssText='display:inline-flex;align-items:center;min-height:44px;color:inherit;text-decoration:none;margin-left:10px';
+              actions.append(st);
+              card.append(actions);
+              joinTeamsEl.append(card);
+            }
+          }
+        }
+        setStatus('Public team directory · sign in to manage','ok');
+      }catch(error){
+        showPageState('signedout');
+        setStatus(error.message||'Sign in to manage teams.','muted');
+      }
+    }
+    if(accessToken())loadInitialTeams();else loadPublicTeamDirectory()
   
     if(hubReadyCheck){hubReadyCheck.addEventListener('click',async()=>{const teamId=hubReadyCheck.dataset.teamId;const roundId=hubReadyCheck.dataset.roundId;if(!teamId||!roundId){setStatus('Pick a published matchup first so the ready check has a league night.','error');return}hubReadyCheck.disabled=true;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Sending…';try{const token=sessionStorage.getItem('fd.accessToken')||'';if(!token)throw new Error('Sign in to start a ready check.');const response=await fetch('/api/teams/ready-checks',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({teamId,roundId})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'Could not start ready check');setStatus('Ready check sent — teammates will see a prompt when they open the app.','ok');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Ready check sent';}catch(error){setStatus(error.message||'Could not start ready check','error');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';hubReadyCheck.disabled=false}})}
 

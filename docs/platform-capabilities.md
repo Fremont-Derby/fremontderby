@@ -55,3 +55,10 @@ Same pattern for `jfl` / `gamma` (gamma must **not** open-auth).
 ## Related cards
 
 Human DRU finish: search issues for `[HUMAN]` DRU open-auth. DNS durability: platform cards on wrangler-owned domains. Migration apply: DRU data cards referencing migrations `20260814031843_shared_staging_lane_schemas.sql` and `20260814093000_expose_lane_private_postgrest_schemas.sql`.
+
+## Product surfaces added 2026-08-14
+
+- `/players` — public player directory (standings-backed).
+- Live-refresh `fdStableList` helper on high-traffic list pages.
+- Captain/admin opening-night depth readiness copy.
+- `/messages?player=` deep-link contract for direct messages.
