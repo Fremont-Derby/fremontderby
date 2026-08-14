@@ -83,7 +83,11 @@ test('rejects non-success HTTP responses without logging their body', async () =
       target: laneHealthTargets[2],
       fetchImpl: async () => healthResponse('gamma', { secret: 'do-not-log' }, 503),
     }),
-    /^Error: HTTP 503$/,
+    (error) => {
+      assert.match(error.message, /HTTP 503/);
+      assert.doesNotMatch(error.message, /do-not-log/);
+      return true;
+    },
   );
 });
 
