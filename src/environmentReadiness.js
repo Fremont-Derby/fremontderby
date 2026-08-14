@@ -1,9 +1,15 @@
-const expectedSupabaseProjectRefs = {
+const fixedExpectedSupabaseProjectRefs = {
   production: 'cpiucsxlkicmlbvdvhww',
   staging: 'oqkkvqkerusepyokzbmt',
 };
 
-const reservedSupabaseProjectRefs = new Set(Object.values(expectedSupabaseProjectRefs));
+const isolatedRuntimeEnvironments = new Set(['beta-jfl', 'beta-dru', 'gamma']);
+const betaRuntimeEnvironments = new Set(['beta-jfl', 'beta-dru']);
+const knownRuntimeEnvironments = new Set([
+  ...Object.keys(fixedExpectedSupabaseProjectRefs),
+  ...isolatedRuntimeEnvironments,
+]);
+const reservedSupabaseProjectRefs = new Set(Object.values(fixedExpectedSupabaseProjectRefs));
 
 function normalizeSupabaseUrl(value) {
   if (!value || typeof value !== 'string') return '';
@@ -32,8 +38,18 @@ function check(name, ok, details = {}) {
   return { name, ok: Boolean(ok), ...details };
 }
 
+function configuredExpectedProjectRef(env, environment) {
+  if (environment in fixedExpectedSupabaseProjectRefs) {
+    return fixedExpectedSupabaseProjectRefs[environment];
+  }
+  if (!isolatedRuntimeEnvironments.has(environment)) return null;
+  return configured(env.EXPECTED_SUPABASE_PROJECT_REF)
+    ? env.EXPECTED_SUPABASE_PROJECT_REF.trim()
+    : null;
+}
+
 export function environmentReadiness(env = {}) {
-  const environment = env.ENVIRONMENT || 'production';
+  const environment = String(env.ENVIRONMENT || 'production').trim() || 'production';
   const supabaseUrl = normalizeSupabaseUrl(env.SUPABASE_URL);
   const projectRef = supabaseProjectRefFromUrl(supabaseUrl);
   const hasPublishableKey = configured(env.SUPABASE_PUBLISHABLE_KEY);
@@ -42,35 +58,29 @@ export function environmentReadiness(env = {}) {
     ? env.SUPABASE_PUBLISHABLE_KEY !== env.SUPABASE_SERVICE_ROLE_KEY
     : null;
 
-  const isBeta = environment === 'beta';
-  const expectedProjectRef = isBeta
-    ? (configured(env.BETA_EXPECTED_SUPABASE_PROJECT_REF)
-      ? env.BETA_EXPECTED_SUPABASE_PROJECT_REF.trim()
-      : null)
-    : (expectedSupabaseProjectRefs[environment] || null);
-
-  const knownWorkerEnvironment =
-    environment in expectedSupabaseProjectRefs || isBeta;
-
-  const betaExpectedProjectConfigured = !isBeta || Boolean(expectedProjectRef);
-  const betaExpectedProjectIsolated = !isBeta
+  const isIsolatedRuntime = isolatedRuntimeEnvironments.has(environment);
+  const isBeta = betaRuntimeEnvironments.has(environment);
+  const expectedProjectRef = configuredExpectedProjectRef(env, environment);
+  const expectedProjectConfigured = !isIsolatedRuntime || Boolean(expectedProjectRef);
+  const expectedProjectIsolated = !isIsolatedRuntime
     || Boolean(expectedProjectRef && !reservedSupabaseProjectRefs.has(expectedProjectRef));
-  const betaActualProjectIsolated = !isBeta
+  const actualProjectIsolated = !isIsolatedRuntime
     || Boolean(projectRef && !reservedSupabaseProjectRefs.has(projectRef));
+  const authBypassAllowed = isBeta;
+  const authBypassEnabled = String(env.BETA_AUTH_BYPASS || '').trim() === '1';
 
-  const projectMatches = isBeta
-    ? Boolean(
-      expectedProjectRef
-      && betaExpectedProjectIsolated
-      && betaActualProjectIsolated
-      && projectRef === expectedProjectRef
-    )
-    : Boolean(expectedProjectRef && projectRef === expectedProjectRef);
+  const projectMatches = Boolean(
+    expectedProjectRef
+    && projectRef === expectedProjectRef
+    && expectedProjectIsolated
+    && actualProjectIsolated
+  );
 
   const checks = [
-    check('knownWorkerEnvironment', knownWorkerEnvironment, { environment }),
+    check('knownWorkerEnvironment', knownRuntimeEnvironments.has(environment), { environment }),
     check('supabaseUrlConfigured', configured(supabaseUrl)),
     check('supabaseUrlUsesExpectedHost', Boolean(projectRef), { projectRef }),
+    check('expectedProjectRefConfigured', expectedProjectConfigured, { expectedProjectRef }),
     check('supabaseProjectMatchesEnvironment', projectMatches, {
       expectedProjectRef,
       projectRef,
@@ -80,14 +90,22 @@ export function environmentReadiness(env = {}) {
     check('supabaseKeysAreDistinct', keysAreDistinct === true, {
       evaluated: keysAreDistinct !== null,
     }),
+    check('authBypassRestrictedToBeta', !authBypassEnabled || authBypassAllowed, {
+      authBypassAllowed,
+      authBypassEnabled,
+    }),
   ];
+
+  if (isIsolatedRuntime) {
+    checks.push(
+      check('expectedProjectRefIsolated', expectedProjectIsolated, { expectedProjectRef }),
+      check('actualProjectIsolated', actualProjectIsolated, { projectRef }),
+    );
+  }
 
   if (isBeta) {
     checks.push(
-      check('betaExpectedProjectRefConfigured', betaExpectedProjectConfigured),
-      check('betaExpectedProjectRefIsolated', betaExpectedProjectIsolated, { expectedProjectRef }),
-      check('betaActualProjectIsolated', betaActualProjectIsolated, { projectRef }),
-      check('betaAuthBypassFlag', String(env.BETA_AUTH_BYPASS || '').trim() === '1'),
+      check('betaAuthBypassFlag', authBypassEnabled),
       check('betaActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
     );
   }

@@ -11,6 +11,8 @@
     "build": "npx wrangler deploy --dry-run --env=\"\" --outdir dist",
     "dev": "npx wrangler dev",
     "deploy": "node scripts/deploy-production.mjs",
-    "deploy:beta": "node scripts/deploy-beta.mjs"
+    "deploy:beta-jfl": "node scripts/deploy-lane.mjs beta-jfl",
+    "deploy:beta-dru": "node scripts/deploy-lane.mjs beta-dru",
+    "deploy:gamma": "node scripts/deploy-lane.mjs gamma"
   }
 }

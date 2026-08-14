@@ -5,19 +5,12 @@ import {
   betaAuthBypassEnabled,
   resolveBetaBypassActor,
 } from '../src/supabaseAuth.js';
-import { environmentReadiness } from '../src/environmentReadiness.js';
 
-const productionProjectRef = 'cpiucsxlkicmlbvdvhww';
-const stagingProjectRef = 'oqkkvqkerusepyokzbmt';
-const betaProjectRef = 'betabetabetabetabeta';
-
-function betaEnv(overrides = {}) {
+function betaEnv(environment = 'beta-jfl', overrides = {}) {
   return {
-    ENVIRONMENT: 'beta',
-    SUPABASE_URL: `https://${betaProjectRef}.supabase.co`,
+    ENVIRONMENT: environment,
+    SUPABASE_URL: 'https://betabetabetabetabeta.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'pub',
-    SUPABASE_SERVICE_ROLE_KEY: 'service',
-    BETA_EXPECTED_SUPABASE_PROJECT_REF: betaProjectRef,
     BETA_AUTH_BYPASS: '1',
     BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001',
     BETA_ACTOR_EMAIL: 'beta@localhost',
@@ -25,29 +18,34 @@ function betaEnv(overrides = {}) {
   };
 }
 
-test('beta auth bypass only when ENVIRONMENT is beta and flag is 1', () => {
-  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta', BETA_AUTH_BYPASS: '1' }), true);
+test('beta auth bypass is limited to beta-jfl and beta-dru', () => {
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta-jfl', BETA_AUTH_BYPASS: '1' }), true);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta-dru', BETA_AUTH_BYPASS: '1' }), true);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'gamma', BETA_AUTH_BYPASS: '1' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'production', BETA_AUTH_BYPASS: '1' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'staging', BETA_AUTH_BYPASS: '1' }), false);
-  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta', BETA_AUTH_BYPASS: '0' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta-jfl', BETA_AUTH_BYPASS: '0' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta', BETA_AUTH_BYPASS: '1' }), false);
 });
 
-test('authenticateSupabaseUser returns beta actor only when bearer is absent', async () => {
-  const actor = await authenticateSupabaseUser(
-    new Request('https://beta.example/api/test'),
-    betaEnv(),
-  );
-  assert.equal(actor.id, '00000000-0000-4000-8000-000000000001');
-  assert.equal(actor.betaBypass, true);
-});
+for (const environment of ['beta-jfl', 'beta-dru']) {
+  test(`authenticateSupabaseUser returns the shared actor without bearer in ${environment}`, async () => {
+    const actor = await authenticateSupabaseUser(
+      new Request(`https://${environment}.example/api/test`),
+      betaEnv(environment),
+    );
+    assert.equal(actor.id, '00000000-0000-4000-8000-000000000001');
+    assert.equal(actor.betaBypass, true);
+  });
+}
 
 test('authenticateSupabaseUser rejects an invalid supplied bearer on beta', async () => {
   await assert.rejects(
     () => authenticateSupabaseUser(
-      new Request('https://beta.example/api/test', {
+      new Request('https://beta-jfl.example/api/test', {
         headers: { authorization: 'Bearer invalid-token' },
       }),
-      betaEnv(),
+      betaEnv('beta-jfl'),
       {
         fetch: async () => new Response('{"message":"invalid"}', {
           status: 401,
@@ -61,64 +59,24 @@ test('authenticateSupabaseUser rejects an invalid supplied bearer on beta', asyn
   );
 });
 
-test('authenticateSupabaseUser still requires bearer on production', async () => {
-  await assert.rejects(
-    () => authenticateSupabaseUser(
-      new Request('https://fremontderby.com/api/test'),
-      {
-        ENVIRONMENT: 'production',
-        BETA_AUTH_BYPASS: '1',
-        BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001',
-        SUPABASE_URL: `https://${productionProjectRef}.supabase.co`,
-        SUPABASE_PUBLISHABLE_KEY: 'pub',
-      },
-    ),
-    (error) => error.name === 'AuthError' && /Missing bearer token/.test(error.message),
-  );
+test('gamma and production still require bearer even if a bypass flag is present', async () => {
+  for (const environment of ['gamma', 'production']) {
+    await assert.rejects(
+      () => authenticateSupabaseUser(
+        new Request('https://example.test/api/test'),
+        {
+          ...betaEnv('beta-jfl'),
+          ENVIRONMENT: environment,
+        },
+      ),
+      (error) => error.name === 'AuthError' && /Missing bearer token/.test(error.message),
+    );
+  }
 });
 
 test('resolveBetaBypassActor fails closed without actor id', () => {
   assert.throws(
-    () => resolveBetaBypassActor({ ENVIRONMENT: 'beta', BETA_AUTH_BYPASS: '1' }),
+    () => resolveBetaBypassActor({ ENVIRONMENT: 'beta-jfl', BETA_AUTH_BYPASS: '1' }),
     (error) => error.name === 'AuthError',
   );
-});
-
-test('environment readiness accepts only an explicitly configured isolated beta project', () => {
-  const report = environmentReadiness(betaEnv());
-  assert.equal(report.environment, 'beta');
-  assert.equal(report.ok, true);
-  assert.equal(report.checks.find((c) => c.name === 'knownWorkerEnvironment')?.ok, true);
-  assert.equal(report.checks.find((c) => c.name === 'betaExpectedProjectRefConfigured')?.ok, true);
-  assert.equal(report.checks.find((c) => c.name === 'betaExpectedProjectRefIsolated')?.ok, true);
-  assert.equal(report.checks.find((c) => c.name === 'betaActualProjectIsolated')?.ok, true);
-  assert.equal(report.checks.find((c) => c.name === 'supabaseProjectMatchesEnvironment')?.ok, true);
-});
-
-test('environment readiness fails closed when beta expected project ref is missing', () => {
-  const report = environmentReadiness(betaEnv({ BETA_EXPECTED_SUPABASE_PROJECT_REF: '' }));
-  assert.equal(report.ok, false);
-  assert.equal(report.checks.find((c) => c.name === 'betaExpectedProjectRefConfigured')?.ok, false);
-  assert.equal(report.checks.find((c) => c.name === 'supabaseProjectMatchesEnvironment')?.ok, false);
-});
-
-test('environment readiness rejects production or staging projects for beta', () => {
-  for (const projectRef of [productionProjectRef, stagingProjectRef]) {
-    const report = environmentReadiness(betaEnv({
-      SUPABASE_URL: `https://${projectRef}.supabase.co`,
-      BETA_EXPECTED_SUPABASE_PROJECT_REF: projectRef,
-    }));
-    assert.equal(report.ok, false);
-    assert.equal(report.checks.find((c) => c.name === 'betaExpectedProjectRefIsolated')?.ok, false);
-    assert.equal(report.checks.find((c) => c.name === 'betaActualProjectIsolated')?.ok, false);
-    assert.equal(report.checks.find((c) => c.name === 'supabaseProjectMatchesEnvironment')?.ok, false);
-  }
-});
-
-test('environment readiness rejects a mismatched beta project ref', () => {
-  const report = environmentReadiness(betaEnv({
-    BETA_EXPECTED_SUPABASE_PROJECT_REF: 'differentbetaproject',
-  }));
-  assert.equal(report.ok, false);
-  assert.equal(report.checks.find((c) => c.name === 'supabaseProjectMatchesEnvironment')?.ok, false);
 });

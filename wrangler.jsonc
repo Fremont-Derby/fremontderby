@@ -3,13 +3,24 @@
   "name": "fremontderby",
   "main": "src/routerEntry.js",
   "compatibility_date": "2026-08-09",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "fremontderby.com",
+      "custom_domain": true
+    }
+  ],
   "version_metadata": {
     "binding": "CF_VERSION_METADATA"
   },
   "vars": {
     "ENVIRONMENT": "production",
     "SUPABASE_URL": "https://cpiucsxlkicmlbvdvhww.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_7WQihuB4HVf-xFKMBeYIng_bUP--oUz"
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_7WQihuB4HVf-xFKMBeYIng_bUP--oUz",
+    "EXPECTED_SUPABASE_PROJECT_REF": "cpiucsxlkicmlbvdvhww"
+  },
+  "secrets": {
+    "required": ["SUPABASE_SERVICE_ROLE_KEY"]
   },
   "env": {
     "staging": {
@@ -17,20 +28,78 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB"
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       }
     },
-    "beta": {
-      "name": "fremontderby-beta",
-      "workers_dev": true,
+    "beta-jfl": {
+      "name": "fremontderby-beta-jfl",
+      "workers_dev": false,
+      "routes": [
+        {
+          "pattern": "beta-jfl.fremontderby.com",
+          "custom_domain": true
+        }
+      ],
       "vars": {
-        "ENVIRONMENT": "beta",
+        "ENVIRONMENT": "beta-jfl",
         "BETA_AUTH_BYPASS": "1",
-        "SUPABASE_URL": "https://REPLACE_BETA_PROJECT.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "REPLACE_BETA_PUBLISHABLE_KEY",
-        "BETA_ACTOR_USER_ID": "REPLACE_BETA_ACTOR_USER_UUID",
-        "BETA_ACTOR_EMAIL": "beta-actor@localhost",
-        "BETA_EXPECTED_SUPABASE_PROJECT_REF": "REPLACE_BETA_PROJECT_REF"
+        "BETA_ACTOR_EMAIL": "beta-jfl-actor@localhost"
+      },
+      "secrets": {
+        "required": [
+          "SUPABASE_URL",
+          "SUPABASE_PUBLISHABLE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "EXPECTED_SUPABASE_PROJECT_REF",
+          "BETA_ACTOR_USER_ID"
+        ]
+      }
+    },
+    "beta-dru": {
+      "name": "fremontderby-beta-dru",
+      "workers_dev": false,
+      "routes": [
+        {
+          "pattern": "beta-dru.fremontderby.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "beta-dru",
+        "BETA_AUTH_BYPASS": "1",
+        "BETA_ACTOR_EMAIL": "beta-dru-actor@localhost"
+      },
+      "secrets": {
+        "required": [
+          "SUPABASE_URL",
+          "SUPABASE_PUBLISHABLE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "EXPECTED_SUPABASE_PROJECT_REF",
+          "BETA_ACTOR_USER_ID"
+        ]
+      }
+    },
+    "gamma": {
+      "name": "fremontderby-gamma",
+      "workers_dev": false,
+      "routes": [
+        {
+          "pattern": "gamma.fremontderby.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "gamma",
+        "BETA_AUTH_BYPASS": "0"
+      },
+      "secrets": {
+        "required": [
+          "SUPABASE_URL",
+          "SUPABASE_PUBLISHABLE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "EXPECTED_SUPABASE_PROJECT_REF"
+        ]
       }
     }
   }

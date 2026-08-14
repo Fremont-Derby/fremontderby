@@ -30,14 +30,17 @@ async function parseJson(response) {
   return JSON.parse(text);
 }
 
+const betaAuthEnvironments = new Set(['beta-jfl', 'beta-dru']);
+
 /**
- * Beta/gamma open-auth: only when ENVIRONMENT is exactly "beta" and
- * BETA_AUTH_BYPASS is "1". Never active for production or staging.
+ * Open-auth is allowed only in the two isolated beta lanes and only when the
+ * explicit bypass flag is enabled. Gamma, staging, and production always use
+ * normal authentication even if a stray bypass flag is present.
  */
 export function betaAuthBypassEnabled(env = {}) {
   const environment = String(env.ENVIRONMENT || '').trim();
   const bypass = String(env.BETA_AUTH_BYPASS || '').trim();
-  return environment === 'beta' && bypass === '1';
+  return betaAuthEnvironments.has(environment) && bypass === '1';
 }
 
 export function resolveBetaBypassActor(env = {}) {
@@ -77,7 +80,6 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Missing bearer token');
   }
 
-  // Real bearer tokens still work on beta when provided.
   const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
   const publishableKey = requireEnvValue(env, 'SUPABASE_PUBLISHABLE_KEY');
   const response = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {
