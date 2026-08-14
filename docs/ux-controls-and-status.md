@@ -41,6 +41,21 @@ select {
 
 Do not use light green text on light green fills. Prefer **dark text on tinted fills** for small pill type.
 
+## Measured WCAG contrast (pill text on fill)
+
+Ratios use relative luminance (WCAG 2.x). Pill type is ~0.78rem bold → treat as **normal text** (AA ≥ 4.5:1, AAA ≥ 7:1).
+
+| Tone | Text on background | Ratio | AA | AAA |
+|------|--------------------|------:|:--:|:---:|
+| Neutral | `#1f2923` on `#eef1ef` | 13.2:1 | Yes | Yes |
+| Success / live | `#0b4d2c` on `#d8f0e2` | 8.3:1 | Yes | Yes |
+| Warning / tonight | `#4a3b00` on `#f7e7a8` | 8.8:1 | Yes | Yes |
+| Danger | `#7a221c` on `#f8d7d4` | 7.6:1 | Yes | Yes |
+| Info | `#0b3a6e` on `#d9e8fc` | 9.2:1 | Yes | Yes |
+
+All current `--fd-pill-*` pairs meet **AAA for normal text**. Prefer these dark-on-tint pairs over light-on-light greens for small labels.
+
+
 ## Do not
 - Apply `--fd-radius-pill` to `<select>` or long `.status` sentences.
 - Treat `.hub-team` as a chip (it is a control row).
