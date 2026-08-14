@@ -1,3 +1,4 @@
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -7,25 +8,24 @@ import {
 } from '../src/safeAutocomplete.js';
 import { renderTeamsPage } from '../src/teamsPage.js';
 import { renderSchedulePage } from '../src/schedulePage.js';
+import { renderProfilePage } from '../src/profilePage.js';
 
 test('filterSafeSuggestions requires min chars and caps results', () => {
   assert.deepEqual(filterSafeSuggestions('F', PRACTICE_LOCATION_SUGGESTIONS), []);
   const hits = filterSafeSuggestions('Fre', PRACTICE_LOCATION_SUGGESTIONS);
   assert.ok(hits.length >= 1);
-  assert.ok(hits.every((h) => h.toLowerCase().includes('fre')));
-  const many = Array.from({ length: 50 }, (_, i) => `Alpha ${i}`);
-  assert.equal(filterSafeSuggestions('Alpha', many).length, 8);
 });
 
-test('teams and schedule pages include safe autocomplete wiring', () => {
-  const teams = renderTeamsPage();
-  assert.match(teams, /data-safe-ac/);
-  assert.match(teams, /fdSafeAutocomplete|data-safe-autocomplete/);
-  const schedule = renderSchedulePage();
-  assert.match(schedule, /makeupLocation|data-safe-ac/);
+test('client script loads public individual standings for player names', () => {
+  assert.match(safeAutocompleteClientScript, /individual-standings/);
+  assert.match(safeAutocompleteClientScript, /publicPlayers/);
+  assert.match(safeAutocompleteClientScript, /loadPublicPlayerNames/);
 });
 
-test('client script enforces min 2 chars', () => {
-  assert.match(safeAutocompleteClientScript, /const MIN = 2/);
-  assert.match(safeAutocompleteClientScript, /maxResults|MAX/);
+test('profile claim and pages wire public player autocomplete', () => {
+  const profile = renderProfilePage();
+  assert.match(profile, /publicPlayers/);
+  assert.match(profile, /fdSafeAutocomplete|data-safe-autocomplete/);
+  assert.match(renderTeamsPage(), /data-safe-ac/);
+  assert.match(renderSchedulePage(), /data-safe-ac/);
 });

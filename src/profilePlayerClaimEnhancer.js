@@ -7,7 +7,7 @@ const card = `<article class="panel" data-player-claim hidden>
   <div class="player-claim" role="region" aria-label="Claim an existing Fremont Derby player profile">
     <div class="player-claim-copy">If the league already added you, claim that prepared player before creating a new profile. Only unclaimed players with no competitive racks can be claimed here.</div>
     <form class="player-claim-search" data-player-claim-search>
-      <label>Player name<input type="search" maxlength="80" autocomplete="name" placeholder="Search by name" data-player-claim-query /></label>
+      <label>Player name<input type="search" maxlength="80" autocomplete="name" placeholder="Search by name" data-player-claim-query data-safe-ac="publicPlayers" /></label>
       <button class="ghost" type="submit">Search players</button>
     </form>
     <div class="player-claim-status" role="status" aria-live="polite" data-player-claim-status></div>

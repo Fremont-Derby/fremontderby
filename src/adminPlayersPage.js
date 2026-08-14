@@ -1,3 +1,4 @@
+import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 export function renderAdminPlayersPage() {
   return `<!doctype html>
 <html lang="en">
@@ -14,10 +15,10 @@ export function renderAdminPlayersPage() {
   <main class="app">
     <header class="head"><div><div class="muted">Admin · League Management</div><h1>Players</h1><div class="muted">Create and manage player identities, league-admin access, competition eligibility, and team membership exceptions without IDs or database edits.</div></div><a class="back" href="/admin/operations">Operations</a></header>
     <section class="panel">
-      <form class="create" data-create-form><label>Player name<input data-create-name maxlength="80" autocomplete="off" placeholder="Example: Jason Lambert" required /></label><button type="submit" data-create-button>Create player</button></form>
+      <form class="create" data-create-form><label>Player name<input data-create-name data-safe-ac="publicPlayers" maxlength="80" autocomplete="off" placeholder="Example: Jason Lambert" required /></label><button type="submit" data-create-button>Create player</button></form>
       <form class="search" data-search-form>
         <label class="muted" for="admin-player-search">Find by player or team name</label>
-        <input id="admin-player-search" data-search type="search" autocomplete="off" placeholder="Type part of a name — e.g. “jen” or “breakers”" aria-label="Search players by name or team" aria-controls="admin-player-list" />
+        <input id="admin-player-search" data-search type="search" autocomplete="off" data-safe-ac="publicPlayers" placeholder="Type part of a name — e.g. “jen” or “breakers”" aria-label="Search players by name or team" aria-controls="admin-player-list" />
         <button type="submit">Find</button>
       </form>
       <div class="directory-tools">
@@ -46,6 +47,7 @@ export function renderAdminPlayersPage() {
     async function load(showLoading=true){if(showLoading)setStatus('Loading players…');const body=await api('/api/admin/players');players=Array.isArray(body.players)?body.players:[];rosterTeams=Array.isArray(body.rosterTeams)?body.rosterTeams:[];render();if(showLoading)setStatus(players.length+' player'+(players.length===1?'':'s')+' loaded.','ok')}document.querySelector('[data-create-form]').addEventListener('submit',event=>{event.preventDefault();createPlayer()});document.querySelector('[data-search-form]').addEventListener('submit',event=>{event.preventDefault();activeLetter='';render();const found=filteredPlayers();if(found.length){listEl.querySelector('h2')?.closest('.card')?.scrollIntoView({block:'nearest'});setStatus(found.length+' match'+(found.length===1?'':'es')+'.','ok')}else if(players.length){setStatus('No players match “'+searchEl.value.trim()+'”.','error');emptyEl.scrollIntoView({block:'nearest'})}else{setStatus('Player list is empty or still loading.','error')}});searchEl.addEventListener('input',()=>{activeLetter='';render()});searchEl.addEventListener('keydown',event=>{if(event.key==='Escape'){searchEl.value='';activeLetter='';render()}});load().catch(error=>{listEl.hidden=true;emptyEl.hidden=true;resultsMetaEl.textContent='';letterIndexEl.replaceChildren();setStatus(error.message,'error')});
     if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load(false),{intervalMs:30000,immediate:false});
   </script>
+${safeAutocompleteClientScript}
 </body>
 </html>`;
 }
