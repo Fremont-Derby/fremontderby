@@ -13,6 +13,12 @@ export function renderSeasonSetupPage() {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">S</span><span>Fremont Derby Season Setup</span></div><div class="status" data-status>Ready</div></header>
+    <nav aria-label="Admin destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px">
+      <a href="/admin" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Admin home</a>
+      <a href="/admin/seasons" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Seasons</a>
+      <a href="/admin/season-teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Season teams</a>
+      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+    </nav>
     <form class="setup" data-season-setup-form>
       <label class="span-4">Choose season<select data-season-selector disabled><option>Loading seasons...</option></select></label>
       <label class="span-2">Season name<input name="seasonName" data-season-name maxlength="80" value="Fremont Derby Season 1" /></label>

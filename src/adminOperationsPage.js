@@ -20,7 +20,7 @@ export function renderAdminOperationsPage(env = {}) {
 </head>
 <body>
   <main class="app">
-    <header class="head"><div><h1>League operations</h1><div class="sub" data-season>Is Fremont Derby running smoothly?</div></div><div class="head-actions"><nav class="admin-links" aria-label="Admin tools"><a href="/admin/players">Players</a><a href="/season-setup">Season setup</a><a href="/messages/moderation">Moderation</a><a href="/admin/audit">Audit log</a></nav><div class="status" role="status" aria-live="polite" data-status>Loading league health…</div><button data-refresh type="button">Refresh</button></div></header>
+    <header class="head"><div><h1>League operations</h1><div class="sub" data-season>Is Fremont Derby running smoothly?</div></div><div class="head-actions"><nav class="admin-links" aria-label="Admin tools"><a href="/admin">Admin home</a><a href="/admin/players">Players</a><a href="/admin/seasons">Seasons</a><a href="/admin/season-teams">Season teams</a><a href="/season-setup">Season setup</a><a href="/messages/moderation">Moderation</a><a href="/admin/audit">Audit log</a></nav><div class="status" role="status" aria-live="polite" data-status>Loading league health…</div><button data-refresh type="button">Refresh</button></div></header>
     <section class="metrics" aria-label="League summary">
       <div class="metric"><span>Players</span><strong data-count="seasonPlayers">—</strong></div>
       <div class="metric"><span>Teams</span><strong data-count="teams">—</strong></div>

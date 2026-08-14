@@ -13,7 +13,14 @@ export function renderAdminPlayersPage() {
 </head>
 <body>
   <main class="app">
-    <header class="head"><div><div class="muted">Admin · League Management</div><h1>Players</h1><div class="muted">Create and manage player identities, league-admin access, competition eligibility, and team membership exceptions without IDs or database edits.</div></div><a class="back" href="/admin/operations">Operations</a></header>
+    <header class="head"><div><div class="muted">Admin · League Management</div><h1>Players</h1><div class="muted">Create and manage player identities, league-admin access, competition eligibility, and team membership exceptions without IDs or database edits.</div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a class="back" href="/admin">Admin home</a>
+        <a class="back" href="/admin/operations">Operations</a>
+        <a class="back" href="/admin/season-teams">Season teams</a>
+        <a class="back" href="/players">Public directory</a>
+      </div>
+    </header>
     <section class="panel">
       <form class="create" data-create-form><label>Player name<input data-create-name data-safe-ac="publicPlayers" maxlength="80" autocomplete="off" placeholder="Example: Jason Lambert" required /></label><button type="submit" data-create-button>Create player</button></form>
       <form class="search" data-search-form>

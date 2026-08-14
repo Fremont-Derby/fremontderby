@@ -19,7 +19,14 @@ export function renderChatModerationPage(env = {}) {
 </head>
 <body>
   <main class="app">
-    <header class="head"><div><h1>Chat moderation</h1><div style="color:var(--muted)">Review player reports across every chat type.</div></div><a href="/messages">Back to messages</a></header>
+    <header class="head"><div><h1>Chat moderation</h1><div style="color:var(--muted)">Review player reports across every chat type.</div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
+        <a href="/admin" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Admin home</a>
+        <a href="/admin/audit" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Audit log</a>
+        <a href="/admin/operations" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Operations</a>
+      </div>
+    </header>
     <div class="status" data-status>Loading reports…</div>
     <section class="list" data-report-list aria-live="polite"></section>
   </main>
