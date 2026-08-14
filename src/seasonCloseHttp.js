@@ -1,3 +1,4 @@
+import { jsonNoStore } from './httpJson.js';
 import {
   closeSeasonCommand,
   getSeasonCloseReadinessCommand,
@@ -5,9 +6,7 @@ import {
 import { createSeasonCloseRepository } from './seasonCloseRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
-function json(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
-}
+const json = jsonNoStore;
 
 export function statusForError(error) {
   if (error instanceof AuthError) return error.status;

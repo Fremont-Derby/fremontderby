@@ -1,3 +1,4 @@
+import { jsonNoStore } from './httpJson.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   listMyPendingReadyChecksCommand,
@@ -6,9 +7,7 @@ import {
 } from './readyCheckCommands.js';
 import { createReadyCheckRepository } from './readyCheckRepository.js';
 
-function json(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
-}
+const json = jsonNoStore;
 
 export function readyCheckErrorStatus(error) {
   if (error instanceof AuthError) return error.status;
