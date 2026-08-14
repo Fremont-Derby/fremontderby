@@ -9,7 +9,7 @@ function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-function statusForError(error) {
+export function statusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (error.message === 'Season not found') return 404;
   if (error.message.includes('Actor is not a league admin')) return 403;

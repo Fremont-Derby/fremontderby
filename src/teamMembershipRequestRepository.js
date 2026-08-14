@@ -37,12 +37,16 @@ async function requestJson(fetchImpl, url, init) {
   return payload;
 }
 
-async function requestRpc(fetchImpl, supabaseUrl, serviceRoleKey, rpcName, body) {
+async function requestRpc(fetchImpl, supabaseUrl, serviceRoleKey, rpcName, body, { expectArray = false } = {}) {
   const payload = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
     method: 'POST',
     headers: headers(serviceRoleKey),
     body: JSON.stringify(body),
   });
+  if (expectArray) {
+    return Array.isArray(payload) ? payload : [];
+  }
+  // PostgREST may wrap a single composite row as a one-element array.
   return Array.isArray(payload) ? payload[0] : payload;
 }
 
@@ -90,6 +94,7 @@ export function createTeamMembershipRequestRepository(
         serviceRoleKey,
         'list_joinable_team_registration',
         {},
+        { expectArray: true },
       );
       const pendingByTeam = new Map(
         (requests?.player_requests ?? [])
