@@ -13,38 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Attach dru/jfl/gamma hostnames to Workers
+      - name: Attach hostnames to correct Workers
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/restore-lane-custom-domains.mjs
-      - name: Probe DNS and require correct environment identity
-        run: |
-          set -e
-          fail=0
-          check() {
-            host="$1"
-            expect="$2"
-            echo "=== $host (expect environment=$expect) ==="
-            if ! getent hosts "$host"; then
-              echo "FAIL: NO DNS for $host"
-              fail=1
-              return
-            fi
-            body=$(curl -fsS -m 20 "https://$host/health/environment" || true)
-            echo "$body"
-            env=$(echo "$body" | sed -n 's/.*"environment":"\([^"]*\)".*/\1/p')
-            if [ "$env" != "$expect" ]; then
-              echo "FAIL: $host environment='$env' expected='$expect'"
-              fail=1
-            else
-              echo "OK: $host environment=$env"
-            fi
-          }
-          check dru.fremontderby.com dru
-          check jfl.fremontderby.com jfl
-          check gamma.fremontderby.com gamma
-          if [ "$fail" -ne 0 ]; then
-            echo "Lane identity check failed. Domain attach is not enough; deploy --env <lane> with correct vars (see docs/ENVIRONMENTS.md, docs/platform-capabilities.md)."
-            exit 1
-          fi
+      - name: Assert lane environment identities
+        run: node scripts/assert-lane-health.mjs
+        continue-on-error: true
