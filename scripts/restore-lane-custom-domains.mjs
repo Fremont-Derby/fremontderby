@@ -110,7 +110,11 @@ async function main() {
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirect) {
   main().catch((error) => {
-    console.error(error);
+    const message = String(error?.message || error);
+    console.error(message);
+    if (/CLOUDFLARE_ACCOUNT_ID is required|CLOUDFLARE_API_TOKEN is required/i.test(message)) {
+      console.error('HUMAN REQUIRED: set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN Actions secrets for domain restore.');
+    }
     process.exitCode = 1;
   });
 }
