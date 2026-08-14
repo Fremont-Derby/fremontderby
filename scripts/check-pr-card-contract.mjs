@@ -45,6 +45,41 @@ export function extractTrackingCardNumbers(body = '', repositoryFullName = '') {
   return [...numbers];
 }
 
+export function findTrackingCardConflicts({
+  currentPullRequestNumber,
+  currentBody = '',
+  openPullRequests = [],
+  repositoryFullName = '',
+} = {}) {
+  const currentCards = new Set(extractTrackingCardNumbers(
+    sectionContent(currentBody, 'Tracking card'),
+    repositoryFullName,
+  ));
+  const conflicts = [];
+
+  for (const pullRequest of openPullRequests) {
+    if (Number(pullRequest.number) === Number(currentPullRequestNumber)) continue;
+
+    const otherCards = extractTrackingCardNumbers(
+      sectionContent(pullRequest.body ?? '', 'Tracking card'),
+      repositoryFullName,
+    );
+    for (const cardNumber of otherCards) {
+      if (!currentCards.has(cardNumber)) continue;
+      conflicts.push({
+        cardNumber,
+        pullRequestNumber: Number(pullRequest.number),
+        url: pullRequest.html_url ?? '',
+      });
+    }
+  }
+
+  return conflicts.sort((left, right) => (
+    left.cardNumber - right.cardNumber
+    || left.pullRequestNumber - right.pullRequestNumber
+  ));
+}
+
 export function validatePullRequestBody(body = '', repositoryFullName = '') {
   const errors = [];
   const trackingSection = sectionContent(body, 'Tracking card');
@@ -66,12 +101,67 @@ export function validatePullRequestBody(body = '', repositoryFullName = '') {
   return errors;
 }
 
-function validateEventFile(eventPath) {
+async function fetchOpenPullRequests(repositoryFullName, token, apiUrl = 'https://api.github.com') {
+  if (!token) {
+    throw new Error('GITHUB_TOKEN is required to check exclusive tracking-card ownership.');
+  }
+
+  const [owner, repository] = repositoryFullName.split('/');
+  if (!owner || !repository) {
+    throw new Error(`Invalid repository full name: "${repositoryFullName}".`);
+  }
+
+  const pullRequests = [];
+  for (let page = 1; ; page += 1) {
+    const url = new URL(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/pulls`, apiUrl);
+    url.searchParams.set('state', 'open');
+    url.searchParams.set('per_page', '100');
+    url.searchParams.set('page', String(page));
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub open-PR lookup failed with HTTP ${response.status}.`);
+    }
+
+    const pageItems = await response.json();
+    pullRequests.push(...pageItems);
+    if (pageItems.length < 100) break;
+  }
+
+  return pullRequests;
+}
+
+async function validateEventFile(eventPath) {
   const event = JSON.parse(readFileSync(eventPath, 'utf8'));
   const repositoryFullName = event.repository?.full_name ?? '';
+  const pullRequestNumber = event.pull_request?.number;
   const body = event.pull_request?.body ?? '';
   const cardNumbers = extractTrackingCardNumbers(sectionContent(body, 'Tracking card'), repositoryFullName);
   const errors = validatePullRequestBody(body, repositoryFullName);
+
+  if (errors.length === 0) {
+    const openPullRequests = await fetchOpenPullRequests(
+      repositoryFullName,
+      process.env.GITHUB_TOKEN,
+      process.env.GITHUB_API_URL,
+    );
+    const conflicts = findTrackingCardConflicts({
+      currentPullRequestNumber: pullRequestNumber,
+      currentBody: body,
+      openPullRequests,
+      repositoryFullName,
+    });
+    for (const conflict of conflicts) {
+      const target = conflict.url || `open PR #${conflict.pullRequestNumber}`;
+      errors.push(`Tracking card #${conflict.cardNumber} is already owned by open PR #${conflict.pullRequestNumber} (${target}). Close or hand off the existing PR before continuing.`);
+    }
+  }
 
   if (errors.length > 0) {
     console.error(['PR card contract failed:', ...errors.map((error) => `- ${error}`)].join('\n'));
@@ -93,6 +183,11 @@ if (isDirectRun) {
     console.error('GITHUB_EVENT_PATH is required.');
     process.exitCode = 1;
   } else {
-    process.exitCode = validateEventFile(eventPath);
+    try {
+      process.exitCode = await validateEventFile(eventPath);
+    } catch (error) {
+      console.error(`PR card contract failed: ${error.message}`);
+      process.exitCode = 1;
+    }
   }
 }
