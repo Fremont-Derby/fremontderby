@@ -79,7 +79,7 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
   assert.equal(config.env.gamma.vars.ENVIRONMENT, 'gamma');
 });
 
-test('non-production lane credentials are declared as required secrets, not placeholders', () => {
+test('non-production Supabase credentials remain required secrets', () => {
   const common = [
     'SUPABASE_URL',
     'SUPABASE_PUBLISHABLE_KEY',
@@ -91,9 +91,17 @@ test('non-production lane credentials are declared as required secrets, not plac
     for (const name of common) assert.ok(target.secrets.required.includes(name));
     assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
   }
-  assert.ok(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'));
+});
+
+test('JFL open-auth actor is explicit lane-only test config', () => {
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
+  assert.equal(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+
   assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
+  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, undefined);
+
   assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.gamma.vars.BETA_ACTOR_USER_ID, undefined);
 });
 
 test('auth bypass is enabled only in the isolated JFL and DRU lane config', () => {
