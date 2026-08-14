@@ -104,7 +104,7 @@ const script = `<script data-profile-contact-script>
   }
 
   async function load(){
-    badge.textContent='Checking…';
+    badge.textContent='Loading…';
     // WHY: default GET omits full phone; UI stays masked until explicit reveal.
     const body=await request('/api/me/contact',{method:'GET'});
     renderMasked(body.contact);

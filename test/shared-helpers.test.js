@@ -4,19 +4,19 @@ import { jsonNoStore, jsonPublic } from '../src/httpJson.js';
 import { normalizeStatusTone } from '../src/statusTone.js';
 import { createStatusController } from '../src/statusController.js';
 
-test('Facade: jsonNoStore sets no-store cache header', async () => {
+test('jsonNoStore sets no-store cache header', async () => {
   const response = jsonNoStore({ ok: true }, 201);
   assert.equal(response.status, 201);
   assert.match(response.headers.get('cache-control'), /no-store/);
   assert.deepEqual(await response.json(), { ok: true });
 });
 
-test('Facade: jsonPublic allows short caching', () => {
+test('jsonPublic allows short caching', () => {
   const response = jsonPublic({ seasons: [] });
   assert.match(response.headers.get('cache-control'), /public/);
 });
 
-test('Strategy: status tones normalize to a small palette', () => {
+test('status tones normalize to a small palette', () => {
   assert.equal(normalizeStatusTone('healthy'), 'ok');
   assert.equal(normalizeStatusTone('critical'), 'error');
   assert.equal(normalizeStatusTone('warn'), 'warning');
@@ -24,13 +24,13 @@ test('Strategy: status tones normalize to a small palette', () => {
   assert.equal(normalizeStatusTone(''), 'muted');
 });
 
-test('Factory/Null Object: status controller no-ops without element', () => {
+test('status controller no-ops without element', () => {
   const status = createStatusController(null);
   assert.doesNotThrow(() => status.set('Hello', 'ok'));
   assert.doesNotThrow(() => status.clear());
 });
 
-test('Factory: status controller writes normalized tone', () => {
+test('status controller writes normalized tone', () => {
   const el = { textContent: '', dataset: {}, removeAttribute(name) { delete this.dataset[name.replace('data-', '')]; } };
   // minimal stub
   const node = {

@@ -1,9 +1,6 @@
 import { normalizeStatusTone } from './statusTone.js';
 
-/**
- * Factory for page status strips.
- * Null Object: if el is missing, set/clear become no-ops.
- */
+/** Status strip helper. No-ops when the element is missing. */
 export function createStatusController(el) {
   if (!el) {
     return {
