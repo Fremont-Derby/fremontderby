@@ -186,7 +186,7 @@ export const shellStyles = `
   }
   .fd-ready-check[data-open="true"] { display: grid; }
   .fd-ready-check__title { font-weight: 950; }
-  .fd-ready-check__meta { color: #b7d0c2; font-weight: 650; font-size: .82rem; }
+  .fd-ready-check__meta { color: #b7d0c2; font-weight: 600; font-size: .82rem; }
   .fd-ready-check__actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .fd-ready-check__actions button {
     min-height: 44px;

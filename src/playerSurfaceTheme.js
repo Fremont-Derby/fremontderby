@@ -347,7 +347,23 @@ export async function injectPlayerSurfaceTheme(response, pathname) {
 
   html = html.replace(/<body([^>]*)>/i, `<body$1 data-fd-player-surface="${surface}">`);
   const themeHead = `<meta name="theme-color" content="#f3f1ed" />
-<style data-fd-player-surface-theme>${playerSurfaceThemeStyles}</style>`;
+<style data-fd-player-surface-theme>${playerSurfaceThemeStyles}</style>
+  body[data-fd-player-surface] .status:empty {
+    display: none !important;
+  }
+  body[data-fd-player-surface] .empty {
+    text-align: left !important;
+    border-radius: var(--fd-radius-control) !important;
+  }
+  body[data-fd-player-surface] .match-actions a {
+    font-weight: 700 !important;
+    border-radius: var(--fd-radius-control) !important;
+  }
+  body[data-fd-player-surface] .status-pill {
+    text-transform: none !important;
+    font-weight: 700 !important;
+  }
+`;
   if (/name="theme-color"/i.test(html)) {
     html = html.replace(/<meta\s+name="theme-color"[^>]*>/i, '<meta name="theme-color" content="#f3f1ed" />');
     html = html.replace('</head>', `<style data-fd-player-surface-theme>${playerSurfaceThemeStyles}</style></head>`);
