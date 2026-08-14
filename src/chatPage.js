@@ -476,7 +476,12 @@ export function renderChatPage(env = {}) {
         for (const candidate of candidates) {
           const option = document.createElement('option');
           option.value = candidate.season_id + '|' + candidate.player_id;
-          option.textContent = candidate.display_name + ' · ' + candidate.season_name;
+          const nameKey=String(candidate.display_name||'').trim().toLowerCase();
+          const sameName=candidates.filter((item)=>String(item.display_name||'').trim().toLowerCase()===nameKey).length>1;
+          option.textContent = candidate.display_name
+            + (sameName && candidate.player_id ? ' · #' + String(candidate.player_id).slice(-4) : '')
+            + ' · ' + (candidate.season_name||'Season')
+            + (candidate.team_name ? ' · ' + candidate.team_name : '');
           select.append(option);
         }
       }
