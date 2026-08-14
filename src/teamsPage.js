@@ -292,12 +292,22 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
           const list=document.createElement('ul');
           for(const member of members){
             const li=document.createElement('li');
-            li.textContent=playerOptionLabel({
+            const pid=member.playerId||member.player_id||member.id||'';
+            const label=playerOptionLabel({
               displayName:member.displayName||member.display_name||member.playerName,
               hasLogin:member.hasLogin,
-              playerId:member.playerId||member.id,
+              playerId:pid,
               isDuplicateName:false,
             });
+            li.textContent=label;
+            if(pid){
+              const msg=document.createElement('a');
+              msg.href='/messages?player='+encodeURIComponent(pid);
+              msg.textContent='Message';
+              msg.style.cssText='margin-left:8px;font-size:.82rem;color:#9ee5bd;text-decoration:none';
+              msg.setAttribute('aria-label','Message '+label);
+              li.append(document.createTextNode(' '),msg);
+            }
             list.append(li);
           }
           card.append(list);
@@ -378,7 +388,20 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         const row=document.createElement('div');
         row.className='card';
         row.append(node('strong',team.teamName||'Team'),node('div',team.seasonName||'','muted'));
-        row.append(actionButton('Request to join','primary',{requestMembership:team.teamId||team.id||''}));
+        const actions=document.createElement('div');
+        actions.className='actions';
+        actions.append(actionButton('Request to join','primary',{requestMembership:team.teamId||team.id||''}));
+        const captainId=team.captainPlayerId||team.captain_player_id||team.captainId||'';
+        if(captainId){
+          const msg=document.createElement('a');
+          msg.href='/messages?player='+encodeURIComponent(captainId);
+          msg.textContent='Message captain';
+          msg.style.cssText='display:inline-flex;align-items:center;min-height:44px;padding:0 12px;color:#9ee5bd;text-decoration:none';
+          actions.append(msg);
+        }else{
+          actions.append(node('div','No captain assigned','muted'));
+        }
+        row.append(actions);
         joinTeamsEl.append(row);
       }
     }

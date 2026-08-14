@@ -31,7 +31,31 @@ export function renderStandingsPage() {
     function renderSeasonOptions(){seasonInput.replaceChildren();for(const season of seasons){const option=document.createElement('option');option.value=season.id;option.textContent=season.name+' — '+season.status;seasonInput.append(option)}const explicit=seasons.find((season)=>season.id===requestedSeasonId);const registration=seasons.find((season)=>season.status==='registration');const remembered=seasons.find((season)=>season.id===rememberedSeasonId);const selected=explicit||remembered||registration||seasons[0];seasonInput.value=selected?.id||'';seasonInput.disabled=seasons.length===0;loadButton.disabled=seasons.length===0}
     function renderRegistrationSummary(season){const isRegistration=season?.status==='registration';registrationSummary.hidden=!isRegistration;if(!isRegistration)return;const openSlots=Number(season.openTeamSlots||0);teamCountEl.textContent=season.teamCount+' / '+season.teamCapacity;playerCountEl.textContent=String(season.rosteredPlayerCount);openSlotsEl.textContent=String(season.openTeamSlots);registerLink.href='/teams?season='+encodeURIComponent(season.id);registerLink.textContent=openSlots<=0?(season.applicationsWaiting?'View waitlist / teams':'Teams full — view teams'):'Register or join a team'}
     async function loadSeasons(){setStatus('Loading seasons...');hideState();seasonInput.disabled=true;loadButton.disabled=true;let body;if(window.fdConditionalFetch){const result=await window.fdConditionalFetch('/api/seasons');if(result.notModified){seasonInput.disabled=false;loadButton.disabled=false;return Boolean(seasons.length)}body=result.body||{};if(!result.response.ok)throw new Error((body&&body.error)||'Standings could not be loaded.');}else{const response=await fetch('/api/seasons');body=await response.json();if(!response.ok)throw new Error((body&&body.error)||('Standings could not be loaded (HTTP '+response.status+').'));}seasons=body.seasons||[];renderSeasonOptions();if(!seasons.length){renderRegistrationSummary(null);renderTeams([]);renderPlayers([]);const message='No season is published yet. Standings will appear here once league setup is ready.';teamEmpty.textContent=message;teamMobileEmpty.textContent=message;playerEmpty.textContent=message;playerMobileEmpty.textContent=message;showState('No season yet','There is nothing to rank yet. You can still review the league format while registration and scheduling are prepared.','/rules','View league rules');setStatus('No season published yet');return false}return true}
-    function rankLabel(rows,index){const rank=rows[index]?.standings_rank;if(rank==null||rank==='')return'-';const tied=rows.filter((row)=>row.standings_rank===rank).length>1;return tied?'T-'+rank:String(rank)}function renderTeams(rows){teamBody.replaceChildren();teamCards.replaceChildren();teamEmpty.hidden=rows.length>0;teamMobileEmpty.hidden=rows.length>0;rows.forEach((row,index)=>{const tr=document.createElement('tr');tr.append(cell(rankLabel(rows,index),'rank'),cell(row.team_name),cell(row.games_played,'numeric'),cell(row.maximum_matches,'numeric'),cell([row.team_wins,row.team_losses].join('-'),'numeric'),cell(row.standing_points,'numeric'),cell(row.match_points+'-'+row.match_points_against,'numeric'),cell(row.point_differential,'numeric'),cell(row.forfeits_won+'-'+row.forfeits_lost,'numeric'));teamBody.append(tr);teamCards.append(card(rankLabel(rows,index),row.team_name,[stat('Record',row.team_wins+'-'+row.team_losses),stat('Points',row.standing_points),stat('Played',row.games_played+' of '+row.maximum_matches),stat('Match points',row.match_points+'-'+row.match_points_against),stat('Differential',row.point_differential),stat('Forfeits',row.forfeits_won+'-'+row.forfeits_lost)]))})}
+    function rankLabel(rows,index){const rank=rows[index]?.standings_rank;if(rank==null||rank==='')return'-';const tied=rows.filter((row)=>row.standings_rank===rank).length>1;return tied?'T-'+rank:String(rank)}function renderTeams(rows){
+      teamEmpty.hidden=rows.length>0;teamMobileEmpty.hidden=rows.length>0;
+      const keyed=rows.map((row,index)=>({row,index,key:String(row.team_id||row.teamId||row.team_name||index)}));
+      function buildTeamRow(item){
+        const row=item.row,index=item.index;
+        const tr=document.createElement('tr');
+        tr.append(cell(rankLabel(rows,index),'rank'),cell(row.team_name),cell(row.games_played,'numeric'),cell(row.maximum_matches,'numeric'),cell([row.team_wins,row.team_losses].join('-'),'numeric'),cell(row.standing_points,'numeric'),cell(row.match_points+'-'+row.match_points_against,'numeric'),cell(row.point_differential,'numeric'),cell(row.forfeits_won+'-'+row.forfeits_lost,'numeric'));
+        return tr;
+      }
+      function buildTeamCard(item){
+        const row=item.row,index=item.index;
+        return card(rankLabel(rows,index),row.team_name,[stat('Record',row.team_wins+'-'+row.team_losses),stat('Points',row.standing_points),stat('Played',row.games_played+' of '+row.maximum_matches),stat('Match points',row.match_points+'-'+row.match_points_against),stat('Differential',row.point_differential),stat('Forfeits',row.forfeits_won+'-'+row.forfeits_lost)]);
+      }
+      function sig(item){
+        const r=item.row;
+        return [rankLabel(rows,item.index),r.team_wins,r.team_losses,r.standing_points,r.match_points,r.match_points_against,r.point_differential,r.games_played,r.forfeits_won,r.forfeits_lost].join('|');
+      }
+      if(window.fdStableList){
+        window.fdStableList(teamBody,keyed,{key:(i)=>i.key,signature:sig,render:(i)=>buildTeamRow(i)});
+        window.fdStableList(teamCards,keyed,{key:(i)=>i.key,signature:sig,render:(i)=>buildTeamCard(i)});
+      }else{
+        teamBody.replaceChildren();teamCards.replaceChildren();
+        keyed.forEach((item)=>{teamBody.append(buildTeamRow(item));teamCards.append(buildTeamCard(item));});
+      }
+    }
     function singlesCutoffNote(row){
       const played=Number(row.matches_played)||(Number(row.wins)+Number(row.losses))||0;
       const minimum=Number(row.minimum_matches)||5;
@@ -39,7 +63,42 @@ export function renderStandingsPage() {
       const need=Math.max(0,minimum-played);
       return played+' of '+minimum+' matches · needs '+need+' more for singles';
     }
-    function renderPlayers(rows,season){const isRegistration=season&&season.status==='registration';const isComplete=season&&season.status==='complete';let list=rows.slice();if(isRegistration||isComplete){list=list.filter((row)=>(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0)}playerBody.replaceChildren();playerCards.replaceChildren();playerEmpty.hidden=list.length>0;playerMobileEmpty.hidden=list.length>0;list.forEach((row,index)=>{const tr=document.createElement('tr');const prize=document.createElement('td');const played=(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0;const showPrize=played&&row.is_prize_eligible;prize.append(showPrize?badge('Eligible #'+row.prize_rank,'ok'):(played?badge('Needs '+row.minimum_matches,'warn'):badge('—','muted')));tr.append(cell(rankLabel(list,index),'rank'),cell(row.display_name),cell(row.wins+'-'+row.losses,'numeric'),cell(percent(row.win_percentage),'numeric'),cell(row.games_won+'-'+row.games_lost,'numeric'),cell(row.game_differential,'numeric'),prize);playerBody.append(tr);const prizeBadge=showPrize?badge('Eligible #'+row.prize_rank,'ok'):(played?badge('Needs '+row.minimum_matches,'warn'):badge('—','muted'));playerCards.append(card(rankLabel(list,index),row.display_name+" — "+singlesCutoffNote(row),[stat('Record',row.wins+'-'+row.losses),stat('Win rate',percent(row.win_percentage)),stat('Games',row.games_won+'-'+row.games_lost),stat('Differential',row.game_differential),stat('Prize status',prizeBadge,'prize')]))})}
+    function renderPlayers(rows,season){
+      const isRegistration=season&&season.status==='registration';
+      const isComplete=season&&season.status==='complete';
+      let list=rows.slice();
+      if(isRegistration||isComplete){list=list.filter((row)=>(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0)}
+      playerEmpty.hidden=list.length>0;playerMobileEmpty.hidden=list.length>0;
+      const keyed=list.map((row,index)=>({row,index,key:String(row.player_id||row.playerId||row.display_name||index)}));
+      function buildPlayerRow(item){
+        const row=item.row,index=item.index;
+        const tr=document.createElement('tr');
+        const prize=document.createElement('td');
+        const played=(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0;
+        const showPrize=played&&row.is_prize_eligible;
+        prize.append(showPrize?badge('Eligible #'+row.prize_rank,'ok'):(played?badge('Needs '+row.minimum_matches,'warn'):badge('—','muted')));
+        tr.append(cell(rankLabel(list,index),'rank'),cell(row.display_name),cell(row.wins+'-'+row.losses,'numeric'),cell(percent(row.win_percentage),'numeric'),cell(row.games_won+'-'+row.games_lost,'numeric'),cell(row.game_differential,'numeric'),prize);
+        return tr;
+      }
+      function buildPlayerCard(item){
+        const row=item.row,index=item.index;
+        const played=(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0;
+        const showPrize=played&&row.is_prize_eligible;
+        const prizeBadge=showPrize?badge('Eligible #'+row.prize_rank,'ok'):(played?badge('Needs '+row.minimum_matches,'warn'):badge('—','muted'));
+        return card(rankLabel(list,index),row.display_name+" — "+singlesCutoffNote(row),[stat('Record',row.wins+'-'+row.losses),stat('Win rate',percent(row.win_percentage)),stat('Games',row.games_won+'-'+row.games_lost),stat('Differential',row.game_differential),stat('Prize status',prizeBadge,'prize')]);
+      }
+      function sig(item){
+        const r=item.row;
+        return [rankLabel(list,item.index),r.wins,r.losses,r.win_percentage,r.games_won,r.games_lost,r.game_differential,r.is_prize_eligible,r.prize_rank,r.matches_played].join('|');
+      }
+      if(window.fdStableList){
+        window.fdStableList(playerBody,keyed,{key:(i)=>i.key,signature:sig,render:(i)=>buildPlayerRow(i)});
+        window.fdStableList(playerCards,keyed,{key:(i)=>i.key,signature:sig,render:(i)=>buildPlayerCard(i)});
+      }else{
+        playerBody.replaceChildren();playerCards.replaceChildren();
+        keyed.forEach((item)=>{playerBody.append(buildPlayerRow(item));playerCards.append(buildPlayerCard(item));});
+      }
+    }
     async function loadStandings(opts={}){const quiet=Boolean(opts&&opts.quiet);const seasonId=seasonInput.value.trim();if(!seasonId)throw new Error('Choose a season first.');localStorage.setItem('fd.standingsSeasonId',seasonId);if(!quiet)hideState();if(!quiet)setStatus('Loading standings...');const encoded=encodeURIComponent(seasonId);const teamUrl='/api/seasons/'+encoded+'/team-standings';const playerUrl='/api/seasons/'+encoded+'/individual-standings';let teamRows;let playerRows;if(window.fdConditionalFetch){const[teamResult,playerResult]=await Promise.all([window.fdConditionalFetch(teamUrl),window.fdConditionalFetch(playerUrl)]);if(teamResult.notModified&&playerResult.notModified){if(!quiet)setStatus('Standings up to date','ok');return}if(teamResult.notModified||playerResult.notModified){/* mixed: fall through by re-fetching both without validators is complex; require both 200 for full render */}const teamBodyJson=teamResult.notModified?null:teamResult.body;const playerBodyJson=playerResult.notModified?null:playerResult.body;if(teamResult.notModified||playerResult.notModified){const[teamResponse,playerResponse]=await Promise.all([fetch(teamUrl),fetch(playerUrl)]);const tJson=await teamResponse.json();const pJson=await playerResponse.json();if(!teamResponse.ok||!playerResponse.ok)throw new Error((tJson&&tJson.error)||(pJson&&pJson.error)||'Standings could not be loaded.');teamRows=tJson.standings||[];playerRows=pJson.standings||[]}else{if(!teamResult.response.ok||!playerResult.response.ok)throw new Error((teamBodyJson&&teamBodyJson.error)||(playerBodyJson&&playerBodyJson.error)||'Standings could not be loaded.');teamRows=teamBodyJson.standings||[];playerRows=playerBodyJson.standings||[]}}else{const[teamResponse,playerResponse]=await Promise.all([fetch(teamUrl),fetch(playerUrl)]);const teamBodyJson=await teamResponse.json();const playerBodyJson=await playerResponse.json();if(!teamResponse.ok||!playerResponse.ok)throw new Error((teamBodyJson&&teamBodyJson.error)||(playerBodyJson&&playerBodyJson.error)||('Standings could not be loaded (HTTP '+teamResponse.status+'/'+playerResponse.status+').'));teamRows=teamBodyJson.standings||[];playerRows=playerBodyJson.standings||[]}const season=seasons.find((candidate)=>candidate.id===seasonId);renderTeams(teamRows);renderPlayers(playerRows,season);renderRegistrationSummary(season);const teamMessage=!teamRows.length&&season?.status==='registration'?season.teamCount+' of '+season.teamCapacity+' teams are registered. Standings begin after league play starts.':'No team standings are available for this season.';const playerMessage=!playerRows.length&&season?.status==='registration'?'Player standings begin after scored matches.':'No individual standings are available for this season.';teamEmpty.textContent=teamMessage;teamMobileEmpty.textContent=teamMessage;playerEmpty.textContent=playerMessage;playerMobileEmpty.textContent=playerMessage;setStatus(season?.status==='registration'?'Registration progress loaded':'Standings loaded','ok')}
     async function run(action){try{await action()}catch(error){setStatus('Could not load standings','error');showState('Standings unavailable','We could not load this public standings view. Nothing needs to be re-entered.','/standings','Try again')}}seasonInput.addEventListener('change',()=>{if(seasonInput.value)run(loadStandings)});form.addEventListener('submit',(event)=>{event.preventDefault();run(loadStandings)});for(const tab of tabs){tab.addEventListener('click',()=>selectTab(tab.dataset.tab));tab.addEventListener('keydown',(event)=>{if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;event.preventDefault();const next=tab.dataset.tab==='teams'?'individuals':'teams';selectTab(next);tabs.find((item)=>item.dataset.tab===next)?.focus()})}selectTab(requestedView||rememberedView||'teams',false);
     run(async () => {
