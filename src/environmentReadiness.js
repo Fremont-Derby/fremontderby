@@ -1,3 +1,5 @@
+import { expectedEnvironmentForHost, hostMatchesEnvironment, normalizeRequestHost } from './hostEnvironment.js';
+
 const fixedExpectedSupabaseProjectRefs = {
   production: 'cpiucsxlkicmlbvdvhww',
   staging: 'oqkkvqkerusepyokzbmt',
@@ -44,7 +46,7 @@ function check(name, ok, details = {}) {
   return { name, ok: Boolean(ok), ...details };
 }
 
-export function environmentReadiness(env = {}) {
+export function environmentReadiness(env = {}, options = {}) {
   const environment = String(env.ENVIRONMENT || 'production').trim() || 'production';
   const supabaseUrl = normalizeSupabaseUrl(env.SUPABASE_URL);
   const projectRef = supabaseProjectRefFromUrl(supabaseUrl);
@@ -95,6 +97,19 @@ export function environmentReadiness(env = {}) {
     );
   }
 
+  const host = normalizeRequestHost(options.host || env.REQUEST_HOST || '');
+  const expectedHostEnvironment = host ? expectedEnvironmentForHost(host) : null;
+  const hostMatch = host ? hostMatchesEnvironment(host, environment) : null;
+  if (expectedHostEnvironment) {
+    checks.push(
+      check('requestHostMatchesWorkerEnvironment', hostMatch === true, {
+        host,
+        expectedHostEnvironment,
+        environment,
+      }),
+    );
+  }
+
   const expectedPrivateSchema = expectedSchema
     ? (expectedSchema === 'public' ? 'private' : `${expectedSchema}_private`)
     : null;
@@ -102,6 +117,9 @@ export function environmentReadiness(env = {}) {
   return {
     ok: checks.every((item) => item.ok),
     environment,
+    host: host || null,
+    expectedHostEnvironment,
+    hostMatchesEnvironment: hostMatch,
     expectedSupabaseProjectRef: expectedProjectRef,
     expectedSupabaseSchema: expectedSchema,
     expectedPrivateSupabaseSchema: expectedPrivateSchema,

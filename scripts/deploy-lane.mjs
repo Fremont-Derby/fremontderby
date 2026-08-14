@@ -36,8 +36,8 @@ export function assertLaneDeployContext(lane, env = process.env, spawn = spawnSy
   const config = laneDeployments[lane];
   if (!config) throw new Error(`Unknown release lane "${lane}".`);
 
-  // Controlled GitHub Action deploys from main may set this flag after human/agent review.
-  if (env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1' && env.GITHUB_ACTIONS === 'true') {
+  // Controlled deploys from main (Actions or operator laptop) after explicit review.
+  if (env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1') {
     return config;
   }
 
