@@ -32,7 +32,7 @@ export const sharedRackLedgerScorecardStyles = `
   .individual-score span:nth-child(2){font-size:.48em;font-weight:600}
   .ledger-panel{margin:0 8px 8px;border:1px solid;border-radius:13px;overflow:hidden}
   .ledger-head{min-height:40px;padding:7px 9px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid}.ledger-head strong{font-size:.8rem}.ledger-state{font-size:.66rem;text-align:right}
-  .ledger-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+  .ledger-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;touch-action:pan-x}
   .ledger{border-collapse:separate;border-spacing:0;min-width:100%;width:max-content}.ledger th,.ledger td{min-width:58px;height:48px;border-right:1px solid;border-bottom:1px solid;text-align:center;padding:4px}
   .ledger tr:last-child th,.ledger tr:last-child td{border-bottom:0}.ledger th:last-child,.ledger td:last-child{border-right:0}
   .ledger .row-label{position:sticky;left:0;z-index:2;width:105px;min-width:105px;max-width:105px;padding:5px 7px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem}
