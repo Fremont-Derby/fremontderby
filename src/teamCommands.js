@@ -322,15 +322,16 @@ export async function updateTeamPracticeCommand(
   if (!teamId) throw new Error('teamId is required');
   assertRepositoryMethod(repository, 'updateTeamPractice');
 
-  const recurrence = normalizePracticeRecurrence(practiceRecurrence);
+  let recurrence = normalizePracticeRecurrence(practiceRecurrence);
   const location = normalizePracticeField(practiceLocation, 'practiceLocation');
   const schedule = normalizePracticeField(practiceSchedule, 'practiceSchedule');
-  const on = normalizePracticeOn(practiceOn, recurrence);
 
-  // If any detail is set, require recurrence so teammates know weekly vs once.
-  if ((location || schedule || on) && !recurrence) {
-    throw new Error('Choose weekly or one-off practice');
+  // Default to weekly when captains fill details but leave recurrence blank.
+  if ((location || schedule || practiceOn) && !recurrence) {
+    recurrence = 'weekly';
   }
+
+  const on = normalizePracticeOn(practiceOn, recurrence);
 
   const practice = await repository.updateTeamPractice({
     actorUserId,
