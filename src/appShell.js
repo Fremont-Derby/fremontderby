@@ -291,9 +291,10 @@ export const shellStyles = `
       border-radius: 12px;
       color: #f7fbf8;
       text-decoration: none;
-      font-size: .68rem;
+      font-size: .72rem;
       font-weight: 850;
-      line-height: 1;
+      line-height: 1.05;
+      letter-spacing: .01em;
       text-align: center;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
@@ -318,11 +319,16 @@ export const shellStyles = `
       font-weight: 950;
     }
     .fd-mobile-dock a[aria-current="page"] {
-      border-color: var(--fd-dock-accent);
-      background: rgba(255,255,255,.09);
-      box-shadow: inset 0 3px 0 var(--fd-dock-accent);
+      border-color: rgba(255,255,255,.35);
+      background: rgba(255,255,255,.16);
+      color: #fff;
+      box-shadow: inset 0 3px 0 var(--fd-dock-accent), 0 0 0 1px rgba(255,255,255,.08);
+      font-weight: 950;
     }
-    .fd-mobile-dock a[aria-current="page"] .fd-mobile-dock__ball { box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.28); }
+    .fd-mobile-dock a[aria-current="page"] .fd-mobile-dock__ball {
+      box-shadow: 0 0 0 3px rgba(255,255,255,.2), 0 2px 6px rgba(0,0,0,.28);
+      transform: translateY(-1px);
+    }
     .fd-mobile-dock a:focus-visible { outline: 3px solid var(--fd-dock-accent); outline-offset: 1px; }
     .fd-mobile-dock-spacer { display: block; height: calc(82px + env(safe-area-inset-bottom)); }
   }
