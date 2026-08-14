@@ -266,3 +266,7 @@ For affected behavior, aim to leave:
 - navigation/discoverability gaps captured when the affected function is not reachable as intended;
 - issue/parent state reconciled accurately;
 - durable discoveries captured so the next low-context agent can continue from the repository alone.
+
+## Testing
+
+Season 1 push confidence contract: [`docs/SEASON1_TEST_CONTRACT.md`](docs/SEASON1_TEST_CONTRACT.md).
