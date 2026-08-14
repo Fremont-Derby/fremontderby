@@ -19,7 +19,7 @@ export function renderAdminSeasonsPage() {
     input,select{min-height:48px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#0b100e;color:#fff}
     .directory-tools{display:grid;gap:8px;margin-top:12px}
     .results-meta{min-height:22px;color:var(--muted);font-weight:700}
-    .letter-index{display:flex;flex-wrap:wrap;gap:6px}
+    .letter-index{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;z-index:5;padding:8px 0;background:#0d1110}
     .letter-index button{min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#0b100e;color:#dff0e6;font-weight:900;cursor:pointer}
     .letter-index button[aria-pressed="true"]{background:var(--green);color:#07140d;border-color:var(--green)}
     .status{margin:12px 0 0;min-height:24px;color:var(--muted)}
