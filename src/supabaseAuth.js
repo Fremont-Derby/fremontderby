@@ -1,3 +1,4 @@
+import { assertBetaBypassLane } from './securityHeaders.js';
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -38,6 +39,7 @@ const testAuthEnvironments = new Set(['jfl', 'dru']);
  * normal authentication even if a stray bypass flag is present.
  */
 export function betaAuthBypassEnabled(env = {}) {
+  assertBetaBypassLane(env);
   const environment = String(env.ENVIRONMENT || '').trim();
   const bypass = String(env.BETA_AUTH_BYPASS || '').trim();
   return testAuthEnvironments.has(environment) && bypass === '1';
@@ -63,6 +65,7 @@ export async function authenticateSupabaseUser(
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
+  assertBetaBypassLane(env);
   if (typeof fetchImpl !== 'function') {
     throw new Error('fetch implementation is required');
   }

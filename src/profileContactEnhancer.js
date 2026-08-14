@@ -83,9 +83,16 @@ const script = `<script data-profile-contact-script>
     badge.textContent=hasPhone?'Contact on file':'Phone missing';
     state.dataset.ready=String(hasPhone);
     const masked=contact?.phoneMasked||'••••';
-    state.innerHTML=hasPhone
-      ? 'Phone on file for league administration: <span class="profile-contact-masked">'+masked+'</span>.'
-      : 'No phone is on file. Normal player features still work; active captaincy requires a phone.';
+    state.replaceChildren();
+    if(hasPhone){
+      state.append('Phone on file for league administration: ');
+      const mask=document.createElement('span');
+      mask.className='profile-contact-masked';
+      mask.textContent=masked;
+      state.append(mask, '.');
+    }else{
+      state.textContent='No phone is on file. Normal player features still work; active captaincy requires a phone.';
+    }
     errorEl.hidden=true;
     setRevealed(false);
   }
