@@ -35,6 +35,8 @@ jobs:
           path: test-output.txt
           retention-days: 1
       - run: npm run build
+      - name: Enforce test-file floor
+        run: node scripts/count-tests.mjs
 
   deploy-nonproduction:
     if: >-
