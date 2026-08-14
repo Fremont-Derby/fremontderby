@@ -216,8 +216,9 @@ export function renderAdminSeasonsPage() {
         listEl.append(card);
       }
     }
-    async function load() {
-      setStatus('Loading seasons…');
+    async function load(opts={}) {
+      const quiet = Boolean(opts && opts.quiet);
+      if (!quiet) setStatus('Loading seasons…');
       const body = await api('/api/admin/seasons');
       seasons = Array.isArray(body.seasons) ? body.seasons : [];
       render();
@@ -239,7 +240,7 @@ export function renderAdminSeasonsPage() {
       letterIndexEl.replaceChildren();
       setStatus(error.message, 'error');
     });
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load(),{intervalMs:30000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

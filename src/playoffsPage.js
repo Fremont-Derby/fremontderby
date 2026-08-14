@@ -233,13 +233,14 @@ export function renderPlayoffsPage() {
         }catch{window.__fdCaptainTeams=[]}
       }
     }
-    async function loadBracket(){
+    async function loadBracket(opts={}){
+      const quiet=Boolean(opts&&opts.quiet);
       const id=seasonEl.value;
       if(!id)return;
-      setStatus('Loading playoff bracket…');
+      if(!quiet) setStatus('Loading playoff bracket…');
       const body=await get('/api/seasons/'+encodeURIComponent(id)+'/schedule');
       renderBracket(body.rounds||body.schedule||[]);
-      setStatus('Playoffs loaded','ok');
+      if(!quiet) setStatus('Playoffs loaded','ok');
     }
     document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch((e)=>setStatus(e.message,'error')));
     seasonEl.addEventListener('change',()=>loadBracket().catch((e)=>setStatus(e.message,'error')));
@@ -260,7 +261,7 @@ export function renderPlayoffsPage() {
       }catch(e){setStatus(e.message,'error')}
     });
     load().catch((e)=>setStatus(e.message,'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>loadBracket().catch(()=>{}),{intervalMs:20000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(()=>{}),{intervalMs:20000,immediate:false});
   </script>
 </body>
 </html>`;
