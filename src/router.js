@@ -20,6 +20,7 @@ import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 import { renderSchedulePage } from './schedulePage.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
+import { readyCheckHttpHandlers } from './readyCheckHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
 import { teamMatchChoiceHttpHandlers } from './teamMatchChoiceHttp.js';
 import { teamMembershipRequestHttpHandlers } from './teamMembershipRequestHttp.js';
@@ -227,6 +228,25 @@ export default {
     if (url.pathname === '/api/me/scorable-matches') {
       if (request.method !== 'GET') return methodNotAllowed();
       return scorableMatchesHttpHandlers.list(request, env);
+    }
+
+    if (url.pathname === '/api/me/ready-checks') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return readyCheckHttpHandlers.listPending(request, env);
+    }
+
+    if (url.pathname === '/api/teams/ready-checks' && request.method === 'POST') {
+      return readyCheckHttpHandlers.start(request, env);
+    }
+
+    const readyCheckRespondMatch = url.pathname.match(/^\/api\/ready-checks\/([^/]+)\/respond$/);
+    if (readyCheckRespondMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return readyCheckHttpHandlers.respond(
+        request,
+        env,
+        decodeURIComponent(readyCheckRespondMatch[1]),
+      );
     }
 
     if (url.pathname === '/api/me/team-match-choices') {
