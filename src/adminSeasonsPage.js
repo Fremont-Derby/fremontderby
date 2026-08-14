@@ -7,7 +7,7 @@ export function renderAdminSeasonsPage() {
   <title>Seasons · Fremont Derby Admin</title>
   <style>
     :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#0d1110;color:#f3f6f4;--panel:#17201c;--line:#31443a;--muted:#a9b8b0;--green:#45b77c;--gold:#e2bd58}
-    *{box-sizing:border-box}button,a,summary,.letter-index button,.action{touch-action:manipulation;-webkit-tap-highlight-color:transparent}body{margin:0;background:#0d1110}button,input,select,a{font:inherit}
+    *{box-sizing:border-box}input,select,textarea{font-size:16px}button,a,summary,.letter-index button,.action{touch-action:manipulation;-webkit-tap-highlight-color:transparent}body{margin:0;background:#0d1110}button,input,select,a{font:inherit}
     button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #9ee5bd;outline-offset:2px}
     .app{width:min(920px,100%);margin:auto;padding:18px}
     .head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
