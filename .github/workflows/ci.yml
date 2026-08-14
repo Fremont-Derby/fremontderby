@@ -1,9 +1,10 @@
 name: CI
 
+# POC mode (#679): GitHub-hosted runners are unavailable because of account
+# billing/spending limits. Keep this workflow intact for later reactivation,
+# but do not create automatic failed checks on PRs or branch pushes.
 on:
-  pull_request:
-  push:
-    branches: [main, fremontderby-jfl, fremontderby-dru, fremontderby-gamma]
+  workflow_dispatch:
 
 permissions:
   contents: read
