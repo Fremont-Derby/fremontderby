@@ -203,3 +203,7 @@ Hosted runners must allocate (`runner_id` non-zero) for workflows to use those s
 - `hostMatchesEnvironment` — `false` when a known lane/apex host is served by the wrong Worker
 
 A 200 with `"environment":"production"` on `dru.fremontderby.com` is a **failed** lane identity: DNS may resolve, but `wrangler deploy --env dru` (and secrets) still need to attach the lane Worker.
+
+## Publish paths (summary)
+
+See **`docs/GITHUB_ACTIONS.md`** for the production source-of-truth table (Workers Builds vs Actions), lane branch allowlists, and Cloudflare dashboard containment steps for #727 / #732.

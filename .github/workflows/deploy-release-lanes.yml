@@ -1,8 +1,7 @@
 name: Deploy release lanes
 
-# TEMPORARY (#692 / #679): No test job gate. This workflow only deploys.
-# GitHub-hosted runners may still fail to allocate while billing limits apply.
-# Revisit once Actions minutes/runners are healthy — do not treat this as permanent policy.
+# Test gate restored (#725). Manual dispatch only — does not depend on PR triggers (#724)
+# still paused while hosted runners/billing recover (#723).
 on:
   workflow_dispatch:
     inputs:
@@ -14,7 +13,27 @@ on:
         options: [gamma, jfl, dru, production, all-lanes]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Lint and syntax check
+        run: |
+          set -euo pipefail
+          npm run lint
+          npm run check
+      - name: Unit tests
+        run: |
+          set -euo pipefail
+          npm test
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,7 +52,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # If this job never starts (runner_id 0), secrets are irrelevant — see docs/GITHUB_ACTIONS.md
           test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN missing"; exit 1; }
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
       - name: Deploy ${{ matrix.lane }}
@@ -50,8 +68,8 @@ jobs:
           else
             npm run "deploy:${{ matrix.lane }}"
           fi
-      - name: Probe host (best-effort while DNS/lanes stabilize)
-        # TEMPORARY: do not fail the deploy job solely on probe while dru/jfl DNS or env identity is incomplete.
+      - name: Probe host identity
+        # Soft while #713 DNS/env may still flap; harden to fail-closed once lanes are green.
         continue-on-error: true
         run: |
           lane='${{ matrix.lane }}'
@@ -63,16 +81,24 @@ jobs:
             expect="$lane"
           fi
           node -e "
-          const host=process.env.HOST;
-          const expect=process.env.EXPECT;
-          fetch('https://'+host+'/health/environment').then(async r=>{
-            const b=await r.json();
-            console.log(JSON.stringify({host, ...b}));
-            if(b.environment!==expect){
-              console.error('Probe identity mismatch (non-fatal TEMP)');
+            const host = process.env.HOST;
+            const expect = process.env.EXPECT;
+            (async () => {
+              const url = 'https://' + host + '/health/environment';
+              const response = await fetch(url, { redirect: 'manual' });
+              const text = await response.text();
+              let body = {};
+              try { body = JSON.parse(text); } catch {}
+              const envName = body.environment || body.ENVIRONMENT || '';
+              console.log(JSON.stringify({ host, status: response.status, environment: envName }));
+              if (response.status !== 200 || String(envName) !== expect) {
+                console.error('Probe identity mismatch (non-fatal until #713 closes)');
+                process.exit(1);
+              }
+            })().catch((error) => {
+              console.error(error);
               process.exit(1);
-            }
-          }).catch(e=>{console.error(e); process.exit(1);});
+            });
           "
         env:
           HOST: ${{ matrix.lane == 'production' && 'fremontderby.com' || format('{0}.fremontderby.com', matrix.lane) }}

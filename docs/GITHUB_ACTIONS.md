@@ -1,48 +1,73 @@
-# GitHub Actions inventory (Fremont Derby)
+# GitHub Actions and publish sources of truth
 
-## Current constraint
+## Production publish source of truth (#727)
 
-GitHub-hosted runners often fail to allocate for this repository (`runner_id: 0`, zero steps, job concludes `failure` in seconds). That is an **account/billing runner** problem, not a proof that application tests failed.
+| Path | What it does | When it is authoritative |
+|------|----------------|---------------------------|
+| **Cloudflare Workers Builds** (`fremontderby-prod`) | Builds and deploys the production Worker from Git | **Default production publisher** when the project is connected and green |
+| **GitHub Actions** `deploy-release-lanes.yml` | Manual `workflow_dispatch` deploy via Wrangler | Operator-driven lane or production deploy when Actions runners are healthy |
+| **Local / agent Wrangler** | `npm run deploy` / `deploy:*` | Emergency or laptop only; same guards apply |
 
-Until runners allocate:
+**How to read a red Actions deploy**
 
-- Prefer **local** `npm test` / `npm run test:season1` / `npm run a11y` as the test source of truth.
-- Prefer **Cloudflare Workers Builds** (or laptop `npm run deploy` / `deploy:dru` / `deploy:jfl`) as the publish path when Actions deploy cannot start.
-- Do **not** delete tests to silence red X marks from empty runners.
+1. Check live identity: `https://fremontderby.com/health/environment` (and lane hosts).
+2. If `/health` shows a new SHA or expected `ENVIRONMENT`, production may already have shipped via **Workers Builds** even when Actions could not start runners.
+3. Do **not** treat “Actions job never started” as proof that production is unchanged.
 
-Related: #679 (POC pause), #692 (TEMP deploy without test gate), #701 (restore automatic gates).
+**Conflict rule**
 
-## Workflows on `main`
+- Prefer **one** automatic production publisher: Workers Builds on `main` for `fremontderby-prod`.
+- Actions production deploy remains **manual** (`workflow_dispatch`) for controlled republish.
+- Repository guards refuse production Workers Builds from non-`main` branches (`scripts/guard-cloudflare-build.mjs`, `scripts/deploy-production.mjs`).
 
-| Workflow file | Name | Trigger (main) | Purpose |
-|---------------|------|----------------|---------|
-| `ci.yml` | CI | `workflow_dispatch` only | lint, check, labels, full tests, a11y, season1, build, test floor; optional deploy/smoke jobs when re-enabled historically |
-| `deploy-release-lanes.yml` | Deploy release lanes | `workflow_dispatch` (`lane`: gamma/jfl/dru/production/all-lanes) | Deploy one lane; **TEMP** no test gate (#692); probe is `continue-on-error` |
+## Workers Builds branch containment (#727 / #732)
+
+Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl + dru**. Dashboard branch filters are required; repo guards are the backstop.
+
+| CF Workers Builds project | Required `FREMONT_BUILD_LANE` | Branch allowlist (code + CF filter) |
+|---------------------------|-------------------------------|-------------------------------------|
+| `fremontderby-prod` | `production` | `main` only |
+| `fremontderby-jfl` | `jfl` | `fremontderby-jfl`, `jfl/**` |
+| `fremontderby-dru` | `dru` | `fremontderby-dru`, `dru/**` |
+| `fremontderby-gamma` | `gamma` | `fremontderby-gamma`, `gamma/**` |
+
+**Operator setup (Cloudflare dashboard, per project)**
+
+1. Open Workers Builds → project → Settings → Build.
+2. Set env var `FREMONT_BUILD_LANE` to the lane in the table.
+3. Restrict **Branch control** / production branch so only the allowlisted refs start a build (fail-closed: no “all branches”).
+4. Build command must run `npm run prebuild` (calls the guard) before deploy.
+5. Proof: open a no-op PR on `jfl/issue-…` and confirm **only** the JFL project builds; zero prod/DRU/gamma starts.
+
+## Workflow inventory (`main`)
+
+| File | Name | Trigger | Notes |
+|------|------|---------|-------|
+| `ci.yml` | CI | `workflow_dispatch` only | Full test suite; auto push/PR triggers remain off until #723 runners are healthy (#724) |
+| `deploy-release-lanes.yml` | Deploy release lanes | `workflow_dispatch` | **`needs: test` gate restored** (#725); probe still `continue-on-error` until #713 |
 | `diagnose-worker-domains.yml` | Diagnose worker domains | `workflow_dispatch` | Cloudflare domain diagnostics |
-| `lane-health-monitor.yml` | Lane health monitor | `workflow_dispatch` | Probe `/health/environment` identity per host |
-| `pr-card-contract.yml` | PR card contract | historically PR-triggered; verify file on main | Enforce implementation-card shape on PRs |
-| `staging-readiness.yml` | Staging readiness | `workflow_dispatch` | Hosted staging smoke + comment |
-| `sync-collaboration-labels.yml` | Sync collaboration labels | `workflow_dispatch` | Create/update collaboration labels |
-| `enforce-workers-dev-disabled.yml` | Enforce workers.dev disabled | `workflow_dispatch` | Disable workers.dev / preview URLs |
+| `lane-health-monitor.yml` | Lane health monitor | `workflow_dispatch` | Probe `/health/environment` |
+| `pr-card-contract.yml` | PR card contract | verify on branch | Implementation-card shape |
+| `staging-readiness.yml` | Staging readiness | `workflow_dispatch` | Hosted staging smoke |
+| `sync-collaboration-labels.yml` | Sync collaboration labels | `workflow_dispatch` | Labels |
+| `enforce-workers-dev-disabled.yml` | Enforce workers.dev disabled | `workflow_dispatch` | Preview URL policy |
 
-All of the above use `runs-on: ubuntu-latest` and therefore **need healthy hosted runners**.
+All use `runs-on: ubuntu-latest` and need healthy hosted runners (#723).
 
 ## Branch lag warning
 
-Long-lived agent branches (for example `fremontderby-jfl`) may still contain an **older `ci.yml`** with `push` / `pull_request` triggers and jobs such as `deploy-nonproduction` / `production-smoke`. Those runs can still appear in the Actions tab and fail on empty runners even though **`main` is dispatch-only**. Rebase or delete stale branches to stop the noise.
+Long-lived agent branches may still carry an older `ci.yml` with `push` / `pull_request` triggers. Rebase or delete stale branches so the Actions tab is not filled with empty-runner noise.
 
-## Reactivation checklist (after runners work)
+## Reactivation checklist (after #723)
 
-1. Confirm a manual `workflow_dispatch` of **CI** completes real steps (checkout visible in logs).
-2. Restore `on: push` / `pull_request` on `ci.yml` only if required checks and minutes budget are intentional (#701).
-3. Restore a **test job gate** before production deploy in `deploy-release-lanes.yml` (remove TEMP #692 policy).
-4. Set deploy probe `continue-on-error: false` once #713 lane DNS/env is green.
-5. Re-enable any scheduled lane-health monitors only with fail-closed behavior and **no** automatic shared DNS mutation (#680).
-6. Confirm branch protection required checks match workflow job names on `main`.
+1. Manual `workflow_dispatch` of **CI** completes real steps.
+2. Restore `on: push` / `pull_request` on `ci.yml` only with intentional required checks (#724 / #701).
+3. Deploy probe `continue-on-error: false` once #713 DNS/env is green.
+4. Branch protection required checks match job names on `main`.
 
-## Secrets expected by deploy/diagnose
+## Secrets
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-Lane deploys may still need Wrangler secrets on the Worker (Supabase, `BETA_ACTOR_USER_ID`); Actions cannot invent those.
+Lane Workers still need Wrangler secrets (`SUPABASE_*`, `BETA_ACTOR_USER_ID`); Actions cannot invent them (#651).
