@@ -312,7 +312,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         schedInput.value=team.practiceSchedule||team.practice_schedule||'';
         schedLabel.append(schedInput);
         const recLabel=document.createElement('label');
-        recLabel.textContent='Repeats';
+        recLabel.textContent='Repeats (weekly or one-off)';
         const recSelect=document.createElement('select');
         recSelect.dataset.practiceRecurrence=team.teamId||team.team_id||team.id||'';
         for(const [value,label] of [['','Not set'],['weekly','Weekly'],['once','One-off']]){
