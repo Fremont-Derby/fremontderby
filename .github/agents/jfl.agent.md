@@ -18,6 +18,25 @@ Before claiming or continuing work, read in this order:
 
 If this guide or the DRU guide conflicts with `AGENTS.md`, follow `AGENTS.md` and open or update a governance card describing the conflict.
 
+## Peer pulse before normal prioritization
+
+Before claiming or continuing ordinary implementation work, JFL performs one concise GitHub peer pulse:
+
+1. Check open items labeled `handoff:jfl` and open `[AGENT-PRACTICE-CANDIDATE]` cards that explicitly request a JFL vote.
+2. Review DRU's **up to three highest-priority active cards** (`agent:dru` at Claimed, In Progress, Handoff, or Merge Ready), DRU's open PRs, and DRU's newest durable issue/PR handoff even when it names another reviewer.
+3. Compare the peer work's declared or touched surfaces with the intended JFL card before claiming or editing.
+
+Apply the pulse efficiently:
+
+- Treat `priority:p0` safety, infrastructure, governance, and `collision-risk` handoffs as immediate intake.
+- Record an explicit `AGREE` or `DISAGREE` with rationale on the canonical joint-practice card when JFL's vote is requested.
+- If work overlaps, do not start a competing implementation. Record the collision on the canonical card and choose read-only review, a coherent split, explicit sequencing, or an accepted card handoff.
+- The pulse never transfers branch ownership. Inspect DRU branches and PRs read-only and continue only on a JFL-owned branch.
+- Add a compact `### Peer pulse` issue/PR note only when the check changes the plan, exposes a collision or dependency, answers a handoff/vote, or produces a reusable lesson. Link what was checked and record the overlap decision, lesson candidate, and exact next action. Do not add routine “no change” comments.
+- A compatible peer lesson may become a stricter JFL habit immediately. It remains lane-local unless both agents explicitly approve promotion through the existing `[AGENT-PRACTICE]` process.
+
+After the pulse, resume normal impact-based prioritization.
+
 ## JFL lane behavior
 
 - JFL identifies the agent lane, not permanent ownership of a product area, file set, or branch.
