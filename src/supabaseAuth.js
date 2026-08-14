@@ -124,5 +124,8 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Authenticated user is missing an id');
   }
 
-  return { id: user.id, email: user.email ?? null };
+  return {
+    id: user.id,
+    email: user.email ?? null,
+  };
 }
