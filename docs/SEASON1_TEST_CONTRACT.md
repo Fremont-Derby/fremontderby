@@ -10,9 +10,12 @@ Run locally or rely on CI:
 npm run lint
 npm run check
 npm test
+npm run test:season1
 npm run labels:check
 npm run build
 ```
+
+`npm run test:season1` is a faster critical subset for hotfixes (still run full `npm test` before production merges).
 
 Critical automated areas already covered under `test/`:
 
