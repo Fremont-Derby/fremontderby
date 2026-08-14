@@ -401,13 +401,14 @@ export function renderPrizesPage() {
       return true;
     }
 
-    async function loadPrizes() {
+    async function loadPrizes(opts={}) {
+      const quiet = Boolean(opts && opts.quiet);
       const seasonId = seasonInput.value.trim();
       if (!seasonId) return;
-      hideState();
+      if (!quiet) hideState();
       localStorage.setItem('fd.prizesSeasonId', seasonId);
-      setStatus('Loading prizes…');
-      loadButton.disabled = true;
+      if (!quiet) setStatus('Loading prizes…');
+      if (!quiet) loadButton.disabled = true;
       try {
         const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
         const body = await response.json();

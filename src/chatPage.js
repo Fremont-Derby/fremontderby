@@ -399,39 +399,57 @@ export function renderChatPage(env = {}) {
       return button;
     }
     function currentThread() { return threads.find((thread) => thread.key === currentKey) || null; }
-    function appendSection(label, sectionThreads, group) {
-      if (!sectionThreads.length) return;
-      const sectionLabel = document.createElement('div');
-      sectionLabel.className = 'section-label';
-      sectionLabel.textContent = label;
-      threadListEl.append(sectionLabel);
-      for (const thread of sectionThreads) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'thread';
-        button.dataset.threadKey = thread.key;
-        button.dataset.active = String(thread.key === currentKey);
-        const name = document.createElement('strong');
+    function threadPreviewText(thread) {
+      return thread.canSend === false
+        ? (thread.type === 'league' || thread.type === 'matchup' ? 'Read-only' : 'Messaging unavailable')
+        : (thread.preview || 'No messages yet');
+    }
+    function paintThreadButton(button, thread) {
+      button.dataset.threadKey = thread.key;
+      button.dataset.active = String(thread.key === currentKey);
+      let name = button.querySelector('.thread-name');
+      if (!name) {
+        name = document.createElement('strong');
         name.className = 'thread-name';
-        name.textContent = thread.name;
-        const preview = document.createElement('span');
-        preview.className = 'thread-preview';
-        preview.textContent = thread.canSend === false
-          ? (thread.type === 'league' || thread.type === 'matchup' ? 'Read-only' : 'Messaging unavailable')
-          : (thread.preview || 'No messages yet');
         button.append(name);
-        if (Number(thread.unread) > 0) {
-          const unread = document.createElement('span');
+      }
+      name.textContent = thread.name;
+      let unread = button.querySelector('.unread');
+      if (Number(thread.unread) > 0) {
+        if (!unread) {
+          unread = document.createElement('span');
           unread.className = 'unread';
-          unread.textContent = String(thread.unread);
-          unread.setAttribute('aria-label', String(thread.unread) + ' unread messages');
-          button.append(unread);
-        } else {
-          button.append(document.createElement('span'));
+          name.insertAdjacentElement('afterend', unread);
         }
+        unread.textContent = String(thread.unread);
+        unread.setAttribute('aria-label', String(thread.unread) + ' unread messages');
+      } else if (unread) {
+        unread.remove();
+      }
+      let preview = button.querySelector('.thread-preview');
+      if (!preview) {
+        preview = document.createElement('span');
+        preview.className = 'thread-preview';
         button.append(preview);
-        threadListEl.append(button);
-
+      }
+      preview.textContent = threadPreviewText(thread);
+    }
+    function appendSection(label, sectionThreads, group, listTarget) {
+      if (!sectionThreads.length) return;
+      if (listTarget) {
+        const sectionLabel = document.createElement('div');
+        sectionLabel.className = 'section-label';
+        sectionLabel.textContent = label;
+        listTarget.append(sectionLabel);
+        for (const thread of sectionThreads) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'thread';
+          paintThreadButton(button, thread);
+          listTarget.append(button);
+        }
+      }
+      for (const thread of sectionThreads) {
         const option = document.createElement('option');
         option.value = thread.key;
         option.textContent = thread.name + (Number(thread.unread) ? ' (' + thread.unread + ')' : '');
@@ -454,12 +472,12 @@ export function renderChatPage(env = {}) {
       mobileNewDirectFormEl.hidden = !mobileNewDirectFormEl.hidden;
     }
     function renderThreads() {
-      threadListEl.replaceChildren();
       threadSelectEl.replaceChildren();
       if (!threads.length) {
+        threadListEl.replaceChildren();
         const actions = candidates.length
           ? [emptyButton('Start a player message', () => { newDirectFormEl.hidden = false; candidateSelectEl.focus(); }, true)]
-          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule')];
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('Open Players', '/players'), emptyLink('See tonight', '/schedule')];
         threadListEl.append(emptyState(
           'No conversations yet',
           candidates.length
@@ -473,6 +491,20 @@ export function renderChatPage(env = {}) {
         threadSelectEl.append(option);
         return;
       }
+      const existingButtons = Array.from(threadListEl.querySelectorAll('button.thread'));
+      const existingKeys = existingButtons.map((button) => button.dataset.threadKey);
+      const nextKeys = threads.map((thread) => thread.key);
+      const structureSame = existingKeys.length === nextKeys.length
+        && existingKeys.every((key, index) => key === nextKeys[index])
+        && !threadListEl.querySelector('.empty');
+      if (structureSame) {
+        for (const thread of threads) {
+          const button = threadListEl.querySelector('button.thread[data-thread-key="' + thread.key.replace(/"/g, '') + '"]');
+          if (button) paintThreadButton(button, thread);
+        }
+      } else {
+        threadListEl.replaceChildren();
+      }
       const leagueGroup = document.createElement('optgroup');
       leagueGroup.label = 'League rooms';
       const matchupGroup = document.createElement('optgroup');
@@ -481,10 +513,11 @@ export function renderChatPage(env = {}) {
       directGroup.label = 'Player messages';
       const teamGroup = document.createElement('optgroup');
       teamGroup.label = 'Team chats';
-      appendSection('League rooms', threads.filter((thread) => thread.type === 'league'), leagueGroup);
-      appendSection('Matchup rooms', threads.filter((thread) => thread.type === 'matchup'), matchupGroup);
-      appendSection('Player messages', threads.filter((thread) => thread.type === 'direct'), directGroup);
-      appendSection('Team chats', threads.filter((thread) => thread.type === 'team'), teamGroup);
+      const listTarget = structureSame ? null : threadListEl;
+      appendSection('League rooms', threads.filter((thread) => thread.type === 'league'), leagueGroup, listTarget);
+      appendSection('Matchup rooms', threads.filter((thread) => thread.type === 'matchup'), matchupGroup, listTarget);
+      appendSection('Player messages', threads.filter((thread) => thread.type === 'direct'), directGroup, listTarget);
+      appendSection('Team chats', threads.filter((thread) => thread.type === 'team'), teamGroup, listTarget);
       if (leagueGroup.children.length) threadSelectEl.append(leagueGroup);
       if (matchupGroup.children.length) threadSelectEl.append(matchupGroup);
       if (directGroup.children.length) threadSelectEl.append(directGroup);
