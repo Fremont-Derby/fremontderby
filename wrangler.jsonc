@@ -32,19 +32,19 @@
         "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       }
     },
-    "beta-jfl": {
-      "name": "fremontderby-beta-jfl",
+    "jfl": {
+      "name": "fremontderby-jfl",
       "workers_dev": false,
       "routes": [
         {
-          "pattern": "beta-jfl.fremontderby.com",
+          "pattern": "jfl.fremontderby.com",
           "custom_domain": true
         }
       ],
       "vars": {
-        "ENVIRONMENT": "beta-jfl",
+        "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "beta-jfl-actor@localhost"
+        "BETA_ACTOR_EMAIL": "jfl-actor@localhost"
       },
       "secrets": {
         "required": [
@@ -56,19 +56,19 @@
         ]
       }
     },
-    "beta-dru": {
-      "name": "fremontderby-beta-dru",
+    "dru": {
+      "name": "fremontderby-dru",
       "workers_dev": false,
       "routes": [
         {
-          "pattern": "beta-dru.fremontderby.com",
+          "pattern": "dru.fremontderby.com",
           "custom_domain": true
         }
       ],
       "vars": {
-        "ENVIRONMENT": "beta-dru",
+        "ENVIRONMENT": "dru",
         "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "beta-dru-actor@localhost"
+        "BETA_ACTOR_EMAIL": "dru-actor@localhost"
       },
       "secrets": {
         "required": [
