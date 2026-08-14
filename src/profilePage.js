@@ -1,3 +1,4 @@
+import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
 function browserConfig(env = {}) {
   return {
@@ -134,7 +135,7 @@ export function renderProfilePage(env = {}) {
             </div>
             <form class="actions" data-profile-form>
               <label>Display name
-                <input name="displayName" data-display-name-input autocomplete="name" maxlength="80" />
+                <input name="displayName" data-display-name-input autocomplete="name" data-safe-ac="publicPlayers" maxlength="80" />
               </label>
               <button class="primary" type="submit">Save profile</button>
             </form>
@@ -458,6 +459,7 @@ export function renderProfilePage(env = {}) {
       }
     });
   </script>
+${safeAutocompleteClientScript}
 </body>
 </html>`;
 }
