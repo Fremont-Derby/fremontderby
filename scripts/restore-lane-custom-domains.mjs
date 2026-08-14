@@ -1,5 +1,5 @@
 /**
- * Attach Fremont Derby lane hostnames to the matching Workers via Cloudflare API.
+ * Attach Fremont Derby lane hostnames to matching Workers via Cloudflare API.
  * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
  */
 import { fileURLToPath } from 'node:url';
@@ -16,10 +16,14 @@ function requireEnv(name) {
   return value;
 }
 
-async function cf(path, { method = 'GET', body } = {}) {
+async function cf(path, { method = 'GET', body, base = 'accounts' } = {}) {
   const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID');
   const token = requireEnv('CLOUDFLARE_API_TOKEN');
-  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}${path}`;
+  const root =
+    base === 'accounts'
+      ? `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}`
+      : 'https://api.cloudflare.com/client/v4';
+  const url = `${root}${path}`;
   const response = await fetch(url, {
     method,
     headers: {
@@ -42,7 +46,6 @@ async function listWorkerDomains() {
 }
 
 async function attachDomain({ hostname, service, environment = 'production' }) {
-  // Cloudflare Workers custom domains API (account-level)
   let result = await cf('/workers/domains', {
     method: 'PUT',
     body: { hostname, service, environment },
@@ -54,6 +57,44 @@ async function attachDomain({ hostname, service, environment = 'production' }) {
     });
   }
   return result;
+}
+
+async function findZoneId(hostname) {
+  const parts = hostname.split('.');
+  // fremontderby.com
+  const zoneName = parts.slice(-2).join('.');
+  const { response, payload } = await cf(
+    `/zones?name=${encodeURIComponent(zoneName)}`,
+    { base: 'root' },
+  );
+  // fix: zones are under /zones not accounts
+  return { response, payload, zoneName };
+}
+
+async function cfZones(path, opts = {}) {
+  const token = requireEnv('CLOUDFLARE_API_TOKEN');
+  const url = `https://api.cloudflare.com/client/v4${path}`;
+  const response = await fetch(url, {
+    method: opts.method || 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const payload = await response.json().catch(() => ({}));
+  return { response, payload };
+}
+
+async function ensureZoneVisibility(hostname) {
+  const zoneName = hostname.split('.').slice(-2).join('.');
+  const { response, payload } = await cfZones(`/zones?name=${encodeURIComponent(zoneName)}`);
+  if (!response.ok || !payload.result?.length) {
+    console.warn(`Zone lookup failed for ${zoneName}: ${JSON.stringify(payload.errors || payload)}`);
+    return null;
+  }
+  return payload.result[0].id;
 }
 
 async function main() {
@@ -72,10 +113,13 @@ async function main() {
   const results = [];
 
   for (const lane of LANES) {
+    const zoneId = await ensureZoneVisibility(lane.hostname);
+    if (zoneId) console.log(`zone ${lane.hostname} -> ${zoneId}`);
+
     const current = byHost.get(lane.hostname);
     if (current && current.service === lane.service) {
       console.log(`OK already attached: ${lane.hostname} -> ${lane.service}`);
-      results.push({ ...lane, status: 'already' });
+      results.push({ ...lane, status: 'already', zoneId });
       continue;
     }
     console.log(`Attaching ${lane.hostname} -> ${lane.service}…`);
@@ -83,11 +127,11 @@ async function main() {
     if (!response.ok || payload.success === false) {
       const message = JSON.stringify(payload.errors || payload || { status: response.status });
       console.error(`FAIL ${lane.hostname}: ${message}`);
-      results.push({ ...lane, status: 'error', message });
+      results.push({ ...lane, status: 'error', message, zoneId });
       continue;
     }
     console.log(`OK attached: ${lane.hostname}`);
-    results.push({ ...lane, status: 'attached' });
+    results.push({ ...lane, status: 'attached', zoneId });
   }
 
   console.log(JSON.stringify({ results }, null, 2));
