@@ -86,7 +86,16 @@ export function renderAdminSeasonsPage() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
     const normalizeStatusTone = ${normalizeStatusTone.toString()};
-    function setStatus(message, tone = '') {
+    function setStatus(message, tone = '', opts = {}) {
+      if (window.fdSetStatus) {
+        if (!message) {
+          window.fdSetStatus(statusEl, '', '', opts);
+          statusEl.removeAttribute('data-tone');
+          return;
+        }
+        window.fdSetStatus(statusEl, message, tone ? normalizeStatusTone(tone) : '', opts);
+        return;
+      }
       statusEl.textContent = message;
       if (!message) {
         statusEl.removeAttribute('data-tone');
@@ -238,7 +247,7 @@ export function renderAdminSeasonsPage() {
       emptyEl.hidden = true;
       resultsMetaEl.textContent = '';
       letterIndexEl.replaceChildren();
-      setStatus(error.message, 'error');
+      setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
     });
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
   </script>

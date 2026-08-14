@@ -70,7 +70,7 @@ export function renderTradesPage() {
     const countEl=document.querySelector('[data-trade-count]');
     let captainTeams=[];
     let counterparties=[];
-    function setStatus(m,t){statusEl.textContent=m;statusEl.dataset.tone=t||'muted'}
+    function setStatus(m,t,opts){if(window.fdSetStatus){window.fdSetStatus(statusEl,m,t||'muted',opts||{});return}statusEl.textContent=m;statusEl.dataset.tone=t||'muted'}
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function api(path,options={}){
       if(!token())throw new Error('Sign in on Profile first.');
@@ -185,7 +185,7 @@ export function renderTradesPage() {
       if(id){
         const actions=document.createElement('div');
         actions.className='actions';
-        const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>fn().catch((e)=>setStatus(e.message,'error'));return b};
+        const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>fn().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error'));return b};
         actions.append(
           mk('Player accept','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'accepted'})}).then(loadTrades)),
           mk('Player reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
@@ -210,10 +210,13 @@ export function renderTradesPage() {
       listEl.replaceChildren();
       for(const trade of trades){listEl.append(buildTradeCard(trade));}
     }
-    async function loadTrades(){
+    async function loadTrades(opts={}){
+      const quiet=Boolean(opts&&opts.quiet);
+      if(!quiet) setStatus('Loading trades…','muted');
       const body=await api('/api/me/trades');
       const trades=(body.tradeManagement&&body.tradeManagement.trades)||[];
       renderTrades(Array.isArray(trades)?trades:[]);
+      if(!quiet) setStatus(trades.length?('Trades loaded · '+trades.length):'No open trades','ok');
     }
     async function propose(event){
       event.preventDefault();
@@ -239,10 +242,10 @@ export function renderTradesPage() {
     }
     document.querySelector('[data-trade-form]').addEventListener('submit',(e)=>propose(e).catch((err)=>setStatus(err.message,'error')));
     document.querySelector('[data-refresh]').addEventListener('click',()=>boot().catch((err)=>setStatus(err.message,'error')));
-    teamSelect.addEventListener('change',()=>{fillOfferedPlayers();loadCounterparties().catch((e)=>setStatus(e.message,'error'))});
+    teamSelect.addEventListener('change',()=>{fillOfferedPlayers();loadCounterparties().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error'))});
     otherTeamSelect.addEventListener('change',fillRequestedPlayers);
     boot().catch((err)=>setStatus(err.message,'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>loadTrades().catch(()=>{}),{intervalMs:20000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadTrades(opts).catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')),{intervalMs:20000,immediate:false});
   </script>
 </body>
 </html>`;

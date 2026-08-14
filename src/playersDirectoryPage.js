@@ -63,7 +63,7 @@ export function renderPlayersDirectoryPage() {
     const metaEl=document.querySelector('[data-meta]');
     let seasons=[];
     let rows=[];
-    function setStatus(m,t){statusEl.textContent=m;statusEl.dataset.tone=t||'muted'}
+    function setStatus(m,t,opts){if(window.fdSetStatus){window.fdSetStatus(statusEl,m,t||'muted',opts||{});return}statusEl.textContent=m;statusEl.dataset.tone=t||'muted'}
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function fetchJson(url){
       if(window.fdConditionalFetch){
@@ -181,7 +181,7 @@ export function renderPlayersDirectoryPage() {
         if(!seasons.length) await loadSeasons();
         await loadPlayers(opts);
       }catch(error){
-        setStatus(error.message||'Could not load directory','error');
+        setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Could not load directory')),'error');
       }
     }
     seasonEl.addEventListener('change',()=>boot());

@@ -33,7 +33,7 @@ export function renderScorePickerPage() {
   <script>
     const statusEl=document.querySelector('[data-status]');const listEl=document.querySelector('[data-list]');const filtersEl=document.querySelector('[data-filters]');const dateSelect=document.querySelector('[data-date]');const teamSelect=document.querySelector('[data-team]');const matchupSelect=document.querySelector('[data-matchup]');const raceSelect=document.querySelector('[data-race]');const requestedMatch=new URLSearchParams(location.search).get('match')||'';let matches=[];let captainContexts=[];
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
-    function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
+    function setStatus(message,tone,opts){if(window.fdSetStatus){window.fdSetStatus(statusEl,message,tone||'muted',opts||{});return}statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
     function text(value){return value==null?'':String(value)}
     function localDateKey(){const now=new Date();const year=now.getFullYear();const month=String(now.getMonth()+1).padStart(2,'0');const day=String(now.getDate()).padStart(2,'0');return year+'-'+month+'-'+day}
     function dateLabel(value){if(!value||value==='tbd')return'Date TBD';const d=new Date(value+'T12:00:00');return new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric'}).format(d)}
