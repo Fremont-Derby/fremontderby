@@ -11,6 +11,23 @@ function canonicalJson(value) {
   return JSON.stringify(value);
 }
 
+/**
+ * WHY: weak version tokens are not crypto secrets. FNV-1a is enough to detect
+ * league-scale fingerprint changes without SHA-256 on every warm poll.
+ */
+export function fastVersionToken(value) {
+  const s = canonicalJson(value);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  // mix length to reduce collision classes for empty vs non-empty
+  h ^= s.length;
+  h = Math.imul(h, 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
 export async function strongEtagFromBody(body) {
   const encoded = new TextEncoder().encode(canonicalJson(body));
   const digest = await crypto.subtle.digest('SHA-256', encoded);
@@ -19,8 +36,8 @@ export async function strongEtagFromBody(body) {
 }
 
 export async function versionTokenFromValue(value) {
-  const etag = await strongEtagFromBody(value);
-  return etag.slice(1, -1);
+  // Prefer fast token for version scopes; strong body etags still use SHA-256.
+  return fastVersionToken(value);
 }
 
 export function weakEtag(scope, version) {

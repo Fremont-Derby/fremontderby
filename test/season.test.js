@@ -39,8 +39,9 @@ test('published rounds include four table-assigned team matches', () => {
   for (const round of schedule.rounds) {
     assert.equal(round.stage, 'regular');
     assert.equal(round.matches.length, 4);
+    // Tables are a rotation of the configured set (fair distribution across weeks).
     assert.deepEqual(
-      round.matches.map((match) => match.tableNumber),
+      [...round.matches.map((match) => match.tableNumber)].sort((a, b) => a - b),
       [5, 6, 7, 8],
     );
 
@@ -54,6 +55,9 @@ test('published rounds include four table-assigned team matches', () => {
     }
     assert.equal(teamsInRound.size, 8);
   }
+  const week0 = schedule.rounds[0].matches.map((m) => m.tableNumber).join(',');
+  const week1 = schedule.rounds[1].matches.map((m) => m.tableNumber).join(',');
+  assert.notEqual(week0, week1, 'table assignment should rotate between rounds');
 });
 
 test('season publication rejects invalid setup inputs', () => {
