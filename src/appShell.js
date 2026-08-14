@@ -1,4 +1,5 @@
 import { livePageRefreshScript } from './livePageRefresh.js';
+import { friendlyErrorMessage } from './friendlyErrorMessage.js';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
@@ -77,22 +78,7 @@ export function renderMobileDock(pathname) {
   return `<nav class="fd-mobile-dock" aria-label="Quick navigation" data-fd-mobile-dock>${links}</nav>`;
 }
 
-export function friendlyErrorMessage(value) {
-  const message = String(value || '').replace(/\s+/g, ' ').trim();
-  if (!message) return 'We could not complete that action. Please try again.';
-  if (/sign[- ]?in expired|session expired|unauthorized/i.test(message)) {
-    return 'Your sign-in expired. Open Profile, sign in again, and retry.';
-  }
-  // WHY: raw PostgREST/Postgres text is noisy and was also getting letters stripped by a
-  // template-literal bug (/s+/). Always map infrastructure failures to a stable sentence.
-  if (
-    /supabase|postgrest|permission denied|schema "?private"?|column reference|ambiguous|postgres|PGRST|RPC|relation ".+" does not exist|duplicate key|violates|statement timeout|networkerror|failed to fetch/i
-      .test(message)
-  ) {
-    return 'We could not complete that action. Nothing was changed. Please try again.';
-  }
-  return message;
-}
+export { friendlyErrorMessage } from './friendlyErrorMessage.js';
 
 function renderMessageIndicator(pathname) {
   const current = sectionForPath(pathname) === 'messages';

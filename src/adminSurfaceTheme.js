@@ -1,3 +1,4 @@
+import { tokenRemapStyles } from './tokenRemap.js';
 const ADMIN_SURFACES = new Map([
   ['/admin/players', 'players'],
   ['/admin/season-teams', 'season-teams'],
@@ -12,6 +13,7 @@ export const adminSurfaceThemeStyles = `
     overflow-x: hidden;
     background: var(--fd-bg-page) !important;
     color: var(--fd-text) !important;
+    ${tokenRemapStyles}
   }
 
   /* Cohesion: page-local agent themes used --panel/--line/--muted/--green/--gold.

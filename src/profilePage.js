@@ -1,3 +1,4 @@
+import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
 function browserConfig(env = {}) {
   return {
     supabaseUrl: env.SUPABASE_URL || '',
@@ -234,16 +235,7 @@ export function renderProfilePage(env = {}) {
       return value == null || value === '' ? '—' : String(value);
     }
 
-    function friendlyErrorMessage(error) {
-      const message = String(error && error.message ? error.message : error || '').replace(/\\s+/g, ' ').trim();
-      if (/sign in is required|unauthorized|jwt|session.*expired/i.test(message)) {
-        return 'Your sign-in expired. Continue with Google to sign in again.';
-      }
-      if (/supabase|service role|schema|postgres|rpc|permission denied|browser config/i.test(message)) {
-        return 'We could not load your profile. Nothing was changed. Please try again.';
-      }
-      return message || 'We could not complete that action. Please try again.';
-    }
+    const friendlyErrorMessage = ${sharedFriendlyErrorMessage.toString()};
 
     function requireConfig() {
       if (!config.supabaseUrl || !config.supabasePublishableKey) {

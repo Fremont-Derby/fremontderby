@@ -1,4 +1,5 @@
 import app from './index.js';
+import { renderDesignSystemCatalogPage } from './designSystemCatalogPage.js';
 import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
 import { renderAdminOperationsPage } from './adminOperationsPage.js';
 import { adminPlayersHttpHandlers } from './adminPlayersHttp.js';
@@ -165,6 +166,10 @@ export default {
     if (request.method === 'GET' && url.pathname === '/rules') {
       return htmlResponse(stripLegacyPublicNav(renderRulesPage()), url.pathname);
     }
+    if (request.method === 'GET' && url.pathname === '/design-system') {
+      return htmlResponse(renderDesignSystemCatalogPage(), url.pathname);
+    }
+
 
     if (url.pathname === '/schedule') {
       if (request.method !== 'GET') return methodNotAllowed();

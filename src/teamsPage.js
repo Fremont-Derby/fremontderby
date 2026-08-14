@@ -13,11 +13,11 @@ export function renderTeamsPage() {
 </head>
 <body>
   <main class="app">
-    <header class="topbar"><div class="brand"><span class="mark">T</span><span>Fremont Derby Teams</span></div><div class="status" data-status role="status" aria-live="polite" aria-atomic="true">Checking your teams…</div></header>
+    <header class="topbar"><div class="brand"><span class="mark">T</span><span>Fremont Derby Teams</span></div><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></header>
     <section class="page-state" data-page-state role="status" aria-live="polite" aria-atomic="true">
       <div class="state-kicker">Teams</div>
       <h1 data-state-title>Loading your teams…</h1>
-      <p data-state-copy>Checking your sign-in and team access.</p>
+      <p data-state-copy>Preparing your teams.</p>
       <div class="state-actions" data-state-actions></div>
     </section>
     <div data-team-content hidden>
