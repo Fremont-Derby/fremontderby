@@ -252,6 +252,31 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         invitationsEl.append(row);
       }
     }
+    function openingNightReadiness(members, team){
+      const roster = Array.isArray(members) ? members : [];
+      // Prefer explicit registered flags when present; otherwise count active roster seats.
+      let registered = 0;
+      for (const m of roster) {
+        const status = String(m.registrationStatus || m.registration_status || m.status || '').toLowerCase();
+        const paid = m.paymentStatus || m.payment_status;
+        if (status.includes('register') || status === 'active' || status === 'confirmed' || paid === 'paid' || paid === true) {
+          registered += 1;
+        } else if (!status && !paid) {
+          // Unknown flags: treat rostered seat as counting toward depth.
+          registered += 1;
+        }
+      }
+      const target = 4;
+      const entry = String(team.entryStatus || team.entry_status || team.slotStatus || team.slot_status || '').toLowerCase();
+      const entryLabel = entry
+        ? entry.charAt(0).toUpperCase() + entry.slice(1)
+        : (roster.length >= 3 ? 'Rostered' : 'Forming');
+      if (registered >= target) {
+        return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Opening-night ready';
+      }
+      const need = Math.max(0, target - registered);
+      return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Needs depth (add ' + need + ' more)';
+    }
     function renderCaptainTeams(teams){
       if(!captainTeamsEl)return;
       captainTeamsEl.replaceChildren();
@@ -262,6 +287,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         card.append(node('h2',team.teamName||'Team'));
         card.append(node('div',(team.seasonName||'')+(team.role?' · '+team.role:''),'muted'));
         const members=Array.isArray(team.members)?team.members:(Array.isArray(team.roster)?team.roster:[]);
+        card.append(node('div', openingNightReadiness(members, team), 'muted'));
         if(members.length){
           const list=document.createElement('ul');
           for(const member of members){
