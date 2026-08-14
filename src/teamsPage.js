@@ -34,10 +34,10 @@ export function renderTeamsPage() {
           <span class="action-cta" data-hub-lineup-cta>Build lineup →</span>
         </a>
         <a class="action-card" data-accent="blue" data-hub-availability href="/availability">
-          <span class="action-label">Before play</span>
-          <strong>Mark availability</strong>
-          <span class="action-meta">Tell captains whether you can play the next round.</span>
-          <span class="action-cta">Update status →</span>
+          <span class="action-label">League night</span>
+          <strong>Weekly check-in</strong>
+          <span class="action-meta">Morning of the match: say you&rsquo;ll be there, you&rsquo;re unsure, or you can&rsquo;t make it.</span>
+          <span class="action-cta">Check in →</span>
         </a>
         <a class="action-card" data-accent="gold" data-hub-score href="/scorecard">
           <span class="action-label" data-hub-score-label>During play</span>
