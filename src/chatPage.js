@@ -826,6 +826,7 @@ export function renderChatPage(env = {}) {
       pollCount += 1;
       if (!document.hidden && token() && pollCount % 4 === 0) run(refreshThreadMetadata);
     }, 4000);
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>{if(typeof refreshThreadMetadata==='function')refreshThreadMetadata();},{intervalMs:12000,immediate:false});
   </script>
 </body>
 </html>`;

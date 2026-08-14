@@ -233,6 +233,7 @@ export function renderAdminSeasonsPage() {
       letterIndexEl.replaceChildren();
       setStatus(error.message, 'error');
     });
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load(),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

@@ -352,6 +352,7 @@ export function renderTradesPage() {
     if (tokenInput.value) {
       run(loadTrades);
     }
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>run(loadTrades),{intervalMs:20000,immediate:false});
   </script>
 </body>
 </html>`;
