@@ -131,6 +131,8 @@ Labels make ownership and lifecycle state filterable across the backlog; the iss
 
 New implementation cards start with `agent:unclaimed`, `stage:ready`, and `priority:p2`. Before coding, replace `agent:unclaimed` with the accepting owner, set the correct priority and area, then advance `stage:claimed` to `stage:in-progress` when the focused branch exists.
 
+**Human-required exception:** cards labeled `human-required` are owned by a human/project author for dashboard-only work (Cloudflare, Supabase SQL editor, identity provider consoles). They still need `stage:*`, `priority:*`, and `area:*`. They do **not** require an `agent:*` implementation owner while blocked on a human. Agents may automate steps only when repository secrets and workflows already allow it; otherwise leave exact steps on the card and do not close it.
+
 Lifecycle labels are mutually exclusive. Replace the previous `stage:*` label when state changes; never stack several stages or owner labels. Use `stage:merged` after merge, `stage:verified` only after evidence is recorded, and `stage:closed` immediately before closing the issue. PRs reference the card but do not duplicate its lifecycle labels.
 
 The canonical names, colors, and descriptions live in `.github/collaboration-labels.json` and are synchronized by `.github/workflows/sync-collaboration-labels.yml`. Agents may not invent near-duplicate owner or stage labels. Change the manifest through a tracked governance PR when the system needs to evolve.
@@ -255,6 +257,19 @@ For meaningful changes:
 - distinguish source-code proof, test proof, staging proof, and production proof in PR/issue notes.
 
 A green unit test does not prove a live deployment. A successful login does not prove authorization. A hosted hotfix does not prove the repository is synchronized.
+
+### Live platform verification (non-negotiable for lane/infra cards)
+
+When the card touches hostnames, Worker envs, auth bypass, or Supabase migrations:
+
+1. **Probe the live hostname**, not only CI. Record `/health/environment` (or equivalent) showing the expected `environment` value.
+2. **DNS exists is not success.** A resolving host that reports `environment=production` on a beta/DRU/JFL URL is still failing the card.
+3. **Merge is not apply.** A merged migration file on `main` does not close data cards until it is applied to the **target** database (DRU/JFL/gamma/prod as named) and re-probed.
+4. **Open-auth cards** must prove an authenticated API without a bearer where intended, and must prove production/gamma still require a bearer.
+5. Prefer GitHub Actions workflows that use existing `CLOUDFLARE_*` (or similar) repository secrets for domain/Worker automation over asking a human to click the same API-capable step. Inventory what secrets Actions already has before cutting a human card.
+6. If a custom domain is attached via API, re-check public DNS and health a few minutes later; attachment acknowledgements can race propagation or wrong-Worker routing.
+
+Close platform cards only after these live checks match acceptance criteria.
 
 ## Pull requests and merges
 
