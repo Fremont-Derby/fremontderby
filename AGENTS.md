@@ -163,6 +163,12 @@ While implementing:
 - If two active branches need the same file or behavior, coordinate in the issues/PRs. Prefer splitting ownership by coherent surface, sequencing one card after the other, or handing off a specific change. Do not race two competing implementations to `main`.
 - Shared migrations, schema, auth, routing, global styles, common domain primitives, and package/config files are high-collision surfaces. Treat them as explicit dependencies when another active branch is touching them.
 
+### Shared infrastructure mutation rule
+
+Any change that can mutate shared external infrastructure or alter more than one deployment lane — including Cloudflare Worker custom domains/routes, DNS, deployment workflows, Wrangler environment routing, secrets requirements, release/promotion workflows, shared database environment routing, or other scheduled external-control-plane actions — must use a dedicated implementation card and focused PR. It may not be bundled with product, UX, test, refactor, or unrelated CI work. If the change can affect both JFL and DRU (or Gamma/production), both JFL and DRU must record explicit review agreement before the card may advance to Merge Ready. Scheduled or automatic mutation of shared external infrastructure requires the same cross-lane agreement and must fail closed when current external state cannot be positively determined. An unrelated PR must never introduce, broaden, or increase the frequency of such mutation.
+
+This rule preserves autonomous speed for ordinary scoped work; only shared infrastructure mutation gets the stronger gate.
+
 A good branch changes the smallest coherent set of files needed for its card. Broad changes require their own card and deliberate coordination rather than being bundled into a feature PR.
 
 ### JFL and DRU lane guides
