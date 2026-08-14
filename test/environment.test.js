@@ -7,7 +7,7 @@ test('staging and production Worker environments are explicit and distinct', () 
 
   assert.equal(config.vars.ENVIRONMENT, 'production');
   assert.equal(config.env.staging.vars.ENVIRONMENT, 'staging');
-  assert.equal(config.env.staging.workers_dev, true);
+  assert.equal(config.env.staging.workers_dev, false);
   assert.notEqual(config.vars.ENVIRONMENT, config.env.staging.vars.ENVIRONMENT);
 });
 

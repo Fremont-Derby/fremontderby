@@ -40,10 +40,24 @@ test('Wrangler owns every public release hostname as a custom domain', () => {
   for (const [environment, host] of Object.entries(publicHosts)) {
     assert.equal(customDomainFor(environment), host);
   }
+});
+
+test('workers.dev and preview URLs stay disabled for every Wrangler environment', () => {
   assert.equal(config.workers_dev, false);
-  assert.equal(config.env.jfl.workers_dev, false);
-  assert.equal(config.env.dru.workers_dev, false);
-  assert.equal(config.env.gamma.workers_dev, false);
+  assert.equal(config.preview_urls, false);
+
+  for (const [environment, target] of Object.entries(config.env)) {
+    assert.equal(
+      target.workers_dev ?? config.workers_dev,
+      false,
+      `${environment} must not expose a workers.dev route`,
+    );
+    assert.equal(
+      target.preview_urls ?? config.preview_urls,
+      false,
+      `${environment} must not expose Worker preview URLs`,
+    );
+  }
 });
 
 test('each deployable Derby lane binds version metadata for exact SHA verification', () => {
