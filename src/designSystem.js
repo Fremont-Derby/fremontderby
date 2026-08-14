@@ -56,7 +56,20 @@ export const designSystemStyles = `
     --fd-shadow-soft: 0 3px 10px rgba(25, 31, 27, .08);
     --fd-radius: 16px;
     --fd-radius-sm: 11px;
+    --fd-radius-control: 10px;
     --fd-radius-pill: 999px;
+    /* WCAG-oriented status chip pairs (bg + text). */
+    --fd-pill-neutral-bg: #eef1ef;
+    --fd-pill-neutral-text: #1f2923;
+    --fd-pill-success-bg: #d8f0e2;
+    --fd-pill-success-text: #0b4d2c;
+    --fd-pill-warning-bg: #f7e7a8;
+    --fd-pill-warning-text: #4a3b00;
+    --fd-pill-danger-bg: #f8d7d4;
+    --fd-pill-danger-text: #7a221c;
+    --fd-pill-info-bg: #d9e8fc;
+    --fd-pill-info-text: #0b3a6e;
+    --fd-touch-min: 44px;
   }
 
 
@@ -186,19 +199,63 @@ export const designSystemStyles = `
   }
   button:disabled { opacity: .45 !important; }
 
+  /* Controls = soft rectangles. Status = short pills. See docs/ux-controls-and-status.md */
   input, select, textarea {
-    min-height: var(--fd-control-min);
+    min-height: max(var(--fd-control-min), var(--fd-touch-min));
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px !important;
     background: var(--fd-bg-surface) !important;
     color: var(--fd-text) !important;
     border: 1px solid var(--fd-border-control) !important;
-    border-radius: 10px !important;
+    border-radius: var(--fd-radius-control) !important;
+    font-size: 16px !important; /* iOS: avoid focus zoom */
+    line-height: 1.25 !important;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    padding-right: 36px !important;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--fd-text-muted) 50%),
+      linear-gradient(135deg, var(--fd-text-muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) calc(50% - 3px),
+      calc(100% - 12px) calc(50% - 3px);
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
   }
   input::placeholder, textarea::placeholder { color: #929894 !important; }
 
-  /* Shared state language. */
-  .status { color: var(--fd-text-muted) !important; }
-  .status[data-tone="ok"], .status[data-tone="ready"], [data-state="success"] { color: var(--fd-success) !important; }
-  .status[data-tone="error"], [data-state="error"], .error, .error-popup, .fd-error-popup { color: var(--fd-danger-text) !important; }
+  button, .button, a.button, .score-link, .action, .state-action, [role="button"] {
+    min-height: max(var(--fd-control-min), var(--fd-touch-min));
+    min-width: var(--fd-touch-min);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Shared state language — long status copy is rectangular, not a stadium pill. */
+  .status {
+    display: inline-flex !important;
+    align-items: center !important;
+    max-width: 100%;
+    min-height: 34px;
+    padding: 6px 12px !important;
+    border-radius: var(--fd-radius-control) !important;
+    border: 1px solid var(--fd-border) !important;
+    background: var(--fd-bg-surface) !important;
+    color: var(--fd-text-muted) !important;
+    font-weight: 700 !important;
+  }
+  .status[data-tone="ok"], .status[data-tone="ready"], [data-state="success"] {
+    color: var(--fd-pill-success-text) !important;
+    background: var(--fd-pill-success-bg) !important;
+    border-color: #b7dfc5 !important;
+  }
+  .status[data-tone="error"], [data-state="error"], .error, .error-popup, .fd-error-popup {
+    color: var(--fd-danger-text) !important;
+  }
   .error-popup, .fd-error-popup, .state-card[data-tone="error"] {
     background: var(--fd-danger-bg) !important;
     border-color: var(--fd-danger) !important;
@@ -212,15 +269,70 @@ export const designSystemStyles = `
     border-color: var(--fd-accent) !important;
     box-shadow: var(--fd-shadow-soft) !important;
   }
-  .chip, .step-status, .tag, .badge, .side, .hub-team {
-    background: var(--fd-green-100) !important;
-    border-color: #b6d4c1 !important;
-    color: var(--fd-primary-strong) !important;
+
+  /* Short tokens only — not long filter labels or team names. */
+  .chip, .step-status, .tag, .badge, .side, .status-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px;
+    min-height: 28px;
+    max-width: 100%;
+    padding: 4px 10px !important;
+    border: 1px solid transparent !important;
     border-radius: var(--fd-radius-pill) !important;
+    background: var(--fd-pill-neutral-bg) !important;
+    color: var(--fd-pill-neutral-text) !important;
+    font-weight: 800 !important;
+    font-size: .78rem !important;
+    line-height: 1.2 !important;
+    letter-spacing: .01em;
+  }
+  .chip[data-tone="ok"], .badge.ok, .badge.ready, .status-pill[data-tone="live"] {
+    background: var(--fd-pill-success-bg) !important;
+    color: var(--fd-pill-success-text) !important;
+    border-color: #b7dfc5 !important;
+  }
+  .chip[data-tone="warn"], .badge.warn, .status-pill[data-tone="tonight"] {
+    background: var(--fd-pill-warning-bg) !important;
+    color: var(--fd-pill-warning-text) !important;
+    border-color: #e2c86a !important;
+  }
+  .chip[data-tone="danger"], .badge.blocked, .badge.unclaimed {
+    background: var(--fd-pill-danger-bg) !important;
+    color: var(--fd-pill-danger-text) !important;
+    border-color: #efb4ae !important;
+  }
+  .chip[data-tone="info"], .badge.admin, .status-pill[data-tone="done"] {
+    background: var(--fd-pill-info-bg) !important;
+    color: var(--fd-pill-info-text) !important;
+    border-color: #b4ccee !important;
+  }
+  /* Team/filter chrome is a control row, not a pill. */
+  .hub-team {
+    border-radius: var(--fd-radius-control) !important;
+    background: var(--fd-bg-subtle) !important;
+    color: var(--fd-text) !important;
+    border: 1px solid var(--fd-border) !important;
+    min-height: var(--fd-touch-min);
+    padding: 8px 12px !important;
   }
   .unread {
     background: var(--fd-accent) !important;
     color: #241e0c !important;
+  }
+
+  @media (max-width: 720px) {
+    label:has(select),
+    label:has(input),
+    .filters select,
+    .controls select,
+    .topbar select {
+      display: block;
+      width: 100%;
+    }
+    select, input[type="text"], input[type="search"], input[type="tel"] {
+      width: 100% !important;
+    }
   }
 
   /* Legacy adapters: normalize repeated page-local vocab without rewriting markup or behavior. */

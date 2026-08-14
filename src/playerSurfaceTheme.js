@@ -75,7 +75,7 @@ export const playerSurfaceThemeStyles = `
     margin-left: auto !important;
     padding: 6px 12px !important;
     border: 1px solid var(--fd-border) !important;
-    border-radius: var(--fd-radius-pill) !important;
+    border-radius: var(--fd-radius-control) !important;
     background: var(--fd-bg-surface) !important;
     color: var(--fd-text-muted) !important;
     font-size: .84rem !important;
@@ -149,10 +149,22 @@ export const playerSurfaceThemeStyles = `
   body[data-fd-player-surface] select,
   body[data-fd-player-surface] input,
   body[data-fd-player-surface] textarea {
-    min-height: var(--fd-control-min) !important;
+    min-height: max(var(--fd-control-min), var(--fd-touch-min)) !important;
+    border-radius: var(--fd-radius-control) !important;
     background: var(--fd-bg-surface) !important;
     border-color: var(--fd-border-control) !important;
     color: var(--fd-text) !important;
+    font-size: 16px !important;
+  }
+  body[data-fd-player-surface] select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+  }
+  body[data-fd-player-surface] .status {
+    border-radius: var(--fd-radius-control) !important;
+  }
+  body[data-fd-player-surface] .status-pill {
+    border-radius: var(--fd-radius-pill) !important;
   }
 
   body[data-fd-player-surface] a.primary,
