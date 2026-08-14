@@ -48,3 +48,8 @@ Critical automated areas already covered under `test/`:
 ## CI
 
 Pull requests and pushes run a dedicated `test-season1` job (`npm run test:season1` + `npm run test:floor`) in addition to the full `npm test` job.
+
+## Known regression locks added mid-build
+
+- Membership `list_joinable_team_registration` must keep **full arrays** (not first-row unwrap).
+- Season close HTTP status mapping is unit-tested for auth/404/409 paths.
