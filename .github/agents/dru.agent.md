@@ -22,9 +22,10 @@ If this guide or the JFL guide conflicts with `AGENTS.md`, follow `AGENTS.md` an
 
 - DRU identifies the agent lane, not permanent ownership of a product area, file set, or branch.
 - Claim exactly one primary implementation card before editing and record DRU as the implementation owner.
-- Start normal work from current `main` on a focused `issue-<number>-<short-slug>` branch.
-- Treat `fremontderby-dru` as the permanent DRU deployment lane, not as a general implementation branch or shared mutable workspace.
-- Never modify JFL's active feature branch or claimed work without an explicit GitHub handoff.
+- Start normal work from current `main` on a focused `dru/issue-<number>-<short-slug>` branch.
+- Treat `fremontderby-dru` as DRU's permanent deployment lane, not as a general implementation branch or shared mutable workspace.
+- Never check out, commit to, push to, merge into, rebase, reset, rename, delete, update, or otherwise mutate a `jfl/*` branch or `fremontderby-jfl`. No handoff creates an exception.
+- Inspect JFL work only through read-only PR, diff, compare, or commit views. If DRU accepts a JFL card handoff, create a new `dru/*` branch from current `main` and continue there.
 - Declare important files and high-collision surfaces before implementation. Coordinate rather than race when JFL owns an overlap.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
@@ -42,6 +43,6 @@ When a JFL practice looks broadly useful:
 
 ## Handoff expectations
 
-A DRU handoff must link the card and branch/PR, state completed and remaining work, list touched surfaces and collision risks, record validation and failures, name the next owner, and stop DRU edits after ownership transfers.
+A DRU handoff must link the card and branch/PR, state completed and remaining work, list touched surfaces and collision risks, record validation and failures, and name the next owner. A handoff transfers the card only: DRU retains exclusive ownership of every `dru/*` branch it created, and an incoming agent must continue on a new branch in its own namespace.
 
 End each cycle with the card stage, branch/PR state, evidence, and next action recorded in GitHub.

@@ -122,8 +122,39 @@ export function findTrackingCardConflicts({
   ));
 }
 
-export function validatePullRequestBody(body = '', repositoryFullName = '') {
+export function validateAgentBranchOwnership(body = '', headRef = '') {
+  if (!headRef) return [];
+
   const errors = [];
+  const owner = sectionContent(body, 'Owner lane / agent');
+  const isJflOwner = /\bJFL\b/i.test(owner);
+  const isDruOwner = /\bDRU\b/i.test(owner);
+  const isJflBranch = headRef.startsWith('jfl/');
+  const isDruBranch = headRef.startsWith('dru/');
+
+  if (isJflOwner && isDruOwner) {
+    errors.push('Owner lane / agent must name only one of JFL or DRU.');
+    return errors;
+  }
+
+  if (isJflOwner && !isJflBranch) {
+    errors.push('JFL-owned PRs must use a `jfl/issue-<number>-<slug>` head branch.');
+  }
+  if (isDruOwner && !isDruBranch) {
+    errors.push('DRU-owned PRs must use a `dru/issue-<number>-<slug>` head branch.');
+  }
+  if (isJflBranch && !isJflOwner) {
+    errors.push('Only a PR whose owner lane is JFL may use the `jfl/*` branch namespace.');
+  }
+  if (isDruBranch && !isDruOwner) {
+    errors.push('Only a PR whose owner lane is DRU may use the `dru/*` branch namespace.');
+  }
+
+  return errors;
+}
+
+export function validatePullRequestBody(body = '', repositoryFullName = '', headRef = '') {
+  const errors = [...validateAgentBranchOwnership(body, headRef)];
   const trackingSection = sectionContent(body, 'Tracking card');
 
   if (extractTrackingCardNumbers(trackingSection, repositoryFullName).length === 0) {
@@ -185,7 +216,7 @@ async function validateEventFile(eventPath) {
   const pullRequestNumber = event.pull_request?.number;
   const body = event.pull_request?.body ?? '';
   const cardNumbers = extractTrackingCardNumbers(sectionContent(body, 'Tracking card'), repositoryFullName);
-  const errors = validatePullRequestBody(body, repositoryFullName);
+  const errors = validatePullRequestBody(body, repositoryFullName, event.pull_request?.head?.ref ?? '');
 
   if (errors.length === 0) {
     const openPullRequests = await fetchOpenPullRequests(

@@ -73,7 +73,7 @@ Before JFL, DRU, or another agent starts implementation:
 3. search open PRs and issues for overlap;
 4. record the owner/agent lane on the card;
 5. check the **Ready** and **Claimed** stages;
-6. create a branch such as `issue-123-short-slug` from current `main`;
+6. create a lane-owned branch from current `main`: `jfl/issue-123-short-slug` for JFL or `dru/issue-123-short-slug` for DRU;
 7. check **In progress**.
 
 If another agent already owns the same behavior, do not start a competing implementation. Review it, split the card, sequence a dependent card, or request an explicit handoff.
@@ -83,10 +83,10 @@ If another agent already owns the same behavior, do not start a competing implem
 Feature branches are work boundaries.
 
 - One primary card per branch and PR unless multiple cards are genuinely inseparable.
-- Prefer branch names that include the issue number, for example `issue-382-shared-design-tokens`.
-- Start from current `main`; do not build new feature work on another agent's feature branch unless the issue explicitly records that dependency.
-- Do not commit directly to another agent's active branch without a recorded handoff.
-- Do not force-push, reset, rebase, or rewrite another agent's branch history.
+- JFL branches use `jfl/issue-<number>-<slug>`; DRU branches use `dru/issue-<number>-<slug>`. Branch ownership is fixed when the branch is created.
+- Start from current `main`; never build new feature work on another agent's feature branch.
+- No agent may ever check out, commit to, push to, merge into, force-push, reset, rebase, rename, delete, update the ref of, or otherwise mutate another agent's branch. A handoff does not create an exception.
+- Read-only inspection through a PR, diff, compare view, or commit object is allowed for coordination without attaching a working tree to the peer branch.
 - Do not keep long-lived personal branches containing unrelated work.
 - Do not use a feature PR as a vehicle for repository-wide cleanup.
 
@@ -109,8 +109,8 @@ If JFL and DRU both need the same surface, choose one of these patterns:
 
 1. **Split by coherent surface** — each card owns different files/behavior with an explicit integration point.
 2. **Sequence** — one card merges first; the dependent card refreshes from `main` afterward.
-3. **Handoff** — current owner commits/pushes a coherent state and transfers ownership in the card/PR.
-4. **Single shared card** — only when the work truly cannot be separated; still keep one branch owner at a time.
+3. **Handoff** — current owner commits/pushes a coherent state and transfers the card; the receiver starts a new branch in its own namespace from current `main`.
+4. **Single shared card** — only when the work truly cannot be separated; branches still remain immutable and single-owner.
 
 Do not solve collisions by racing two alternatives to merge or by overwriting whichever branch is older.
 
@@ -165,9 +165,9 @@ The incoming implementation owner must:
 3. post an explicit acceptance comment;
 4. replace the outgoing `agent:*` label with its own;
 5. remove the `handoff:*` label and set `stage:in-progress`;
-6. only then edit the handed-off branch.
+6. create a new branch in its own namespace from current `main`, record both old and new branch names on the card, and only then edit its new branch.
 
-After acceptance, the outgoing agent stops editing unless ownership is transferred back. A reviewer instead records findings/completion without changing the implementation owner label.
+Branch ownership never transfers. The receiver may reproduce or selectively apply needed work to its own branch while inspecting the outgoing work read-only, but it must never check out or mutate the outgoing branch. A reviewer records findings/completion through PR/diff review without changing the implementation owner label or checking out the owner's branch.
 
 ## GitHub is the communication bus
 

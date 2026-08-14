@@ -22,9 +22,10 @@ If this guide or the DRU guide conflicts with `AGENTS.md`, follow `AGENTS.md` an
 
 - JFL identifies the agent lane, not permanent ownership of a product area, file set, or branch.
 - Claim exactly one primary implementation card before editing and record JFL as the implementation owner.
-- Start normal work from current `main` on a focused `issue-<number>-<short-slug>` branch.
-- Treat `fremontderby-jfl` as the permanent JFL deployment lane, not as a general implementation branch or shared mutable workspace.
-- Never modify DRU's active feature branch or claimed work without an explicit GitHub handoff.
+- Start normal work from current `main` on a focused `jfl/issue-<number>-<short-slug>` branch.
+- Treat `fremontderby-jfl` as JFL's permanent deployment lane, not as a general implementation branch or shared mutable workspace.
+- Never check out, commit to, push to, merge into, rebase, reset, rename, delete, update, or otherwise mutate a `dru/*` branch or `fremontderby-dru`. No handoff creates an exception.
+- Inspect DRU work only through read-only PR, diff, compare, or commit views. If JFL accepts a DRU card handoff, create a new `jfl/*` branch from current `main` and continue there.
 - Declare important files and high-collision surfaces before implementation. Coordinate rather than race when DRU owns an overlap.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
@@ -42,6 +43,6 @@ When a DRU practice looks broadly useful:
 
 ## Handoff expectations
 
-A JFL handoff must link the card and branch/PR, state completed and remaining work, list touched surfaces and collision risks, record validation and failures, name the next owner, and stop JFL edits after ownership transfers.
+A JFL handoff must link the card and branch/PR, state completed and remaining work, list touched surfaces and collision risks, record validation and failures, and name the next owner. A handoff transfers the card only: JFL retains exclusive ownership of every `jfl/*` branch it created, and an incoming agent must continue on a new branch in its own namespace.
 
 End each cycle with the card stage, branch/PR state, evidence, and next action recorded in GitHub.

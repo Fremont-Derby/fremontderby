@@ -146,13 +146,14 @@ Before editing:
 1. claim one card by recording the agent/owner lane on the issue;
 2. sync from current `main`;
 3. search open PRs/issues for overlapping behavior and likely touched surfaces;
-4. create a dedicated feature branch from current `main`, preferably `issue-<number>-<short-slug>`;
+4. create a dedicated feature branch from current `main`; JFL uses `jfl/issue-<number>-<short-slug>`, DRU uses `dru/issue-<number>-<short-slug>`, and every other agent uses a branch whose owner is unambiguous;
 5. keep the branch limited to that card's acceptance criteria.
 
 While implementing:
 
-- Do not commit directly to another agent's active feature branch unless that agent explicitly hands it off on the issue/PR.
-- Do not force-update, rebase, reset, or rewrite another agent's branch history.
+- Branch ownership is immutable. No agent may ever check out, commit to, push to, merge into, rebase, reset, rename, delete, update the ref of, or otherwise mutate another agent's branch. A handoff does not create an exception.
+- Read-only inspection through GitHub PRs, diffs, compare views, or commit objects is allowed and encouraged for coordination; do not attach a working tree to the peer branch.
+- If another agent takes over a card, it creates a new branch in its own namespace from current `main`. The old branch remains owned only by its creator.
 - Do not make sweeping repository-wide formatting, rename, cleanup, dependency, architecture, or style changes as incidental work.
 - Do not rewrite unrelated files merely because they are nearby, noisy, or could be cleaner.
 - Do not revert unfamiliar code to make your branch easier to merge. First determine which card/PR owns it.
@@ -173,7 +174,7 @@ Both guides are subordinate to this file. They may add stricter lane-specific ha
 
 JFL and DRU must read both lane guides before claiming work. Cross-reading exists to find useful practices and detect drift, not to create shared ownership. A useful peer practice may be followed immediately only when it is compatible with this file and the active card; it does not become a repository-wide rule until adopted through the joint proposal process below.
 
-Agent identity and deployment lanes are different concepts. The permanent `fremontderby-jfl` and `fremontderby-dru` branches exist to deploy their named test environments. They are not general-purpose implementation branches and are never shared mutable workspaces. Normal implementation remains on a focused `issue-<number>-<short-slug>` branch from current `main`, followed by reviewed promotion or handoff.
+Agent identity and deployment lanes are different concepts. The permanent `fremontderby-jfl` and `fremontderby-dru` branches exist to deploy their named test environments. They are owned exclusively by JFL and DRU respectively, are not general-purpose implementation branches, and are never shared mutable workspaces. JFL must never mutate `fremontderby-dru`; DRU must never mutate `fremontderby-jfl`. Normal JFL implementation uses `jfl/issue-<number>-<short-slug>` and normal DRU implementation uses `dru/issue-<number>-<short-slug>`, each created from current `main`.
 
 ### Joint JFL/DRU practice proposals
 
@@ -212,9 +213,9 @@ The outgoing agent must:
    - risks, blockers, and collision concerns;
    - exact next action.
 
-For an ownership transfer, the incoming agent reads the current card/PR and repository state, posts explicit acceptance, replaces the outgoing `agent:*` label with its own, removes the `handoff:*` label, and sets `stage:in-progress` before editing. The outgoing agent then stops changing the branch unless ownership is transferred back.
+For an ownership transfer, the incoming agent reads the current card/PR and repository state through read-only GitHub views, posts explicit acceptance, replaces the outgoing `agent:*` label with its own, removes the `handoff:*` label, and creates a new branch in its own namespace from current `main` before editing. Any still-needed work is reproduced or selectively applied onto the new branch without checking out or updating the outgoing branch. The issue comment must record both the retired outgoing branch and the new incoming branch.
 
-For review-only handoffs, the implementation owner label does not change. The reviewer records findings and completion; the owner removes `handoff:review` and advances the stage when the review is resolved.
+Branch ownership never transfers and is never transferred back. The outgoing branch remains exclusively owned by its creator even after the card owner changes. For review-only handoffs, the implementation owner label does not change; the reviewer inspects through the PR/diff, records findings and completion, and never checks out or mutates the owner's branch.
 
 ## Implementation behavior
 
@@ -292,7 +293,7 @@ Use the platform best suited to the evidence needed.
 - Read current issues and PRs before coding.
 - Claim a card and work from a dedicated focused branch based on current `main`.
 - Prefer small changes with tests.
-- Do not duplicate an existing implementation PR or modify another agent's active branch without an explicit handoff.
+- Do not duplicate an existing implementation PR. Never check out or mutate another agent's branch; handoffs transfer cards, not branches.
 
 **Supabase / database agents**
 - Treat repository migrations as the durable database source of truth.
