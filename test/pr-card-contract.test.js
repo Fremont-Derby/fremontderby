@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   extractTrackingCardNumbers,
   findTrackingCardConflicts,
+  validateAgentBranchOwnership,
   validatePullRequestBody,
 } from '../scripts/check-pr-card-contract.mjs';
 
@@ -114,4 +115,46 @@ test('excludes the current PR and PRs that track different cards', () => {
     ],
     repositoryFullName: REPOSITORY,
   }), []);
+});
+
+
+test('accepts JFL and DRU PRs only in their own branch namespaces', () => {
+  assert.deepEqual(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'JFL' }),
+    'jfl/issue-629-immutable-agent-branches',
+  ), []);
+  assert.deepEqual(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'DRU' }),
+    'dru/issue-629-immutable-agent-branches',
+  ), []);
+});
+
+test('rejects JFL and DRU PRs outside their own branch namespaces', () => {
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'JFL' }),
+    'dru/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('JFL-owned PRs')));
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'DRU' }),
+    'jfl/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('DRU-owned PRs')));
+});
+
+test('rejects non-owners using JFL or DRU branch namespaces', () => {
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'Orchestrator / ChatGPT' }),
+    'jfl/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('Only a PR whose owner lane is JFL')));
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'Orchestrator / ChatGPT' }),
+    'dru/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('Only a PR whose owner lane is DRU')));
+});
+
+test('rejects ambiguous JFL and DRU co-ownership', () => {
+  const errors = validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'JFL / DRU' }),
+    'jfl/issue-629-immutable-agent-branches',
+  );
+  assert.deepEqual(errors, ['Owner lane / agent must name only one of JFL or DRU.']);
 });
