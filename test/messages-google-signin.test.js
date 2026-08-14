@@ -23,3 +23,19 @@ test('profile preserves next path through Google redirect', () => {
   assert.match(src, /next=/);
   assert.match(src, /window\.location\.replace\(next\)/);
 });
+
+test('rendered messages client script parses', async () => {
+  const { writeFileSync, unlinkSync } = await import('node:fs');
+  const { execFileSync } = await import('node:child_process');
+  const html = renderChatPage({
+    ENVIRONMENT: 'production',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'pub',
+  });
+  const start = html.indexOf('const config =');
+  const end = html.indexOf('</script>', start);
+  const path = '/tmp/messages-client-syntax.js';
+  writeFileSync(path, html.slice(start, end));
+  execFileSync('node', ['--check', path]);
+  try { unlinkSync(path); } catch {}
+});
