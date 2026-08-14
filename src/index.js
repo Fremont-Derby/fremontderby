@@ -1097,14 +1097,27 @@ export async function handleListSeasonScheduleRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    const ifNoneMatch = request?.headers?.get?.('if-none-match') || '';
+    // WHY: warm polls parallelize exists+version (independent I/O) before any heavy build.
+    if (ifNoneMatch) {
+      const [exists, versionState] = await Promise.all([
+        repository.seasonExists({ seasonId }),
+        repository.getSeasonScheduleVersion({ seasonId }),
+      ]);
+      if (!exists) return jsonResponse({ error: "Season not found" }, 404);
+      return conditionalJsonFromVersion(request, {
+        scope: `schedule:${seasonId}`,
+        cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+        getVersion: async () => versionTokenFromValue(versionState),
+        buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+      });
+    }
     if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    // WHY: warm polls only pay for status fingerprint; cold loads skip the extra version query.
     return conditionalJsonFromVersion(request, {
       scope: `schedule:${seasonId}`,
       cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
-      getVersion: async () => versionTokenFromValue(await repository.getSeasonScheduleVersion({ seasonId })),
       versionFromBody: async (body) => {
         // WHY: must match getSeasonScheduleVersion() shape so cold and warm ETags agree.
         const rounds = (body?.rounds || []).map((round) => ({
@@ -1127,10 +1140,7 @@ export async function handleListSeasonScheduleRequest(
         }
         return versionTokenFromValue({ rounds, matches });
       },
-      buildBody: async () => {
-        const rounds = await repository.listSeasonSchedule({ seasonId });
-        return { rounds };
-      },
+      buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
     });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
