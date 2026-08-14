@@ -4,7 +4,9 @@ import { applyScriptNonces } from './securityHeaders.js';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
-  { href: '/schedule', label: 'Schedule', key: 'schedule' },
+  { href: '/schedule',
+  '/playoffs', label: 'Schedule', key: 'schedule' },
+  { href: '/playoffs', label: 'Playoffs', key: 'playoffs' },
   { href: '/standings', label: 'Standings', key: 'standings' },
   { href: '/prizes', label: 'Prizes', key: 'prizes' },
   { href: '/rules', label: 'Rules', key: 'rules' },
