@@ -66,6 +66,24 @@ export function renderPlayoffsPage() {
     const bracketEl=document.querySelector('[data-bracket]');
     const adminEl=document.querySelector('[data-admin]');
     function setStatus(m,t){statusEl.textContent=m;statusEl.dataset.tone=t||'muted'}
+    function markDuplicateNames(players){
+      const counts=new Map();
+      for(const p of players||[]){
+        const key=String(p.displayName||p.display_name||'').trim().toLowerCase();
+        if(!key)continue;
+        counts.set(key,(counts.get(key)||0)+1);
+      }
+      return (players||[]).map((p)=>{
+        const key=String(p.displayName||p.display_name||'').trim().toLowerCase();
+        return Object.assign({},p,{isDuplicateName:Boolean(key&&(counts.get(key)||0)>1)});
+      });
+    }
+    function playerOptionLabel(p){
+      const name=String(p.displayName||p.display_name||'Player').trim()||'Player';
+      if(!p.isDuplicateName)return name;
+      const id=String(p.playerId||p.player_id||p.id||'');
+      return id.length>=4 ? (name+' · #'+id.slice(-4)) : name;
+    }
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function get(path){
       const response=await fetch(path);
@@ -143,10 +161,10 @@ export function renderPlayoffsPage() {
             function paintPlayers(){
               playerBox.replaceChildren();
               anchorSel.innerHTML='<option value="">Anchor player…</option>';
-              const roster=rosterFor(teamSel.value);
+              const roster=markDuplicateNames(rosterFor(teamSel.value));
               for(const p of roster){
                 const id=p.playerId||p.player_id;
-                const name=p.displayName||p.display_name||'Player';
+                const name=playerOptionLabel(p);
                 if(!id)continue;
                 const lab=document.createElement('label');
                 lab.style.display='flex';lab.style.gap='8px';lab.style.alignItems='center';
