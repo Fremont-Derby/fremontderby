@@ -200,6 +200,7 @@ export function renderPrizesPage() {
       <label>Season
         <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
       </label>
+      <a class="ghost" href="/standings" style="min-height:44px;display:inline-flex;align-items:center">Standings</a>
       <button class="load" data-load type="submit" disabled>Load prizes</button>
     </form>
 
@@ -234,6 +235,7 @@ export function renderPrizesPage() {
       </article>
 
       <article class="panel">
+        <p class="muted" style="margin:0 0 12px">Singles prize eligibility follows individual standings (minimum matches). Team prizes follow final team rank. Open Standings for the live “why” line on each player.</p>
         <div class="panel-head"><span>Finalized payouts</span><span class="badge" data-finalized-count>0</span></div>
         <table>
           <thead>
