@@ -24,7 +24,7 @@
 - [ ] Checked open PRs/cards for overlapping work before implementation.
 - [ ] Rechecked overlap/current `main` before merge.
 - [ ] No unrelated sweeping formatting/refactor/cleanup is bundled into this PR.
-- [ ] I did not overwrite or rewrite another agent's active branch/work without an explicit handoff.
+- [ ] I never checked out or mutated another agent's branch; handoffs transfer cards, not branches.
 
 ## Risk / safety
 <!-- Auth, RLS, data, migrations, environment isolation, compatibility, rollback, shared-file collision, or other meaningful risk. -->
