@@ -18,6 +18,7 @@ jobs:
           node-version: 22
       - run: npm run lint
       - run: npm run check
+      - run: npm run labels:check
       - name: Run tests
         id: tests
         shell: bash
