@@ -108,7 +108,7 @@ export function renderProfilePage(env = {}) {
   <main class="app">
     <header class="topbar">
       <div class="brand"><span class="mark">P</span><span>Fremont Derby Profile</span></div>
-      <div class="status" role="status" aria-live="polite" aria-atomic="true" data-status>Checking sign-in…</div>
+      <div class="status" role="status" aria-live="polite" aria-atomic="true" data-status></div>
     </header>
 
     <section class="grid">
