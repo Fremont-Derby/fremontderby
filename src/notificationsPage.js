@@ -26,6 +26,7 @@ export function renderNotificationsPage() {
       <button type="button" class="primary" data-mark-all>Mark all read</button>
       <a class="ghost" href="/messages">Open messages</a>
       <a class="ghost" href="/teams">Teams</a>
+      <a class="ghost" href="/players">Players</a>
     </div>
     <section class="list" data-list></section>
   </main>
@@ -42,41 +43,51 @@ export function renderNotificationsPage() {
       if(!response.ok)throw new Error(body.error||'Request failed');
       return body;
     }
-    function render(items){
-      listEl.replaceChildren();
-      if(!items.length){listEl.textContent='No notifications yet.';return}
-      for(const item of items){
-        const card=document.createElement('article');
-        card.className='item';
-        card.dataset.unread=String(!item.readAt);
-        const title=document.createElement('strong');
-        title.textContent=item.title;
-        const body=document.createElement('div');
-        body.className='muted';
-        body.textContent=item.body;
-        card.append(title,body);
-        if(item.href){
-          const link=document.createElement('a');
-          link.href=item.href;
-          link.textContent='Open';
-          card.append(link);
-        }
-        if(!item.readAt){
-          const mark=document.createElement('button');
-          mark.type='button';
-          mark.textContent='Mark read';
-          mark.addEventListener('click',async()=>{
-            try{await api('/api/me/notifications/'+encodeURIComponent(item.id)+'/read',{method:'POST'});await load()}
-            catch(error){setStatus(error.message,'error')}
-          });
-          card.append(mark);
-        }
-        listEl.append(card);
+    function buildNotificationCard(item){
+      const card=document.createElement('article');
+      card.className='item';
+      card.dataset.unread=String(!item.readAt);
+      const title=document.createElement('strong');
+      title.textContent=item.title;
+      const body=document.createElement('div');
+      body.className='muted';
+      body.textContent=item.body;
+      card.append(title,body);
+      if(item.href){
+        const link=document.createElement('a');
+        link.href=item.href;
+        link.textContent='Open';
+        card.append(link);
       }
+      if(!item.readAt){
+        const mark=document.createElement('button');
+        mark.type='button';
+        mark.textContent='Mark read';
+        mark.addEventListener('click',async()=>{
+          try{await api('/api/me/notifications/'+encodeURIComponent(item.id)+'/read',{method:'POST'});await load()}
+          catch(error){setStatus(error.message,'error')}
+        });
+        card.append(mark);
+      }
+      return card;
     }
-    async function load(){
+    function render(items){
+      if(!items.length){listEl.replaceChildren();listEl.textContent='No notifications yet.';return}
+      if(window.fdStableList){
+        window.fdStableList(listEl,items,{
+          key:(item)=>String(item.id||item.title||''),
+          signature:(item)=>[item.title,item.body,item.readAt,item.href].join('|'),
+          render:(item)=>buildNotificationCard(item),
+        });
+        return;
+      }
+      listEl.replaceChildren();
+      for(const item of items) listEl.append(buildNotificationCard(item));
+    }
+    async function load(opts={}){
+      const quiet=Boolean(opts&&opts.quiet);
       if(!token()){setStatus('Sign in required','muted');listEl.textContent='Open Profile and sign in to see notifications.';return}
-      setStatus('Loading…');
+      if(!quiet) setStatus('Loading…');
       const body=await api('/api/me/notifications');
       render(body.notifications||[]);
       const unread=(body.notifications||[]).filter((n)=>!n.readAt).length;
@@ -87,7 +98,7 @@ export function renderNotificationsPage() {
       catch(error){setStatus(error.message,'error')}
     });
     load().catch((error)=>setStatus(error.message,'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load().catch(()=>{}),{intervalMs:30000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;
