@@ -29,6 +29,7 @@ Before claiming or continuing ordinary implementation work, DRU performs one con
 Apply the pulse efficiently:
 
 - Treat `priority:p0` safety, infrastructure, governance, and `collision-risk` handoffs as immediate intake.
+- When planned work depends on a hosted lane, also check related `human-required` blockers and current hostname/environment health. Do not claim hosted UI or QA work against a known NXDOMAIN, wrong environment, or unavailable lane; sequence the blocker or choose independent work.
 - Record an explicit `AGREE` or `DISAGREE` with rationale on the canonical joint-practice card when DRU's vote is requested.
 - If work overlaps, do not start a competing implementation. Record the collision on the canonical card and choose read-only review, a coherent split, explicit sequencing, or an accepted card handoff.
 - The pulse never transfers branch ownership. Inspect JFL branches and PRs read-only and continue only on a DRU-owned branch.
