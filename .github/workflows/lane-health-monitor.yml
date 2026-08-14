@@ -1,8 +1,7 @@
 name: Lane health monitor
+# POC mode (#679): manual only while GitHub-hosted runners are unavailable.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '47 * * * *'
 jobs:
   probe:
     runs-on: ubuntu-latest
