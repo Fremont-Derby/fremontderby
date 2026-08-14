@@ -7,6 +7,8 @@ const NAV_ITEMS = [
   { href: '/schedule', label: 'Schedule', key: 'schedule' },
   { href: '/playoffs', label: 'Playoffs', key: 'playoffs' },
   { href: '/standings', label: 'Standings', key: 'standings' },
+  { href: '/players', label: 'Players', key: 'players' },
+  { href: '/lineup', label: 'Lineup', key: 'lineup' },
   { href: '/prizes', label: 'Prizes', key: 'prizes' },
   { href: '/trades', label: 'Trades', key: 'trades' },
   { href: '/rules', label: 'Rules', key: 'rules' },
@@ -62,6 +64,7 @@ function sectionForPath(pathname) {
   if (pathname === '/notifications') return 'notifications';
   if (pathname === '/prizes') return 'prizes';
   if (pathname.startsWith('/standings')) return 'standings';
+  if (pathname === '/players' || pathname.startsWith('/players/')) return 'players';
   if (pathname.startsWith('/scorecard')) return 'score';
   if (pathname.startsWith('/messages')) return 'messages';
   if (pathname === '/season-setup' || pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';

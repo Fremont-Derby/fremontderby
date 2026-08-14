@@ -61,6 +61,7 @@ import {
   listIndividualStandingsCommand,
   listTeamStandingsCommand,
 } from './standingsCommands.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderStandingsPage } from './standingsPage.js';
 import { createStandingsRepository } from './standingsRepository.js';
 import { conditionalJsonFromVersion, conditionalJsonResponse, versionTokenFromValue } from './httpConditional.js';
@@ -1960,7 +1961,21 @@ export default {
       });
     }
 
-    if (url.pathname === "/standings") {
+    
+    if (url.pathname === "/players") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderPlayersDirectoryPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+if (url.pathname === "/standings") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }

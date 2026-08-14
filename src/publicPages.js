@@ -36,6 +36,12 @@ export function renderIntroPage() {
     <div class="eyebrow">Cash league · 8 teams · 12 weeks · flexible calendar</div>
     <h1>Fremont Derby</h1>
     <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
+    <ul>
+      <li><strong>When:</strong> Weekly league nights across a 12-week season (seven-match round robin + flex / makeup / postseason).</li>
+      <li><strong>Where:</strong> Fremont venue — four tables, one house.</li>
+      <li><strong>Cost:</strong> Team + individual cash stakes (see Rules for current season amounts).</li>
+      <li><strong>How to join:</strong> Sign in on Profile, register for the open season, then join or form a team.</li>
+    </ul>
     <p>The 12-week calendar is built around a <strong>seven-match single round robin</strong>: every team plays every other team once, with the remaining calendar space reserved for flexibility, makeup dates, and postseason play.</p>
     <p>Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
     <p>Every match also counts toward the <strong>individual cash competition</strong>. Flexible scheduling and simple team management make it easy to use subs and keep matches moving.</p>
@@ -46,6 +52,7 @@ export function renderIntroPage() {
       <a class="button" href="/schedule">Schedule</a>
       <a class="button" href="/teams">Teams</a>
       <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/players">Players</a>
       <a class="button" href="/playoffs">Playoffs</a>
       <a class="button" href="/rules">Read the rules</a>
     </div>
