@@ -15,6 +15,7 @@ const required = [
   'test/two-device-scorecard-flow.test.js',
   'test/season-publish-readiness.test.js',
   'docs/SEASON1_TEST_CONTRACT.md',
+  'test/diagnose-worker-domain-expectations.test.js',
   'test/worker-domain-bindings.test.js',
 ];
 
