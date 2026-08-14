@@ -1,3 +1,4 @@
+import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
 import {
   listTeamRoundAvailabilityCommand,
   setRosterAvailabilityCommand,
@@ -130,12 +131,7 @@ export function renderLandingPage(env = {}) {
 }
 
 function jsonResponse(body, status = 200) {
-  return Response.json(body, {
-    status,
-    headers: {
-      "cache-control": "no-store",
-    },
-  });
+  return Response.json(body, { status, headers: apiSecurityHeaders() });
 }
 
 async function readJsonBody(request) {

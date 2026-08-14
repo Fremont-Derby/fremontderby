@@ -1,5 +1,6 @@
 import { livePageRefreshScript } from './livePageRefresh.js';
 import { friendlyErrorMessage } from './friendlyErrorMessage.js';
+import { applyScriptNonces } from './securityHeaders.js';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
@@ -641,7 +642,7 @@ const errorPopupScript = `<script data-fd-error-popup-script>
   })();
 </script>`;
 
-export function decorateHtmlWithShell(html, pathname = '/') {
+export function decorateHtmlWithShell(html, pathname = '/', { nonce } = {}) {
   if (typeof html !== 'string' || html.includes('data-fd-shell')) return html;
   if (!/<body(?:\s|>)/i.test(html)) return html;
 
@@ -662,9 +663,10 @@ export function decorateHtmlWithShell(html, pathname = '/') {
   const mobileSpacer = pathname.startsWith('/scorecard')
     ? ''
     : '<div class="fd-mobile-dock-spacer" aria-hidden="true"></div>\n';
-  return /<\/body>/i.test(withShell)
+  const assembled = /<\/body>/i.test(withShell)
     ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}${navMenuScript}\n${errorPopupScript}\n${readyCheckScript}\n${livePageRefreshScript}\n</body>`)
     : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}${readyCheckScript}${livePageRefreshScript}`;
+  return applyScriptNonces(assembled, nonce);
 }
 
 export function isKnownAppPagePath(pathname) {

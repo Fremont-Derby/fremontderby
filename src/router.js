@@ -1,3 +1,4 @@
+import { createRequestNonce, htmlSecurityHeaders, apiSecurityHeaders } from './securityHeaders.js';
 import app from './index.js';
 import { renderDesignSystemCatalogPage } from './designSystemCatalogPage.js';
 import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
@@ -27,12 +28,10 @@ import { teamMatchChoiceHttpHandlers } from './teamMatchChoiceHttp.js';
 import { teamMembershipRequestHttpHandlers } from './teamMembershipRequestHttp.js';
 
 function htmlResponse(html, pathname, status = 200) {
-  return new Response(decorateHtmlWithShell(html, pathname), {
+  const nonce = createRequestNonce();
+  return new Response(decorateHtmlWithShell(html, pathname, { nonce }), {
     status,
-    headers: {
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'no-store',
-    },
+    headers: htmlSecurityHeaders(nonce),
   });
 }
 
@@ -47,12 +46,14 @@ async function decorateAppResponse(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
+  const nonce = createRequestNonce();
   const headers = new Headers(response.headers);
-  headers.set('content-type', 'text/html; charset=utf-8');
-  headers.set('cache-control', 'no-store');
+  for (const [key, value] of Object.entries(htmlSecurityHeaders(nonce))) {
+    headers.set(key, value);
+  }
 
   return new Response(
-    decorateHtmlWithShell(await response.text(), pathname),
+    decorateHtmlWithShell(await response.text(), pathname, { nonce }),
     {
       status: response.status,
       statusText: response.statusText,
