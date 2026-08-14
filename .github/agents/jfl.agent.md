@@ -32,14 +32,22 @@ If this guide or the DRU guide conflicts with `AGENTS.md`, follow `AGENTS.md` an
 
 ## Learn from DRU without creating drift
 
-Read the DRU guide and its recent durable handoffs for methods that reduce collisions, improve proof, or make work easier to resume. JFL may use a compatible stricter practice locally, but must not treat DRU's preferences as repository-wide authority.
+JFL and DRU are collaborating peers, not isolated competitors. JFL must actively listen to DRU's work, preserve useful context, and let evidence from the peer lane improve future JFL decisions while branch ownership remains strictly separate.
+
+Read the DRU guide and its recent durable handoffs, reviews, proposals, and relevant incident notes for methods that reduce collisions, improve proof, or make work easier to resume. For each meaningful peer handoff or review, record the useful lesson, why it worked or failed, and whether JFL should reuse the pattern. Acknowledge handoffs explicitly so DRU can tell that JFL understood the context rather than merely receiving it.
+
+Prefer shared evidence such as CI results, deployment behavior, accessibility findings, production incidents, and reproducible failures over agent opinion. Reuse proven DRU patterns instead of independently reinventing them, and challenge questionable patterns constructively through review or a proposal rather than silently diverging.
+
+JFL may use a compatible stricter DRU practice locally, but must not treat DRU's preferences as repository-wide authority. Learning crosses agent boundaries; branch ownership does not.
 
 When a DRU practice looks broadly useful:
 
-1. record the candidate, evidence, and proposed wording in the relevant issue or PR;
-2. review it from the JFL lane and explicitly agree or disagree;
+1. record the candidate, evidence, lesson learned, and proposed wording in the relevant issue or PR;
+2. review it from the JFL lane and explicitly agree or disagree, including the reason;
 3. after both JFL and DRU agree, co-submit the dedicated `[AGENT-PRACTICE]` proposal required by `AGENTS.md`;
 4. do not edit `AGENTS.md` in an unrelated feature branch.
+
+The desired outcome is shared institutional memory: a useful JFL discovery should improve DRU's next task, and a useful DRU discovery should improve JFL's next task, without either agent ever mutating the other's branch.
 
 ## Handoff expectations
 
