@@ -5,6 +5,13 @@ name: Deploy release lanes
 on:
   workflow_dispatch:
     inputs:
+      runner_target:
+        description: 'Runner (ubuntu-latest or self-hosted for laptop INFRA)'
+        required: false
+        default: 'ubuntu-latest'
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+
       lane:
         description: 'Lane to deploy (jfl, dru, gamma, production, or all-lanes)'
         required: true
@@ -14,7 +21,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -34,7 +41,7 @@ jobs:
 
   deploy:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
     permissions:
       contents: read
     strategy:

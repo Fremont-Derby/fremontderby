@@ -69,3 +69,18 @@ Page CSS often used `font-weight: 900/950`. Global polish prefers **700** for co
 2. Prefer `data-tone="ok"|"error"|"warning"` for new status calls.
 3. New surfaces should opt into `data-fd-player-surface` or `data-fd-admin-surface`.
 4. Avoid adding a third global theme file without extending `designSystem.js`.
+
+## Code-smell remediation (approved batch)
+
+| Smell | Resolution |
+|-------|------------|
+| Duplicated `friendlyErrorMessage` | `src/friendlyErrorMessage.js`; shell + profile share one implementation |
+| Page-local dark tokens | Central `src/tokenRemap.js` on player/admin surfaces |
+| Mixed `data-tone` | CSS aliases + call-site cleanup (`critical`→`error` on operations) |
+| Template `\s` footgun | `scripts/lint-template-regex.mjs` |
+| “Checking …” system chrome | Cleared/replaced on teams, messages, lineup |
+| Hosted `runner_id: 0` | Workflows accept `runner_target: self-hosted` input for INFRA laptop runs |
+
+## Design catalog
+See `docs/design-system-storybook.md` and route `/design-system`.
+

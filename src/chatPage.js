@@ -123,7 +123,7 @@ export function renderChatPage(env = {}) {
   <main class="app">
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
-      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true">Checking your messages…</div></div>
+      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
     </header>
 
     <section class="state-card" data-page-state data-tone="warning" hidden>

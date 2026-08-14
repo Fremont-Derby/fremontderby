@@ -1,3 +1,4 @@
+import { tokenRemapStyles } from './tokenRemap.js';
 const PLAYER_SURFACES = new Map([
   ['/', 'home'],
   ['/schedule', 'schedule'],
@@ -18,6 +19,7 @@ export const playerSurfaceThemeStyles = `
     overflow-x: hidden;
     background: var(--fd-bg-page) !important;
     color: var(--fd-text) !important;
+    ${tokenRemapStyles}
   }
 
   body[data-fd-player-surface] *,
