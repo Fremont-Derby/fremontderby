@@ -3,6 +3,7 @@ name: CI
 # POC mode (#679): GitHub-hosted runners are unavailable because of account
 # billing/spending limits. Keep this workflow intact for later reactivation,
 # but do not create automatic failed checks on PRs or branch pushes.
+# Inventory + reactivation: docs/GITHUB_ACTIONS.md · restore gates: #701
 on:
   workflow_dispatch:
 
