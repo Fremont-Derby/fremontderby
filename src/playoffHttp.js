@@ -28,7 +28,7 @@ async function readJsonBody(request) {
   }
 }
 
-function statusForError(error) {
+export function playoffStatusForError(error) {
   if (error instanceof AuthError) return error.status;
   const message = error?.message || 'Request failed';
   if (message.includes('Actor is not a league admin')) return 403;
@@ -67,7 +67,7 @@ export function createPlayoffHttpHandlers({
         );
         return jsonResponse({ playoffs }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, playoffStatusForError(error));
       }
     },
 
@@ -81,7 +81,7 @@ export function createPlayoffHttpHandlers({
         );
         return jsonResponse({ championship }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, playoffStatusForError(error));
       }
     },
 
@@ -102,7 +102,7 @@ export function createPlayoffHttpHandlers({
         );
         return jsonResponse({ lineup }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, playoffStatusForError(error));
       }
     },
   };

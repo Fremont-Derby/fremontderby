@@ -8,7 +8,7 @@ import {
 import { createAdminSeasonTeamsRepository } from './adminSeasonTeamsRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 
-function statusFor(error) {
+export function adminSeasonTeamsStatusFor(error) {
   const message = error?.message || 'Request failed';
   if (message.includes('Actor is not a league admin')) return 403;
   if (message.includes('Supabase request failed with 401')) return 401;
@@ -50,7 +50,7 @@ export function createAdminSeasonTeamsHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return Response.json({ error: error.message }, { status: statusFor(error) });
+      return Response.json({ error: error.message }, { status: adminSeasonTeamsStatusFor(error) });
     }
   }
 

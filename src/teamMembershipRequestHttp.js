@@ -23,7 +23,7 @@ async function readJsonBody(request) {
   }
 }
 
-function statusForError(error) {
+export function teamMembershipStatusForError(error) {
   const message = error?.message || 'Request failed';
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
@@ -48,7 +48,7 @@ export function createTeamMembershipRequestHttpHandlers({
         const requests = await repository.listOwn({ actorUserId: actor.id });
         return jsonResponse({ requests: requests ?? { player_requests: [], captain_requests: [] } });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
       }
     },
 
@@ -62,7 +62,7 @@ export function createTeamMembershipRequestHttpHandlers({
         });
         return jsonResponse({ membershipRequest }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
       }
     },
 
@@ -82,7 +82,7 @@ export function createTeamMembershipRequestHttpHandlers({
         });
         return jsonResponse({ membershipRequest });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
       }
     },
 
@@ -96,7 +96,7 @@ export function createTeamMembershipRequestHttpHandlers({
         });
         return jsonResponse({ membershipRequest });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
       }
     },
   };

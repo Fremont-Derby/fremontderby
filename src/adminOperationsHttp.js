@@ -248,7 +248,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
   };
 }
 
-function statusForError(error) {
+export function adminOperationsStatusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/League admin access/i.test(error.message)) return 403;
   return 502;
@@ -270,7 +270,7 @@ export async function handleAdminOperationsRequest(
   } catch (error) {
     return Response.json(
       { error: error.message },
-      { status: statusForError(error), headers: { 'cache-control': 'no-store' } },
+      { status: adminOperationsStatusForError(error), headers: { 'cache-control': 'no-store' } },
     );
   }
 }
