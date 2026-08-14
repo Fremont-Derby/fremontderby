@@ -1,3 +1,5 @@
+import { safeAutocompleteClientScript } from './safeAutocomplete.js';
+
 export function renderTeamsPage() {
   return `<!doctype html>
 <html lang="en">
@@ -84,7 +86,7 @@ export function renderTeamsPage() {
     </section>
     <form class="setup" data-create-form>
       <label>Season<select name="seasonId" data-season-select><option value="">Loading open season…</option></select></label>
-      <label>Team name<input name="teamName" data-team-name autocomplete="off" maxlength="80" placeholder="Team name" /></label>
+      <label>Team name<input name="teamName" data-team-name autocomplete="organization" autocomplete="off" maxlength="80" placeholder="Team name" /></label>
       <button class="primary" data-create-team type="submit">Apply for team slot</button>
     </form>
     <div class="hint" data-season-help hidden>Team registration is not open right now. You can still review your current team activity below.</div>
@@ -295,6 +297,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         locInput.type='text';
         locInput.maxLength=120;
         locInput.placeholder='e.g. Fremont Bowl — side tables';
+        locInput.setAttribute('data-safe-ac','practiceLocation');
         locInput.dataset.practiceLocation=team.teamId||team.id||'';
         locInput.value=team.practiceLocation||team.practice_location||'';
         locLabel.append(locInput);
@@ -304,6 +307,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         schedInput.type='text';
         schedInput.maxLength=120;
         schedInput.placeholder='e.g. 6:30–8:00 PM';
+        schedInput.setAttribute('data-safe-ac','practiceTime');
         schedInput.dataset.practiceSchedule=team.teamId||team.id||'';
         schedInput.value=team.practiceSchedule||team.practice_schedule||'';
         schedLabel.append(schedInput);
@@ -337,6 +341,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         practice.append(practiceTitle,practiceHelp,locLabel,schedLabel,recLabel,onLabel,summary,save);
         card.append(practice);
         captainTeamsEl.append(card);
+        if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(practice);
       }
     }
     function renderJoinTeams(items){
@@ -524,6 +529,7 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
 
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>run(async()=>{await loadTeams(opts)}),{intervalMs:20000,immediate:false});
   </script>
+${safeAutocompleteClientScript}
 </body>
 </html>`;
 }
