@@ -43,6 +43,10 @@ export function renderIntroPage() {
     <div class="actions">
       <a class="button primary" href="/profile">Join / sign in</a>
       <a class="button demo" href="/demo">Test drive the app</a>
+      <a class="button" href="/schedule">Schedule</a>
+      <a class="button" href="/teams">Teams</a>
+      <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/playoffs">Playoffs</a>
       <a class="button" href="/rules">Read the rules</a>
     </div>
   `);

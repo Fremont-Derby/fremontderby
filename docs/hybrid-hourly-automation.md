@@ -18,7 +18,7 @@ Three layers keep Fremont Derby from depending on a single scheduler.
   - `HOURLY_PROBE_HOSTS` — comma-separated origins (default `https://fremontderby.com`)
   - `HOURLY_PROBE_GITHUB_TOKEN` — fine-grained PAT with issues:write (optional)
   - `HOURLY_PROBE_ISSUE` — issue number for failure comments (default `806`)
-  - `HOURLY_PROBE_KEY` — if set, required as `x-probe-key` for `GET /internal/hourly-probe`
+  - `HOURLY_PROBE_KEY` — **required in production** for `GET /internal/hourly-probe` (`x-probe-key` or `?key=`)
 
 Manual check (after deploy):
 
