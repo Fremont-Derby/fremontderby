@@ -60,6 +60,7 @@ import {
   approveTeamTradeCaptainCommand,
   cancelTeamInvitationCommand,
   invitePlayerToTeamCommand,
+  updateTeamPracticeCommand,
   listOwnTeamManagementCommand,
   listOwnTeamTradesCommand,
   proposeTeamTradeCommand,
@@ -692,6 +693,35 @@ export async function handleListOwnTeamTradesRequest(
     );
 
     return jsonResponse({ tradeManagement });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+export async function handleUpdateTeamPracticeRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'PUT' && request.method !== 'POST') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const practice = await updateTeamPracticeCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        practiceLocation: body.practiceLocation ?? body.practice_location ?? null,
+        practiceSchedule: body.practiceSchedule ?? body.practice_schedule ?? null,
+      },
+      repository,
+    );
+    return jsonResponse({ practice });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1452,6 +1482,9 @@ export default {
     const membershipRequestCancelMatch = url.pathname.match(
       /^\/api\/team-membership-requests\/([^/]+)\/cancel$/,
     );
+    const teamPracticeMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/practice$/,
+    );
     const teamInvitationMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/invitations$/,
     );
@@ -1913,6 +1946,18 @@ export default {
         request,
         env,
         decodeURIComponent(membershipRequestCancelMatch[1]),
+      );
+    }
+
+    if (teamPracticeMatch) {
+      if (request.method !== "PUT" && request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleUpdateTeamPracticeRequest(
+        request,
+        env,
+        decodeURIComponent(teamPracticeMatch[1]),
       );
     }
 
