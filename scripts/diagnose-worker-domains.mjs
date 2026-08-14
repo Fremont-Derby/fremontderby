@@ -18,9 +18,27 @@ async function cf(path) {
 }
 
 const { response, payload } = await cf('/workers/domains');
-console.log(JSON.stringify({ status: response.status, success: payload.success, result: payload.result, errors: payload.errors }, null, 2));
+console.log(JSON.stringify({
+  status: response.status,
+  success: payload.success,
+  domains: (payload.result || []).map((row) => ({
+    hostname: row.hostname,
+    service: row.service,
+    environment: row.environment,
+    id: row.id,
+  })),
+  errors: payload.errors,
+}, null, 2));
 
-for (const script of ['fremontderby', 'fremontderby-dru', 'fremontderby-jfl', 'fremontderby-gamma']) {
+for (const script of ['fremontderby', 'fremontderby-dru', 'fremontderby-jfl', 'fremontderby-gamma', 'fremontderby-prod']) {
   const r = await cf(`/workers/scripts/${encodeURIComponent(script)}`);
-  console.log(script, r.response.status, r.payload?.success, r.payload?.result?.id || r.payload?.errors);
+  const ok = r.response.ok
+  console.log(JSON.stringify({
+    script,
+    status: r.response.status,
+    ok,
+    id: r.payload?.result?.id,
+    modified: r.payload?.result?.modified_on,
+    errors: r.payload?.errors,
+  }))
 }
