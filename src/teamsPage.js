@@ -277,11 +277,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
       const need = Math.max(0, target - registered);
       return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Needs depth (add ' + need + ' more)';
     }
-    function renderCaptainTeams(teams){
-      if(!captainTeamsEl)return;
-      captainTeamsEl.replaceChildren();
-      if(!teams.length){captainTeamsEl.append(empty('You are not captaining a team yet.'));return}
-      for(const team of teams){
+    function buildCaptainTeamCard(team){
         const card=document.createElement('div');
         card.className='card';
         card.append(node('h2',team.teamName||'Team'));
@@ -376,9 +372,37 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         const save=actionButton('Save practice','primary',{savePractice:team.teamId||team.team_id||team.id||''});
         practice.append(practiceTitle,practiceHelp,locLabel,schedLabel,recLabel,onLabel,summary,save);
         card.append(practice);
-        captainTeamsEl.append(card);
-        if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(practice);
+        if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(card);
+        return card;
+    }
+    function renderCaptainTeams(teams){
+      if(!captainTeamsEl)return;
+      if(!teams.length){
+        captainTeamsEl.replaceChildren();
+        captainTeamsEl.append(empty('You are not captaining a team yet.'));
+        return;
       }
+      function captainSig(team){
+        const members=Array.isArray(team.members)?team.members:(Array.isArray(team.roster)?team.roster:[]);
+        return [
+          team.teamName||team.team_name||'',
+          team.practiceLocation||team.practice_location||'',
+          team.practiceSchedule||team.practice_schedule||'',
+          team.practiceRecurrence||team.practice_recurrence||'',
+          members.map((m)=>m.playerId||m.player_id||m.id||'').join(','),
+          members.length,
+        ].join('|');
+      }
+      if(window.fdStableList){
+        window.fdStableList(captainTeamsEl,teams,{
+          key:(t)=>String(t.teamId||t.team_id||t.id||''),
+          signature:captainSig,
+          render:(t)=>buildCaptainTeamCard(t),
+        });
+        return;
+      }
+      captainTeamsEl.replaceChildren();
+      for(const team of teams){captainTeamsEl.append(buildCaptainTeamCard(team));}
     }
     function renderJoinTeams(items){
       if(!joinTeamsEl)return;
