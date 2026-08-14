@@ -172,3 +172,20 @@ The endpoint must not return credential values. It should return HTTP 200 only w
 Ad-hoc Cloudflare domain attach without `wrangler deploy --env <lane>` is insufficient for durable DNS. Prefer branch deploys (`fremontderby-jfl` / `fremontderby-dru` / `fremontderby-gamma`) so routes and env vars publish together.
 
 See also `docs/platform-capabilities.md`.
+
+
+## Provisioning lane secrets
+
+Lane deploys fail closed until required secrets exist on the Worker:
+
+```bash
+npx wrangler secret put SUPABASE_URL --env dru
+npx wrangler secret put SUPABASE_PUBLISHABLE_KEY --env dru
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env dru
+npx wrangler secret put EXPECTED_SUPABASE_PROJECT_REF --env dru
+npx wrangler secret put BETA_ACTOR_USER_ID --env dru
+```
+
+Use `--env jfl` / `--env gamma` with the matching isolated project values. Gamma must not set open-auth actor bypass secrets for production-like behavior.
+
+After secrets are set, deploy with `npm run deploy:dru` (from `fremontderby-dru`) or the **Deploy release lanes** GitHub Action.
