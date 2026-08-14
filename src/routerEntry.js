@@ -95,7 +95,7 @@ async function finalizeBrowserResponse(response, pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (isRetiredTradePath(url.pathname)) return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    // Trades restored — paths served by legacy router / index handlers.
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);

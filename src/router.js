@@ -24,6 +24,7 @@ import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 import { renderSchedulePage } from './schedulePage.js';
 import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderTradesPage } from './tradesPage.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
 import { readyCheckHttpHandlers } from './readyCheckHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
@@ -177,6 +178,10 @@ export default {
 
     if (url.pathname === '/playoffs') {
       return htmlResponse(renderPlayoffsPage(), url.pathname);
+    }
+    if (url.pathname === '/trades') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderTradesPage(), url.pathname);
     }
     if (url.pathname === '/schedule') {
       if (request.method !== 'GET') return methodNotAllowed();
