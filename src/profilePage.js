@@ -212,10 +212,7 @@ export function renderProfilePage(env = {}) {
       return sessionStorage.getItem('fd.refreshToken') || '';
     }
 
-    function setStatus(message, tone) {
-      statusEl.textContent = message;
-      statusEl.dataset.tone = tone || 'muted';
-    }
+    function setStatus(message, tone){if(window.fdSetStatus){window.fdSetStatus(statusEl,message,tone || 'muted',{});return;}statusEl.textContent=message;statusEl.dataset.tone=tone || 'muted';}
 
     function setSession(accessToken, nextRefreshToken = '') {
       if (accessToken) {

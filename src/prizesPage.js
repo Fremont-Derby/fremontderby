@@ -426,7 +426,7 @@ export function renderPrizesPage() {
       try {
         await action();
       } catch (error) {
-        setStatus(error.message, 'error');
+        setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
         showState('Could not load prizes', error.message, '/prizes', 'Try again');
       }
     }

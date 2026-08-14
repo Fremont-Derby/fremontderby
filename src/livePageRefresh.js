@@ -13,7 +13,9 @@
  * Helpers exposed on window:
  *   fdStableList(container, items, { key, signature, render })
  *   fdSetStatus(el, message, tone, { quiet })  → skips Loading-like messages when quiet
- *   fdFriendlyError(err) → product-safe client error string when available
+ *   fdFriendlyError(err) → product-safe client error string
+ *   fdQuietRun(action, { quiet, statusEl, loadingMessage }) → shared try/catch runner
+ *   register(fn, { statusEl, softFail }) → soft will-retry after quiet failures
  *
  * Behavior:
  * - Polls only while the tab is visible and navigator.onLine
@@ -54,12 +56,26 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
       entry.lastError = null;
       entry.lastAt = Date.now();
       window.fdLiveRefresh.lastError = null;
+      if (quiet && entry.statusEl && entry.statusEl.dataset && entry.statusEl.dataset.fdSoftFail === '1') {
+        window.fdSetStatus(entry.statusEl, entry.lastOkStatus || 'Up to date', 'ok');
+        delete entry.statusEl.dataset.fdSoftFail;
+      }
     } catch (error) {
       entry.failCount = (entry.failCount || 0) + 1;
       entry.nextAllowedAt = Date.now() + Math.min(60000, 5000 * entry.failCount);
       entry.lastError = error;
       window.fdLiveRefresh.lastError = error;
-      // Background failures stay silent at the registry layer; pages may still surface via their own catch.
+      if (quiet && entry.softFail !== false && entry.statusEl && entry.failCount >= 2) {
+        const friendly = window.fdFriendlyError(error);
+        const soft = entry.failCount >= 3
+          ? ('Last update failed — will retry. ' + friendly)
+          : 'Update delayed — retrying…';
+        window.fdSetStatus(entry.statusEl, soft, 'muted');
+        entry.statusEl.dataset.fdSoftFail = '1';
+      }
+      if (typeof entry.onFail === 'function') {
+        try { entry.onFail(error, { quiet, reason, failCount: entry.failCount }); } catch (_) {}
+      }
     } finally {
       entry.running = false;
     }
@@ -210,31 +226,93 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
   window.fdSetStatus = function fdSetStatus(el, message, tone, opts) {
     if (!el) return;
     const quiet = Boolean(opts && opts.quiet);
-    const text = String(message == null ? '' : message);
-    if (quiet && /^(loading|checking|saving|working)\b/i.test(text.trim())) return;
-    el.textContent = text;
-    if (tone) el.dataset.tone = tone;
+    const textMsg = String(message == null ? '' : message);
+    if (quiet && /^(loading|checking|saving|working)\b/i.test(textMsg.trim())) return;
+    el.textContent = textMsg;
+    if (tone) el.dataset.tone = String(tone);
     else if (el.dataset) delete el.dataset.tone;
   };
 
-  // Prefer product-safe mapping when friendlyErrorMessage was inlined by the page.
+  // Product-safe client errors (mirrors friendlyErrorMessage.js).
   window.fdFriendlyError = function fdFriendlyError(error) {
     if (typeof window.friendlyErrorMessage === 'function') {
       try { return window.friendlyErrorMessage(error); } catch (_) {}
     }
-    if (error && typeof error === 'object' && error.message) return String(error.message);
-    return String(error || 'We could not complete that action. Please try again.');
+    const raw = error && typeof error === 'object' && error.message
+      ? String(error.message)
+      : String(error || '');
+    const message = raw.replace(/\s+/g, ' ').trim();
+    if (!message) return 'We could not complete that action. Please try again.';
+    if (
+      (typeof navigator !== 'undefined' && navigator.onLine === false)
+      || /failed to fetch|networkerror|net::err_|load failed|offline/i.test(message)
+    ) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return 'You appear to be offline. Reconnect and try again. Nothing was changed.';
+      }
+      return 'We could not reach the league service. Check your connection and try again. Nothing was changed.';
+    }
+    if (/sign[- ]?in expired|session expired|unauthorized|jwt/i.test(message)) {
+      return 'Your sign-in expired. Open Profile, sign in again, and retry.';
+    }
+    if (/503|service unavailable|worker threw/i.test(message)) {
+      return 'The league service is temporarily unavailable. Please try again in a moment. Nothing was changed.';
+    }
+    if (/429|rate limit|too many requests|throttl/i.test(message)) {
+      return 'Too many requests in a short time. Wait a few seconds and try again.';
+    }
+    if (/migration|schema cache|PGRST202|function .+ does not exist|could not find the function/i.test(message)) {
+      return 'This league feature is still being published. Please try again shortly. Nothing was changed.';
+    }
+    if (/supabase|postgrest|permission denied|postgres|PGRST|statement timeout|service role/i.test(message)) {
+      return 'We could not complete that action. Nothing was changed. Please try again.';
+    }
+    return message;
+  };
+
+  /**
+   * Shared page action runner.
+   *   await window.fdQuietRun(async () => {...}, { quiet, statusEl, loadingMessage })
+   */
+  window.fdQuietRun = async function fdQuietRun(action, options) {
+    const opts = options || {};
+    const quiet = Boolean(opts.quiet);
+    const statusEl = opts.statusEl || null;
+    try {
+      if (!quiet && statusEl && opts.loadingMessage) {
+        window.fdSetStatus(statusEl, opts.loadingMessage, 'muted');
+      }
+      return await action({ quiet, reason: opts.reason, isBackground: quiet });
+    } catch (error) {
+      const friendly = window.fdFriendlyError(error);
+      if (statusEl && (!quiet || opts.surfaceQuietErrors)) {
+        window.fdSetStatus(statusEl, friendly, 'error');
+      }
+      if (typeof opts.onError === 'function') {
+        try { opts.onError(error, friendly, { quiet }); } catch (_) {}
+      }
+      if (opts.rethrow !== false) throw error;
+      return null;
+    }
   };
 
   window.fdLiveRefresh = {
     lastError: null,
-    register(fn, options = {}) {
-      if (typeof fn !== 'function') return () => {};
+    register(fn, options) {
+      options = options || {};
+      if (typeof fn !== 'function') return function () {};
       const id = 'lr-' + String(++seq);
+      const statusEl = options.statusEl
+        || (typeof document !== 'undefined' ? document.querySelector('[data-status]') : null)
+        || null;
       const entry = {
-        id,
-        fn,
+        id: id,
+        fn: fn,
         intervalMs: options.intervalMs,
+        statusEl: statusEl,
+        softFail: options.softFail !== false,
+        onFail: typeof options.onFail === 'function' ? options.onFail : null,
+        lastOkStatus: options.lastOkStatus || '',
         running: false,
         timer: null,
         lastAt: 0,
@@ -248,15 +326,15 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
       if (options.immediate === true && isVisible()) {
         runOne(entry, 'register');
       }
-      return () => {
+      return function () {
         const current = registry.get(id);
         if (!current) return;
         clearTimer(current);
         registry.delete(id);
       };
     },
-    refreshNow(reason = 'manual') {
-      runAll(reason);
+    refreshNow(reason) {
+      runAll(reason || 'manual');
     },
   };
 
