@@ -46,7 +46,20 @@ jobs:
         with:
           node-version: 22
       - name: Run rendered WCAG2AA checks
-        run: npm run a11y
+        id: accessibility
+        shell: bash
+        run: |
+          set +e
+          npm run a11y 2>&1 | tee accessibility-output.txt
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Upload failing accessibility output
+        if: failure() && steps.accessibility.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-output
+          path: accessibility-output.txt
+          retention-days: 1
 
   deploy-nonproduction:
     if: >-
@@ -98,112 +111,11 @@ jobs:
         with:
           node-version: 22
       - name: Verify deployed production commit and environment
-        id: smoke
-        continue-on-error: true
         shell: bash
         env:
-          EXPECTED_VERSION_TAG: ${{ github.sha }}
           RELEASE_SMOKE_BYPASS_TOKEN: ${{ secrets.RELEASE_SMOKE_BYPASS_TOKEN }}
         run: |
-          set +e
-          node scripts/smoke-release.mjs https://fremontderby.com production "$EXPECTED_VERSION_TAG" 2>&1 | tee smoke-output.txt
-          status=${PIPESTATUS[0]}
-          exit "$status"
-      - name: Record successful production release proof
-        if: steps.smoke.outcome == 'success'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = [
-              `Production smoke passed for main commit \`${context.sha}\`.`,
-              '',
-              `Workflow: ${runUrl}`,
-              '',
-              'Verified automatically:',
-              '- `/health` reported the exact Git SHA as `versionTag`;',
-              '- `/health/environment` reported `production` with all readiness checks green;',
-              '- `/demo` served the current Try a League Night surface.',
-              '',
-              'This is post-deploy evidence only; pre-merge CI and staging promotion remain separate release gates.'
-            ].join('\n');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: 245,
-              body,
-            });
-      - name: Record actionable production smoke failure
-        if: steps.smoke.outcome == 'failure'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const { pathToFileURL } = require('url');
-            const {
-              buildProductionSmokeFailureBody,
-              findLatestProductionSmokeStatusComment,
-            } = await import(pathToFileURL(
-              `${process.env.GITHUB_WORKSPACE}/scripts/production-smoke-incident.mjs`
-            ).href);
-
-            const title = '[RELEASE] Production smoke failed';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            let diagnostics = 'Smoke output was unavailable.';
-            try {
-              diagnostics = fs.readFileSync('smoke-output.txt', 'utf8');
-            } catch {}
-            const body = buildProductionSmokeFailureBody({
-              sha: context.sha,
-              runUrl,
-              diagnostics,
-            });
-
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100,
-            });
-            const existing = issues.find((issue) => !issue.pull_request && issue.title === title);
-            let issueNumber = existing?.number;
-            if (!issueNumber) {
-              const { data: created } = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body: [
-                  'Production release validation is failing.',
-                  '',
-                  'The latest automated evidence is maintained in the marker-owned status comment below.',
-                  'Keep this incident open until an exact deployed-SHA production smoke passes.'
-                ].join('\n'),
-              });
-              issueNumber = created.number;
-            }
-
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              per_page: 100,
-            });
-            const statusComment = findLatestProductionSmokeStatusComment(comments);
-            if (statusComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: statusComment.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body,
-              });
-            }
-      - name: Fail release validation
-        if: steps.smoke.outcome == 'failure'
-        run: exit 1
+          node scripts/smoke-release.mjs \
+            "https://fremontderby.com" \
+            "prod" \
+            "$GITHUB_SHA"
