@@ -79,10 +79,11 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
   // WHY: session body cache makes repeat visits feel instant while ETags keep backend cheap.
   function isSensitiveUrl(url) {
     // WHY: never persist contact/PII JSON in sessionStorage.
+    // Use string checks only — regex with \/ inside this template becomes // comments.
     const path = String(url || '');
-    return /\/api\/me\/contact\b/.test(path)
-      || /\/api\/admin\/players\/[^/]+\/contact\b/.test(path)
-      || /[?&]reveal=/.test(path);
+    return path.includes('/api/me/contact')
+      || (path.includes('/api/admin/players/') && path.includes('/contact'))
+      || path.includes('reveal=');
   }
   function etagKey(url) {
     return 'fd.etag:' + String(url);

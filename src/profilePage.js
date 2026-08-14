@@ -259,7 +259,7 @@ export function renderProfilePage(env = {}) {
       requireConfig();
       const currentRefreshToken = refreshToken();
       if (!currentRefreshToken) return false;
-      const response = await fetch(String(config.supabaseUrl || '').replaceAll('/', (c,i,s)=>i>=s.length-1&&s.endsWith('/')?'':c).replace(/\/+$/,'') + '/auth/v1/token?grant_type=refresh_token', {
+      const response = await fetch(trimUrl(config.supabaseUrl) + '/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
         headers: {
           apikey: config.supabasePublishableKey,
