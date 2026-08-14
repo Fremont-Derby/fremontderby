@@ -104,10 +104,14 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
-      const key = request.headers.get('x-probe-key') || '';
+      const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
       const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
-      if (expected && key !== expected) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      const envName = String(env?.ENVIRONMENT || 'production').toLowerCase();
+      // Production always requires a configured key; other lanes require key when set.
+      if (envName === 'production' || expected) {
+        if (!expected || key !== expected) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
       }
       const summary = await runHourlyProbes(env);
       if (url.searchParams.get('notify') === '1') {

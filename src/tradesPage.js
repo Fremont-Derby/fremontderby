@@ -114,12 +114,17 @@ export function renderTradesPage() {
       fillSelect(otherTeamSelect,[],()=>({}),'Select other team…');
       fillSelect(requestedSelect,[],()=>({}),'Select their player…');
       if(!seasonId)return;
-      const body=await api('/api/seasons/'+encodeURIComponent(seasonId)+'/trade-counterparties');
-      counterparties=body.teams||[];
-      fillSelect(otherTeamSelect,counterparties,(t)=>({
-        value:t.teamId,
-        label:t.teamName+(t.players&&t.players.length?(' · '+t.players.length+' players'):''),
-      }),counterparties.length?'Select other team…':'No other teams in season');
+      try{
+        const body=await api('/api/seasons/'+encodeURIComponent(seasonId)+'/trade-counterparties');
+        counterparties=body.teams||[];
+        fillSelect(otherTeamSelect,counterparties,(t)=>({
+          value:t.teamId,
+          label:t.teamName+(t.players&&t.players.length?(' · '+t.players.length+' players'):''),
+        }),counterparties.length?'Select other team…':'No other teams in season');
+      }catch(error){
+        fillSelect(otherTeamSelect,[],()=>({}),'Counterparties unavailable');
+        setStatus((error&&error.message)?(error.message+' — own roster still works; counterparty list needs the trade options migration.'):'Counterparty list unavailable','error');
+      }
     }
     function fillRequestedPlayers(){
       const team=counterparties.find((t)=>t.teamId===otherTeamSelect.value);
