@@ -140,6 +140,55 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
     return { response, notModified: false, body, fromCache: false };
   };
 
+
+  // Stable list renderer: only mutates rows whose signature changed.
+  // container: element holding row children
+  // rows: array of data
+  // opts.key(row) -> stable id string
+  // opts.signature(row) -> string compared across polls
+  // opts.render(row, el?) -> HTMLElement (create or update)
+  window.fdStableList = function fdStableList(container, rows, opts) {
+    if (!container || !opts || typeof opts.key !== 'function' || typeof opts.render !== 'function') return;
+    const keyFn = opts.key;
+    const sigFn = typeof opts.signature === 'function' ? opts.signature : keyFn;
+    const existing = new Map();
+    for (const child of Array.from(container.children)) {
+      const k = child.dataset && child.dataset.stableKey;
+      if (k) existing.set(k, child);
+    }
+    const nextKeys = new Set();
+    const frag = document.createDocumentFragment();
+    let orderChanged = false;
+    let prev = null;
+    for (const row of rows || []) {
+      const k = String(keyFn(row) || '');
+      if (!k) continue;
+      nextKeys.add(k);
+      const sig = String(sigFn(row) || '');
+      let el = existing.get(k);
+      if (el && el.dataset.stableSig === sig) {
+        // unchanged — keep node
+      } else if (el) {
+        const updated = opts.render(row, el);
+        el = updated || el;
+        el.dataset.stableKey = k;
+        el.dataset.stableSig = sig;
+      } else {
+        el = opts.render(row, null);
+        if (!el) continue;
+        el.dataset.stableKey = k;
+        el.dataset.stableSig = sig;
+      }
+      frag.appendChild(el);
+    }
+    // Remove stale
+    for (const [k, el] of existing) {
+      if (!nextKeys.has(k) && el.parentNode === container) el.remove();
+    }
+    // If order/content of remaining matches, avoid full replace when possible
+    container.replaceChildren(frag);
+  };
+
   window.fdLiveRefresh = {
     register(fn, options = {}) {
       if (typeof fn !== 'function') return () => {};

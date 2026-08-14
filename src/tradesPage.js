@@ -164,33 +164,51 @@ export function renderTradesPage() {
       fillOfferedPlayers();
       await loadCounterparties();
     }
+    function tradeSignature(trade){
+      return [
+        trade.status||'pending',
+        trade.player_response||trade.playerResponse||'',
+        trade.captain_response||trade.captainResponse||'',
+        trade.offered_player_name||trade.offeredPlayerName||'',
+        trade.requested_player_name||trade.requestedPlayerName||'',
+      ].join('|');
+    }
+    function buildTradeCard(trade){
+      const card=document.createElement('article');
+      card.style.cssText='border-bottom:1px solid var(--line);padding:10px 0';
+      card.innerHTML='<strong>'+String(trade.status||'pending')+'</strong><div class="note">'
+        +[(trade.season_name||trade.seasonName||''),
+          (trade.offered_player_name||trade.offeredPlayerName||'Player')+' ↔ '+(trade.requested_player_name||trade.requestedPlayerName||'Player'),
+          'Player: '+(trade.player_response||trade.playerResponse||'—'),
+          'Captain: '+(trade.captain_response||trade.captainResponse||'—')].filter(Boolean).join(' · ')+'</div>';
+      const id=trade.id||trade.tradeId;
+      if(id){
+        const actions=document.createElement('div');
+        actions.className='actions';
+        const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>fn().catch((e)=>setStatus(e.message,'error'));return b};
+        actions.append(
+          mk('Player accept','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'accepted'})}).then(loadTrades)),
+          mk('Player reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
+          mk('Captain approve','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/captain-approval',{method:'POST',body:JSON.stringify({response:'approved'})}).then(loadTrades)),
+          mk('Captain reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/captain-approval',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
+        );
+        card.append(actions);
+      }
+      return card;
+    }
     function renderTrades(trades){
-      listEl.replaceChildren();
       countEl.textContent=String(trades.length);
       emptyEl.hidden=trades.length>0;
-      for(const trade of trades){
-        const card=document.createElement('article');
-        card.style.cssText='border-bottom:1px solid var(--line);padding:10px 0';
-        card.innerHTML='<strong>'+String(trade.status||'pending')+'</strong><div class="note">'
-          +[(trade.season_name||trade.seasonName||''),
-            (trade.offered_player_name||trade.offeredPlayerName||'Player')+' ↔ '+(trade.requested_player_name||trade.requestedPlayerName||'Player'),
-            'Player: '+(trade.player_response||trade.playerResponse||'—'),
-            'Captain: '+(trade.captain_response||trade.captainResponse||'—')].filter(Boolean).join(' · ')+'</div>';
-        const id=trade.id||trade.tradeId;
-        if(id){
-          const actions=document.createElement('div');
-          actions.className='actions';
-          const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=()=>fn().catch((e)=>setStatus(e.message,'error'));return b};
-          actions.append(
-            mk('Player accept','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'accepted'})}).then(loadTrades)),
-            mk('Player reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/player-response',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
-            mk('Captain approve','primary',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/captain-approval',{method:'POST',body:JSON.stringify({response:'approved'})}).then(loadTrades)),
-            mk('Captain reject','ghost',()=>api('/api/team-trades/'+encodeURIComponent(id)+'/captain-approval',{method:'POST',body:JSON.stringify({response:'rejected'})}).then(loadTrades)),
-          );
-          card.append(actions);
-        }
-        listEl.append(card);
+      if(window.fdStableList){
+        window.fdStableList(listEl,trades,{
+          key:(t)=>String(t.id||t.tradeId||''),
+          signature:tradeSignature,
+          render:(t,el)=>buildTradeCard(t),
+        });
+        return;
       }
+      listEl.replaceChildren();
+      for(const trade of trades){listEl.append(buildTradeCard(trade));}
     }
     async function loadTrades(){
       const body=await api('/api/me/trades');
