@@ -1,9 +1,9 @@
 export const sharedRackLedgerScorecardStyles = `
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;overflow-x:hidden}
+  body{margin:0;min-height:100vh;overflow-x:hidden}input,select,textarea{font-size:16px}
   button,summary{font:inherit;min-height:48px;border:1px solid transparent;border-radius:11px;padding:9px 12px;font-weight:850;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   button:disabled{opacity:.42;cursor:not-allowed}
-  .scorecard-app{width:min(760px,100%);margin:auto;padding:10px 8px 20px}
+  .scorecard-app{width:min(760px,100%);margin:auto;padding:10px 8px max(20px,env(safe-area-inset-bottom))}
   .scorecard-status{min-height:28px;display:flex;justify-content:flex-end;align-items:center;font-size:.76rem}
   .match-context{position:relative;min-height:42px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem;font-weight:800;text-align:center}
   .match-context a{position:absolute;right:12px;font-size:.72rem;text-decoration:none}
@@ -52,9 +52,9 @@ export const sharedRackLedgerScorecardStyles = `
   .details{border:1px solid;border-radius:11px;overflow:hidden}.details summary{min-height:48px;padding:13px;cursor:pointer;font-size:.78rem;font-weight:900;list-style:none;text-align:center}.details summary::-webkit-details-marker{display:none}
   .detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:9px;border-top:1px solid}.detail span{display:block;font-size:.6rem}.detail strong{display:block;margin-top:2px;overflow-wrap:anywhere;font-size:.72rem}
   .completion-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}.confirm,.finalize{min-height:48px}
-  .error-popup{position:fixed;z-index:30;left:50%;bottom:16px;width:min(430px,calc(100% - 24px));transform:translateX(-50%);display:none;padding:11px 13px;border:1px solid;border-radius:12px}.error-popup[data-open=true]{display:block}.error-popup strong{display:block;font-size:.8rem}.error-popup span{display:block;margin-top:2px;font-size:.7rem}
+  .error-popup{position:fixed;z-index:30;left:50%;bottom:max(16px,env(safe-area-inset-bottom));width:min(430px,calc(100% - 24px));transform:translateX(-50%);display:none;padding:11px 13px;border:1px solid;border-radius:12px}.error-popup[data-open=true]{display:block}.error-popup strong{display:block;font-size:.8rem}.error-popup span{display:block;margin-top:2px;font-size:.7rem}
   .sandbox-footer{margin-top:10px;padding:10px;border:1px solid;border-radius:13px}.sandbox-footer textarea{width:100%;min-height:72px;padding:9px}.sandbox-footer-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.sandbox-footer a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px}
-  @media(max-width:520px){.scorecard-app{padding:8px 6px 18px}.match-context{justify-content:flex-start;padding-right:78px;text-align:left}.match-context a{right:8px}.opening-setup{grid-template-columns:1fr}.players{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);padding:10px 8px}.individual-score{padding:0 7px;gap:5px}.ledger .row-label{width:94px;min-width:94px;max-width:94px}.ledger th,.ledger td{min-width:53px}.quick-actions{grid-template-columns:1fr 1fr 1fr}.quick-actions button,.details summary{padding:6px 4px;font-size:.69rem}.detail-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.scorecard-app{padding:8px 6px max(18px,env(safe-area-inset-bottom))}.match-context{justify-content:flex-start;padding-right:78px;text-align:left}.match-context a{right:8px}.opening-setup{grid-template-columns:1fr}.players{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);padding:10px 8px}.individual-score{padding:0 7px;gap:5px}.ledger .row-label{width:94px;min-width:94px;max-width:94px}.ledger th,.ledger td{min-width:53px}.quick-actions{grid-template-columns:1fr 1fr 1fr}.quick-actions button,.details summary{padding:6px 4px;font-size:.69rem}.detail-grid{grid-template-columns:1fr 1fr}}
 `;
 
 export const sharedRackLedgerScorecardMarkup = `
