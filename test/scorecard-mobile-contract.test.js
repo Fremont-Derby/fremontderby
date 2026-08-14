@@ -12,6 +12,7 @@ test('live scorecard is phone-first with large winner and edit targets', () => {
   assert.match(html, /touch-action:manipulation/);
   assert.match(html, /winner\{min-height:56px/);
   assert.match(html, /add-rack\{[^}]*min-height:62px/);
+  assert.match(html, /ledger-scroll\{[^}]*touch-action:\s*pan-x/);
 });
 
 test('player sandbox scorecard reuses the same mobile scorecard shell', () => {
