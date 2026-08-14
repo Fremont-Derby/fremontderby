@@ -160,3 +160,18 @@ The endpoint must not return credential values. It should return HTTP 200 only w
 - #245 — green pre-merge validation and traceable production releases.
 - #35 — hosted Supabase/environment isolation proof.
 - #545 and #572 — historical single-beta approach, superseded by this topology.
+
+## PostgREST schema exposure (shared staging)
+
+Lane Workers set `Accept-Profile` / `Content-Profile` to the lane schema (`jfl`, `dru`, `gamma`) or `{lane}_private` for privileged REST.
+
+After applying `20260814031843_shared_staging_lane_schemas.sql`, also apply
+`20260814093000_expose_lane_private_postgrest_schemas.sql` (or equivalent) so
+`pgrst.db_schemas` includes both public lane schemas and `*_private`, then reload:
+
+```sql
+notify pgrst, 'reload config';
+notify pgrst, 'reload schema';
+```
+
+If NOTIFY does not take effect on hosted Supabase, use the project API settings / schema cache reload. Production must not list lane schemas.
