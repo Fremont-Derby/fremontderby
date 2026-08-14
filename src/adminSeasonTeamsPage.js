@@ -11,7 +11,14 @@ export function renderAdminSeasonTeamsPage() {
 </head>
 <body>
   <main class="app">
-    <header class="head"><h1>Season teams</h1><p>Reserve returning teams and add qualified new teams.</p></header>
+    <header class="head"><div><h1>Season teams</h1><p>Reserve returning teams and add qualified new teams.</p></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a href="/admin" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Admin home</a>
+        <a href="/admin/seasons" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Seasons</a>
+        <a href="/admin/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Players</a>
+        <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Public directory</a>
+      </div>
+    </header>
     <section class="toolbar" aria-label="Season team controls">
       <label>Season<select data-season disabled><option>Loading seasons…</option></select></label>
       <div class="capacity"><strong data-capacity>—</strong><span data-open-slots>Loading team slots…</span></div>
