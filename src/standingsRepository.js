@@ -55,31 +55,58 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
 
   return {
     async listPublicSeasons() {
-      const seasons = await requestJson(
-        fetchImpl,
-        `${supabaseUrl}/rest/v1/rpc/list_public_season_registration`,
-        { method: 'POST', headers, body: '{}' },
-      );
-      return (Array.isArray(seasons) ? seasons : []).map((season) => ({
+      const mapRegistrationRow = (season) => ({
         id: season.id,
         name: season.name,
         status: season.status,
-        firstRoundDate: season.first_round_date,
-        teamCount: season.team_count,
-        confirmedTeamCount: season.confirmed_team_count,
-        teamCapacity: season.team_capacity,
-        occupiedSlots: season.occupied_slots,
-        openTeamSlots: season.open_team_slots,
-        reservedReturningSlots: season.reserved_returning_slots,
-        heldTeamSlots: season.held_team_slots,
-        applicationsWaiting: season.applications_waiting,
-        rosteredPlayerCount: season.rostered_player_count,
-        registeredPlayerCount: season.registered_player_count,
-        freeAgentCount: season.free_agent_count,
-        openPrimaryRosterSpots: season.open_primary_roster_spots,
-        atRiskTeamCount: season.at_risk_team_count,
-        minimumCommittedRoster: season.minimum_committed_roster,
-      }));
+        firstRoundDate: season.first_round_date ?? season.firstRoundDate ?? null,
+        teamCount: season.team_count ?? season.teamCount ?? null,
+        confirmedTeamCount: season.confirmed_team_count ?? season.confirmedTeamCount ?? null,
+        teamCapacity: season.team_capacity ?? season.teamCapacity ?? null,
+        occupiedSlots: season.occupied_slots ?? season.occupiedSlots ?? null,
+        openTeamSlots: season.open_team_slots ?? season.openTeamSlots ?? null,
+        reservedReturningSlots: season.reserved_returning_slots ?? season.reservedReturningSlots ?? null,
+        heldTeamSlots: season.held_team_slots ?? season.heldTeamSlots ?? null,
+        applicationsWaiting: season.applications_waiting ?? season.applicationsWaiting ?? null,
+        rosteredPlayerCount: season.rostered_player_count ?? season.rosteredPlayerCount ?? null,
+        registeredPlayerCount: season.registered_player_count ?? season.registeredPlayerCount ?? null,
+        freeAgentCount: season.free_agent_count ?? season.freeAgentCount ?? null,
+        openPrimaryRosterSpots: season.open_primary_roster_spots ?? season.openPrimaryRosterSpots ?? null,
+        atRiskTeamCount: season.at_risk_team_count ?? season.atRiskTeamCount ?? null,
+        minimumCommittedRoster: season.minimum_committed_roster ?? season.minimumCommittedRoster ?? null,
+      });
+
+      try {
+        const seasons = await requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/rpc/list_public_season_registration`,
+          { method: 'POST', headers, body: '{}' },
+        );
+        return (Array.isArray(seasons) ? seasons : []).map(mapRegistrationRow);
+      } catch (error) {
+        // Production has been observed with missing execute grants on this RPC.
+        // Fall back to a minimal public seasons list so auth/session flows can load.
+        const message = String(error?.message || '');
+        const grantOrMissing =
+          /permission denied|42501|PGRST202|Could not find the function|404/i.test(message);
+        if (!grantOrMissing) throw error;
+
+        const params = new URLSearchParams({
+          select: 'id,name,status,first_round_date',
+          order: 'created_at.desc',
+        });
+        const rows = await requestJson(
+          fetchImpl,
+          `${supabaseUrl}/rest/v1/seasons?${params}`,
+          { method: 'GET', headers },
+        );
+        return (Array.isArray(rows) ? rows : []).map((season) => mapRegistrationRow({
+          id: season.id,
+          name: season.name,
+          status: season.status,
+          first_round_date: season.first_round_date,
+        }));
+      }
     },
 
     async listSeasonSchedule({ seasonId }) {
