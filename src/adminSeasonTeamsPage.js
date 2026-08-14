@@ -37,7 +37,7 @@ export function renderAdminSeasonTeamsPage() {
     function isTargetSeasonTeam(row){return normalized(row,'sourceSeasonId')===selectedSeasonId()}function canAssignCaptain(row){return !normalized(row,'captainPlayerId')&&isTargetSeasonTeam(row)}function rosterHref(row){return '/admin/players?season='+encodeURIComponent(selectedSeasonId())+'&team='+encodeURIComponent(normalized(row,'teamId'))}
     function render(){
       const query=search.value.trim().toLowerCase();
-      const tokens=query.split(/\s+/).filter(Boolean);
+      const tokens=query.split(/[ \t\n\r]+/).filter(Boolean);
       const tabRows=teams.filter(row=>normalized(row,'candidateKind')===activeTab);
       let filtered=tabRows.filter(row=>{
         if(!tokens.length)return true;
