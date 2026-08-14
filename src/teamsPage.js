@@ -645,6 +645,16 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
           const head=document.createElement('div');
           head.className='card';
           head.append(node('strong',(season.name||'Season')+' · public team directory'),node('div','Sign in to join, invite, or manage a roster.','muted'));
+          const pubLinks=document.createElement('div');
+          pubLinks.className='actions';
+          for(const [label,href] of [['Players','/players'],['Standings','/standings'],['Schedule','/schedule'],['Sign in','/profile']]){
+            const a=document.createElement('a');
+            a.href=href;
+            a.textContent=label;
+            a.style.cssText='display:inline-flex;align-items:center;min-height:44px;margin-right:10px;color:#9ee5bd;text-decoration:none';
+            pubLinks.append(a);
+          }
+          head.append(pubLinks);
           joinTeamsEl.append(head);
           if(!teams.length){
             joinTeamsEl.append(empty('No teams listed for this season yet.'));
