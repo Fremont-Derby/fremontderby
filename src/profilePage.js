@@ -176,6 +176,7 @@ export function renderProfilePage(env = {}) {
 
   <script>
     const config = ${safeJson(browserConfig(env))};
+    function trimUrl(value){ let s=String(value||''); while(s.endsWith('/')) s=s.slice(0,-1); return s; }
     const profileForm = document.querySelector('[data-profile-form]');
     const displayNameInput = document.querySelector('[data-display-name-input]');
     const statusEl = document.querySelector('[data-status]');
@@ -258,7 +259,7 @@ export function renderProfilePage(env = {}) {
       requireConfig();
       const currentRefreshToken = refreshToken();
       if (!currentRefreshToken) return false;
-      const response = await fetch(config.supabaseUrl.replace(/\\/+$/, '') + '/auth/v1/token?grant_type=refresh_token', {
+      const response = await fetch(String(config.supabaseUrl || '').replaceAll('/', (c,i,s)=>i>=s.length-1&&s.endsWith('/')?'':c).replace(/\/+$/,'') + '/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
         headers: {
           apikey: config.supabasePublishableKey,
@@ -388,7 +389,7 @@ export function renderProfilePage(env = {}) {
 
     function signInWithGoogle() {
       requireConfig();
-      const baseUrl = config.supabaseUrl.replace(/\/+$/, '');
+      const baseUrl = trimUrl(config.supabaseUrl);
       const next = safeNextPath();
       const redirectTo = window.location.origin + '/profile' + (next ? ('?next=' + encodeURIComponent(next)) : '');
       const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
@@ -399,7 +400,7 @@ export function renderProfilePage(env = {}) {
 
     function consumeOAuthCallback() {
       const hash = window.location.hash.replace(/^#/, '');
-      const query = window.location.search.replace(/^\?/, '');
+      const query = window.location.search.slice(1);
       const params = new URLSearchParams(hash || query);
       const authError = params.get('error_description') || params.get('error');
       if (authError) {
@@ -426,7 +427,7 @@ export function renderProfilePage(env = {}) {
     async function signOut() {
       const accessToken = token();
       if (accessToken && config.supabaseUrl && config.supabasePublishableKey) {
-        await fetch(config.supabaseUrl.replace(/\/+$/, '') + '/auth/v1/logout', {
+        await fetch(trimUrl(config.supabaseUrl) + '/auth/v1/logout', {
           method: 'POST',
           headers: { apikey: config.supabasePublishableKey, authorization: 'Bearer ' + accessToken },
         }).catch(() => {});

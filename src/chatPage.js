@@ -203,6 +203,7 @@ export function renderChatPage(env = {}) {
 
   <script>
     const config = ${safeJson(browserConfig(env))};
+    function trimUrl(value){ let s=String(value||''); while(s.endsWith('/')) s=s.slice(0,-1); return s; }
     const statusEl = document.querySelector('[data-status]');
     const signedOutEl = document.querySelector('[data-signed-out]');
     const signedOutTitleEl = document.querySelector('[data-signed-out-title]');
@@ -291,7 +292,7 @@ export function renderChatPage(env = {}) {
     }
     function consumeOAuthCallback() {
       const hash = window.location.hash.replace(/^#/, '');
-      const query = window.location.search.replace(/^\?/, '');
+      const query = window.location.search.slice(1);
       const params = new URLSearchParams(hash || query);
       const authError = params.get('error_description') || params.get('error');
       if (authError) {
@@ -318,7 +319,7 @@ export function renderChatPage(env = {}) {
       if (!config.supabaseUrl || !config.supabasePublishableKey) {
         throw new Error('Sign-in is not configured on this environment');
       }
-      const baseUrl = config.supabaseUrl.replace(/\/+$/, '');
+      const baseUrl = trimUrl(config.supabaseUrl);
       const redirectTo = window.location.origin + '/messages' + (window.location.search || '');
       const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
       authorizeUrl.searchParams.set('provider', 'google');
@@ -327,7 +328,7 @@ export function renderChatPage(env = {}) {
     }
     async function refreshSession() {
       if (!config.supabaseUrl || !config.supabasePublishableKey || !refreshToken()) return false;
-      const response = await fetch(config.supabaseUrl.replace(/\\\/+$/, '') + '/auth/v1/token?grant_type=refresh_token', {
+      const response = await fetch(trimUrl(config.supabaseUrl) + '/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
         headers: { apikey: config.supabasePublishableKey, 'content-type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken() }),
