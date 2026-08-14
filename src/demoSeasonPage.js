@@ -122,6 +122,8 @@ export function renderDemoSeasonPage() {
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#07150f; color:#f4f7f5; --gold:#e9bd45; --green:#2fa972; }
     * { box-sizing:border-box; }
+    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    input, select, textarea { font-size: 16px; }
     body { margin:0; background:linear-gradient(180deg,#081a12,#06110d); }
     main { width:min(1080px,calc(100% - 24px)); margin:auto; padding:20px 0 56px; }
     a { color:#d7f6e2; }
