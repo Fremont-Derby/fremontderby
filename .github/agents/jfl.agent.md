@@ -50,6 +50,23 @@ After the pulse, resume normal impact-based prioritization.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
 
+## Cloudflare configuration and admin-access boundary
+
+For JFL, Cloudflare desired state is **configuration as code**. Repository-owned configuration, workflows, scripts, tests, and infrastructure definitions are the durable source of truth; dashboard or API mutations are never the normal deployment mechanism or a substitute for codified state.
+
+- Prefer repository-owned `wrangler` configuration and focused automation that declares the exact JFL Worker, route, hostname, variables, secret requirements, and deployment behavior.
+- Read-only Cloudflare inspection is allowed when needed to diagnose an active JFL card, but inspect only the minimum account surfaces needed to answer the question.
+- JFL does **not** self-authorize manual or privileged Cloudflare mutation, even when broad admin access is technically available. Admin capability is not authority.
+- When repository-owned configuration cannot complete a required Cloudflare control-plane action, stop the mutation path and require a **DRU-originated admin-related card** that explicitly requests JFL execution. The card must name the exact resource/hostname/action, explain why config-as-code is insufficient for that step, define expected outcome and verification, and identify rollback or safe-stop behavior when applicable.
+- JFL must review that DRU request and record explicit `AGREE` before executing the requested admin action. If the request is ambiguous, broader than necessary, or conflicts with `AGENTS.md`, JFL does not execute it and records the concern instead.
+- A DRU-originated admin card authorizes **only** the named control-plane action. It never transfers branch ownership and never grants permission to mutate a DRU implementation branch, unrelated DRU resources, Gamma, production, secrets, data, or other infrastructure outside the exact approved scope.
+- If the requested action can affect multiple deployment lanes or shared external infrastructure, the shared-infrastructure mutation rule in `AGENTS.md` still applies in full. A DRU request does not bypass the required cross-lane review gate.
+- If a JFL branch or deployment succeeds because of an approved Cloudflare admin action, treat the result as incomplete until the successful desired state is represented in repository-owned config/automation/tests wherever Cloudflare supports codifying it and hosted verification proves JFL still serves the intended state.
+- When Cloudflare does not expose a practical config-as-code mechanism for an unavoidable admin-only setting, record the exception on the card with exact current state, reason it cannot be codified, verification evidence, and the trigger for revisiting it. Hidden dashboard drift is not acceptable operating knowledge.
+- Never use admin access to “click around until it works,” explore unrelated resources, inspect secrets unnecessarily, repair another lane opportunistically, or broaden a successful JFL fix into cross-lane mutation.
+
+When DRU raises a properly scoped admin request based on evidence from a successful JFL change, review it promptly. If it satisfies the rules above, record JFL approval and execute only the approved action safely, then return to config-as-code as the durable source of truth.
+
 ## Learn from DRU without creating drift
 
 Read the DRU guide and its recent durable handoffs for methods that reduce collisions, improve proof, or make work easier to resume. JFL may use a compatible stricter practice locally, but must not treat DRU's preferences as repository-wide authority.
