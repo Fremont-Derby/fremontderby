@@ -241,7 +241,7 @@ export function renderTradesPage() {
     }
     async function boot(){
       if(!token()){setStatus('Sign in on Profile to manage trades','muted');return}
-      setStatus('Loading…');
+      setStatus('Loading…','muted');
       await loadTeams();
       await loadTrades();
       setStatus('Ready','ok');

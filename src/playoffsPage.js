@@ -35,7 +35,7 @@ export function renderPlayoffsPage() {
     .empty{padding:24px;color:var(--muted);text-align:center}
     .admin{margin:12px 0;padding:12px;border:1px dashed var(--line);border-radius:12px}
     @media(max-width:700px){.controls,.matches{grid-template-columns:1fr}.status{text-align:left}}
-  </style>
+  @media(max-width:720px){.app,main{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
   <main class="app">

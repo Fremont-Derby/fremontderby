@@ -925,7 +925,7 @@ export function renderChatPage(env = {}) {
     if (googleSignInButton) {
       googleSignInButton.addEventListener('click', () => {
         try { signInWithGoogle(); }
-        catch (error) { setStatus(error.message || 'Could not start Google sign-in', 'error'); }
+        catch (error) { setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : (error.message || 'Could not start Google sign-in')), 'error'); }
       });
     }
     try {
@@ -934,7 +934,7 @@ export function renderChatPage(env = {}) {
       }
     } catch (error) {
       showSignedOut(false);
-      setStatus(error.message || 'Sign-in failed', 'error');
+      setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : (error.message || 'Sign-in failed')), 'error');
     }
     if (token()) {
       signedOutEl.hidden = true;
