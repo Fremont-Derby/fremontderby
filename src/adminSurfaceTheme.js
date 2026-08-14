@@ -13,6 +13,46 @@ export const adminSurfaceThemeStyles = `
     background: var(--fd-bg-page) !important;
     color: var(--fd-text) !important;
   }
+
+  /* Cohesion: page-local agent themes used --panel/--line/--muted/--green/--gold.
+     Bind them to design tokens so dark leftovers cannot reappear. */
+  body[data-fd-player-surface],
+  body[data-fd-admin-surface] {
+    --panel: var(--fd-bg-surface) !important;
+    --line: var(--fd-border) !important;
+    --muted: var(--fd-text-muted) !important;
+    --green: var(--fd-success) !important;
+    --gold: var(--fd-accent) !important;
+    --red: var(--fd-danger) !important;
+    --bg: var(--fd-bg-page) !important;
+    --text: var(--fd-text) !important;
+  }
+  body[data-fd-admin-surface] .letter-index {
+    background: var(--fd-bg-page) !important;
+  }
+  body[data-fd-admin-surface] .letter-index button {
+    background: var(--fd-bg-surface) !important;
+    color: var(--fd-text) !important;
+    border-color: var(--fd-border) !important;
+    font-weight: 700 !important;
+  }
+  body[data-fd-admin-surface] .letter-index button[aria-pressed="true"] {
+    background: var(--fd-primary-strong) !important;
+    color: var(--fd-primary-text) !important;
+    border-color: var(--fd-primary-strong) !important;
+  }
+  body[data-fd-admin-surface] .badge {
+    font-weight: 700 !important;
+  }
+  body[data-fd-admin-surface] .card,
+  body[data-fd-admin-surface] .lookup-sticky {
+    background: var(--fd-bg-surface) !important;
+    color: var(--fd-text) !important;
+  }
+  body[data-fd-admin-surface] .lookup-sticky {
+    background: linear-gradient(var(--fd-bg-page) 70%, transparent) !important;
+  }
+
   body[data-fd-admin-surface] *,
   body[data-fd-admin-surface] *::before,
   body[data-fd-admin-surface] *::after { min-width: 0; }
