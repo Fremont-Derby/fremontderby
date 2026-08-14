@@ -62,3 +62,14 @@ Human DRU finish: search issues for `[HUMAN]` DRU open-auth. DNS durability: pla
 - Live-refresh `fdStableList` helper on high-traffic list pages.
 - Captain/admin opening-night depth readiness copy.
 - `/messages?player=` deep-link contract for direct messages.
+
+## Live refresh contract (browser)
+
+`window.fdLiveRefresh.register((opts) => reload(opts), { intervalMs })` passes:
+
+- `opts.quiet` / `opts.isBackground` — true for interval, focus, visibility, online, register
+- `opts.reason` — event name
+
+Page loaders **must** skip Loading flashes and destructive empties when `quiet` is true. Prefer `window.fdStableList` for list DOM and `window.fdSetStatus(el, msg, tone, { quiet })` for status text.
+
+Error strings for users go through `friendlyErrorMessage` (offline, 503, rate limit, pending migration, auth expiry).

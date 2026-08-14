@@ -3,15 +3,24 @@
  *
  * Pages:
  *   window.fdLiveRefresh.register((opts) => reload(opts), { intervalMs: 20000 })
- * Loader contract:
- *   opts.quiet === true → no loading flash / no destructive empty states
+ *
+ * Loader contract (required for ship-quality):
+ *   opts.quiet === true  → no "Loading…" status flash, no destructive empty states,
+ *                           no full-list wipe when data is unchanged (prefer fdStableList)
+ *   opts.reason          → 'interval' | 'focus' | 'visible' | 'pageshow' | 'online' | 'register' | 'manual'
+ *   opts.isBackground    → true for any non-manual reason (same as quiet for most pages)
+ *
+ * Helpers exposed on window:
+ *   fdStableList(container, items, { key, signature, render })
+ *   fdSetStatus(el, message, tone, { quiet })  → skips Loading-like messages when quiet
+ *   fdFriendlyError(err) → product-safe client error string when available
  *
  * Behavior:
- * - Polls only while the tab is visible
+ * - Polls only while the tab is visible and navigator.onLine
  * - Refreshes on focus, pageshow, visibility, and back-online
  * - Debounces bursty focus+visibility pairs
  * - Skips overlapping runs
- * - Backs off briefly after repeated failures
+ * - Backs off briefly after repeated failures (lastError kept for diagnostics)
  */
 export const livePageRefreshScript = `<script data-fd-live-refresh-script>
 (() => {
@@ -31,18 +40,26 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
   async function runOne(entry, reason) {
     if (!entry || entry.running) return;
     if (!isVisible() && reason === 'interval') return;
+    // Offline interval polls waste battery and produce noisy failed-to-fetch errors.
+    if (reason === 'interval' && typeof navigator !== 'undefined' && navigator.onLine === false) return;
     if (entry.failCount >= 3 && entry.nextAllowedAt && Date.now() < entry.nextAllowedAt) return;
 
     entry.running = true;
     entry.lastReason = reason;
+    const quiet = reason !== 'manual';
     try {
-      await entry.fn({ quiet: reason !== 'manual', reason });
+      await entry.fn({ quiet, reason, isBackground: quiet });
       entry.failCount = 0;
       entry.nextAllowedAt = 0;
+      entry.lastError = null;
       entry.lastAt = Date.now();
-    } catch {
+      window.fdLiveRefresh.lastError = null;
+    } catch (error) {
       entry.failCount = (entry.failCount || 0) + 1;
       entry.nextAllowedAt = Date.now() + Math.min(60000, 5000 * entry.failCount);
+      entry.lastError = error;
+      window.fdLiveRefresh.lastError = error;
+      // Background failures stay silent at the registry layer; pages may still surface via their own catch.
     } finally {
       entry.running = false;
     }
@@ -189,7 +206,28 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
     container.replaceChildren(frag);
   };
 
+  // Quiet-aware status helper: avoids "Loading…" flicker on background polls.
+  window.fdSetStatus = function fdSetStatus(el, message, tone, opts) {
+    if (!el) return;
+    const quiet = Boolean(opts && opts.quiet);
+    const text = String(message == null ? '' : message);
+    if (quiet && /^(loading|checking|saving|working)\b/i.test(text.trim())) return;
+    el.textContent = text;
+    if (tone) el.dataset.tone = tone;
+    else if (el.dataset) delete el.dataset.tone;
+  };
+
+  // Prefer product-safe mapping when friendlyErrorMessage was inlined by the page.
+  window.fdFriendlyError = function fdFriendlyError(error) {
+    if (typeof window.friendlyErrorMessage === 'function') {
+      try { return window.friendlyErrorMessage(error); } catch (_) {}
+    }
+    if (error && typeof error === 'object' && error.message) return String(error.message);
+    return String(error || 'We could not complete that action. Please try again.');
+  };
+
   window.fdLiveRefresh = {
+    lastError: null,
     register(fn, options = {}) {
       if (typeof fn !== 'function') return () => {};
       const id = 'lr-' + String(++seq);
@@ -201,6 +239,7 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
         timer: null,
         lastAt: 0,
         lastReason: '',
+        lastError: null,
         failCount: 0,
         nextAllowedAt: 0,
       };
