@@ -10,7 +10,7 @@ const card = `<article class="panel" data-player-claim hidden>
       <label>Player name<input type="search" maxlength="80" autocomplete="name" placeholder="Search by name" data-player-claim-query /></label>
       <button class="ghost" type="submit">Search players</button>
     </form>
-    <div class="player-claim-status" role="status" aria-live="polite" data-player-claim-status>Checking for prepared players…</div>
+    <div class="player-claim-status" role="status" aria-live="polite" data-player-claim-status></div>
     <div class="player-claim-results" data-player-claim-results></div>
   </div>
 </article>`;
@@ -39,7 +39,7 @@ const script = `<script data-player-claim-script>
     for(const player of players){const row=document.createElement('div');row.className='player-claim-option';const copy=document.createElement('div');const name=document.createElement('strong');name.textContent=player.displayName;const detail=document.createElement('div');detail.className='player-claim-context';detail.textContent=contextFor(player);copy.append(name,detail);const button=document.createElement('button');button.type='button';button.className='primary';button.textContent='Claim '+player.displayName;button.dataset.claimPlayer=player.playerId;button.dataset.claimName=player.displayName;row.append(copy,button);results.append(row)}
   }
   async function load(){
-    if(!token())return;setStatus('Checking for prepared players…');
+    if(!token())return;setStatus('Loading prepared players…');
     const value=query.value.trim();const body=await request('/api/me/player-claim-options'+(value?'?q='+encodeURIComponent(value):''),{method:'GET'});const options=body.options||{};
     if(options.canClaim===false){root.hidden=true;return}
     root.hidden=false;renderPlayers(options.players||[]);setStatus((options.players||[]).length?'Choose the prepared player that is you.':'No prepared player is ready to claim.');

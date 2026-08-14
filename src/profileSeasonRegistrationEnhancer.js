@@ -6,7 +6,7 @@ const card = `<article class="panel" data-season-now>
   <div class="panel-head"><span>Current season</span><span class="badge" data-season-now-badge>Checking…</span></div>
   <div class="season-now" role="region" aria-label="Current season registration and payment status">
     <div class="season-now-head">
-      <div><h2 data-season-now-name>Loading season…</h2><div class="season-now-sub" data-season-now-copy>Checking your current registration and payment status.</div></div>
+      <div><h2 data-season-now-name>Loading season…</h2><div class="season-now-sub" data-season-now-copy>Loading your registration and payment status.</div></div>
       <button class="primary season-now-action" data-season-now-action type="button" hidden>Join this season</button>
     </div>
     <div class="season-now-states" data-season-now-states hidden>
@@ -54,7 +54,7 @@ const script = `<script data-profile-season-status-script>
     badge.textContent='Registered';registrationState.textContent='Registered';registrationState.dataset.kind='registered';paymentState.textContent=paymentLabel(registration.paymentStatus);paymentState.dataset.kind=paymentKind(registration.paymentStatus);copy.textContent='You are registered for this season.';action.hidden=true;note.textContent=registration.paymentStatus==='paid'?'Your payment has been recorded.':'Your registration is complete. Payment is still tracked separately by the league.';
   }
   async function load(){
-    errorEl.hidden=true;action.hidden=true;badge.textContent='Checking…';copy.textContent='Checking your current registration and payment status.';
+    errorEl.hidden=true;action.hidden=true;badge.textContent='Loading…';copy.textContent='Loading your registration and payment status.';
     const seasonsBody=await publicJson('/api/seasons');const seasons=seasonsBody.seasons||[];
     const open=seasons.find((season)=>season.status==='registration');
     if(!open){renderClosed(seasons.find((season)=>['active','playoffs','published'].includes(season.status))||seasons[0]||null);return}

@@ -1,7 +1,5 @@
-/**
- * Strategy map: multi-agent tone strings → canonical chrome tones.
- * Call sites can keep historical names; CSS + this helper agree.
- */
+/** Map multi-agent status tone strings to a small canonical set. */
+
 const TONE_STRATEGY = Object.freeze({
   ok: 'ok',
   success: 'ok',

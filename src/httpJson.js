@@ -1,6 +1,6 @@
 import { apiSecurityHeaders } from './securityHeaders.js';
 
-/** Shared Worker JSON responses (Facade over Response.json + cache headers). */
+/** Shared Worker JSON responses (Response.json + cache headers). */
 export function jsonNoStore(body, status = 200, extraHeaders = {}) {
   return Response.json(body, {
     status,
