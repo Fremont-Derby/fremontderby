@@ -80,3 +80,26 @@ test('resolveBetaBypassActor fails closed without actor id', () => {
     (error) => error.name === 'AuthError',
   );
 });
+
+test('missing or blank ENVIRONMENT never enables test auth bypass', () => {
+  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: '', BETA_AUTH_BYPASS: '1' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: '   ', BETA_AUTH_BYPASS: '1' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'DRU', BETA_AUTH_BYPASS: '1' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'JFL', BETA_AUTH_BYPASS: '1' }), false);
+});
+
+test('authenticateSupabaseUser without bearer rejects on unset ENVIRONMENT', async () => {
+  await assert.rejects(
+    () => authenticateSupabaseUser(
+      new Request('https://example.test/api/test'),
+      {
+        BETA_AUTH_BYPASS: '1',
+        BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001',
+        SUPABASE_URL: 'https://betabetabetabetabeta.supabase.co',
+        SUPABASE_PUBLISHABLE_KEY: 'pub',
+      },
+    ),
+    (error) => error.name === 'AuthError' && /Missing bearer token/.test(error.message),
+  );
+});

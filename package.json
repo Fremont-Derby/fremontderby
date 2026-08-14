@@ -15,6 +15,6 @@
     "deploy:dru": "node scripts/deploy-lane.mjs dru",
     "deploy:gamma": "node scripts/deploy-lane.mjs gamma",
     "labels:check": "node scripts/collaboration-labels.mjs --check",
-    "test:season1": "node --test test/season1-complete-e2e.test.js test/regular-season-e2e.test.js test/environment-readiness.test.js test/beta-auth-bypass.test.js test/assert-lane-health.test.js test/worker-domain-bindings.test.js test/domain-race-targets.test.js test/deploy-lane.test.js test/season1-test-inventory.test.js test/rack-ledger-scorecard.test.js test/two-device-scorecard-flow.test.js test/season-publish-readiness.test.js"
+    "test:season1": "node --test test/season1-complete-e2e.test.js test/regular-season-e2e.test.js test/domain.test.js test/season.test.js test/domain-race-targets.test.js test/environment-readiness.test.js test/beta-auth-bypass.test.js test/assert-lane-health.test.js test/worker-domain-bindings.test.js test/diagnose-worker-domain-expectations.test.js test/deploy-lane.test.js test/season1-test-inventory.test.js test/rack-ledger-scorecard.test.js test/two-device-scorecard-flow.test.js test/season-publish-readiness.test.js"
   }
 }
