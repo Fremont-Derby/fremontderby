@@ -46,6 +46,13 @@ test('Wrangler owns every public release hostname as a custom domain', () => {
   assert.equal(config.env.gamma.workers_dev, false);
 });
 
+test('each deployable Derby lane binds version metadata for exact SHA verification', () => {
+  assert.equal(config.version_metadata.binding, 'CF_VERSION_METADATA');
+  for (const lane of ['jfl', 'dru', 'gamma']) {
+    assert.equal(config.env[lane].version_metadata?.binding, 'CF_VERSION_METADATA');
+  }
+});
+
 test('release lanes have explicit Derby identities and no legacy generic beta environment', () => {
   assert.equal(config.env.beta, undefined);
   assert.equal(config.env['beta-jfl'], undefined);
