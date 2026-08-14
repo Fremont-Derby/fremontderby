@@ -175,3 +175,23 @@ notify pgrst, 'reload schema';
 ```
 
 If NOTIFY does not take effect on hosted Supabase, use the project API settings / schema cache reload. Production must not list lane schemas.
+
+## PostgREST Accept-Profile / Content-Profile
+
+Lane Workers isolate data on the **shared staging** Supabase project by schema, not by separate projects.
+
+| Worker `ENVIRONMENT` | Public profile headers | Private profile headers |
+|----------------------|------------------------|-------------------------|
+| `production` / `staging` | `public` | `private` |
+| `jfl` | `jfl` | `jfl_private` |
+| `dru` | `dru` | `dru_private` |
+| `gamma` | `gamma` | `gamma_private` |
+
+`src/supabaseSchema.js` wraps repository `fetch` so every `/rest/v1/*` call sets **both**:
+
+- `Accept-Profile`
+- `Content-Profile`
+
+Callers that need privileged tables pass `accept-profile: private`; the wrapper rewrites that to the lane private profile. Foreign lane profiles are forced back to this Worker’s schema (fail-closed isolation).
+
+PostgREST must list these schemas in `pgrst.db_schemas` (see migrations `20260814031843_*` and `20260814093000_*`) and reload config/schema after apply.

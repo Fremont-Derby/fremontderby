@@ -89,3 +89,17 @@ test('readiness never exposes secret values', () => {
   assert.equal(readiness.ok, false);
   assert.doesNotMatch(JSON.stringify(readiness), /server-only-secret/);
 });
+
+test('lane readiness reports private PostgREST profile name', () => {
+  const result = environmentReadiness({
+    ENVIRONMENT: 'dru',
+    SUPABASE_URL: 'https://oqkkvqkerusepyokzbmt.supabase.co',
+    SUPABASE_SCHEMA: 'dru',
+    SUPABASE_PUBLISHABLE_KEY: 'pub',
+    SUPABASE_SERVICE_ROLE_KEY: 'role',
+    BETA_AUTH_BYPASS: '1',
+    BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001',
+  });
+  assert.equal(result.expectedSupabaseSchema, 'dru');
+  assert.equal(result.expectedPrivateSupabaseSchema, 'dru_private');
+});
