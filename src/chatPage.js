@@ -33,7 +33,7 @@ export function renderChatPage(env = {}) {
     * { box-sizing: border-box; }
     button, a, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     input, select, textarea { font-size: 16px; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 0, #123b28, #07150f 34rem); }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: radial-gradient(circle at 50% 0, #123b28, #07150f 34rem); }
     button, textarea, select { font: inherit; }
     button, select, textarea { border: 1px solid var(--line); border-radius: 11px; }
     button { min-height: 44px; cursor: pointer; font-weight: 850; }

@@ -255,7 +255,7 @@ export const shellStyles = `
       right: 12px;
       left: auto;
       width: min(280px, calc(100vw - 24px));
-      max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px));
+      max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
       z-index: 1200;
     }
     .fd-error-popup { top: 66px; right: 12px; left: 12px; width: auto; }
@@ -527,8 +527,11 @@ export function decorateHtmlWithShell(html, pathname = '/') {
   if (typeof html !== 'string' || html.includes('data-fd-shell')) return html;
   if (!/<body(?:\s|>)/i.test(html)) return html;
 
+  const themeColorTag = html.includes('name="theme-color"') || html.includes("name='theme-color'")
+    ? ''
+    : '<meta name="theme-color" content="#07150f" />\n';
   const withStyles = /<\/head>/i.test(html)
-    ? html.replace(/<\/head>/i, `<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
+    ? html.replace(/<\/head>/i, `${themeColorTag}<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
     : html;
 
   const withShell = withStyles.replace(
@@ -566,7 +569,7 @@ export function renderNotFoundPage(pathname = '') {
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 10%, #153d2a 0, #081a12 34%, #06110d 72%); color: #f4f7f5; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: radial-gradient(circle at 50% 10%, #153d2a 0, #081a12 34%, #06110d 72%); color: #f4f7f5; }
     .lost { width: min(820px, calc(100% - 28px)); margin: 0 auto; padding: clamp(28px, 7vw, 72px) 0 64px; text-align: center; }
     .hound { width: min(420px, 84vw); margin: 0 auto 22px; filter: drop-shadow(0 18px 24px rgba(0,0,0,.28)); }
     .hound svg { width: 100%; height: auto; display: block; }

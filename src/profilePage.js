@@ -33,7 +33,7 @@ export function renderProfilePage(env = {}) {
     * { box-sizing: border-box; }
     input, select, textarea { font-size: 16px; }
     button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; min-height: 100vh; background: #111313; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: #111313; }
     button, input { font: inherit; }
     button {
       min-height: 44px;
