@@ -18,16 +18,15 @@ jobs:
         with:
           node-version: 22
       - name: Validate PR coordination sections
+        id: contract
         run: node scripts/check-pr-card-contract.mjs
       - name: Verify referenced cards are open repository issues
         uses: actions/github-script@v7
+        env:
+          TRACKING_CARD_NUMBERS: ${{ steps.contract.outputs.tracking-card-numbers }}
         with:
           script: |
-            const body = context.payload.pull_request.body || '';
-            const matcher = /\b(?:Tracks|Refs)\s+(?:#(\d+)|https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/(\d+))\b/gi;
-            const numbers = [...body.matchAll(matcher)]
-              .map((match) => Number(match[1] || match[2]));
-            const uniqueNumbers = [...new Set(numbers)];
+            const uniqueNumbers = JSON.parse(process.env.TRACKING_CARD_NUMBERS || '[]');
 
             for (const issueNumber of uniqueNumbers) {
               const { data: issue } = await github.rest.issues.get({
