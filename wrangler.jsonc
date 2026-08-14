@@ -51,6 +51,7 @@
         "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
+        "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
         "SUPABASE_SCHEMA": "jfl"
       },
       "secrets": {
@@ -58,8 +59,7 @@
           "SUPABASE_URL",
           "SUPABASE_PUBLISHABLE_KEY",
           "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
-          "BETA_ACTOR_USER_ID"
+          "EXPECTED_SUPABASE_PROJECT_REF"
         ]
       }
     },
