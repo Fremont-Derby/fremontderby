@@ -34,7 +34,7 @@ export function renderAdminSeasonsPage() {
     .actions a{min-height:44px;display:inline-flex;align-items:center;padding:0 14px;border-radius:10px;border:1px solid var(--line);color:#dff0e6;text-decoration:none;font-weight:800}
     .actions a.primary{background:var(--green);color:#07140d;border-color:var(--green)}
     .empty{padding:18px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
-  </style>
+  @media(max-width:720px){.app{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
   <main class="app">

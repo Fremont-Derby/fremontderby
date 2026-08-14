@@ -148,6 +148,11 @@ export function renderProfilePage(env = {}) {
               </label>
               <button class="primary" type="submit">Save profile</button>
             </form>
+            <div class="hint" data-fargo-panel style="margin-top:12px">
+              <strong style="display:block;margin-bottom:4px">Fargo rating</strong>
+              <div data-fargo-detail>Rating appears here after league staff or a linked Fargo ID establishes it.</div>
+              <div class="muted" data-fargo-id-line style="margin-top:6px"></div>
+            </div>
           </div>
         </article>
 
@@ -359,6 +364,23 @@ export function renderProfilePage(env = {}) {
       document.querySelector('[data-rating]').textContent = profile && profile.fargo_rating != null ? String(profile.fargo_rating) : '—';
       document.querySelector('[data-rating-status]').textContent = profile && profile.rating_status ? profile.rating_status : 'Not rated';
       displayNameInput.value = profile && profile.display_name ? profile.display_name : '';
+      const fargoDetail = document.querySelector('[data-fargo-detail]');
+      const fargoIdLine = document.querySelector('[data-fargo-id-line]');
+      if (fargoDetail) {
+        if (profile && profile.fargo_rating != null) {
+          fargoDetail.textContent = 'Current rating: ' + profile.fargo_rating
+            + (profile.rating_status ? (' · ' + profile.rating_status) : '')
+            + '. Used for race targets when both players are rated.';
+        } else {
+          fargoDetail.textContent = 'No rating on file yet. Unrated players can still play; race targets use the season default until a rating is established.';
+        }
+      }
+      if (fargoIdLine) {
+        const fid = profile && (profile.fargo_id || profile.fargoId || profile.fargo_player_id);
+        fargoIdLine.textContent = fid
+          ? ('Linked Fargo ID: ' + fid)
+          : 'Self-serve Fargo ID linking is on the roadmap; league staff can still maintain ratings.';
+      }
       const teams = profile && Array.isArray(profile.teams) ? profile.teams : [];
       const seasons = profile && Array.isArray(profile.seasons) ? profile.seasons : [];
       renderRows(
