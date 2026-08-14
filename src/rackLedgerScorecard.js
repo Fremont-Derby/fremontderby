@@ -1,7 +1,7 @@
 export const sharedRackLedgerScorecardStyles = `
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;overflow-x:hidden}
-  button{font:inherit;min-height:48px;border:1px solid transparent;border-radius:11px;padding:9px 12px;font-weight:850;cursor:pointer;touch-action:manipulation}
+  button,summary{font:inherit;min-height:48px;border:1px solid transparent;border-radius:11px;padding:9px 12px;font-weight:850;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   button:disabled{opacity:.42;cursor:not-allowed}
   .scorecard-app{width:min(760px,100%);margin:auto;padding:10px 8px 20px}
   .scorecard-status{min-height:28px;display:flex;justify-content:flex-end;align-items:center;font-size:.76rem}
@@ -12,11 +12,11 @@ export const sharedRackLedgerScorecardStyles = `
   .perspective{margin:0 0 8px;padding:8px;border:1px solid;border-radius:13px;display:none;gap:7px;align-items:center}
   .perspective[data-open=true]{display:grid;grid-template-columns:auto 1fr 1fr}
   .perspective span{font-size:.72rem;font-weight:800}
-  .perspective button{min-height:42px}
+  .perspective button{min-height:44px}
   .perspective button[aria-pressed=true]{font-weight:950}
   .opening-setup{margin:0 0 8px;padding:8px;display:grid;grid-template-columns:auto minmax(210px,1fr);gap:10px;align-items:center}
   .opening-copy strong{display:block;font-size:.78rem}.opening-copy span{display:block;margin-top:2px;font-size:.64rem}
-  .opening-options{display:grid;grid-template-columns:1fr 1fr;gap:6px}.opening-option{min-height:44px}
+  .opening-options{display:grid;grid-template-columns:1fr 1fr;gap:6px}.opening-option{min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .team-score{border:1px solid;border-radius:16px;padding:12px 14px;display:grid;gap:7px}
   .team-score-label{text-align:center;font-size:.7rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
   .team-score-grid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px}

@@ -31,6 +31,7 @@ export function renderProfilePage(env = {}) {
       --focus: #9ee5bd;
     }
     * { box-sizing: border-box; }
+    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     body { margin: 0; min-height: 100vh; background: #111313; }
     button, input { font: inherit; }
     button {
