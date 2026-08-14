@@ -127,7 +127,16 @@ function renderErrorPopup() {
 }
 
 export function renderPrimaryNavigation(pathname = '/') {
-  return `<header class="fd-shell" data-fd-shell>
+  return `<div class="fd-ready-check" data-ready-check hidden data-open="false" role="region" aria-label="Team ready check">
+    <div class="fd-ready-check__title" data-ready-check-title>Team ready check</div>
+    <div class="fd-ready-check__meta" data-ready-check-meta></div>
+    <div class="fd-ready-check__actions">
+      <button type="button" data-ready-response="ready">👍 I'll be there</button>
+      <button type="button" data-ready-response="maybe">Not sure</button>
+      <button type="button" data-ready-response="not_ready">Can't make it</button>
+    </div>
+  </div>
+  <header class="fd-shell" data-fd-shell>
     <div class="fd-shell__inner">
       <a class="fd-brand" href="/" aria-label="Fremont Derby home">
         <span class="fd-brand__ball" aria-hidden="true">8</span>
@@ -160,6 +169,38 @@ export const shellStyles = `
   .fd-nav a:hover { color: #fff; background: #10291d; }
   .fd-nav a[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-nav a:focus-visible, .fd-brand:focus-visible, .fd-nav-menu summary:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
+  .fd-ready-check {
+    position: sticky;
+    top: 0;
+    z-index: 1200;
+    display: none;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #315d45;
+    background: linear-gradient(180deg, #123522, #0b2418);
+    color: #f4f7f5;
+    font: 700 .9rem/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+  .fd-ready-check[data-open="true"] { display: grid; }
+  .fd-ready-check__title { font-weight: 950; }
+  .fd-ready-check__meta { color: #b7d0c2; font-weight: 650; font-size: .82rem; }
+  .fd-ready-check__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fd-ready-check__actions button {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid #3f6b52;
+    background: #0f2c1c;
+    color: #eef7f1;
+    font: 850 .86rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .fd-ready-check__actions button[data-response="ready"] {
+    background: #2fa972;
+    border-color: #2fa972;
+    color: #06140c;
+  }
   .fd-mobile-dock { display: none; }
   .fd-mobile-dock-spacer { display: none; }
   .fd-message-notifications { position: relative; flex: 0 0 auto; }
@@ -482,6 +523,72 @@ const navMenuScript = `<script data-fd-nav-menu-script>
   })();
 </script>`;
 
+const readyCheckScript = `<script data-fd-ready-check-script>
+  (() => {
+    const banner = document.querySelector('[data-ready-check]');
+    if (!banner) return;
+    const title = document.querySelector('[data-ready-check-title]');
+    const meta = document.querySelector('[data-ready-check-meta]');
+    const token = () => sessionStorage.getItem('fd.accessToken') || '';
+    let current = null;
+    const paint = (row) => {
+      current = row;
+      if (!row || row.my_response || row.myResponse) {
+        banner.hidden = true;
+        banner.dataset.open = 'false';
+        return;
+      }
+      const team = row.team_name || row.teamName || 'Your team';
+      const round = row.round_number || row.roundNumber || '';
+      const when = row.scheduled_on || row.scheduledOn || '';
+      const starter = row.started_by_display_name || row.startedByDisplayName || 'A teammate';
+      title.textContent = team + ' · ready check';
+      meta.textContent = starter + ' asked who is coming' + (round ? (' for round ' + round) : '') + (when ? (' · ' + when) : '') + '.';
+      banner.hidden = false;
+      banner.dataset.open = 'true';
+    };
+    const load = async () => {
+      if (!token()) return paint(null);
+      try {
+        const response = await fetch('/api/me/ready-checks', {
+          headers: { authorization: 'Bearer ' + token() },
+        });
+        if (!response.ok) return paint(null);
+        const body = await response.json();
+        const rows = body.readyChecks || [];
+        paint(rows.find((row) => !(row.my_response || row.myResponse)) || null);
+      } catch {
+        paint(null);
+      }
+    };
+    banner.querySelectorAll('[data-ready-response]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        if (!current?.id) return;
+        button.disabled = true;
+        try {
+          const response = await fetch('/api/ready-checks/' + encodeURIComponent(current.id) + '/respond', {
+            method: 'POST',
+            headers: {
+              authorization: 'Bearer ' + token(),
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ response: button.getAttribute('data-ready-response') }),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(body.error || 'Could not save ready check');
+          paint(null);
+        } catch (error) {
+          meta.textContent = error.message || 'Could not save response';
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
+    load();
+    window.addEventListener('focus', load);
+  })();
+</script>`;
+
 const errorPopupScript = `<script data-fd-error-popup-script>
   (() => {
     const popup = document.querySelector('[data-error-popup]');
@@ -549,7 +656,7 @@ export function decorateHtmlWithShell(html, pathname = '/') {
     : '<div class="fd-mobile-dock-spacer" aria-hidden="true"></div>\n';
   return /<\/body>/i.test(withShell)
     ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}${navMenuScript}\n${errorPopupScript}\n</body>`)
-    : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}`;
+    : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}${readyCheckScript}`;
 }
 
 export function isKnownAppPagePath(pathname) {
