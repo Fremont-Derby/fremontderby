@@ -83,8 +83,10 @@ export function friendlyErrorMessage(value) {
   if (/sign[- ]?in expired|session expired|unauthorized/i.test(message)) {
     return 'Your sign-in expired. Open Profile, sign in again, and retry.';
   }
+  // WHY: raw PostgREST/Postgres text is noisy and was also getting letters stripped by a
+  // template-literal bug (/s+/). Always map infrastructure failures to a stable sentence.
   if (
-    /supabase|permission denied|schema private|column reference|ambiguous|postgres|rpc/i
+    /supabase|postgrest|permission denied|schema "?private"?|column reference|ambiguous|postgres|PGRST|RPC|relation ".+" does not exist|duplicate key|violates|statement timeout|networkerror|failed to fetch/i
       .test(message)
   ) {
     return 'We could not complete that action. Nothing was changed. Please try again.';
@@ -626,7 +628,7 @@ const errorPopupScript = `<script data-fd-error-popup-script>
         const style = window.getComputedStyle ? window.getComputedStyle(node) : null;
         if (style && (style.display === 'none' || style.visibility === 'hidden')) return;
         const explicit = node.getAttribute('data-error-message') || node.querySelector?.('[data-error-message]')?.textContent;
-        const value = String(explicit || node.textContent || '').replace(/\s+/g, ' ').trim();
+        const value = String(explicit || node.textContent || '').replace(/\\s+/g, ' ').trim();
         if (!value || seen.get(node) === value) return;
         seen.set(node, value);
         show(value);
