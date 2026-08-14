@@ -1,0 +1,15 @@
+name: Lane health monitor
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 * * * *'
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert lane environment identities
+        run: node scripts/assert-lane-health.mjs

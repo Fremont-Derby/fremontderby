@@ -1,0 +1,45 @@
+name: Deploy release lanes
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: 'Lane to deploy (jfl, dru, gamma, or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, jfl, dru, gamma]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: ${{ github.event.inputs.lane == 'all' && fromJson('["jfl","dru","gamma"]') || fromJson(format('["{0}"]', github.event.inputs.lane)) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Deploy ${{ matrix.lane }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN: '1'
+          GITHUB_ACTIONS: 'true'
+        run: npm run "deploy:${{ matrix.lane }}"
+      - name: Probe ${{ matrix.lane }} host identity
+        run: |
+          node -e "
+          const lane='${{ matrix.lane }}';
+          const host=lane+'.fremontderby.com';
+          fetch('https://'+host+'/health/environment').then(async r=>{
+            const b=await r.json();
+            console.log(JSON.stringify({host, ...b}));
+            if(b.environment!==lane){
+              console.error('Still wrong environment — Worker secrets/vars may be incomplete');
+              process.exit(1);
+            }
+          }).catch(e=>{console.error(e); process.exit(1);});
+          "
