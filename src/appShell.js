@@ -4,16 +4,16 @@ import { applyScriptNonces } from './securityHeaders.js';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
-  { href: '/schedule',
-  '/playoffs', label: 'Schedule', key: 'schedule' },
+  { href: '/schedule', label: 'Schedule', key: 'schedule' },
   { href: '/playoffs', label: 'Playoffs', key: 'playoffs' },
   { href: '/standings', label: 'Standings', key: 'standings' },
   { href: '/prizes', label: 'Prizes', key: 'prizes' },
+  { href: '/trades', label: 'Trades', key: 'trades' },
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
-  { href: '/messages',
-  '/notifications', '/notifications', label: 'Messages', key: 'messages' },
+  { href: '/messages', label: 'Messages', key: 'messages' },
+  { href: '/notifications', label: 'Notices', key: 'notifications' },
   { href: '/admin', label: 'Admin', key: 'admin' },
   { href: '/profile', label: 'Profile', key: 'profile' },
 ];
@@ -29,8 +29,10 @@ const MOBILE_DOCK_ITEMS = [
 const APP_PAGE_PATHS = new Set([
   '/scorecard',
   '/schedule',
+  '/playoffs',
   '/standings',
   '/prizes',
+  '/trades',
   '/season-setup',
   '/lineup',
   '/profile',
@@ -38,6 +40,11 @@ const APP_PAGE_PATHS = new Set([
   '/teams',
   '/messages',
   '/messages/moderation',
+  '/notifications',
+  '/admin',
+  '/admin/audit',
+  '/admin/operations',
+  '/admin/players',
 ]);
 
 function sectionForPath(pathname) {
@@ -50,6 +57,9 @@ function sectionForPath(pathname) {
     || pathname === '/lineup'
   ) return 'teams';
   if (pathname.startsWith('/schedule')) return 'schedule';
+  if (pathname === '/playoffs') return 'playoffs';
+  if (pathname === '/trades') return 'trades';
+  if (pathname === '/notifications') return 'notifications';
   if (pathname === '/prizes') return 'prizes';
   if (pathname.startsWith('/standings')) return 'standings';
   if (pathname.startsWith('/scorecard')) return 'score';

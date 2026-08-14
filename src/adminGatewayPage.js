@@ -44,6 +44,9 @@ export function renderAdminGatewayPage() {
         <a class="card" href="/season-setup">
           <strong>League setup</strong><span>Create and publish seasons, capacity, and schedule.</span><b>Open setup →</b>
         </a>
+        <a class="card" href="/admin/audit">
+          <strong>Audit log</strong><span>Who changed rosters, scores, moderation, and broadcasts.</span><b>Open audit log →</b>
+        </a>
         <a class="card" data-accent="rose" href="/messages/moderation">
           <strong>Moderation</strong><span>Review reported messages that need an admin decision.</span><b>Review reports →</b>
         </a>
