@@ -1,8 +1,9 @@
 name: PR card contract
 
+# POC mode (#679): hosted Actions are temporarily unavailable. Keep the
+# executable contract for later reactivation, but do not emit failed PR checks.
 on:
-  pull_request:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 permissions:
   contents: read
