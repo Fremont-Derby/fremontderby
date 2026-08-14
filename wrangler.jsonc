@@ -26,6 +26,7 @@
   "env": {
     "staging": {
       "workers_dev": false,
+      "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "staging",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
@@ -36,6 +37,7 @@
     "jfl": {
       "name": "fremontderby-jfl",
       "workers_dev": false,
+      "preview_urls": false,
       "routes": [
         {
           "pattern": "jfl.fremontderby.com",
@@ -48,14 +50,15 @@
       "vars": {
         "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "jfl-actor@localhost"
+        "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt",
+        "SUPABASE_SCHEMA": "jfl"
       },
       "secrets": {
         "required": [
-          "SUPABASE_URL",
-          "SUPABASE_PUBLISHABLE_KEY",
           "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
           "BETA_ACTOR_USER_ID"
         ]
       }
@@ -63,6 +66,7 @@
     "dru": {
       "name": "fremontderby-dru",
       "workers_dev": false,
+      "preview_urls": false,
       "routes": [
         {
           "pattern": "dru.fremontderby.com",
@@ -75,14 +79,15 @@
       "vars": {
         "ENVIRONMENT": "dru",
         "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "dru-actor@localhost"
+        "BETA_ACTOR_EMAIL": "dru-actor@fremontderby.com",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt",
+        "SUPABASE_SCHEMA": "dru"
       },
       "secrets": {
         "required": [
-          "SUPABASE_URL",
-          "SUPABASE_PUBLISHABLE_KEY",
           "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
           "BETA_ACTOR_USER_ID"
         ]
       }
@@ -90,6 +95,7 @@
     "gamma": {
       "name": "fremontderby-gamma",
       "workers_dev": false,
+      "preview_urls": false,
       "routes": [
         {
           "pattern": "gamma.fremontderby.com",
@@ -101,14 +107,15 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
-        "BETA_AUTH_BYPASS": "0"
+        "BETA_AUTH_BYPASS": "0",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt",
+        "SUPABASE_SCHEMA": "gamma"
       },
       "secrets": {
         "required": [
-          "SUPABASE_URL",
-          "SUPABASE_PUBLISHABLE_KEY",
-          "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF"
+          "SUPABASE_SERVICE_ROLE_KEY"
         ]
       }
     }

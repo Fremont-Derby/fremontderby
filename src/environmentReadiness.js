@@ -1,15 +1,22 @@
 const fixedExpectedSupabaseProjectRefs = {
   production: 'cpiucsxlkicmlbvdvhww',
   staging: 'oqkkvqkerusepyokzbmt',
+  jfl: 'oqkkvqkerusepyokzbmt',
+  dru: 'oqkkvqkerusepyokzbmt',
+  gamma: 'oqkkvqkerusepyokzbmt',
+};
+
+const expectedSchemas = {
+  production: 'public',
+  staging: 'public',
+  jfl: 'jfl',
+  dru: 'dru',
+  gamma: 'gamma',
 };
 
 const isolatedRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
 const testAuthRuntimeEnvironments = new Set(['jfl', 'dru']);
-const knownRuntimeEnvironments = new Set([
-  ...Object.keys(fixedExpectedSupabaseProjectRefs),
-  ...isolatedRuntimeEnvironments,
-]);
-const reservedSupabaseProjectRefs = new Set(Object.values(fixedExpectedSupabaseProjectRefs));
+const knownRuntimeEnvironments = new Set(Object.keys(fixedExpectedSupabaseProjectRefs));
 
 function normalizeSupabaseUrl(value) {
   if (!value || typeof value !== 'string') return '';
@@ -19,7 +26,6 @@ function normalizeSupabaseUrl(value) {
 export function supabaseProjectRefFromUrl(value) {
   const url = normalizeSupabaseUrl(value);
   if (!url) return null;
-
   try {
     const host = new URL(url).host;
     const [projectRef, service, domain] = host.split('.');
@@ -38,58 +44,38 @@ function check(name, ok, details = {}) {
   return { name, ok: Boolean(ok), ...details };
 }
 
-function configuredExpectedProjectRef(env, environment) {
-  if (environment in fixedExpectedSupabaseProjectRefs) {
-    return fixedExpectedSupabaseProjectRefs[environment];
-  }
-  if (!isolatedRuntimeEnvironments.has(environment)) return null;
-  return configured(env.EXPECTED_SUPABASE_PROJECT_REF)
-    ? env.EXPECTED_SUPABASE_PROJECT_REF.trim()
-    : null;
-}
-
 export function environmentReadiness(env = {}) {
   const environment = String(env.ENVIRONMENT || 'production').trim() || 'production';
   const supabaseUrl = normalizeSupabaseUrl(env.SUPABASE_URL);
   const projectRef = supabaseProjectRefFromUrl(supabaseUrl);
+  const schema = String(env.SUPABASE_SCHEMA || expectedSchemas[environment] || '').trim();
+  const expectedProjectRef = fixedExpectedSupabaseProjectRefs[environment] ?? null;
+  const expectedSchema = expectedSchemas[environment] ?? null;
   const hasPublishableKey = configured(env.SUPABASE_PUBLISHABLE_KEY);
   const hasServiceRoleKey = configured(env.SUPABASE_SERVICE_ROLE_KEY);
   const keysAreDistinct = hasPublishableKey && hasServiceRoleKey
     ? env.SUPABASE_PUBLISHABLE_KEY !== env.SUPABASE_SERVICE_ROLE_KEY
     : null;
-
   const isIsolatedRuntime = isolatedRuntimeEnvironments.has(environment);
   const isTestAuthRuntime = testAuthRuntimeEnvironments.has(environment);
-  const expectedProjectRef = configuredExpectedProjectRef(env, environment);
-  const expectedProjectConfigured = !isIsolatedRuntime || Boolean(expectedProjectRef);
-  const expectedProjectIsolated = !isIsolatedRuntime
-    || Boolean(expectedProjectRef && !reservedSupabaseProjectRefs.has(expectedProjectRef));
-  const actualProjectIsolated = !isIsolatedRuntime
-    || Boolean(projectRef && !reservedSupabaseProjectRefs.has(projectRef));
   const authBypassAllowed = isTestAuthRuntime;
   const authBypassEnabled = String(env.BETA_AUTH_BYPASS || '').trim() === '1';
-
-  const projectMatches = Boolean(
-    expectedProjectRef
-    && projectRef === expectedProjectRef
-    && expectedProjectIsolated
-    && actualProjectIsolated
-  );
+  const projectMatches = Boolean(expectedProjectRef && projectRef === expectedProjectRef);
+  const schemaMatches = Boolean(expectedSchema && schema === expectedSchema);
+  const actualProjectIsolated = !isIsolatedRuntime
+    || Boolean(projectRef && projectRef !== fixedExpectedSupabaseProjectRefs.production);
 
   const checks = [
     check('knownWorkerEnvironment', knownRuntimeEnvironments.has(environment), { environment }),
     check('supabaseUrlConfigured', configured(supabaseUrl)),
     check('supabaseUrlUsesExpectedHost', Boolean(projectRef), { projectRef }),
-    check('expectedProjectRefConfigured', expectedProjectConfigured, { expectedProjectRef }),
-    check('supabaseProjectMatchesEnvironment', projectMatches, {
-      expectedProjectRef,
-      projectRef,
-    }),
+    check('expectedProjectRefConfigured', Boolean(expectedProjectRef), { expectedProjectRef }),
+    check('supabaseProjectMatchesEnvironment', projectMatches, { expectedProjectRef, projectRef }),
+    check('supabaseSchemaConfigured', configured(schema), { schema }),
+    check('supabaseSchemaMatchesEnvironment', schemaMatches, { expectedSchema, schema }),
     check('supabasePublishableKeyConfigured', hasPublishableKey),
     check('supabaseServiceRoleKeyConfigured', hasServiceRoleKey),
-    check('supabaseKeysAreDistinct', keysAreDistinct === true, {
-      evaluated: keysAreDistinct !== null,
-    }),
+    check('supabaseKeysAreDistinct', keysAreDistinct === true, { evaluated: keysAreDistinct !== null }),
     check('authBypassRestrictedToTestLane', !authBypassEnabled || authBypassAllowed, {
       authBypassAllowed,
       authBypassEnabled,
@@ -98,11 +84,10 @@ export function environmentReadiness(env = {}) {
 
   if (isIsolatedRuntime) {
     checks.push(
-      check('expectedProjectRefIsolated', expectedProjectIsolated, { expectedProjectRef }),
+      check('expectedProjectRefIsolated', expectedProjectRef !== fixedExpectedSupabaseProjectRefs.production, { expectedProjectRef }),
       check('actualProjectIsolated', actualProjectIsolated, { projectRef }),
     );
   }
-
   if (isTestAuthRuntime) {
     checks.push(
       check('testAuthBypassFlag', authBypassEnabled),
@@ -114,9 +99,11 @@ export function environmentReadiness(env = {}) {
     ok: checks.every((item) => item.ok),
     environment,
     expectedSupabaseProjectRef: expectedProjectRef,
+    expectedSupabaseSchema: expectedSchema,
     supabase: {
       url: supabaseUrl || null,
       projectRef,
+      schema: schema || null,
       hasPublishableKey,
       hasServiceRoleKey,
     },
