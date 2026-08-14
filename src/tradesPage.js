@@ -95,16 +95,35 @@ export function renderTradesPage() {
         select.append(opt);
       }
     }
+    // Disambiguate same display names in captain trade pickers (identity stays playerId).
+    function markDuplicateNames(players){
+      const counts=new Map();
+      for(const p of players||[]){
+        const key=String(p.displayName||p.display_name||'').trim().toLowerCase();
+        if(!key)continue;
+        counts.set(key,(counts.get(key)||0)+1);
+      }
+      return (players||[]).map((p)=>{
+        const key=String(p.displayName||p.display_name||'').trim().toLowerCase();
+        return {...p,isDuplicateName:Boolean(key&&(counts.get(key)||0)>1)};
+      });
+    }
+    function playerOptionLabel(p){
+      const name=String(p.displayName||p.display_name||'Player').trim()||'Player';
+      if(!p.isDuplicateName)return name;
+      const id=String(p.playerId||p.player_id||p.id||'');
+      return id.length>=4 ? (name+' · #'+id.slice(-4)) : name;
+    }
     function selectedTeam(){
       return captainTeams.find((t)=>(t.teamId||t.team_id)===teamSelect.value)||null;
     }
     function fillOfferedPlayers(){
       const team=selectedTeam();
       const roster=Array.isArray(team&&team.roster)?team.roster:[];
-      const players=roster.filter((p)=>String(p.role||'player')==='player');
+      const players=markDuplicateNames(roster.filter((p)=>String(p.role||'player')==='player'));
       fillSelect(offeredSelect,players,(p)=>({
         value:p.playerId||p.player_id,
-        label:p.displayName||p.display_name||'Player',
+        label:playerOptionLabel(p),
       }),players.length?'Select player…':'No non-captain players on roster');
     }
     async function loadCounterparties(){
@@ -128,10 +147,10 @@ export function renderTradesPage() {
     }
     function fillRequestedPlayers(){
       const team=counterparties.find((t)=>t.teamId===otherTeamSelect.value);
-      const players=(team&&team.players)||[];
+      const players=markDuplicateNames((team&&team.players)||[]);
       fillSelect(requestedSelect,players,(p)=>({
         value:p.playerId,
-        label:p.displayName||'Player',
+        label:playerOptionLabel(p),
       }),players.length?'Select player…':'No non-captain players');
     }
     async function loadTeams(){
