@@ -135,7 +135,10 @@ export function renderChatPage(env = {}) {
     <section class="state-card" data-signed-out data-tone="warning" hidden>
       <h2 data-signed-out-title>Coordinate league night in one place</h2>
       <p data-signed-out-detail>Sign in to read league, matchup, team, and player messages without sharing your phone number.</p>
-      <div class="state-actions"><a class="state-action" href="/profile">Sign in to message</a></div>
+      <div class="state-actions">
+        <button type="button" class="state-action" data-google-signin>Continue with Google</button>
+        <a class="state-action" href="/profile?next=%2Fmessages" data-profile-signin>Open Profile</a>
+      </div>
     </section>
 
     <section class="layout" data-chat-layout hidden>
@@ -285,6 +288,42 @@ export function renderChatPage(env = {}) {
       const text = await response.text();
       if (!text) return {};
       try { return JSON.parse(text); } catch { return { error: text }; }
+    }
+    function consumeOAuthCallback() {
+      const hash = window.location.hash.replace(/^#/, '');
+      const query = window.location.search.replace(/^\?/, '');
+      const params = new URLSearchParams(hash || query);
+      const authError = params.get('error_description') || params.get('error');
+      if (authError) {
+        history.replaceState({}, '', window.location.pathname + (window.location.search.includes('error') ? '' : window.location.search));
+        // Strip oauth params from query if present
+        const clean = new URL(window.location.href);
+        clean.hash = '';
+        ['error','error_description','error_code'].forEach((k)=>clean.searchParams.delete(k));
+        history.replaceState({}, '', clean.pathname + clean.search);
+        throw new Error(authError);
+      }
+      const accessToken = params.get('access_token');
+      if (!accessToken) return false;
+      sessionStorage.setItem('fd.accessToken', accessToken);
+      const nextRefresh = params.get('refresh_token') || '';
+      if (nextRefresh) sessionStorage.setItem('fd.refreshToken', nextRefresh);
+      else sessionStorage.removeItem('fd.refreshToken');
+      const clean = new URL(window.location.href);
+      clean.hash = '';
+      history.replaceState({}, '', clean.pathname + clean.search);
+      return true;
+    }
+    function signInWithGoogle() {
+      if (!config.supabaseUrl || !config.supabasePublishableKey) {
+        throw new Error('Sign-in is not configured on this environment');
+      }
+      const baseUrl = config.supabaseUrl.replace(/\/+$/, '');
+      const redirectTo = window.location.origin + '/messages' + (window.location.search || '');
+      const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
+      authorizeUrl.searchParams.set('provider', 'google');
+      authorizeUrl.searchParams.set('redirect_to', redirectTo);
+      window.location.assign(authorizeUrl.toString());
     }
     async function refreshSession() {
       if (!config.supabaseUrl || !config.supabasePublishableKey || !refreshToken()) return false;
@@ -817,6 +856,21 @@ export function renderChatPage(env = {}) {
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); run(sendMessage); }
     });
 
+    const googleSignInButton = document.querySelector('[data-google-signin]');
+    if (googleSignInButton) {
+      googleSignInButton.addEventListener('click', () => {
+        try { signInWithGoogle(); }
+        catch (error) { setStatus(error.message || 'Could not start Google sign-in', 'error'); }
+      });
+    }
+    try {
+      if (consumeOAuthCallback()) {
+        setStatus('Signed in', 'ok');
+      }
+    } catch (error) {
+      showSignedOut(false);
+      setStatus(error.message || 'Sign-in failed', 'error');
+    }
     if (token()) {
       signedOutEl.hidden = true;
       layoutEl.hidden = false;
