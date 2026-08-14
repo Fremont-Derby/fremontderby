@@ -2,6 +2,11 @@ import { createNotificationRepository } from './notificationRepository.js';
 import { createChatRepository } from './chatRepository.js';
 import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
 import {
+  readSanitizedJsonBody,
+  safeClientErrorMessage,
+  requireUuid,
+} from './requestSanitize.js';
+import {
   listTeamRoundAvailabilityCommand,
   setRosterAvailabilityCommand,
 } from './availabilityCommands.js';
@@ -148,37 +153,21 @@ function jsonResponse(body, status = 200) {
 }
 
 async function readJsonBody(request) {
-  try {
-    const text = await request.text();
-    if (!text.trim()) {
-      return {};
-    }
-
-    const body = JSON.parse(text);
-    if (!body || Array.isArray(body) || typeof body !== "object") {
-      throw new Error("Request body must be a JSON object");
-    }
-    return body;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error("Request body must be valid JSON");
-    }
-    throw error;
-  }
+  return readSanitizedJsonBody(request);
 }
 
 function clientErrorMessage(error) {
-  const msg = String(error?.message || "Request failed");
-  if (/invalid input syntax for type uuid/i.test(msg)) {
-    return "That season or match link is invalid.";
+  // Prefer safe mapping first, then preserve a few product-specific uuid phrases.
+  const safe = safeClientErrorMessage(error);
+  const raw = String(error?.message || '');
+  if (/invalid input syntax for type uuid/i.test(raw) || /Supabase request failed with 400:.*uuid/i.test(raw)) {
+    return 'That season or match link is invalid.';
   }
-  if (/Supabase request failed with 400:.*uuid/i.test(msg)) {
-    return "That season or match link is invalid.";
-  }
-  return msg;
+  return safe;
 }
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
+  if (Number(error?.status) >= 400 && Number(error?.status) < 600) return Number(error.status);
   if (/invalid input syntax for type uuid/i.test(String(error?.message || ""))) return 400;
   if (error.message === "Season not found") return 404;
   if (error.message === "Actor is not a league admin") return 403;

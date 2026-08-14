@@ -1,3 +1,4 @@
+import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
 import {
   adminOverrideReconciledPlayerMatchCommand,
   confirmPlayerMatchScoreCommand,
@@ -40,11 +41,7 @@ export function dualScoringStatusForError(error) {
 }
 
 async function readJsonBody(request) {
-  const text = await request.text();
-  if (!text.trim()) return {};
-  const body = JSON.parse(text);
-  if (!body || Array.isArray(body) || typeof body !== 'object') throw new Error('Request body must be a JSON object');
-  return body;
+  return readSanitizedJsonBody(request);
 }
 
 function scoringTeamFromRequest(request, body = {}) {
