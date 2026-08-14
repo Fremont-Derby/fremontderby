@@ -455,6 +455,7 @@ export function renderProfilePage(env = {}) {
       const returnedFromGoogle = consumeOAuthCallback();
       if (returnedFromGoogle || token()) {
         await loadProfile();
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>loadProfile().catch(()=>{}),{intervalMs:45000,immediate:false});
         await refreshAdminAccess();
       }
     });

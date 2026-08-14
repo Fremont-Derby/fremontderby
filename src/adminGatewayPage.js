@@ -41,7 +41,7 @@ export function renderAdminGatewayPage() {
         <a class="card" href="/admin/season-teams">
           <strong>Season teams</strong><span>Jump team names A–Z and manage roster slots for a season.</span><b>Manage teams →</b>
         </a>
-        <a class="card" href="/season-setup">
+        <a class="card" data-accent="gold" href="/season-setup" data-admin-surface="season-setup">
           <strong>League setup</strong><span>Create and publish seasons, capacity, and schedule.</span><b>Open setup →</b>
         </a>
         <a class="card" href="/admin/audit">
