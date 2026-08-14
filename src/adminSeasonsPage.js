@@ -44,7 +44,11 @@ export function renderAdminSeasonsPage() {
         <h1>Seasons</h1>
         <div class="muted">Find a season by name or status, then jump into setup or season teams without hunting through dropdowns.</div>
       </div>
-      <a class="back" href="/admin">Admin home</a>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a class="back" href="/admin">Admin home</a>
+        <a class="back" href="/admin/season-teams">Season teams</a>
+        <a class="back" href="/season-setup">League setup</a>
+      </div>
     </header>
     <section class="panel">
       <div class="tools">

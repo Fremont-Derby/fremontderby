@@ -33,6 +33,7 @@ const APP_PAGE_PATHS = new Set([
   '/schedule',
   '/playoffs',
   '/standings',
+  '/players',
   '/prizes',
   '/trades',
   '/season-setup',
@@ -47,6 +48,10 @@ const APP_PAGE_PATHS = new Set([
   '/admin/audit',
   '/admin/operations',
   '/admin/players',
+  '/admin/seasons',
+  '/admin/season-teams',
+  '/demo',
+  '/rules',
 ]);
 
 function sectionForPath(pathname) {
