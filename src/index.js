@@ -1499,7 +1499,7 @@ export default {
     }
 
     if (url.pathname === "/health/environment") {
-      const readiness = environmentReadiness(env);
+      const readiness = environmentReadiness(env, { host: url.hostname || request.headers.get('host') });
       return jsonResponse(
         {
           service: serviceName,
@@ -1508,6 +1508,11 @@ export default {
           deployedAt: version.timestamp,
           ok: readiness.ok,
           environment: readiness.environment,
+          host: readiness.host,
+          expectedHostEnvironment: readiness.expectedHostEnvironment,
+          hostMatchesEnvironment: readiness.hostMatchesEnvironment,
+          expectedSupabaseSchema: readiness.expectedSupabaseSchema,
+          expectedPrivateSupabaseSchema: readiness.expectedPrivateSupabaseSchema,
         },
         readiness.ok ? 200 : 503,
       );

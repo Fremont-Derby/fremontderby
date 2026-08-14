@@ -192,3 +192,14 @@ The repository is expected to hold these **Actions** secret *names* for deploy/d
 Worker-level secrets (`SUPABASE_*`, `BETA_ACTOR_USER_ID`, …) are provisioned on each Cloudflare Worker / `wrangler secret`, not as a substitute for the Actions Cloudflare pair.
 
 Hosted runners must allocate (`runner_id` non-zero) for workflows to use those secrets. See `docs/GITHUB_ACTIONS.md`.
+
+## Host vs Worker identity
+
+`GET /health/environment` includes:
+
+- `environment` — Worker `ENVIRONMENT`
+- `host` — request hostname
+- `expectedHostEnvironment` — map for known public hosts (`dru.fremontderby.com` → `dru`, etc.)
+- `hostMatchesEnvironment` — `false` when a known lane/apex host is served by the wrong Worker
+
+A 200 with `"environment":"production"` on `dru.fremontderby.com` is a **failed** lane identity: DNS may resolve, but `wrangler deploy --env dru` (and secrets) still need to attach the lane Worker.
