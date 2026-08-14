@@ -51,6 +51,7 @@ import {
 } from './standingsCommands.js';
 import { renderStandingsPage } from './standingsPage.js';
 import { createStandingsRepository } from './standingsRepository.js';
+import { conditionalJsonFromVersion, conditionalJsonResponse, versionTokenFromValue } from './httpConditional.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
 import {
@@ -668,12 +669,14 @@ export async function handleListOwnTeamManagementRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamRepository(env, { fetch: fetchImpl });
+    // Actor-scoped: strong ETag after load still enables 304 bandwidth savings on live refresh.
     const teamManagement = await listOwnTeamManagementCommand(
       { actorUserId: actor.id },
       repository,
     );
-
-    return jsonResponse({ teamManagement });
+    return conditionalJsonResponse(request, { teamManagement }, {
+      cacheControl: 'private, no-store',
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1083,6 +1086,7 @@ export async function handleListPublicSeasonsRequest(
 }
 
 export async function handleListSeasonScheduleRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -1093,14 +1097,24 @@ export async function handleListSeasonScheduleRequest(
     if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const rounds = await repository.listSeasonSchedule({ seasonId });
-    return jsonResponse({ rounds });
+    const versionState = await repository.getSeasonScheduleVersion({ seasonId });
+    const version = await versionTokenFromValue(versionState);
+    return conditionalJsonFromVersion(request, {
+      scope: `schedule:${seasonId}`,
+      version,
+      cacheControl: 'private, no-store',
+      buildBody: async () => {
+        const rounds = await repository.listSeasonSchedule({ seasonId });
+        return { rounds };
+      },
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListTeamStandingsRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -1111,18 +1125,24 @@ export async function handleListTeamStandingsRequest(
     if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const standings = await listTeamStandingsCommand(
-      { seasonId },
-      repository,
-    );
-
-    return jsonResponse({ standings });
+    const versionState = await repository.getSeasonStandingsVersion({ seasonId });
+    const version = await versionTokenFromValue(versionState);
+    return conditionalJsonFromVersion(request, {
+      scope: `team-standings:${seasonId}`,
+      version,
+      cacheControl: 'private, no-store',
+      buildBody: async () => {
+        const standings = await listTeamStandingsCommand({ seasonId }, repository);
+        return { standings };
+      },
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListIndividualStandingsRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -1133,12 +1153,17 @@ export async function handleListIndividualStandingsRequest(
     if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const standings = await listIndividualStandingsCommand(
-      { seasonId },
-      repository,
-    );
-
-    return jsonResponse({ standings });
+    const versionState = await repository.getSeasonStandingsVersion({ seasonId });
+    const version = await versionTokenFromValue(versionState);
+    return conditionalJsonFromVersion(request, {
+      scope: `individual-standings:${seasonId}`,
+      version,
+      cacheControl: 'private, no-store',
+      buildBody: async () => {
+        const standings = await listIndividualStandingsCommand({ seasonId }, repository);
+        return { standings };
+      },
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -2060,6 +2085,7 @@ export default {
       }
 
       return handleListSeasonScheduleRequest(
+        request,
         env,
         decodeURIComponent(seasonScheduleMatch[1]),
       );
@@ -2071,6 +2097,7 @@ export default {
       }
 
       return handleListTeamStandingsRequest(
+        request,
         env,
         decodeURIComponent(teamStandingsMatch[1]),
       );
@@ -2082,6 +2109,7 @@ export default {
       }
 
       return handleListIndividualStandingsRequest(
+        request,
         env,
         decodeURIComponent(individualStandingsMatch[1]),
       );

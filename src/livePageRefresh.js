@@ -75,6 +75,34 @@ export const livePageRefreshScript = `<script data-fd-live-refresh-script>
     entry.timer = setInterval(() => runOne(entry, 'interval'), ms);
   }
 
+
+  function etagKey(url) {
+    return 'fd.etag:' + String(url);
+  }
+
+  window.fdConditionalFetch = async function fdConditionalFetch(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+    const key = etagKey(url);
+    try {
+      const prior = sessionStorage.getItem(key);
+      if (prior && !headers.has('if-none-match')) headers.set('if-none-match', prior);
+    } catch {}
+    const response = await fetch(url, { ...options, headers });
+    const etag = response.headers.get('etag');
+    if (etag) {
+      try { sessionStorage.setItem(key, etag); } catch {}
+    }
+    if (response.status === 304) {
+      return { response, notModified: true, body: null };
+    }
+    let body = null;
+    const text = await response.text();
+    if (text) {
+      try { body = JSON.parse(text); } catch { body = text; }
+    }
+    return { response, notModified: false, body };
+  };
+
   window.fdLiveRefresh = {
     register(fn, options = {}) {
       if (typeof fn !== 'function') return () => {};

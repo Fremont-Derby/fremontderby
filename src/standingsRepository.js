@@ -137,6 +137,49 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
       }));
     },
 
+    async getSeasonScheduleVersion({ seasonId }) {
+      const roundParams = new URLSearchParams({
+        select: 'id,round_number,scheduled_on,status,stage',
+        season_id: `eq.${seasonId}`,
+        order: 'round_number.asc',
+      });
+      const matchParams = new URLSearchParams({
+        select: 'id,round_id,status,table_number,team_a_id,team_b_id',
+        season_id: `eq.${seasonId}`,
+        order: 'id.asc',
+      });
+      const [roundRows, matchRows] = await Promise.all([
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, { method: 'GET', headers }),
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/team_matches?${matchParams}`, { method: 'GET', headers }),
+      ]);
+      return {
+        rounds: Array.isArray(roundRows) ? roundRows : [],
+        matches: Array.isArray(matchRows) ? matchRows : [],
+      };
+    },
+
+    async getSeasonStandingsVersion({ seasonId }) {
+      // Standings move when match/round status changes; cheaper than full standings RPCs.
+      const matchParams = new URLSearchParams({
+        select: 'id,status',
+        season_id: `eq.${seasonId}`,
+        order: 'id.asc',
+      });
+      const roundParams = new URLSearchParams({
+        select: 'id,status',
+        season_id: `eq.${seasonId}`,
+        order: 'id.asc',
+      });
+      const [matchRows, roundRows] = await Promise.all([
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/team_matches?${matchParams}`, { method: 'GET', headers }),
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, { method: 'GET', headers }),
+      ]);
+      return {
+        matches: Array.isArray(matchRows) ? matchRows : [],
+        rounds: Array.isArray(roundRows) ? roundRows : [],
+      };
+    },
+
     async listTeamStandings({ seasonId }) {
       return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_team_standings`, {
         method: 'POST',
