@@ -47,7 +47,7 @@ export function renderAdminAuditPage() {
     const statusEl=document.querySelector('[data-status]');
     const listEl=document.querySelector('[data-list]');
     const prefixEl=document.querySelector('[data-prefix]');
-    function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
+    function setStatus(message,tone,opts){if(window.fdSetStatus){window.fdSetStatus(statusEl,message,tone||'muted',opts||{});return}statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function api(path,options={}){
       const response=await fetch(path,{...options,headers:{authorization:'Bearer '+token(),'content-type':'application/json',...(options.headers||{})}});
@@ -126,7 +126,7 @@ export function renderAdminAuditPage() {
       try{
         const body=await api('/api/admin/audit-webhooks/flush',{method:'POST'});
         setStatus('Webhooks delivered: '+(body.delivered||0),'ok');
-      }catch(error){setStatus(error.message,'error')}
+      }catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
     prefixEl.addEventListener('change',()=>load().catch((e)=>setStatus(e.message,'error')));
     load().catch((e)=>setStatus(e.message,'error'));

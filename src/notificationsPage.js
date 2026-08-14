@@ -34,7 +34,7 @@ export function renderNotificationsPage() {
   <script>
     const statusEl=document.querySelector('[data-status]');
     const listEl=document.querySelector('[data-list]');
-    function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
+    function setStatus(message,tone,opts){if(window.fdSetStatus){window.fdSetStatus(statusEl,message,tone||'muted',opts||{});return}statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
     async function api(path,options={}){
       const response=await fetch(path,{...options,headers:{authorization:'Bearer '+token(),'content-type':'application/json',...(options.headers||{})}});
@@ -65,7 +65,7 @@ export function renderNotificationsPage() {
         mark.textContent='Mark read';
         mark.addEventListener('click',async()=>{
           try{await api('/api/me/notifications/'+encodeURIComponent(item.id)+'/read',{method:'POST'});await load()}
-          catch(error){setStatus(error.message,'error')}
+          catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
         });
         card.append(mark);
       }
@@ -87,7 +87,7 @@ export function renderNotificationsPage() {
     async function load(opts={}){
       const quiet=Boolean(opts&&opts.quiet);
       if(!token()){setStatus('Sign in required','muted');listEl.textContent='Open Profile and sign in to see notifications.';return}
-      if(!quiet) setStatus('Loading…');
+      if(!quiet) setStatus('Loading…','muted',{quiet:false});
       const body=await api('/api/me/notifications');
       render(body.notifications||[]);
       const unread=(body.notifications||[]).filter((n)=>!n.readAt).length;
@@ -95,9 +95,9 @@ export function renderNotificationsPage() {
     }
     document.querySelector('[data-mark-all]').addEventListener('click',async()=>{
       try{await api('/api/me/notifications/read-all',{method:'POST'});await load()}
-      catch(error){setStatus(error.message,'error')}
+      catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
-    load().catch((error)=>setStatus(error.message,'error'));
+    load().catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error'));
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
   </script>
 </body>

@@ -190,7 +190,7 @@ export function renderPlayoffsPage() {
                   body:JSON.stringify({teamId,playerIds:boxes,anchorPlayerId}),
                 });
                 setStatus('Postseason lineup submitted','ok');
-              }catch(e){setStatus(e.message,'error')}
+              }catch(e){setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')}
             });
             post.append(teamSel,playerBox,anchorSel,submit);
             card.append(post);
@@ -242,15 +242,15 @@ export function renderPlayoffsPage() {
       renderBracket(body.rounds||body.schedule||[]);
       if(!quiet) setStatus('Playoffs loaded','ok');
     }
-    document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch((e)=>setStatus(e.message,'error')));
-    seasonEl.addEventListener('change',()=>loadBracket().catch((e)=>setStatus(e.message,'error')));
+    document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')));
+    seasonEl.addEventListener('change',()=>loadBracket().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')));
     document.querySelector('[data-start]').addEventListener('click',async()=>{
       try{
         setStatus('Starting playoffs…');
         await authApi('/api/admin/seasons/'+encodeURIComponent(seasonEl.value)+'/start-playoffs',{method:'POST',body:'{}'});
         await loadBracket();
         setStatus('Playoffs started','ok');
-      }catch(e){setStatus(e.message,'error')}
+      }catch(e){setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')}
     });
     document.querySelector('[data-advance]').addEventListener('click',async()=>{
       try{
@@ -258,9 +258,9 @@ export function renderPlayoffsPage() {
         await authApi('/api/admin/seasons/'+encodeURIComponent(seasonEl.value)+'/advance-championship',{method:'POST',body:'{}'});
         await loadBracket();
         setStatus('Championship advanced','ok');
-      }catch(e){setStatus(e.message,'error')}
+      }catch(e){setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')}
     });
-    load().catch((e)=>setStatus(e.message,'error'));
+    load().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error'));
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(()=>{}),{intervalMs:20000,immediate:false});
   </script>
 </body>

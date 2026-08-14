@@ -73,3 +73,9 @@ Human DRU finish: search issues for `[HUMAN]` DRU open-auth. DNS durability: pla
 Page loaders **must** skip Loading flashes and destructive empties when `quiet` is true. Prefer `window.fdStableList` for list DOM and `window.fdSetStatus(el, msg, tone, { quiet })` for status text.
 
 Error strings for users go through `friendlyErrorMessage` (offline, 503, rate limit, pending migration, auth expiry).
+
+### Shared helpers (browser)
+
+- `window.fdQuietRun(action, { quiet, statusEl, loadingMessage, surfaceQuietErrors })` — try/catch with `fdFriendlyError`.
+- `register(fn, { statusEl, softFail })` — after 2+ quiet failures shows “Update delayed — retrying…” then “Last update failed — will retry.”; clears on success.
+- Local `setStatus` wrappers should delegate to `fdSetStatus` when present so quiet polls never flash Loading.
