@@ -119,6 +119,22 @@ Track each implementation card through these stages in the issue body or project
 7. **Verified** — the merged behavior has been validated at the appropriate source/CI/staging/production level and evidence is recorded on the card.
 8. **Closed** — only after acceptance criteria are satisfied and follow-up cards are linked.
 
+### Card label contract
+
+Labels make ownership and lifecycle state filterable across the backlog; the issue body and comments remain the evidence. Every open implementation card must carry:
+
+- exactly one `agent:*` label: current implementation owner, or `agent:unclaimed`;
+- exactly one `stage:*` label matching the lifecycle above;
+- exactly one `priority:p0` through `priority:p3`;
+- at least one `area:*` label;
+- optional coordination flags such as `blocked`, `collision-risk`, `human-required`, or `handoff:*`.
+
+New implementation cards start with `agent:unclaimed`, `stage:ready`, and `priority:p2`. Before coding, replace `agent:unclaimed` with the accepting owner, set the correct priority and area, then advance `stage:claimed` to `stage:in-progress` when the focused branch exists.
+
+Lifecycle labels are mutually exclusive. Replace the previous `stage:*` label when state changes; never stack several stages or owner labels. Use `stage:merged` after merge, `stage:verified` only after evidence is recorded, and `stage:closed` immediately before closing the issue. PRs reference the card but do not duplicate its lifecycle labels.
+
+The canonical names, colors, and descriptions live in `.github/collaboration-labels.json` and are synchronized by `.github/workflows/sync-collaboration-labels.yml`. Agents may not invent near-duplicate owner or stage labels. Change the manifest through a tracked governance PR when the system needs to evolve.
+
 Do not use an auto-closing PR keyword such as `Closes #123` as the normal tracking mechanism. Prefer `Tracks #123` or `Refs #123` so merge does not close the card before post-merge verification.
 
 ## Parallel agent ownership and branch discipline
@@ -178,17 +194,27 @@ Do not bundle top-level instruction promotion into an unrelated feature PR.
 
 ### Clean handoff protocol
 
-When handing work from JFL to DRU, DRU to JFL, or any agent to another:
+A handoff is explicit and accepted; silence never transfers ownership.
 
-- push/commit the current coherent state before handoff;
-- link the card and PR/branch;
-- state exactly what is complete, what remains, and what is blocked;
-- list important files/surfaces changed and any known collision risk;
-- record tests/CI already run and failures still present;
-- identify the next exact action and who now owns implementation;
-- do not have both agents continue modifying the same branch after ownership transfers.
+The outgoing agent must:
 
-The receiving agent starts by reading the card/PR, refreshing `main`, and confirming the handoff is still current before editing.
+1. commit and push a coherent state;
+2. set `stage:handoff` and add `handoff:jfl`, `handoff:dru`, or `handoff:review` as appropriate;
+3. retain its current `agent:*` owner label until an incoming implementation owner accepts;
+4. leave a GitHub issue or PR comment containing:
+   - outgoing owner;
+   - requested incoming owner or reviewer;
+   - card and branch/PR;
+   - completed work;
+   - remaining work;
+   - touched files/surfaces;
+   - proof run and known failures;
+   - risks, blockers, and collision concerns;
+   - exact next action.
+
+For an ownership transfer, the incoming agent reads the current card/PR and repository state, posts explicit acceptance, replaces the outgoing `agent:*` label with its own, removes the `handoff:*` label, and sets `stage:in-progress` before editing. The outgoing agent then stops changing the branch unless ownership is transferred back.
+
+For review-only handoffs, the implementation owner label does not change. The reviewer records findings and completion; the owner removes `handoff:review` and advances the stage when the review is resolved.
 
 ## Implementation behavior
 

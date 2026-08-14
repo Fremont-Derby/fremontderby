@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "labels": [
+    { "name": "agent:unclaimed", "color": "6e7781", "description": "No implementation owner has accepted this card" },
+    { "name": "agent:jfl", "color": "1f6feb", "description": "JFL is the current implementation owner" },
+    { "name": "agent:dru", "color": "8250df", "description": "DRU is the current implementation owner" },
+    { "name": "agent:codex", "color": "0969da", "description": "Codex or ChatGPT is the current implementation owner" },
+    { "name": "agent:orchestrator", "color": "0e8a16", "description": "Orchestrator or TPM owns coordination for this card" },
+    { "name": "agent:other", "color": "bfdadc", "description": "Another named lane owns implementation; record it in the card" },
+
+    { "name": "stage:ready", "color": "d4c5f9", "description": "Scope and dependencies are understood; ready to claim" },
+    { "name": "stage:claimed", "color": "c2e0c6", "description": "One implementation owner has accepted the card" },
+    { "name": "stage:in-progress", "color": "0e8a16", "description": "Focused implementation is active" },
+    { "name": "stage:handoff", "color": "fbca04", "description": "Ownership transfer or review handoff is pending acceptance" },
+    { "name": "stage:merge-ready", "color": "1d76db", "description": "Scope reconciled and required checks are green" },
+    { "name": "stage:merged", "color": "5319e7", "description": "Implementation merged; post-merge verification remains" },
+    { "name": "stage:verified", "color": "006b75", "description": "Merged outcome verified with recorded evidence" },
+    { "name": "stage:closed", "color": "0e8a16", "description": "Acceptance criteria satisfied and follow-ups linked" },
+
+    { "name": "priority:p0", "color": "b60205", "description": "Immediate blocker or safety-critical work" },
+    { "name": "priority:p1", "color": "d93f0b", "description": "High-impact work to do next" },
+    { "name": "priority:p2", "color": "fbca04", "description": "Normal-priority planned work" },
+    { "name": "priority:p3", "color": "c5def5", "description": "Lower-priority improvement or future work" },
+
+    { "name": "area:product", "color": "a2eeef", "description": "Product behavior or user workflow" },
+    { "name": "area:ui", "color": "7057ff", "description": "User interface, accessibility, or interaction design" },
+    { "name": "area:rules", "color": "d876e3", "description": "League rules, eligibility, or scoring policy" },
+    { "name": "area:data", "color": "0052cc", "description": "Schema, migrations, integrity, or data access" },
+    { "name": "area:platform", "color": "006b75", "description": "Cloudflare, Supabase, deployment, or operations" },
+    { "name": "area:qa", "color": "bfd4f2", "description": "Testing, release proof, security, or verification" },
+    { "name": "area:process", "color": "f9d0c4", "description": "Agent governance, documentation, or developer workflow" },
+
+    { "name": "handoff:jfl", "color": "54aeff", "description": "JFL review or ownership acceptance is requested" },
+    { "name": "handoff:dru", "color": "a475f9", "description": "DRU review or ownership acceptance is requested" },
+    { "name": "handoff:review", "color": "fbca04", "description": "A named reviewer or specialist handoff is pending" },
+    { "name": "blocked", "color": "b60205", "description": "Work cannot proceed until a recorded blocker clears" },
+    { "name": "collision-risk", "color": "e99695", "description": "Active work may overlap a high-collision surface" },
+    { "name": "human-required", "color": "d93f0b", "description": "A specific human action or decision is required" }
+  ]
+}

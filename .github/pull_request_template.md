@@ -39,7 +39,17 @@
 <!-- Issues created/updated or durable docs/instructions improved. Use `None` when truly complete. -->
 
 ## Handoff
-<!-- Recommended reviewer/next specialist lane and why. If ownership is transferring, name the incoming owner and exact next action. -->
+<!-- Complete every field. Use "Same as owner" or "None" only when accurate. For ownership transfer, also update the card labels and require explicit acceptance before the incoming agent edits. -->
+
+- Outgoing owner:
+- Requested incoming owner/reviewer:
+- Completed:
+- Remaining:
+- Touched surfaces:
+- Proof and known failures:
+- Risks/blockers/collision concerns:
+- Exact next action:
+- Acceptance status: pending / accepted / review-only
 
 ## After merge
 <!-- Do not close the tracking card at merge. Mark it Merged, perform appropriate post-merge verification, record evidence on the card, mark Verified, then close only after acceptance criteria are satisfied. -->
