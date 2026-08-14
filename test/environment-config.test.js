@@ -8,8 +8,8 @@ const config = JSON.parse(
 
 const publicHosts = {
   production: 'fremontderby.com',
-  'beta-jfl': 'beta-jfl.fremontderby.com',
-  'beta-dru': 'beta-dru.fremontderby.com',
+  jfl: 'jfl.fremontderby.com',
+  dru: 'dru.fremontderby.com',
   gamma: 'gamma.fremontderby.com',
 };
 
@@ -41,18 +41,20 @@ test('Wrangler owns every public release hostname as a custom domain', () => {
     assert.equal(customDomainFor(environment), host);
   }
   assert.equal(config.workers_dev, false);
-  assert.equal(config.env['beta-jfl'].workers_dev, false);
-  assert.equal(config.env['beta-dru'].workers_dev, false);
+  assert.equal(config.env.jfl.workers_dev, false);
+  assert.equal(config.env.dru.workers_dev, false);
   assert.equal(config.env.gamma.workers_dev, false);
 });
 
-test('new release lanes have explicit identities and no legacy generic beta environment', () => {
+test('release lanes have explicit Derby identities and no legacy generic beta environment', () => {
   assert.equal(config.env.beta, undefined);
-  assert.equal(config.env['beta-jfl'].name, 'fremontderby-beta-jfl');
-  assert.equal(config.env['beta-dru'].name, 'fremontderby-beta-dru');
+  assert.equal(config.env['beta-jfl'], undefined);
+  assert.equal(config.env['beta-dru'], undefined);
+  assert.equal(config.env.jfl.name, 'fremontderby-jfl');
+  assert.equal(config.env.dru.name, 'fremontderby-dru');
   assert.equal(config.env.gamma.name, 'fremontderby-gamma');
-  assert.equal(config.env['beta-jfl'].vars.ENVIRONMENT, 'beta-jfl');
-  assert.equal(config.env['beta-dru'].vars.ENVIRONMENT, 'beta-dru');
+  assert.equal(config.env.jfl.vars.ENVIRONMENT, 'jfl');
+  assert.equal(config.env.dru.vars.ENVIRONMENT, 'dru');
   assert.equal(config.env.gamma.vars.ENVIRONMENT, 'gamma');
 });
 
@@ -63,19 +65,19 @@ test('non-production lane credentials are declared as required secrets, not plac
     'SUPABASE_SERVICE_ROLE_KEY',
     'EXPECTED_SUPABASE_PROJECT_REF',
   ];
-  for (const lane of ['beta-jfl', 'beta-dru', 'gamma']) {
+  for (const lane of ['jfl', 'dru', 'gamma']) {
     const target = config.env[lane];
     for (const name of common) assert.ok(target.secrets.required.includes(name));
     assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
   }
-  assert.ok(config.env['beta-jfl'].secrets.required.includes('BETA_ACTOR_USER_ID'));
-  assert.ok(config.env['beta-dru'].secrets.required.includes('BETA_ACTOR_USER_ID'));
+  assert.ok(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'));
+  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
   assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
 });
 
-test('auth bypass is enabled only in the isolated beta lane config', () => {
-  assert.equal(config.env['beta-jfl'].vars.BETA_AUTH_BYPASS, '1');
-  assert.equal(config.env['beta-dru'].vars.BETA_AUTH_BYPASS, '1');
+test('auth bypass is enabled only in the isolated JFL and DRU lane config', () => {
+  assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, '1');
+  assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.gamma.vars.BETA_AUTH_BYPASS, '0');
   assert.equal(config.vars.BETA_AUTH_BYPASS, undefined);
   assert.equal(config.env.staging.vars.BETA_AUTH_BYPASS, undefined);
