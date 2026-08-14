@@ -1,7 +1,9 @@
 name: Restore lane custom domains
 on:
   workflow_dispatch:
-  # Allow agents to request restore without a code change
+  schedule:
+    # Domains have been observed dropping; keep lanes attached.
+    - cron: '17 * * * *'
 jobs:
   restore:
     runs-on: ubuntu-latest
@@ -17,3 +19,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/restore-lane-custom-domains.mjs
+      - name: Probe public DNS and health
+        run: |
+          set +e
+          for host in dru.fremontderby.com jfl.fremontderby.com gamma.fremontderby.com; do
+            echo "=== $host ==="
+            getent hosts "$host" || echo "NO DNS yet for $host"
+            curl -sS -m 15 "https://$host/health/environment" || echo "health failed for $host"
+            echo
+          done
