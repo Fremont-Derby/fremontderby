@@ -296,7 +296,11 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         // Team management remains useful even if optional picker data is unavailable.
       }
 
-      const captainTeams = enrichedManagement.captain_teams ?? [];
+      const captainTeams = (enrichedManagement.captain_teams ?? []).map((team) => ({
+        ...team,
+        teamId: team.teamId || team.team_id || team.id || null,
+        teamName: team.teamName || team.team_name || team.name || null,
+      }));
       let scheduleEnriched = false;
       const teamsWithRounds = [];
       for (const team of captainTeams) {
