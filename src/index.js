@@ -1073,13 +1073,17 @@ export async function handleListVisibleTeamLineupsRequest(
 }
 
 export async function handleListPublicSeasonsRequest(
+  request,
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
     const seasons = await repository.listPublicSeasons();
-    return jsonResponse({ seasons });
+    // Public, anonymous-safe list: strong ETag + short shared edge TTL (Phase 3).
+    return conditionalJsonResponse(request || new Request('https://example.test/api/seasons'), { seasons }, {
+      cacheControl: 'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1102,7 +1106,7 @@ export async function handleListSeasonScheduleRequest(
     return conditionalJsonFromVersion(request, {
       scope: `schedule:${seasonId}`,
       version,
-      cacheControl: 'private, no-store',
+      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
       buildBody: async () => {
         const rounds = await repository.listSeasonSchedule({ seasonId });
         return { rounds };
@@ -1130,7 +1134,7 @@ export async function handleListTeamStandingsRequest(
     return conditionalJsonFromVersion(request, {
       scope: `team-standings:${seasonId}`,
       version,
-      cacheControl: 'private, no-store',
+      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
       buildBody: async () => {
         const standings = await listTeamStandingsCommand({ seasonId }, repository);
         return { standings };
@@ -1158,7 +1162,7 @@ export async function handleListIndividualStandingsRequest(
     return conditionalJsonFromVersion(request, {
       scope: `individual-standings:${seasonId}`,
       version,
-      cacheControl: 'private, no-store',
+      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
       buildBody: async () => {
         const standings = await listIndividualStandingsCommand({ seasonId }, repository);
         return { standings };
@@ -1170,6 +1174,7 @@ export async function handleListIndividualStandingsRequest(
 }
 
 export async function handleGetSeasonPrizeSummaryRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -1180,8 +1185,9 @@ export async function handleGetSeasonPrizeSummaryRequest(
       { seasonId },
       repository,
     );
-
-    return jsonResponse({ summary });
+    return conditionalJsonResponse(request || new Request('https://example.test/api/prizes'), { summary }, {
+      cacheControl: 'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -2076,7 +2082,7 @@ export default {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return handleListPublicSeasonsRequest(env);
+      return handleListPublicSeasonsRequest(request, env);
     }
 
     if (seasonScheduleMatch) {
@@ -2121,6 +2127,7 @@ export default {
       }
 
       return handleGetSeasonPrizeSummaryRequest(
+        request,
         env,
         decodeURIComponent(seasonPrizesMatch[1]),
       );

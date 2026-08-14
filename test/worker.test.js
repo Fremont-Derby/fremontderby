@@ -1694,7 +1694,7 @@ test("public season list handler returns registration progress", async () => {
       }],
   }]);
 
-  const response = await handleListPublicSeasonsRequest(publishEnv, { fetch });
+  const response = await handleListPublicSeasonsRequest(new Request("https://example.test/api/seasons"), publishEnv, { fetch });
 
   assert.equal(response.status, 200);
   const body = await response.json();
@@ -1844,6 +1844,7 @@ test("season prize summary handler returns public aggregate purse information", 
   ]);
 
   const response = await handleGetSeasonPrizeSummaryRequest(
+    new Request("https://example.test/api/seasons/season-1/prizes"),
     publishEnv,
     "season-1",
     { fetch },
