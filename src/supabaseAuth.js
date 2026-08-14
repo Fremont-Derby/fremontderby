@@ -6,6 +6,8 @@ export class AuthError extends Error {
   }
 }
 
+export const JFL_SIMULATED_OIDC_ACCESS_TOKEN = 'fd-jfl-simulated-google-oidc-v1';
+
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -43,6 +45,18 @@ export function betaAuthBypassEnabled(env = {}) {
   return testAuthEnvironments.has(environment) && bypass === '1';
 }
 
+/**
+ * The simulated Google/OIDC browser session is intentionally narrower than
+ * tokenless test-lane auth: only JFL may exchange the reserved opaque token
+ * for the configured JFL test actor. DRU, Gamma, staging, and production fail
+ * closed even if a bypass flag is accidentally present.
+ */
+export function jflSimulatedOidcEnabled(env = {}) {
+  const environment = String(env.ENVIRONMENT || '').trim();
+  const bypass = String(env.BETA_AUTH_BYPASS || '').trim();
+  return environment === 'jfl' && bypass === '1';
+}
+
 export function resolveBetaBypassActor(env = {}) {
   const id = String(env.BETA_ACTOR_USER_ID || '').trim();
   if (!id) {
@@ -68,6 +82,16 @@ export async function authenticateSupabaseUser(
   }
 
   const token = bearerToken(request);
+
+  if (token === JFL_SIMULATED_OIDC_ACCESS_TOKEN) {
+    if (!jflSimulatedOidcEnabled(env)) {
+      throw new AuthError('Invalid bearer token');
+    }
+    return {
+      ...resolveBetaBypassActor(env),
+      simulatedOidc: true,
+    };
+  }
 
   // Test-lane bypass is only for deliberately unauthenticated automation.
   // Once a caller supplies a bearer token, validate it normally rather than
@@ -100,8 +124,5 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Authenticated user is missing an id');
   }
 
-  return {
-    id: user.id,
-    email: user.email ?? null,
-  };
+  return { id: user.id, email: user.email ?? null };
 }
