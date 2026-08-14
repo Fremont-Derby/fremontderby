@@ -182,6 +182,36 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         const button=actionButton('Send invite','primary',{inviteTeam:team.teamId||team.id||''});
         invite.append(label,button);
         card.append(invite);
+        const practice=document.createElement('div');
+        practice.className='practice-block';
+        const practiceTitle=node('h3','Team practice');
+        const practiceHelp=node('div','Optional. Teammates use this for where/when you meet outside league night.','muted');
+        const locLabel=document.createElement('label');
+        locLabel.textContent='Practice location';
+        const locInput=document.createElement('input');
+        locInput.type='text';
+        locInput.maxLength=120;
+        locInput.placeholder='e.g. Fremont Bowl — side tables';
+        locInput.dataset.practiceLocation=team.teamId||team.id||'';
+        locInput.value=team.practiceLocation||team.practice_location||'';
+        locLabel.append(locInput);
+        const schedLabel=document.createElement('label');
+        schedLabel.textContent='Practice time';
+        const schedInput=document.createElement('input');
+        schedInput.type='text';
+        schedInput.maxLength=120;
+        schedInput.placeholder='e.g. Thursdays 6:30–8:00 PM';
+        schedInput.dataset.practiceSchedule=team.teamId||team.id||'';
+        schedInput.value=team.practiceSchedule||team.practice_schedule||'';
+        schedLabel.append(schedInput);
+        const summary=node('div',null,'practice-summary muted');
+        const hasPractice=Boolean((team.practiceLocation||team.practice_location)||(team.practiceSchedule||team.practice_schedule));
+        summary.textContent=hasPractice
+          ? [team.practiceLocation||team.practice_location,team.practiceSchedule||team.practice_schedule].filter(Boolean).join(' · ')
+          : 'No practice set yet.';
+        const save=actionButton('Save practice','primary',{savePractice:team.teamId||team.id||''});
+        practice.append(practiceTitle,practiceHelp,locLabel,schedLabel,summary,save);
+        card.append(practice);
         captainTeamsEl.append(card);
       }
     }
@@ -291,11 +321,24 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
     async function applyForTeam(){const seasonId=seasonSelect.value;const teamName=teamNameInput.value.trim();if(!seasonId)throw new Error('No registration season is open.');if(!teamName)throw new Error('Team name is required');localStorage.setItem('fd.teamsSeasonId',seasonId);setStatus('Submitting application...');await api('/api/seasons/'+encodeURIComponent(seasonId)+'/team-applications',{method:'POST',body:JSON.stringify({teamName})});teamNameInput.value='';await loadTeams();setStatus('Application submitted for admin review','ok')}
     async function withdrawApplication(applicationId){setStatus('Withdrawing application...');await api('/api/team-applications/'+encodeURIComponent(applicationId)+'/withdraw',{method:'POST',body:'{}'});await loadTeams();setStatus('Application withdrawn','ok')}
     async function respondToSlot(slotId,action){const select=document.querySelector('[data-transfer-player="'+slotId+'"]');const transferPlayerId=select?select.value:'';if(action==='transfer'&&!transferPlayerId)throw new Error('Choose a player for the transfer');setStatus('Updating reservation...');await api('/api/team-slots/'+encodeURIComponent(slotId)+'/respond',{method:'POST',body:JSON.stringify({action,transferPlayerId:transferPlayerId||null})});await loadTeams();setStatus(action==='confirm'?'Returning team confirmed':'Reservation updated','ok')}
+    async function savePractice(teamId){
+      const locationEl=document.querySelector('[data-practice-location="'+teamId+'"]');
+      const scheduleEl=document.querySelector('[data-practice-schedule="'+teamId+'"]');
+      const practiceLocation=locationEl?locationEl.value.trim():'';
+      const practiceSchedule=scheduleEl?scheduleEl.value.trim():'';
+      setStatus('Saving practice details…');
+      await api('/api/teams/'+encodeURIComponent(teamId)+'/practice',{
+        method:'PUT',
+        body:JSON.stringify({practiceLocation,practiceSchedule}),
+      });
+      await loadTeams();
+      setStatus(practiceLocation||practiceSchedule?'Practice details saved.':'Practice details cleared.','ok');
+    }
     async function invitePlayer(teamId){const select=Array.from(document.querySelectorAll('[data-invite-player-select]')).find((candidate)=>candidate.dataset.invitePlayerSelect===teamId);const playerId=select?select.value:'';if(!playerId)throw new Error('Choose a player to invite');const chosen=select.options[select.selectedIndex];const label=chosen?chosen.textContent:'';const player=Array.isArray(playerDirectory)?playerDirectory.find((item)=>(item.playerId||item.id)===playerId):null;if((player&&player.isDuplicateName)||(label&&label.includes(' — ')&&/#\w{4}\b/.test(label))){if(!confirm('More than one player may share this name.\n\nInvite this record?\n'+label))return}setStatus('Sending invitation...');await api('/api/teams/'+encodeURIComponent(teamId)+'/invitations',{method:'POST',body:JSON.stringify({playerId})});await loadTeams();setStatus('Invitation sent','ok')}
     async function requestMembership(teamId){setStatus('Sending join request...');await api('/api/teams/'+encodeURIComponent(teamId)+'/membership-request',{method:'POST',body:'{}'});await loadTeams();setStatus('Join request sent','ok')}async function cancelMembershipRequest(requestId){setStatus('Canceling join request...');await api('/api/team-membership-requests/'+encodeURIComponent(requestId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Join request canceled','ok')}async function respondToMembershipRequest(requestId,response){setStatus(response==='approved'?'Approving player...':'Declining request...');await api('/api/team-membership-requests/'+encodeURIComponent(requestId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus(response==='approved'?'Player added to team':'Request declined','ok')}
     async function cancelInvitation(invitationId){setStatus('Canceling invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Invitation canceled','ok')}async function removeMember(membershipId){setStatus('Removing member...');await api('/api/team-memberships/'+encodeURIComponent(membershipId)+'/remove',{method:'POST',body:'{}'});await loadTeams();setStatus('Roster updated','ok')}async function respondToInvitation(invitationId,response){setStatus(response==='accepted'?'Accepting invitation...':'Declining invitation...');await api('/api/team-invitations/'+encodeURIComponent(invitationId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus('Invitation '+response,'ok')}async function run(action){try{await action()}catch(error){if(error.name==='SessionExpiredError')showPageState('expired');else setStatus(error.message,'error')}}
     createForm.addEventListener('submit',(event)=>{event.preventDefault();run(applyForTeam)});seasonSelect.addEventListener('change',()=>{if(seasonSelect.value)localStorage.setItem('fd.teamsSeasonId',seasonSelect.value);run(loadRegistration)});document.querySelector('[data-refresh]').addEventListener('click',()=>run(async()=>{await loadTeams();setStatus('Teams loaded','ok')}));document.addEventListener('click',(event)=>{const button=event.target.closest('button');if(!button)return;if(button.hasAttribute('data-retry'))loadInitialTeams();
-    if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response));if(button.dataset.requestMembership)run(()=>requestMembership(button.dataset.requestMembership));if(button.dataset.cancelMembershipRequest)run(()=>cancelMembershipRequest(button.dataset.cancelMembershipRequest));if(button.dataset.respondMembershipRequest)run(()=>respondToMembershipRequest(button.dataset.respondMembershipRequest,button.dataset.response));if(button.dataset.withdrawApplication)run(()=>withdrawApplication(button.dataset.withdrawApplication));if(button.dataset.respondSlot)run(()=>respondToSlot(button.dataset.respondSlot,button.dataset.slotAction))});
+    if(button.dataset.savePractice)run(()=>savePractice(button.dataset.savePractice));if(button.dataset.inviteTeam)run(()=>invitePlayer(button.dataset.inviteTeam));if(button.dataset.cancelInvitation)run(()=>cancelInvitation(button.dataset.cancelInvitation));if(button.dataset.removeMembership)run(()=>removeMember(button.dataset.removeMembership));if(button.dataset.respondInvitation)run(()=>respondToInvitation(button.dataset.respondInvitation,button.dataset.response));if(button.dataset.requestMembership)run(()=>requestMembership(button.dataset.requestMembership));if(button.dataset.cancelMembershipRequest)run(()=>cancelMembershipRequest(button.dataset.cancelMembershipRequest));if(button.dataset.respondMembershipRequest)run(()=>respondToMembershipRequest(button.dataset.respondMembershipRequest,button.dataset.response));if(button.dataset.withdrawApplication)run(()=>withdrawApplication(button.dataset.withdrawApplication));if(button.dataset.respondSlot)run(()=>respondToSlot(button.dataset.respondSlot,button.dataset.slotAction))});
     if(accessToken())loadInitialTeams();else showPageState('signedout')
   
     if(hubReadyCheck){hubReadyCheck.addEventListener('click',async()=>{const teamId=hubReadyCheck.dataset.teamId;const roundId=hubReadyCheck.dataset.roundId;if(!teamId||!roundId){setStatus('Pick a published matchup first so the ready check has a league night.','error');return}hubReadyCheck.disabled=true;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Sending…';try{const token=sessionStorage.getItem('fd.accessToken')||'';if(!token)throw new Error('Sign in to start a ready check.');const response=await fetch('/api/teams/ready-checks',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({teamId,roundId})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'Could not start ready check');setStatus('Ready check sent — teammates will see a prompt when they open the app.','ok');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Ready check sent';}catch(error){setStatus(error.message||'Could not start ready check','error');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';hubReadyCheck.disabled=false}})}

@@ -333,6 +333,39 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         // Availability selection is optional enrichment of the base management view.
       }
 
+
+      // Practice location/schedule for captained teams (and any membership teams).
+      try {
+        const captainIds = (finalManagement.captain_teams || [])
+          .map((team) => team.teamId || team.team_id)
+          .filter(Boolean);
+        if (captainIds.length) {
+          const inList = captainIds.map(encodeURIComponent).join(',');
+          const practiceRows = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule&id=in.(${inList})`,
+            { method: 'GET', headers },
+          );
+          const byId = new Map(
+            (Array.isArray(practiceRows) ? practiceRows : []).map((row) => [row.id, row]),
+          );
+          finalManagement = {
+            ...finalManagement,
+            captain_teams: (finalManagement.captain_teams || []).map((team) => {
+              const row = byId.get(team.teamId || team.team_id);
+              if (!row) return team;
+              return {
+                ...team,
+                practiceLocation: row.practice_location ?? null,
+                practiceSchedule: row.practice_schedule ?? null,
+              };
+            }),
+          };
+        }
+      } catch {
+        // Practice enrichment is optional.
+      }
+
       return finalManagement;
     },
 
@@ -362,6 +395,27 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       });
 
       return Array.isArray(result) ? result[0] : result;
+    },
+
+
+    async updateTeamPractice({ actorUserId, teamId, practiceLocation, practiceSchedule }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/set_team_practice`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_id: teamId,
+          practice_location: practiceLocation,
+          practice_schedule: practiceSchedule,
+        }),
+      });
+      const row = Array.isArray(result) ? result[0] : result;
+      return {
+        teamId: row?.team_id ?? teamId,
+        teamName: row?.team_name ?? null,
+        practiceLocation: row?.practice_location ?? null,
+        practiceSchedule: row?.practice_schedule ?? null,
+      };
     },
 
     async invitePlayerToTeam({ actorUserId, teamId, playerId }) {

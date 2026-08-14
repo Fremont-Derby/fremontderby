@@ -258,3 +258,31 @@ export async function removeTeamMemberCommand(
     membershipId,
   });
 }
+
+function normalizePracticeField(value, fieldName) {
+  if (value == null) return null;
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be text`);
+  }
+  const cleaned = value.trim();
+  if (!cleaned) return null;
+  if (cleaned.length > 120) {
+    throw new Error(`${fieldName} must be 120 characters or fewer`);
+  }
+  return cleaned;
+}
+
+export async function updateTeamPracticeCommand(
+  { actorUserId, teamId, practiceLocation, practiceSchedule },
+  repository,
+) {
+  if (!actorUserId) throw new Error('actorUserId is required');
+  if (!teamId) throw new Error('teamId is required');
+  assertRepositoryMethod(repository, 'updateTeamPractice');
+  return repository.updateTeamPractice({
+    actorUserId,
+    teamId,
+    practiceLocation: normalizePracticeField(practiceLocation, 'practiceLocation'),
+    practiceSchedule: normalizePracticeField(practiceSchedule, 'practiceSchedule'),
+  });
+}
