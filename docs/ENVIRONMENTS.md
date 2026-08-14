@@ -159,3 +159,16 @@ The endpoint must not return credential values. It should return HTTP 200 only w
 - #245 — green pre-merge validation and traceable production releases.
 - #35 — hosted Supabase/environment isolation proof.
 - #545 and #572 — historical single-beta approach, superseded by this topology.
+
+## Live verification contract
+
+`wrangler.jsonc` declares the desired topology. **Live proof** is required before closing platform or open-auth cards:
+
+1. Public DNS resolves for the lane hostname.
+2. `GET /health/environment` returns the **lane** name (`jfl`, `dru`, or `gamma`), not `production`, unless the host is production.
+3. Open-auth is allowed **only** on JFL/DRU when explicitly configured; production and gamma must return **401** on admin APIs without a bearer.
+4. A merged migration on `main` is not applied until the **target lane database** has run it and live probes pass.
+
+Ad-hoc Cloudflare domain attach without `wrangler deploy --env <lane>` is insufficient for durable DNS. Prefer branch deploys (`fremontderby-jfl` / `fremontderby-dru` / `fremontderby-gamma`) so routes and env vars publish together.
+
+See also `docs/platform-capabilities.md`.
