@@ -29,8 +29,8 @@ Critical automated areas already covered under `test/`:
 
 ## Live gates (not unit-testable alone)
 
-1. **Lane identity:** `node scripts/assert-lane-health.mjs`  
-   - `dru` / `jfl` / `gamma` / production hosts must report the matching `environment` value.  
+1. **Lane identity:** `node scripts/assert-lane-health.mjs`
+   - `dru` / `jfl` / `gamma` / production hosts must report the matching `environment` value.
    - DNS alone is insufficient if a lane host reports `production`.
 2. **Open-auth only on test lanes:** admin APIs without bearer must stay **401** on production and gamma.
 3. **Migrations applied on the target DB** after merge — merged SQL on `main` does not close data cards until live probes pass.
