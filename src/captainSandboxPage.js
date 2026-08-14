@@ -42,7 +42,7 @@ export function renderCaptainSandboxPage() {
 </head>
 <body><main class="app">
   <div class="sandbox">SEASON 1 WAR GAMES · FICTIONAL PRACTICE ONLY · NEVER AFFECTS LEAGUE RECORDS</div>
-  <header class="top"><div><h1>Captain dry run</h1><div class="muted">Build a team, make roster decisions, submit a lineup, then stress the roster midseason.</div></div><a href="/demo">War Games home</a></header>
+  <header class="top"><div><h1>Captain dry run</h1><div class="muted">Build a team, make roster decisions, submit a lineup, then stress the roster midseason.</div></div><span style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><a href="/demo">War Games home</a><a href="/teams">Live Teams</a><a href="/players">Live Players</a><a href="/schedule">Live Schedule</a></span></header>
   <section class="orientation-panel quick"><strong>No sign-in or setup required.</strong><div class="muted">Everything on this screen is fictional, throwaway practice stored only in this browser tab. The lineup step below is the same component captains use in production.</div></section>
 
   <section class="orientation-panel" aria-labelledby="formation-title">
