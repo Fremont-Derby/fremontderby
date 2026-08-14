@@ -19,7 +19,7 @@ async function readJsonBody(request) {
   return body;
 }
 
-function statusForError(error) {
+export function teamMatchChoiceStatusForError(error) {
   if (error instanceof AuthError) return error.status;
   const message = error?.message || '';
   if (message.includes('Player profile is required')) return 403;
@@ -51,7 +51,7 @@ export const teamMatchChoiceHttpHandlers = {
     } catch (error) {
       return jsonResponse(
         { error: publicError(error, 'Team choices are unavailable right now. Please try again.') },
-        statusForError(error),
+        teamMatchChoiceStatusForError(error),
       );
     }
   },
@@ -73,7 +73,7 @@ export const teamMatchChoiceHttpHandlers = {
     } catch (error) {
       return jsonResponse(
         { error: publicError(error, 'We could not save your team choice. Please try again.') },
-        statusForError(error),
+        teamMatchChoiceStatusForError(error),
       );
     }
   },

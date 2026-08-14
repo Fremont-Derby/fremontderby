@@ -9,7 +9,7 @@ function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-function errorStatus(error) {
+export function playerSeasonRegistrationErrorStatus(error) {
   if (error instanceof AuthError) return error.status;
   if (error.message.includes('Season not found')) return 404;
   if (error.message.includes('Season registration is not open')) return 409;
@@ -67,6 +67,6 @@ export async function routePlayerSeasonRegistration(
     );
     return json({ registration: normalizeRegistration(registration) }, 201);
   } catch (error) {
-    return json({ error: error.message }, errorStatus(error));
+    return json({ error: error.message }, playerSeasonRegistrationErrorStatus(error));
   }
 }

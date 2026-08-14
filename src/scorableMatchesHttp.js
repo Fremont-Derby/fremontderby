@@ -8,7 +8,7 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-function statusForError(error) {
+export function scorableMatchesStatusForError(error) {
   if (error instanceof AuthError) return error.status;
   const message = error?.message || 'Request failed';
   if (message.includes('Supabase request failed with 401')) return 401;
@@ -28,7 +28,7 @@ export function createScorableMatchesHttpHandlers({
         const matches = await repository.listScorableMatches({ actorUserId: actor.id });
         return jsonResponse({ matches });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, scorableMatchesStatusForError(error));
       }
     },
   };
