@@ -1,6 +1,9 @@
 /**
- * Attach Fremont Derby hostnames to the correct Workers via Cloudflare API.
+ * Break-glass repair for Fremont Derby Worker custom-domain bindings.
  * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
+ *
+ * Steady-state domain ownership belongs to Wrangler lane deploys. This script
+ * must only mutate after Cloudflare has positively reported current domain state.
  *
  * CRITICAL: production apex must stay on fremontderby-prod — never on a lane Worker.
  */
@@ -36,7 +39,7 @@ async function cf(path, { method = 'GET', body } = {}) {
   return { response, payload };
 }
 
-async function listWorkerDomains() {
+export async function listWorkerDomains() {
   const { response, payload } = await cf('/workers/domains');
   if (!response.ok || payload.success === false) {
     throw new Error(`list domains failed: ${JSON.stringify(payload.errors || payload)}`);
@@ -44,7 +47,7 @@ async function listWorkerDomains() {
   return payload.result || [];
 }
 
-async function attachDomain({ hostname, service, environment = 'production' }) {
+export async function attachDomain({ hostname, service, environment = 'production' }) {
   let result = await cf('/workers/domains', {
     method: 'PUT',
     body: { hostname, service, environment },
@@ -58,16 +61,18 @@ async function attachDomain({ hostname, service, environment = 'production' }) {
   return result;
 }
 
-async function main() {
-  console.log('Listing existing worker domains…');
-  let existing = [];
-  try {
-    existing = await listWorkerDomains();
-    for (const row of existing) {
-      console.log(`  ${row.hostname} -> ${row.service}`);
-    }
-  } catch (error) {
-    console.warn(String(error.message || error));
+export async function restoreWorkerDomains({
+  listDomains = listWorkerDomains,
+  attach = attachDomain,
+  logger = console,
+} = {}) {
+  logger.log('Listing existing worker domains…');
+
+  // Safety invariant: inability to enumerate is not evidence that a domain is
+  // missing. Let this throw so no mutation occurs while current state is unknown.
+  const existing = await listDomains();
+  for (const row of existing) {
+    logger.log(`  ${row.hostname} -> ${row.service}`);
   }
 
   const byHost = new Map(existing.map((row) => [row.hostname, row]));
@@ -75,36 +80,49 @@ async function main() {
 
   for (const lane of WORKER_DOMAIN_BINDINGS) {
     const current = byHost.get(lane.hostname);
-    if (current && current.service === lane.service) {
-      console.log(`OK already correct: ${lane.hostname} -> ${lane.service}`);
+    if (current?.service === lane.service) {
+      logger.log(`OK already correct: ${lane.hostname} -> ${lane.service}`);
       results.push({ ...lane, status: 'already' });
       continue;
     }
-    if (current && current.service !== lane.service) {
-      console.warn(`MISROUTE: ${lane.hostname} currently -> ${current.service}; rebinding to ${lane.service}`);
+
+    if (current) {
+      logger.warn(`MISROUTE: ${lane.hostname} currently -> ${current.service}; rebinding to ${lane.service}`);
+    } else {
+      logger.warn(`MISSING: ${lane.hostname} is absent from Cloudflare Worker custom domains`);
     }
-    console.log(`Attaching ${lane.hostname} -> ${lane.service}…`);
-    const { response, payload } = await attachDomain(lane);
-    if (!response.ok || payload.success === false) {
-      const message = JSON.stringify(payload.errors || payload || { status: response.status });
-      console.error(`FAIL ${lane.hostname}: ${message}`);
-      results.push({ ...lane, status: 'error', message });
-      continue;
+
+    logger.log(`Attaching ${lane.hostname} -> ${lane.service}…`);
+    const { response, payload } = await attach(lane);
+    if (!response?.ok || payload?.success === false) {
+      const message = JSON.stringify(payload?.errors || payload || { status: response?.status });
+      throw new Error(`attach failed for ${lane.hostname}: ${message}`);
     }
-    console.log(`OK attached: ${lane.hostname} -> ${lane.service}`);
     results.push({ ...lane, status: current ? 'rebound' : 'attached' });
   }
 
-  // Safety: refuse silent success if apex still on a lane worker after attempts
-  const after = await listWorkerDomains().catch(() => []);
-  const apex = after.find((row) => row.hostname === 'fremontderby.com');
-  if (apex && apex.service !== 'fremontderby-prod') {
-    console.error(`CRITICAL: fremontderby.com still bound to ${apex.service}`);
-    process.exitCode = 1;
+  // Verification is also fail-closed. If Cloudflare cannot report the final
+  // state, the repair must fail rather than silently claiming success.
+  const after = await listDomains();
+  const afterByHost = new Map(after.map((row) => [row.hostname, row]));
+  const mismatches = WORKER_DOMAIN_BINDINGS.filter(
+    (lane) => afterByHost.get(lane.hostname)?.service !== lane.service,
+  );
+  if (mismatches.length > 0) {
+    throw new Error(
+      `post-repair verification failed: ${mismatches.map((lane) => `${lane.hostname}->${lane.service}`).join(', ')}`,
+    );
   }
 
-  console.log(JSON.stringify({ results, domains: after.map((r) => ({ hostname: r.hostname, service: r.service })) }, null, 2));
-  if (results.some((row) => row.status === 'error')) process.exitCode = 1;
+  return {
+    results,
+    domains: after.map((row) => ({ hostname: row.hostname, service: row.service })),
+  };
+}
+
+async function main() {
+  const output = await restoreWorkerDomains();
+  console.log(JSON.stringify(output, null, 2));
 }
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
