@@ -206,6 +206,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/messages` — league, team, direct, and planned admin-support communication; matchup-specific chat is deprecated under #78
 - `/messages/moderation` — moderator/admin message-report review; separate from Admin Support
 - `/standings` — canonical team / individual standings and historical result selection; source-theme convergence is complete and final browser proof remains under #382
+- `/players` — canonical public player directory for recruiting and substitutes (#330); sortable/searchable from individual standings; Message when signed in; no phone numbers
 - `/admin` — shipped partial role-aware Admin gateway. Shared navigation is defined canonically in `src/appShell.js`; remaining destination/ownership work is #366/#372/#361
 - `/admin/seasons` — league-admin directory for finding existing seasons by human-readable name/status and continuing to the correct canonical surface. It owns lookup only; configuration/lifecycle stays `/season-setup`, team entry stays `/admin/season-teams`, and public results stay `/standings`
 - `/season-setup` — league-director selected-season lifecycle management under Admin → League Management, including explicit audited **Close season** after PR #412/#337 and authoritative Publish/Close readiness checklists after PRs #417/#419/#338. Distinct Cancel/Archive/safe-delete actions stay #414
