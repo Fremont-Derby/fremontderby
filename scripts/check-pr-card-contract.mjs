@@ -45,6 +45,48 @@ export function extractTrackingCardNumbers(body = '', repositoryFullName = '') {
   return [...numbers];
 }
 
+
+export function validateTrackingCardLabels(labels = []) {
+  const names = labels
+    .map((label) => (typeof label === 'string' ? label : label?.name))
+    .filter((name) => typeof name === 'string' && name.length > 0);
+  const matching = (prefix) => names.filter((name) => name.startsWith(prefix));
+  const owners = matching('agent:');
+  const stages = matching('stage:');
+  const priorities = matching('priority:');
+  const areas = matching('area:');
+  const handoffs = matching('handoff:');
+  const errors = [];
+
+  if (owners.length !== 1) {
+    errors.push(`Tracking card must have exactly one agent:* owner label; found ${owners.length}.`);
+  } else if (owners[0] === 'agent:unclaimed') {
+    errors.push('Tracking card owner must accept the work before a PR opens; replace agent:unclaimed.');
+  }
+
+  if (stages.length !== 1) {
+    errors.push(`Tracking card must have exactly one stage:* label; found ${stages.length}.`);
+  } else if (!['stage:handoff', 'stage:merge-ready'].includes(stages[0])) {
+    errors.push(`Open implementation PRs require stage:handoff or stage:merge-ready; found ${stages[0]}.`);
+  }
+
+  if (priorities.length !== 1) {
+    errors.push(`Tracking card must have exactly one priority:* label; found ${priorities.length}.`);
+  }
+  if (areas.length === 0) {
+    errors.push('Tracking card must have at least one area:* label.');
+  }
+
+  if (stages[0] === 'stage:handoff' && handoffs.length !== 1) {
+    errors.push(`stage:handoff requires exactly one handoff:* target; found ${handoffs.length}.`);
+  }
+  if (stages[0] === 'stage:merge-ready' && handoffs.length > 0) {
+    errors.push('stage:merge-ready cannot retain a pending handoff:* label.');
+  }
+
+  return errors;
+}
+
 export function findTrackingCardConflicts({
   currentPullRequestNumber,
   currentBody = '',

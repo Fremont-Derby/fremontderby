@@ -5,6 +5,7 @@ import {
   extractTrackingCardNumbers,
   findTrackingCardConflicts,
   validatePullRequestBody,
+  validateTrackingCardLabels,
 } from '../scripts/check-pr-card-contract.mjs';
 
 const REPOSITORY = 'subiki/fremontderby';
@@ -74,6 +75,86 @@ test('rejects missing tracking references and empty template sections', () => {
 test('rejects automatic close keywords', () => {
   const errors = validatePullRequestBody(validBody({ 'Tracking card': 'Closes #584\nTracks #584' }), REPOSITORY);
   assert.ok(errors.some((error) => error.includes('Automatic close keywords')));
+});
+
+
+test('accepts valid handoff and merge-ready tracking-card labels', () => {
+  assert.deepEqual(validateTrackingCardLabels([
+    'agent:jfl',
+    'stage:handoff',
+    'priority:p1',
+    'area:product',
+    'area:qa',
+    'handoff:review',
+  ]), []);
+  assert.deepEqual(validateTrackingCardLabels([
+    'agent:dru',
+    'stage:merge-ready',
+    'priority:p0',
+    'area:data',
+  ]), []);
+});
+
+test('rejects missing, multiple, or unaccepted owners', () => {
+  const noOwner = validateTrackingCardLabels([
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(noOwner.some((error) => error.includes('exactly one agent:*')));
+
+  const multipleOwners = validateTrackingCardLabels([
+    'agent:jfl',
+    'agent:dru',
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(multipleOwners.some((error) => error.includes('found 2')));
+
+  const unclaimed = validateTrackingCardLabels([
+    'agent:unclaimed',
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(unclaimed.some((error) => error.includes('replace agent:unclaimed')));
+});
+
+test('rejects invalid stage, priority, and area cardinality', () => {
+  const errors = validateTrackingCardLabels([
+    'agent:codex',
+    'stage:in-progress',
+    'stage:handoff',
+    'priority:p1',
+    'priority:p2',
+    'handoff:review',
+  ]);
+  assert.ok(errors.some((error) => error.includes('exactly one stage:*')));
+  assert.ok(errors.some((error) => error.includes('exactly one priority:*')));
+  assert.ok(errors.some((error) => error.includes('at least one area:*')));
+});
+
+test('requires an accepted handoff state before merge readiness', () => {
+  const missingTarget = validateTrackingCardLabels([
+    'agent:codex',
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+  ]);
+  assert.ok(missingTarget.some((error) => error.includes('exactly one handoff:*')));
+
+  const staleTarget = validateTrackingCardLabels([
+    'agent:codex',
+    'stage:merge-ready',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(staleTarget.some((error) => error.includes('cannot retain')));
 });
 
 test('reports another open PR that owns the same tracking card', () => {
