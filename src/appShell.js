@@ -1,3 +1,4 @@
+import { livePageRefreshScript } from './livePageRefresh.js';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
@@ -655,8 +656,8 @@ export function decorateHtmlWithShell(html, pathname = '/') {
     ? ''
     : '<div class="fd-mobile-dock-spacer" aria-hidden="true"></div>\n';
   return /<\/body>/i.test(withShell)
-    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}${navMenuScript}\n${errorPopupScript}\n</body>`)
-    : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}${readyCheckScript}`;
+    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}${navMenuScript}\n${errorPopupScript}\n${readyCheckScript}\n${livePageRefreshScript}\n</body>`)
+    : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}${readyCheckScript}${livePageRefreshScript}`;
 }
 
 export function isKnownAppPagePath(pathname) {

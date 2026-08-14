@@ -69,6 +69,7 @@ export function renderAvailabilityPage() {
     async function run(action){try{await action()}catch(error){const message=error?.message||'Availability could not be loaded.';setStatus(message,'error');if(message.startsWith('Your sign-in expired'))showRecovery('Your sign-in expired','Sign in again to keep your availability tied to the correct player.','expired');else showRecovery('Availability could not be loaded','Your choices were not changed. Try loading the page again.','retry')}}
     contextSelect.addEventListener('change',renderContext);for(const button of buttons)button.addEventListener('click',()=>run(()=>saveAvailability(button.dataset.availabilityStatus)));teamChoiceList.addEventListener('click',(event)=>{const button=event.target.closest('[data-choose-team]');if(button)run(()=>saveTeamChoice(button.dataset.teamMatch,button.dataset.chooseTeam))});
     run(loadPage);
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>run(loadPage),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

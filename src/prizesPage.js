@@ -425,6 +425,7 @@ export function renderPrizesPage() {
       if (hasSeason) await loadPrizes();
     });
     seasonInput.addEventListener('change', () => run(loadPrizes));
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>run(loadPrizes),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

@@ -49,6 +49,7 @@ export function renderAdminOperationsPage(env = {}) {
     function renderFailure(error){statusEl.textContent=error.status===403?'League admin access required':error.message;statusEl.dataset.tone='critical';actionsEl.replaceChildren();const card=document.createElement('div');card.className='empty';card.textContent=error.status===403?'This page is available only to league admins.':'Operations could not load. No league data was changed.';const recovery=document.createElement('div');recovery.className='recovery';const profile=document.createElement('a');profile.href='/profile';profile.textContent='Open Profile';recovery.append(profile);if(error.status!==403){const retry=document.createElement('a');retry.href='/admin/operations';retry.textContent='Try again';recovery.append(retry)}actionsEl.append(card,recovery)}
     async function load(){statusEl.textContent='Loading league health…';statusEl.dataset.tone='';try{const body=await api();render(body.overview)}catch(error){renderFailure(error)}}
     document.querySelector('[data-refresh]').addEventListener('click',load);load();
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load(),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;
