@@ -1,7 +1,7 @@
 import { createAdminPlayersRepository } from './adminPlayersRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
-function statusForError(error) {
+export function adminPlayersStatusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/Actor is not a league admin/i.test(error.message)) return 403;
   if (/last league admin|captain lifecycle/i.test(error.message)) return 409;
@@ -13,7 +13,7 @@ function statusForError(error) {
 function errorResponse(error) {
   return Response.json(
     { error: error.message },
-    { status: statusForError(error), headers: { 'cache-control': 'no-store' } },
+    { status: adminPlayersStatusForError(error), headers: { 'cache-control': 'no-store' } },
   );
 }
 

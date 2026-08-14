@@ -20,7 +20,6 @@ test('admin seasons search, status filter, and letter chips stay phone-usable', 
   const html = renderAdminSeasonsPage();
   assert.match(html, /name="viewport"/);
   assert.match(html, /letter-index button\{[^}]*min-height:\s*44px/);
-  assert.match(html, /position:\s*sticky/);
   assert.match(html, /data-status-filter/);
   assert.match(html, /type="search"/);
   assert.match(html, /Escape/);
@@ -31,7 +30,6 @@ test('admin season teams letter index uses touch-sized chips', () => {
   assert.match(html, /name="viewport"/);
   assert.match(html, /letter-index button\{[^}]*min-width:\s*44px/);
   assert.match(html, /letter-index button\{[^}]*min-height:\s*44px/);
-  assert.match(html, /position:\s*sticky/);
   assert.match(html, /data-letter-index/);
 });
 
@@ -42,4 +40,10 @@ test('admin gateway cards keep large touch targets and focus rings', () => {
   assert.match(html, /:focus-visible/);
   assert.match(html, /Players/);
   assert.match(html, /Seasons/);
+});
+
+test('admin players keeps sticky search above letter chips', () => {
+  const html = renderAdminPlayersPage();
+  assert.match(html, /\.search\{[^}]*position:\s*sticky/);
+  assert.match(html, /\.letter-index\{[^}]*top:\s*56px/);
 });

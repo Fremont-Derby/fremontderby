@@ -28,7 +28,7 @@ async function readJsonBody(request) {
   }
 }
 
-function statusForError(error) {
+export function sandboxFeedbackStatusForError(error) {
   const message = error?.message || 'Request failed';
   if (/401/.test(message)) return 401;
   if (/403|League admin access is required/i.test(message)) return 403;
@@ -55,7 +55,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, sandboxFeedbackStatusForError(error));
       }
     },
 
@@ -71,7 +71,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, sandboxFeedbackStatusForError(error));
       }
     },
 
@@ -85,7 +85,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: error.message }, sandboxFeedbackStatusForError(error));
       }
     },
   };
