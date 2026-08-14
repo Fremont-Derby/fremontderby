@@ -34,6 +34,8 @@ export const playerSurfaceThemeStyles = `
     --green: var(--fd-success) !important;
     --gold: var(--fd-accent) !important;
     --red: var(--fd-danger) !important;
+    --bg: var(--fd-bg-page) !important;
+    --text: var(--fd-text) !important;
   }
 
   body[data-fd-player-surface] .app,

@@ -576,6 +576,40 @@ export const designSystemStyles = `
     .panel, .card, .match { border-radius: 14px !important; }
     th, td { padding: 11px 12px !important; }
   }
+
+
+  /* ——— Status tone cohesion (multi-agent vocabulary → one language) ———
+     Pages historically used ok/error/warning PLUS healthy/critical/ready/live.
+     Map aliases so chrome stays consistent without rewriting every setStatus call. */
+  .status[data-tone="healthy"],
+  .status[data-tone="ready"],
+  .status[data-tone="success"],
+  [data-state="success"],
+  [data-state="healthy"] {
+    color: var(--fd-pill-success-text) !important;
+    background: var(--fd-pill-success-bg) !important;
+    border-color: #b7dfc5 !important;
+  }
+  .status[data-tone="critical"],
+  .status[data-tone="danger"],
+  [data-state="critical"] {
+    color: var(--fd-danger-text) !important;
+    background: var(--fd-danger-bg) !important;
+    border-color: var(--fd-danger) !important;
+  }
+  .status[data-tone="warning"],
+  .status[data-tone="warn"],
+  [data-state="warning"] {
+    color: var(--fd-accent-text) !important;
+    background: var(--fd-warning-bg) !important;
+    border-color: var(--fd-accent) !important;
+  }
+  .status[data-tone="muted"],
+  .status[data-tone="info"] {
+    color: var(--fd-text-muted) !important;
+    background: var(--fd-bg-subtle) !important;
+    border-color: var(--fd-border) !important;
+  }
 `;
 
 export async function injectDesignSystem(response) {
