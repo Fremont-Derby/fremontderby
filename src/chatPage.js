@@ -113,7 +113,7 @@ export function renderChatPage(env = {}) {
       .chat { grid-template-rows: auto auto minmax(260px, 1fr) auto; }
       .message-list { padding: 12px 10px; }
       .message { max-width: 88%; }
-      .composer { position: sticky; bottom: 0; padding: 9px; grid-template-columns: minmax(0, 1fr) auto; }
+      .composer { position: sticky; bottom: 0; padding: 9px; grid-template-columns: minmax(0, 1fr) auto;  padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px)); }
       .send { min-width: 72px; padding: 0 12px; }
       .empty-actions, .empty-actions a, .empty-actions button { width: 100%; }
     }
