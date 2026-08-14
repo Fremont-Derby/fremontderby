@@ -267,6 +267,7 @@ When the card touches hostnames, Worker envs, auth bypass, or Supabase migration
 3. **Merge is not apply.** A merged migration file on `main` does not close data cards until it is applied to the **target** database (DRU/JFL/gamma/prod as named) and re-probed.
 4. **Open-auth cards** must prove an authenticated API without a bearer where intended, and must prove production/gamma still require a bearer.
 5. Prefer GitHub Actions workflows that use existing `CLOUDFLARE_*` (or similar) repository secrets for domain/Worker automation over asking a human to click the same API-capable step. Inventory what secrets Actions already has before cutting a human card.
+7. See `docs/platform-capabilities.md` for the current inventory of automatable vs human-only platform actions.
 6. If a custom domain is attached via API, re-check public DNS and health a few minutes later; attachment acknowledgements can race propagation or wrong-Worker routing.
 
 Close platform cards only after these live checks match acceptance criteria.
