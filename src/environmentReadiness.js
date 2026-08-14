@@ -95,11 +95,16 @@ export function environmentReadiness(env = {}) {
     );
   }
 
+  const expectedPrivateSchema = expectedSchema
+    ? (expectedSchema === 'public' ? 'private' : `${expectedSchema}_private`)
+    : null;
+
   return {
     ok: checks.every((item) => item.ok),
     environment,
     expectedSupabaseProjectRef: expectedProjectRef,
     expectedSupabaseSchema: expectedSchema,
+    expectedPrivateSupabaseSchema: expectedPrivateSchema,
     supabase: {
       url: supabaseUrl || null,
       projectRef,
