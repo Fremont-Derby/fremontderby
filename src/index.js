@@ -1,4 +1,8 @@
 import { createNotificationRepository } from './notificationRepository.js';
+import {
+  createAdminAuditRepository,
+  deliverAuditWebhooks,
+} from './adminAuditRepository.js';
 import { createChatRepository } from './chatRepository.js';
 import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
 import {
@@ -734,6 +738,34 @@ export async function handleUpdateTeamPracticeRequest(
 
 
 
+
+export async function handleListAdminAuditEventsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const url = new URL(request.url);
+    const repository = createAdminAuditRepository(env, { fetch: fetchImpl });
+    const events = await repository.listAuditEvents({
+      actorUserId: actor.id,
+      limit: Number(url.searchParams.get('limit') || 50),
+      actionPrefix: url.searchParams.get('prefix') || null,
+    });
+    return jsonResponse({ events });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleFlushAdminAuditWebhooksRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const result = await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
+    return jsonResponse(result);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleListMyNotificationsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
@@ -788,6 +820,21 @@ export async function handleAdminBroadcastNotificationRequest(request, env, { fe
       },
       repository,
     );
+    try {
+      const auditRepository = createAdminAuditRepository(env, { fetch: fetchImpl });
+      const seasonId = body.seasonId ?? body.season_id ?? null;
+      await auditRepository.writeAuditEvent({
+        actorUserId: actor.id,
+        action: 'admin.broadcast_notification',
+        entityType: 'season',
+        entityId: seasonId || '00000000-0000-4000-8000-000000000000',
+        reason: String(body.title || '').slice(0, 120) || null,
+        afterState: { sent: result.sent, href: body.href ?? null },
+      });
+      await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
+    } catch {
+      // best-effort audit
+    }
     return jsonResponse(result, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1688,6 +1735,12 @@ export default {
         env,
         decodeURIComponent(notificationReadMatch[1]),
       );
+    }
+    if (url.pathname === '/api/admin/audit-events' && request.method === 'GET') {
+      return handleListAdminAuditEventsRequest(request, env);
+    }
+    if (url.pathname === '/api/admin/audit-webhooks/flush') {
+      return handleFlushAdminAuditWebhooksRequest(request, env);
     }
     if (url.pathname === '/api/admin/notifications/broadcast') {
       return handleAdminBroadcastNotificationRequest(request, env);

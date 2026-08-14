@@ -1,3 +1,4 @@
+import { createAdminAuditRepository, deliverAuditWebhooks } from './adminAuditRepository.js';
 import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
 import {
   blockPlayerChatCommand,
@@ -521,6 +522,23 @@ export async function handleModerateChatReportRequest(
       note: body.note,
       removeMessage: body.removeMessage,
     }, repository);
+    try {
+      const auditRepository = createAdminAuditRepository(env, { fetch: fetchImpl });
+      await auditRepository.writeAuditEvent({
+        actorUserId: actor.id,
+        action: body.removeMessage ? 'chat.moderate_remove_message' : 'chat.moderate_report',
+        entityType: 'chat_report',
+        entityId: reportId,
+        reason: body.note || body.resolution || null,
+        afterState: {
+          resolution: body.resolution,
+          removeMessage: Boolean(body.removeMessage),
+        },
+      });
+      await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
+    } catch {
+      // best-effort
+    }
     return jsonResponse({ result });
   } catch (error) {
     return jsonResponse({ error: error.message }, chatStatusForError(error));
