@@ -70,12 +70,12 @@ test('staging readiness fails if it points at the production project', () => {
 });
 
 for (const [environment, projectRef] of [
-  ['beta-jfl', 'jflbetaprojectref1234'],
-  ['beta-dru', 'drubetaprojectref1234'],
+  ['jfl', 'jflprojectref123456789'],
+  ['dru', 'druprojectref123456789'],
   ['gamma', 'gammaprojectref123456'],
 ]) {
   test(`${environment} readiness accepts its explicitly configured isolated project`, () => {
-    const overrides = environment.startsWith('beta-')
+    const overrides = ['jfl', 'dru'].includes(environment)
       ? { BETA_AUTH_BYPASS: '1', BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001' }
       : {};
     const readiness = environmentReadiness(isolatedEnv(environment, projectRef, overrides));
@@ -87,9 +87,9 @@ for (const [environment, projectRef] of [
 }
 
 test('all isolated lanes fail closed when pointed at production or staging', () => {
-  for (const environment of ['beta-jfl', 'beta-dru', 'gamma']) {
+  for (const environment of ['jfl', 'dru', 'gamma']) {
     for (const projectRef of [productionProjectRef, stagingProjectRef]) {
-      const overrides = environment.startsWith('beta-')
+      const overrides = ['jfl', 'dru'].includes(environment)
         ? { BETA_AUTH_BYPASS: '1', BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001' }
         : {};
       const readiness = environmentReadiness(isolatedEnv(environment, projectRef, overrides));
@@ -100,14 +100,14 @@ test('all isolated lanes fail closed when pointed at production or staging', () 
   }
 });
 
-test('gamma rejects a stray beta auth bypass flag', () => {
+test('gamma rejects a stray test auth bypass flag', () => {
   const readiness = environmentReadiness(isolatedEnv(
     'gamma',
     'gammaprojectref123456',
     { BETA_AUTH_BYPASS: '1' },
   ));
   assert.equal(readiness.ok, false);
-  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToBeta')?.ok, false);
+  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, false);
 });
 
 test('readiness reports missing production bindings without exposing secret values', () => {
