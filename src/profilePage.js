@@ -380,10 +380,17 @@ export function renderProfilePage(env = {}) {
       setStatus('Profile loaded', 'ok');
     }
 
+    function safeNextPath() {
+      const next = new URLSearchParams(window.location.search).get('next') || '';
+      if (!next.startsWith('/') || next.startsWith('//') || next.includes('://')) return '';
+      return next;
+    }
+
     function signInWithGoogle() {
       requireConfig();
-      const baseUrl = config.supabaseUrl.replace(/\\/+$/, '');
-      const redirectTo = window.location.origin + '/profile';
+      const baseUrl = config.supabaseUrl.replace(/\/+$/, '');
+      const next = safeNextPath();
+      const redirectTo = window.location.origin + '/profile' + (next ? ('?next=' + encodeURIComponent(next)) : '');
       const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
       authorizeUrl.searchParams.set('provider', 'google');
       authorizeUrl.searchParams.set('redirect_to', redirectTo);
@@ -391,16 +398,19 @@ export function renderProfilePage(env = {}) {
     }
 
     function consumeOAuthCallback() {
-      const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const hash = window.location.hash.replace(/^#/, '');
+      const query = window.location.search.replace(/^\?/, '');
+      const params = new URLSearchParams(hash || query);
       const authError = params.get('error_description') || params.get('error');
       if (authError) {
-        history.replaceState({}, '', window.location.pathname + window.location.search);
+        history.replaceState({}, '', window.location.pathname);
         throw new Error(authError);
       }
       const accessToken = params.get('access_token');
       if (!accessToken) return false;
       setSession(accessToken, params.get('refresh_token') || '');
-      history.replaceState({}, '', window.location.pathname + window.location.search);
+      const next = safeNextPath();
+      history.replaceState({}, '', window.location.pathname + (next ? ('?next=' + encodeURIComponent(next)) : ''));
       return true;
     }
 
@@ -453,9 +463,16 @@ export function renderProfilePage(env = {}) {
     setSession(existingAccessToken, refreshToken());
     run(async () => {
       const returnedFromGoogle = consumeOAuthCallback();
+      if (returnedFromGoogle) {
+        const next = safeNextPath();
+        if (next) {
+          window.location.replace(next);
+          return;
+        }
+      }
       if (returnedFromGoogle || token()) {
         await loadProfile();
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>loadProfile().catch(()=>{}),{intervalMs:45000,immediate:false});
+        if (window.fdLiveRefresh) window.fdLiveRefresh.register(() => loadProfile().catch(() => {}), { intervalMs: 45000, immediate: false });
         await refreshAdminAccess();
       }
     });
