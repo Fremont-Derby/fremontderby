@@ -472,6 +472,110 @@ export const designSystemStyles = `
       border-radius: 14px !important;
     }
   }
+
+
+  /* ——— Professional polish (chrome only; product copy unchanged) ——— */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Quieter default type hierarchy */
+  h1 { font-weight: 800 !important; letter-spacing: -0.02em !important; line-height: 1.15 !important; }
+  h2 { font-weight: 700 !important; letter-spacing: -0.015em !important; }
+  h3, h4 { font-weight: 700 !important; }
+
+  /* Soften ultra-black weights used in page-local CSS */
+  button, .button, a.button, .action, .tab, .badge, .chip, .status-pill, .match-actions a {
+    font-weight: 700 !important;
+  }
+
+  /* Status strip: calm, professional, no “system boot” energy */
+  .status {
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+  .status:empty {
+    display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    min-height: 0 !important;
+  }
+
+  /* Empty states: left-aligned readable blocks, not floating alarm text */
+  .empty, .page-state, .state-card {
+    text-align: left !important;
+    border-radius: var(--fd-radius) !important;
+    border: 1px solid var(--fd-border) !important;
+    background: var(--fd-bg-surface) !important;
+    padding: 20px 18px !important;
+    color: var(--fd-text-muted) !important;
+    box-shadow: var(--fd-shadow-soft) !important;
+  }
+  .empty a, .page-state a, .state-card a {
+    font-weight: 700 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+  }
+
+  /* Panels / cards: consistent elevation */
+  .panel, .card, .match, .action-card, .ledger-panel, .edit-panel {
+    border: 1px solid var(--fd-border) !important;
+    box-shadow: var(--fd-shadow-soft) !important;
+  }
+
+  /* Tables: cleaner league-ops look */
+  table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden;
+    border: 1px solid var(--fd-border) !important;
+    border-radius: var(--fd-radius-sm) !important;
+  }
+  th, td {
+    padding: 12px 14px !important;
+    border-bottom: 1px solid var(--fd-border) !important;
+  }
+  tr:last-child td { border-bottom: 0 !important; }
+  th {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Interactive transitions without flashy motion */
+  button, .button, a.button, .action, select, input, textarea, .tab, .match-actions a, .action-card {
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease !important;
+  }
+
+  /* Native select: professional closed state */
+  select:disabled {
+    opacity: 0.65 !important;
+    cursor: not-allowed;
+  }
+
+  /* Reduce harsh uppercase micro-labels where page CSS forced them on chrome */
+  .status-pill {
+    letter-spacing: 0.02em !important;
+    text-transform: none !important;
+    font-weight: 700 !important;
+  }
+
+  /* Loading placeholders in selects stay muted, not bold alarm */
+  select:disabled option {
+    color: var(--fd-text-muted) !important;
+  }
+
+  /* Mobile denser rhythm */
+  @media (max-width: 720px) {
+    h1 { font-size: 1.55rem !important; }
+    .panel, .card, .match { border-radius: 14px !important; }
+    th, td { padding: 11px 12px !important; }
+  }
 `;
 
 export async function injectDesignSystem(response) {
