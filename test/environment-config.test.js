@@ -7,36 +7,52 @@ const config = JSON.parse(
 );
 
 const publicHosts = {
-  production: 'fremontderby.com',
   jfl: 'jfl.fremontderby.com',
   dru: 'dru.fremontderby.com',
   gamma: 'gamma.fremontderby.com',
 };
 
 function customDomainFor(environment) {
-  const target = environment === 'production' ? config : config.env[environment];
+  const target = config.env[environment];
   return target.routes?.find((route) => route.custom_domain === true)?.pattern;
 }
 
-test('production and staging expose isolated public Supabase browser config', () => {
-  assert.equal(config.vars.ENVIRONMENT, 'production');
-  assert.match(config.vars.SUPABASE_URL, /cpiucsxlkicmlbvdvhww\.supabase\.co$/);
-  assert.match(config.vars.SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_/);
-  assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, 'cpiucsxlkicmlbvdvhww');
+function rootCustomDomain() {
+  return config.routes?.find((route) => route.custom_domain === true)?.pattern;
+}
 
-  const staging = config.env.staging.vars;
-  assert.equal(staging.ENVIRONMENT, 'staging');
-  assert.match(staging.SUPABASE_URL, /oqkkvqkerusepyokzbmt\.supabase\.co$/);
-  assert.match(staging.SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_/);
-  assert.equal(staging.EXPECTED_SUPABASE_PROJECT_REF, 'oqkkvqkerusepyokzbmt');
-
-  assert.notEqual(config.vars.SUPABASE_URL, staging.SUPABASE_URL);
-  assert.notEqual(config.vars.SUPABASE_PUBLISHABLE_KEY, staging.SUPABASE_PUBLISHABLE_KEY);
+test('JFL root Workers Build profile is isolated and secret-backed', () => {
+  assert.equal(config.name, 'fremontderby-jfl');
+  assert.equal(config.vars.ENVIRONMENT, 'jfl');
+  assert.equal(config.vars.SUPABASE_SCHEMA, 'jfl');
+  assert.equal(rootCustomDomain(), 'jfl.fremontderby.com');
+  assert.equal(config.vars.SUPABASE_URL, undefined);
+  assert.equal(config.vars.SUPABASE_PUBLISHABLE_KEY, undefined);
+  assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, undefined);
   assert.equal('SUPABASE_SERVICE_ROLE_KEY' in config.vars, false);
-  assert.equal('SUPABASE_SERVICE_ROLE_KEY' in staging, false);
+
+  for (const name of [
+    'SUPABASE_URL',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'EXPECTED_SUPABASE_PROJECT_REF',
+  ]) {
+    assert.ok(config.secrets.required.includes(name));
+  }
 });
 
-test('Wrangler owns every public release hostname as a custom domain', () => {
+test('JFL root Workers Build profile matches the explicit jfl environment', () => {
+  assert.equal(config.env.jfl.name, config.name);
+  assert.equal(customDomainFor('jfl'), rootCustomDomain());
+  assert.equal(config.env.jfl.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
+  assert.equal(config.env.jfl.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
+  assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
+});
+
+test('Wrangler retains explicit custom-domain identities for each named lane', () => {
+  assert.equal(rootCustomDomain(), publicHosts.jfl);
   for (const [environment, host] of Object.entries(publicHosts)) {
     assert.equal(customDomainFor(environment), host);
   }
@@ -94,7 +110,9 @@ test('non-production Supabase credentials remain required secrets', () => {
 });
 
 test('JFL open-auth actor is explicit lane-only test config', () => {
-  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
+  assert.equal(config.vars.BETA_ACTOR_USER_ID, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
+  assert.equal(config.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
   assert.equal(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
 
   assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
@@ -104,10 +122,10 @@ test('JFL open-auth actor is explicit lane-only test config', () => {
   assert.equal(config.env.gamma.vars.BETA_ACTOR_USER_ID, undefined);
 });
 
-test('auth bypass is enabled only in the isolated JFL and DRU lane config', () => {
+test('auth bypass is enabled for the JFL root deployment profile', () => {
+  assert.equal(config.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.gamma.vars.BETA_AUTH_BYPASS, '0');
-  assert.equal(config.vars.BETA_AUTH_BYPASS, undefined);
   assert.equal(config.env.staging.vars.BETA_AUTH_BYPASS, undefined);
 });

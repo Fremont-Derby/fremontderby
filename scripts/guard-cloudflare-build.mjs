@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url';
 
+const JFL_DEPLOYMENT_BRANCH = 'fremontderby-jfl';
+
 function requireWorkersBuildValue(env, name) {
   const value = env[name]?.trim();
   if (!value) {
@@ -12,16 +14,15 @@ export function assertCloudflareBuildContext(env = process.env) {
   if (env.WORKERS_CI !== '1') return;
 
   const branch = requireWorkersBuildValue(env, 'WORKERS_CI_BRANCH');
-  if (branch !== 'main') {
+  if (branch !== JFL_DEPLOYMENT_BRANCH) {
     throw new Error(
-      `Refusing Cloudflare build from non-main branch "${branch}". ` +
-      'Non-main Workers Builds are temporarily disabled until Cloudflare Branch control routes them to preview-only deployment.',
+      `Refusing JFL Cloudflare build from branch "${branch}"; expected "${JFL_DEPLOYMENT_BRANCH}".`,
     );
   }
 }
 
-const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (isDirectRun) {
+const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
   try {
     assertCloudflareBuildContext();
   } catch (error) {
