@@ -2,9 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export const laneDeployments = Object.freeze({
-  'beta-jfl': Object.freeze({ branch: 'beta-jfl', environment: 'beta-jfl' }),
-  'beta-dru': Object.freeze({ branch: 'beta-dru', environment: 'beta-dru' }),
-  gamma: Object.freeze({ branch: 'gamma', environment: 'gamma' }),
+  jfl: Object.freeze({ branch: 'fremontderby-jfl', environment: 'jfl' }),
+  dru: Object.freeze({ branch: 'fremontderby-dru', environment: 'dru' }),
+  gamma: Object.freeze({ branch: 'fremontderby-gamma', environment: 'gamma' }),
 });
 
 function requireValue(value, message) {
