@@ -20,6 +20,7 @@ export function renderTradesPage() {
       --red: #d45b50;
     }
     * { box-sizing: border-box; }
+    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     body { margin: 0; min-height: 100vh; background: #111316; }
     button, input { font: inherit; }
     button {

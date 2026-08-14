@@ -62,7 +62,7 @@ function navLinks(pathname, compact = false) {
   }).join(compact ? '' : '\n');
 }
 
-function renderMobileDock(pathname) {
+export function renderMobileDock(pathname) {
   if (pathname.startsWith('/scorecard')) return '';
   const active = sectionForPath(pathname);
   const links = MOBILE_DOCK_ITEMS.map((item) => {
@@ -156,7 +156,7 @@ export const shellStyles = `
   .fd-brand { display: inline-flex; align-items: center; gap: 9px; color: #f4f7f5; text-decoration: none; font: 800 .98rem/1 Inter, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; }
   .fd-brand__ball { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #f4f7f5; color: #07150f; border: 3px solid #d9dedb; font-size: .8rem; }
   .fd-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-  .fd-nav a { min-height: 40px; display: inline-flex; align-items: center; padding: 9px 10px; border-radius: 9px; color: #c9d7cf; text-decoration: none; font: 700 .86rem/1 Inter, ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; }
+  .fd-nav a { min-height: 40px; display: inline-flex; align-items: center; padding: 9px 10px; border-radius: 9px; color: #c9d7cf; text-decoration: none; font: 700 .86rem/1 Inter, ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .fd-nav a:hover { color: #fff; background: #10291d; }
   .fd-nav a[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-nav a:focus-visible, .fd-brand:focus-visible, .fd-nav-menu summary:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
@@ -164,7 +164,7 @@ export const shellStyles = `
   .fd-mobile-dock-spacer { display: none; }
   .fd-message-notifications { position: relative; flex: 0 0 auto; }
   .fd-message-notifications[hidden] { display: none; }
-  .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; }
+  .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .fd-message-indicator:hover { color: #fff; background: #123522; }
   .fd-message-indicator[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-message-indicator svg { width: 23px; height: 23px; }
@@ -246,6 +246,8 @@ export const shellStyles = `
       font-weight: 850;
       line-height: 1;
       text-align: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .fd-mobile-dock a[data-nav-key="teams"] { --fd-dock-accent: #69c8ff; }
     .fd-mobile-dock a[data-nav-key="schedule"] { --fd-dock-accent: #ffd166; }
