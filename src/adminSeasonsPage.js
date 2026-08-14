@@ -160,6 +160,22 @@ export function renderAdminSeasonsPage() {
       listEl.replaceChildren();
       emptyEl.hidden = shown.length > 0;
       listEl.hidden = shown.length === 0;
+      emptyEl.textContent = seasons.length
+        ? ((query || activeLetter || statusFilterEl.value)
+          ? ('No seasons match '
+            + (query ? ('“' + searchEl.value.trim() + '”') : '')
+            + (query && (activeLetter || statusFilterEl.value) ? ' ' : '')
+            + (activeLetter ? ('letter ' + activeLetter) : '')
+            + (activeLetter && statusFilterEl.value ? ' · ' : '')
+            + (statusFilterEl.value ? ('status ' + statusFilterEl.value) : '')
+            + '.')
+          : 'No seasons match that search.')
+        : 'No seasons loaded yet.';
+      if (seasons.length && shown.length === 0 && (query || activeLetter || statusFilterEl.value)) {
+        setStatus(emptyEl.textContent, 'error');
+      } else if (seasons.length && shown.length && (query || activeLetter || statusFilterEl.value)) {
+        setStatus(shown.length + ' match' + (shown.length === 1 ? '' : 'es') + '.', 'ok');
+      }
       for (const season of shown) {
         const card = document.createElement('article');
         card.className = 'card';
