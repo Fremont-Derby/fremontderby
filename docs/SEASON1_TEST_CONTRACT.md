@@ -43,3 +43,8 @@ Critical automated areas already covered under `test/`:
 - If touching auth, env, Worker bindings, or scoring: add or extend a unit/contract test in the same PR.
 - Do not merge with failing `npm test`.
 - Do not treat Workers domain attach as proof of correct `ENVIRONMENT`.
+
+
+## CI
+
+Pull requests and pushes run a dedicated `test-season1` job (`npm run test:season1` + `npm run test:floor`) in addition to the full `npm test` job.

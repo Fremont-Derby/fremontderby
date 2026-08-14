@@ -85,3 +85,22 @@ test('season publication rejects invalid setup inputs', () => {
     /unique/,
   );
 });
+
+test('season publication rejects non-positive interval and missing season id', () => {
+  assert.throws(
+    () => publishRegularSeasonSchedule({
+      seasonId: 'season-1',
+      teamIds: teams,
+      firstRoundDate: '2026-09-03',
+      intervalDays: 0,
+    }),
+    /intervalDays/,
+  );
+  assert.throws(
+    () => publishRegularSeasonSchedule({
+      teamIds: teams,
+      firstRoundDate: '2026-09-03',
+    }),
+    /seasonId is required/,
+  );
+});
