@@ -1,3 +1,4 @@
+import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
 import {
   blockPlayerChatCommand,
   listChatThreadsCommand,
@@ -35,18 +36,7 @@ function jsonResponse(body, status = 200) {
 }
 
 async function readJsonBody(request) {
-  const text = await request.text();
-  if (!text.trim()) return {};
-  try {
-    const body = JSON.parse(text);
-    if (!body || Array.isArray(body) || typeof body !== 'object') {
-      throw new Error('Request body must be a JSON object');
-    }
-    return body;
-  } catch (error) {
-    if (error instanceof SyntaxError) throw new Error('Request body must be valid JSON');
-    throw error;
-  }
+  return readSanitizedJsonBody(request);
 }
 
 export function chatStatusForError(error) {

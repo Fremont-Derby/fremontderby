@@ -1,3 +1,4 @@
+import { readSanitizedJsonBody } from './requestSanitize.js';
 import { jsonNoStore } from './httpJson.js';
 import {
   chooseTeamMatchTeamCommand,
@@ -9,13 +10,7 @@ import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 const jsonResponse = jsonNoStore;
 
 async function readJsonBody(request) {
-  const text = await request.text();
-  if (!text.trim()) return {};
-  const body = JSON.parse(text);
-  if (!body || Array.isArray(body) || typeof body !== 'object') {
-    throw new Error('Request body must be a JSON object');
-  }
-  return body;
+  return readSanitizedJsonBody(request);
 }
 
 export function teamMatchChoiceStatusForError(error) {

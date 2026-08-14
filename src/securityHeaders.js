@@ -40,6 +40,8 @@ export function htmlSecurityHeaders(nonce) {
     'x-frame-options': 'DENY',
     'referrer-policy': 'no-referrer',
     'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+    'cross-origin-opener-policy': 'same-origin',
+    'cross-origin-resource-policy': 'same-origin',
     'content-security-policy': csp,
   };
 }
@@ -50,6 +52,7 @@ export function apiSecurityHeaders(extra = {}) {
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer',
     'x-frame-options': 'DENY',
+    'cross-origin-resource-policy': 'same-origin',
     ...extra,
   };
 }
