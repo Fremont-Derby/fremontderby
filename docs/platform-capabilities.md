@@ -16,7 +16,7 @@ Secret **values** are never readable via the GitHub API. Agents may only exercis
 
 | Action | Mechanism | Notes |
 |--------|-----------|--------|
-| Attach custom domains to lane Workers | `scripts/restore-lane-custom-domains.mjs` + workflow | Hourly schedule + `workflow_dispatch` |
+| Attach custom domains to lane Workers | `scripts/restore-lane-custom-domains.mjs` + workflow | `workflow_dispatch` only while hosted runners are constrained (see `docs/GITHUB_ACTIONS.md`) |
 | Disable `*.workers.dev` | `scripts/disable-workers-dev.mjs` | Does **not** manage custom domains |
 | Deploy lane from matching branch | CI `deploy-nonproduction` on `fremontderby-{jfl,dru,gamma}` | Requires Worker secrets already provisioned |
 | Deploy lane from main (controlled) | Workflow **Deploy release lanes** (`workflow_dispatch`) | Requires Worker secrets already provisioned |
@@ -54,4 +54,4 @@ Same pattern for `jfl` / `gamma` (gamma must **not** open-auth).
 
 ## Related cards
 
-Human DRU finish: search issues for `[HUMAN]` DRU open-auth. DNS durability: platform cards on wrangler-owned domains. Migration apply: DRU data cards referencing migration `20260814040000_*`.
+Human DRU finish: search issues for `[HUMAN]` DRU open-auth. DNS durability: platform cards on wrangler-owned domains. Migration apply: DRU data cards referencing migrations `20260814031843_shared_staging_lane_schemas.sql` and `20260814093000_expose_lane_private_postgrest_schemas.sql`.
