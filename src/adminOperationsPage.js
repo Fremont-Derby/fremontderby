@@ -34,7 +34,14 @@ export function renderAdminOperationsPage(env = {}) {
         <article class="panel"><h2>Ratings and system</h2><div data-system></div></article>
       </div>
     </section>
-  </main>
+  <section class="panel" data-broadcast>
+      <h2>League broadcast</h2>
+      <p class="muted">Send a notice to all active players (or the selected season). Appears in Notifications.</p>
+      <label>Title<input data-broadcast-title maxlength="120" placeholder="Weather / venue update" /></label>
+      <label>Message<textarea data-broadcast-body maxlength="500" rows="3"></textarea></label>
+      <button type="button" class="primary" data-broadcast-send>Send broadcast</button>
+    </section>
+    </main>
   <script>
     const config=${config};const statusEl=document.querySelector('[data-status]');const seasonEl=document.querySelector('[data-season]');const actionsEl=document.querySelector('[data-actions]');
     function token(){return sessionStorage.getItem('fd.accessToken')||''}function refreshToken(){return sessionStorage.getItem('fd.refreshToken')||''}
@@ -50,7 +57,26 @@ export function renderAdminOperationsPage(env = {}) {
     async function load(){statusEl.textContent='Loading league health…';statusEl.dataset.tone='';try{const body=await api();render(body.overview)}catch(error){renderFailure(error)}}
     document.querySelector('[data-refresh]').addEventListener('click',load);load();
     if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>load(),{intervalMs:30000,immediate:false});
-  </script>
+  
+    const broadcastSend=document.querySelector('[data-broadcast-send]');
+    if(broadcastSend){
+      broadcastSend.addEventListener('click',async()=>{
+        const title=document.querySelector('[data-broadcast-title]')?.value?.trim()||'';
+        const body=document.querySelector('[data-broadcast-body]')?.value?.trim()||'';
+        const token=sessionStorage.getItem('fd.accessToken')||'';
+        try{
+          const response=await fetch('/api/admin/notifications/broadcast',{
+            method:'POST',
+            headers:{authorization:'Bearer '+token,'content-type':'application/json'},
+            body:JSON.stringify({title,body,href:'/notifications'}),
+          });
+          const json=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(json.error||'Broadcast failed');
+          alert('Sent to '+(json.sent||0)+' players');
+        }catch(error){alert(error.message)}
+      });
+    }
+    </script>
 </body>
 </html>`;
 }

@@ -1,3 +1,4 @@
+import { createNotificationRepository } from './notificationRepository.js';
 import { createChatRepository } from './chatRepository.js';
 import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
 import {
@@ -73,6 +74,12 @@ import {
   proposeTeamMatchMakeupCommand,
   respondTeamMatchMakeupCommand,
 } from './makeupCommands.js';
+import {
+  listMyNotificationsCommand,
+  markNotificationReadCommand,
+  markAllNotificationsReadCommand,
+  adminBroadcastNotificationCommand,
+} from './notificationCommands.js';
 import { createTeamMembershipRequestRepository } from './teamMembershipRequestRepository.js';
 import { createTeamRepository } from './teamRepository.js';
 import {
@@ -737,6 +744,110 @@ export async function handleUpdateTeamPracticeRequest(
 }
 
 
+
+export async function handleListMyNotificationsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const notifications = await listMyNotificationsCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse({ notifications });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleMarkNotificationReadRequest(request, env, notificationId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const result = await markNotificationReadCommand(
+      { actorUserId: actor.id, notificationId },
+      repository,
+    );
+    return jsonResponse({ notification: result });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleMarkAllNotificationsReadRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const result = await markAllNotificationsReadCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse(result);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleAdminBroadcastNotificationRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const result = await adminBroadcastNotificationCommand(
+      {
+        actorUserId: actor.id,
+        title: body.title,
+        body: body.body ?? body.message,
+        seasonId: body.seasonId ?? body.season_id ?? null,
+        href: body.href ?? null,
+      },
+      repository,
+    );
+    return jsonResponse(result, 201);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+export async function handleTeamMatchDisputeRequest(
+  request,
+  env,
+  teamMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
+    const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
+    // Store a packet notice for the requesting user (audit trail in their inbox).
+    await notificationRepository.createUserNotification({
+      recipientUserId: actor.id,
+      kind: 'dispute_request',
+      title: 'Dispute submitted',
+      body: note || 'Match dispute submitted for admin review.',
+      href: '/scorecard?match=' + encodeURIComponent(teamMatchId),
+      teamMatchId,
+      actorUserId: actor.id,
+    });
+    // Best-effort: also post matchup chat if available.
+    try {
+      const chatRepository = createChatRepository(env, { fetch: fetchImpl });
+      if (typeof chatRepository.sendMatchupMessage === 'function') {
+        await chatRepository.sendMatchupMessage({
+          actorUserId: actor.id,
+          teamMatchId,
+          body: 'Dispute requested: ' + (note || 'Please review this match.'),
+          clientMessageId: null,
+        });
+      }
+    } catch {
+      // optional
+    }
+    return jsonResponse({ ok: true }, 201);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleProposeTeamMatchMakeupRequest(
   request,
   env,
@@ -1129,6 +1240,34 @@ export async function handleSubmitTeamLineupRequest(
       },
       repository,
     );
+
+    // Lifecycle: team chat + in-app notice (best-effort).
+    try {
+      const chatRepository = createChatRepository(env, { fetch: fetchImpl });
+      await chatRepository.sendTeamMessage({
+        actorUserId: actor.id,
+        teamId,
+        body: 'Lineup locked for this matchup. Open Lineup/Scorecard when both sides are ready.',
+        clientMessageId: null,
+      });
+    } catch {
+      // ignore chat failures
+    }
+    try {
+      const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
+      // Notify actor as confirmation; roster-wide fanout can expand later.
+      await notificationRepository.createUserNotification({
+        recipientUserId: actor.id,
+        kind: 'lineup_locked',
+        title: 'Lineup locked',
+        body: 'Your team lineup is locked for this matchup.',
+        href: '/lineup?team=' + encodeURIComponent(teamId) + '&round=' + encodeURIComponent(roundId),
+        teamId,
+        actorUserId: actor.id,
+      });
+    } catch {
+      // ignore notification failures
+    }
 
     return jsonResponse({ lineup });
   } catch (error) {
@@ -1547,6 +1686,33 @@ export default {
     const teamPracticeMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/practice$/,
     );
+    if (url.pathname === '/api/me/notifications' && request.method === 'GET') {
+      return handleListMyNotificationsRequest(request, env);
+    }
+    if (url.pathname === '/api/me/notifications/read-all') {
+      return handleMarkAllNotificationsReadRequest(request, env);
+    }
+    const notificationReadMatch = url.pathname.match(/^\/api\/me\/notifications\/([^/]+)\/read$/);
+    if (notificationReadMatch) {
+      return handleMarkNotificationReadRequest(
+        request,
+        env,
+        decodeURIComponent(notificationReadMatch[1]),
+      );
+    }
+    if (url.pathname === '/api/admin/notifications/broadcast') {
+      return handleAdminBroadcastNotificationRequest(request, env);
+    }
+    const teamMatchDisputeMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/dispute$/,
+    );
+    if (teamMatchDisputeMatch) {
+      return handleTeamMatchDisputeRequest(
+        request,
+        env,
+        decodeURIComponent(teamMatchDisputeMatch[1]),
+      );
+    }
     const teamMatchMakeupProposeMatch = url.pathname.match(
       /^\/api\/team-matches\/([^/]+)\/makeup$/,
     );

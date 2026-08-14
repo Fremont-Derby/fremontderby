@@ -14,6 +14,7 @@ import {
 import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { chatHttpHandlers } from './chatHttp.js';
 import { renderChatModerationPage } from './chatModerationPage.js';
+import { renderNotificationsPage } from './notificationsPage.js';
 import { renderChatPage } from './chatPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
@@ -192,6 +193,9 @@ export default {
       return htmlResponse(renderCaptainSandboxPage(), url.pathname);
     }
 
+    if (url.pathname === '/notifications') {
+      return htmlResponse(renderNotificationsPage());
+    }
     if (url.pathname === '/messages') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatPage(env), url.pathname);

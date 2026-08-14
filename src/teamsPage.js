@@ -488,7 +488,10 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
       if(!location&&!schedule&&!recurrence)return'No practice set yet.';
       const bits=[];
       if(recurrence==='weekly')bits.push('Weekly');
-      else if(recurrence==='once')bits.push(on?('One-off · '+on):'One-off');
+      else if(recurrence==='once'){
+        const past=on&&on<new Date().toISOString().slice(0,10);
+        bits.push(on?(past?('Past one-off · '+on):('One-off · '+on)):(past?'Past one-off':'One-off'));
+      }
       if(location)bits.push(location);
       if(schedule)bits.push(schedule);
       return bits.join(' · ');
