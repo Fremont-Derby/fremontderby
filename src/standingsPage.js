@@ -15,6 +15,12 @@ export function renderStandingsPage() {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Standings</span></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
+    <nav data-standings-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
+      <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+      <a href="/prizes" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Prizes</a>
+    </nav>
     <div class="tabs-wrap"><nav class="tabs" role="tablist" aria-label="Standings views"><button class="tab" data-tab="teams" role="tab" type="button" aria-selected="true" aria-controls="team-standings">Team standings</button><button class="tab" data-tab="individuals" role="tab" type="button" aria-selected="false" aria-controls="individual-standings">Individual standings</button></nav></div>
     <form class="controls" data-form><label>Season<select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select></label><button class="load" data-load type="submit" disabled>Load standings</button></form>
     <section class="state-card" data-page-state hidden aria-live="polite"><strong data-state-title></strong><p data-state-detail></p><a class="state-action" data-state-action href="/standings"></a></section>

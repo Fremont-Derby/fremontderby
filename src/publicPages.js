@@ -135,5 +135,15 @@ export function renderRulesPage() {
     </ul>
 
     <p class="note">Season-specific settings such as dates, deadlines, race-chart values, and payout amounts are published separately and may change between seasons.</p>
-  `);
+  
+
+    <div class="actions">
+      <a class="button primary" href="/profile">Join / sign in</a>
+      <a class="button" href="/teams">Teams</a>
+      <a class="button" href="/players">Players</a>
+      <a class="button" href="/schedule">Schedule</a>
+      <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/demo">Test drive</a>
+    </div>
+`);
 }
