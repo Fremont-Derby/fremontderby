@@ -1097,16 +1097,36 @@ export async function handleListSeasonScheduleRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await repository.listPublicSeasons();
-    if (!seasons.some((season) => season.id === seasonId)) {
+    if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const versionState = await repository.getSeasonScheduleVersion({ seasonId });
-    const version = await versionTokenFromValue(versionState);
+    // WHY: warm polls only pay for status fingerprint; cold loads skip the extra version query.
     return conditionalJsonFromVersion(request, {
       scope: `schedule:${seasonId}`,
-      version,
       cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+      getVersion: async () => versionTokenFromValue(await repository.getSeasonScheduleVersion({ seasonId })),
+      versionFromBody: async (body) => {
+        // WHY: must match getSeasonScheduleVersion() shape so cold and warm ETags agree.
+        const rounds = (body?.rounds || []).map((round) => ({
+          id: round.roundId,
+          round_number: round.roundNumber,
+          scheduled_on: round.scheduledOn,
+          status: round.status,
+          stage: round.stage,
+        }));
+        const matches = [];
+        for (const round of body?.rounds || []) {
+          for (const m of round.matches || []) {
+            matches.push({
+              id: m.teamMatchId,
+              round_id: round.roundId,
+              status: m.status,
+              table_number: m.tableNumber,
+            });
+          }
+        }
+        return versionTokenFromValue({ rounds, matches });
+      },
       buildBody: async () => {
         const rounds = await repository.listSeasonSchedule({ seasonId });
         return { rounds };
@@ -1125,16 +1145,13 @@ export async function handleListTeamStandingsRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await repository.listPublicSeasons();
-    if (!seasons.some((season) => season.id === seasonId)) {
+    if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const versionState = await repository.getSeasonStandingsVersion({ seasonId });
-    const version = await versionTokenFromValue(versionState);
     return conditionalJsonFromVersion(request, {
       scope: `team-standings:${seasonId}`,
-      version,
       cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+      getVersion: async () => versionTokenFromValue(await repository.getSeasonStandingsVersion({ seasonId })),
       buildBody: async () => {
         const standings = await listTeamStandingsCommand({ seasonId }, repository);
         return { standings };
@@ -1153,16 +1170,13 @@ export async function handleListIndividualStandingsRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await repository.listPublicSeasons();
-    if (!seasons.some((season) => season.id === seasonId)) {
+    if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const versionState = await repository.getSeasonStandingsVersion({ seasonId });
-    const version = await versionTokenFromValue(versionState);
     return conditionalJsonFromVersion(request, {
       scope: `individual-standings:${seasonId}`,
-      version,
       cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+      getVersion: async () => versionTokenFromValue(await repository.getSeasonStandingsVersion({ seasonId })),
       buildBody: async () => {
         const standings = await listIndividualStandingsCommand({ seasonId }, repository);
         return { standings };

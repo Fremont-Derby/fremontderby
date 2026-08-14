@@ -1,10 +1,10 @@
 /**
  * Conditional JSON responses for live-refresh GETs.
  *
- * Phase 1: strong ETag = SHA-256 of canonical JSON body.
- * Phase 2: weak ETag from domain version tokens (304 before building body).
- *
- * Auth-scoped `/api/me/*` keeps Cache-Control: private, no-store.
+ * WHY (cost + snappy UX):
+ * - Warm polls with If-None-Match should 304 before building large JSON (cheap backend).
+ * - Cold loads should NOT pay for a version query AND a full build — one trip only.
+ * - Public season data can use short shared TTL; /api/me/* stays private, no-store.
  */
 
 function canonicalJson(value) {
@@ -18,7 +18,6 @@ export async function strongEtagFromBody(body) {
   return `"${hex}"`;
 }
 
-/** Hex fingerprint for version tokens (no quotes). */
 export async function versionTokenFromValue(value) {
   const etag = await strongEtagFromBody(value);
   return etag.slice(1, -1);
@@ -62,17 +61,12 @@ export function notModifiedResponse(etag, options = {}) {
   });
 }
 
-/**
- * Strong body-hash ETag (Phase 1). Always builds body first.
- */
 export async function conditionalJsonResponse(request, body, options = {}) {
   const etag = options.etag || (await strongEtagFromBody(body));
   const headers = baseHeaders(etag, options);
-
   if (request && etagMatches(request.headers?.get?.('if-none-match'), etag)) {
     return new Response(null, { status: 304, headers });
   }
-
   return Response.json(body, {
     status: options.status ?? 200,
     headers,
@@ -80,25 +74,54 @@ export async function conditionalJsonResponse(request, body, options = {}) {
 }
 
 /**
- * Weak version ETag (Phase 2).
- * If If-None-Match matches the version token, returns 304 without calling buildBody.
+ * Weak version ETag with cold/warm split.
  *
  * @param {Request} request
- * @param {{ scope: string, version: string, buildBody: () => Promise<unknown> | unknown, cacheControl?: string, headers?: Record<string,string> }} params
+ * @param {{
+ *   scope: string,
+ *   cacheControl?: string,
+ *   headers?: Record<string,string>,
+ *   // Warm path only (If-None-Match present): cheap fingerprint.
+ *   getVersion?: () => Promise<string>,
+ *   // Always used when body must be produced.
+ *   buildBody: () => Promise<unknown> | unknown,
+ *   // Optional: derive version from body on cold path so we skip getVersion.
+ *   versionFromBody?: (body: unknown) => Promise<string> | string,
+ * }} params
  */
 export async function conditionalJsonFromVersion(request, params) {
-  const etag = weakEtag(params.scope, params.version);
+  const ifNoneMatch = request?.headers?.get?.('if-none-match') || '';
   const options = {
     cacheControl: params.cacheControl,
     headers: params.headers,
     vary: params.vary,
   };
 
-  if (request && etagMatches(request.headers?.get?.('if-none-match'), etag)) {
-    return notModifiedResponse(etag, options);
+  // Warm path: cheap version check first — skip full build on 304.
+  if (ifNoneMatch && typeof params.getVersion === 'function') {
+    const version = await params.getVersion();
+    const etag = weakEtag(params.scope, version);
+    if (etagMatches(ifNoneMatch, etag)) {
+      return notModifiedResponse(etag, options);
+    }
+    const body = await params.buildBody();
+    return Response.json(body, {
+      status: params.status ?? 200,
+      headers: baseHeaders(etag, options),
+    });
   }
 
+  // Cold path: one full build only (no version query). ETag from body or versionFromBody.
   const body = await params.buildBody();
+  let version;
+  if (typeof params.versionFromBody === 'function') {
+    version = await params.versionFromBody(body);
+  } else if (typeof params.getVersion === 'function') {
+    version = await params.getVersion();
+  } else {
+    version = await versionTokenFromValue(body);
+  }
+  const etag = weakEtag(params.scope, version);
   return Response.json(body, {
     status: params.status ?? 200,
     headers: baseHeaders(etag, options),
