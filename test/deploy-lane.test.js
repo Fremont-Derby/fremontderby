@@ -6,9 +6,9 @@ import {
   laneDeployments,
 } from '../scripts/deploy-lane.mjs';
 
-for (const lane of ['beta-jfl', 'beta-dru', 'gamma']) {
-  test(`${lane} deploy maps only to its matching branch and Wrangler environment`, () => {
-    const env = { GITHUB_ACTIONS: 'true', GITHUB_REF_NAME: lane };
+for (const lane of ['jfl', 'dru', 'gamma']) {
+  test(`${lane} deploy maps only to its matching Fremont Derby branch and Wrangler environment`, () => {
+    const env = { GITHUB_ACTIONS: 'true', GITHUB_REF_NAME: `fremontderby-${lane}` };
     assert.deepEqual(assertLaneDeployContext(lane, env), laneDeployments[lane]);
     assert.deepEqual(laneDeployArgs(lane, env), ['wrangler', 'deploy', '--env', lane]);
   });
@@ -18,9 +18,9 @@ test('lane deploy refuses branch/environment mismatches', () => {
   assert.throws(
     () => assertLaneDeployContext('gamma', {
       GITHUB_ACTIONS: 'true',
-      GITHUB_REF_NAME: 'beta-jfl',
+      GITHUB_REF_NAME: 'fremontderby-jfl',
     }),
-    /Refusing gamma deploy from branch "beta-jfl"; expected "gamma"/,
+    /Refusing gamma deploy from branch "fremontderby-jfl"; expected "fremontderby-gamma"/,
   );
 });
 
@@ -38,7 +38,7 @@ test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
   const sha = 'a'.repeat(40);
   const args = laneDeployArgs('gamma', {
     GITHUB_ACTIONS: 'true',
-    GITHUB_REF_NAME: 'gamma',
+    GITHUB_REF_NAME: 'fremontderby-gamma',
     GITHUB_SHA: sha,
   });
   assert.deepEqual(args, [
