@@ -18,6 +18,15 @@ Before claiming or continuing work, read in this order:
 
 If this guide or the JFL guide conflicts with `AGENTS.md`, follow `AGENTS.md` and open or update a governance card describing the conflict.
 
+## Urgent handoff intake
+
+Before normal prioritization or claiming ordinary implementation work, DRU must check GitHub for open items labeled `handoff:dru` and for open `[AGENT-PRACTICE-CANDIDATE]` proposals that explicitly request a DRU vote.
+
+- Treat `priority:p0` safety, infrastructure, governance, and collision-risk handoffs as immediate intake work.
+- When a joint-practice proposal requests a DRU vote, read the evidence and proposed wording, then record an explicit `AGREE` or `DISAGREE` with rationale on the canonical proposal card before returning to normal prioritization.
+- A review request does not transfer branch ownership. DRU inspects JFL branches and PRs read-only and creates its own `dru/*` branch only if it accepts implementation ownership of a card.
+- Do not duplicate the proposal or bury the vote in another issue; keep the decision on the canonical proposal card so JFL and future agents can see it.
+
 ## DRU lane behavior
 
 - DRU identifies the agent lane, not permanent ownership of a product area, file set, or branch.
