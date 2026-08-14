@@ -6,16 +6,17 @@ It is intentionally broader and more stable than any single roadmap, release, or
 
 ## Instruction hierarchy
 
-Use the most current source available. When instructions appear to conflict, prefer the source lower in this list only when it is more specific and demonstrably current:
+Use the highest-authority current source available. A more specific source may add narrower requirements, but it must not silently override or weaken a higher-authority source:
 
 1. **Current user request / explicit product-owner decision** — highest authority for the active task.
 2. **Current GitHub issue, milestone, parent issue, and linked discussion** — source of truth for the specific work being attempted.
 3. **Current code, tests, migrations, CI, and live platform state** — source of truth for what actually exists and what is already deployed.
-4. **`AGENTS.md`** — durable operating behavior for autonomous development.
-5. **`README.md`** — architecture, product invariants, environment map, and contributor orientation.
-6. **`docs/agent-bootstrap.md`** — intentionally tiny external-session bootstrap text.
+4. **`AGENTS.md`** — authoritative repository-owned operating contract for every autonomous development agent.
+5. **`.github/agents/*.agent.md` and `.github/instructions/*.instructions.md`** — role-, lane-, or surface-specific additions that must remain consistent with `AGENTS.md`.
+6. **`README.md`** — architecture, product invariants, environment map, and contributor orientation.
+7. **`docs/agent-bootstrap.md`** — intentionally tiny external-session bootstrap text.
 
-Do not carry stale assumptions from a previous session when the repository can answer the question now.
+If a lane or specialist guide conflicts with `AGENTS.md`, follow `AGENTS.md` and record the conflict for correction. Do not carry stale assumptions from a previous session when the repository can answer the question now.
 
 ## Start every session from the repository
 
@@ -23,7 +24,7 @@ Assume each session has little or no reliable memory.
 
 Before choosing work:
 
-1. Read the current `README.md` and this file from `main`.
+1. Read the current `AGENTS.md` and `README.md` from `main`. If operating as JFL or DRU, also read both `.github/agents/jfl.agent.md` and `.github/agents/dru.agent.md`; the peer guide is required reading, not optional reference material.
 2. Reconcile latest `main`, open PRs, recently merged PRs, open issues, milestones/parent stories, and current CI/workflow state.
 3. Check whether another agent is already implementing the area you are considering.
 4. Read the most relevant issue and linked dependencies before editing code.
@@ -144,6 +145,36 @@ While implementing:
 - Shared migrations, schema, auth, routing, global styles, common domain primitives, and package/config files are high-collision surfaces. Treat them as explicit dependencies when another active branch is touching them.
 
 A good branch changes the smallest coherent set of files needed for its card. Broad changes require their own card and deliberate coordination rather than being bundled into a feature PR.
+
+### JFL and DRU lane guides
+
+JFL and DRU have separate lane guides:
+
+- `.github/agents/jfl.agent.md`
+- `.github/agents/dru.agent.md`
+
+Both guides are subordinate to this file. They may add stricter lane-specific habits but may not redefine product rules, relax safety requirements, claim broad repository ownership, or override this operating contract.
+
+JFL and DRU must read both lane guides before claiming work. Cross-reading exists to find useful practices and detect drift, not to create shared ownership. A useful peer practice may be followed immediately only when it is compatible with this file and the active card; it does not become a repository-wide rule until adopted through the joint proposal process below.
+
+Agent identity and deployment lanes are different concepts. The permanent `fremontderby-jfl` and `fremontderby-dru` branches exist to deploy their named test environments. They are not general-purpose implementation branches and are never shared mutable workspaces. Normal implementation remains on a focused `issue-<number>-<short-slug>` branch from current `main`, followed by reviewed promotion or handoff.
+
+### Joint JFL/DRU practice proposals
+
+Neither JFL nor DRU may unilaterally promote its lane-specific preference into `AGENTS.md`.
+
+1. One agent records a candidate practice in the relevant issue or PR with the problem, concrete evidence, proposed rule, and expected benefit.
+2. The peer agent reviews it against `AGENTS.md`, current repository behavior, and its own lane experience, then records explicit agreement or disagreement in GitHub.
+3. When both agents explicitly agree, they submit a dedicated `[AGENT-PRACTICE]` proposal card containing:
+   - the problem and repeated evidence;
+   - exact proposed `AGENTS.md` wording;
+   - scope, tradeoffs, and risks;
+   - links to JFL's and DRU's recorded agreement;
+   - migration or enforcement changes, if any.
+4. Adoption uses its own claimed governance card, focused branch, review, merge, and verification lifecycle. The proposal is not authoritative until the resulting `AGENTS.md` change is merged and verified.
+5. If the agents disagree, keep the practice lane-local when allowed, document the disagreement, and continue without changing the top-level contract.
+
+Do not bundle top-level instruction promotion into an unrelated feature PR.
 
 ### Clean handoff protocol
 
