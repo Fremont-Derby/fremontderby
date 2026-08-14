@@ -62,7 +62,12 @@ export function renderDesignSystemCatalogPage() {
 
     <h2>Token remap</h2>
     <p class="lede">Legacy <code>--panel / --line / --muted / --green</code> bind to <code>--fd-*</code> on player and admin surfaces via <code>src/tokenRemap.js</code>.</p>
-  </main>
+  
+    <section style="margin:24px 0;padding:16px;border:1px solid var(--line,#343c45);border-radius:12px">
+      <h2 style="margin:0 0 8px">Live refresh helpers</h2>
+      <p style="color:var(--muted,#a9b8b0);line-height:1.5">Browser pages use <code>fdLiveRefresh</code>, <code>fdSetStatus</code>, <code>fdQuietRun</code>, and <code>fdStableList</code> so background polls do not flash Loading states and failures show product-safe copy.</p>
+    </section>
+</main>
 </body>
 </html>`;
 }

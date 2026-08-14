@@ -34,6 +34,12 @@ export function renderTradesPage() {
       <div class="brand"><span class="mark">9</span><span>Trades</span></div>
       <div class="status" data-status>Loading…</div>
     </header>
+    <nav aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+      <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
+      <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+      <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
+    </nav>
     <p class="note">Captains propose a player-for-player swap. Both players and both captains must accept. Captains are not tradable.</p>
     <section class="panel">
       <h2>Propose a trade</h2>

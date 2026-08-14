@@ -32,6 +32,9 @@ export function renderAdminAuditPage() {
       <a class="ghost" href="/admin/operations">Operations</a>
       <a class="ghost" href="/messages/moderation">Moderation</a>
       <a class="ghost" href="/admin/players">Players</a>
+      <a class="ghost" href="/admin/seasons">Seasons</a>
+      <a class="ghost" href="/admin/season-teams">Season teams</a>
+      <a class="ghost" href="/admin">Admin home</a>
     </nav>
     <div class="filters">
       <label>Action prefix
