@@ -13,6 +13,7 @@
     "deploy": "node scripts/deploy-production.mjs",
     "deploy:jfl": "node scripts/deploy-lane.mjs jfl",
     "deploy:dru": "node scripts/deploy-lane.mjs dru",
-    "deploy:gamma": "node scripts/deploy-lane.mjs gamma"
+    "deploy:gamma": "node scripts/deploy-lane.mjs gamma",
+    "labels:check": "node scripts/collaboration-labels.mjs --check"
   }
 }

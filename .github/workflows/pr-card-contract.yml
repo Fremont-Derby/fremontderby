@@ -28,6 +28,10 @@ jobs:
           TRACKING_CARD_NUMBERS: ${{ steps.contract.outputs.tracking-card-numbers }}
         with:
           script: |
+            const { pathToFileURL } = require('url');
+            const { validateTrackingCardLabels } = await import(pathToFileURL(
+              `${process.env.GITHUB_WORKSPACE}/scripts/check-pr-card-contract.mjs`
+            ).href);
             const uniqueNumbers = JSON.parse(process.env.TRACKING_CARD_NUMBERS || '[]');
 
             for (const issueNumber of uniqueNumbers) {
@@ -41,5 +45,10 @@ jobs:
               }
               if (issue.state !== 'open') {
                 core.setFailed(`#${issueNumber} must remain open through post-merge verification.`);
+              }
+
+              const labelErrors = validateTrackingCardLabels(issue.labels);
+              for (const error of labelErrors) {
+                core.setFailed(`#${issueNumber}: ${error}`);
               }
             }

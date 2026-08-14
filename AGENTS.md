@@ -6,16 +6,17 @@ It is intentionally broader and more stable than any single roadmap, release, or
 
 ## Instruction hierarchy
 
-Use the most current source available. When instructions appear to conflict, prefer the source lower in this list only when it is more specific and demonstrably current:
+Use the highest-authority current source available. A more specific source may add narrower requirements, but it must not silently override or weaken a higher-authority source:
 
 1. **Current user request / explicit product-owner decision** — highest authority for the active task.
 2. **Current GitHub issue, milestone, parent issue, and linked discussion** — source of truth for the specific work being attempted.
 3. **Current code, tests, migrations, CI, and live platform state** — source of truth for what actually exists and what is already deployed.
-4. **`AGENTS.md`** — durable operating behavior for autonomous development.
-5. **`README.md`** — architecture, product invariants, environment map, and contributor orientation.
-6. **`docs/agent-bootstrap.md`** — intentionally tiny external-session bootstrap text.
+4. **`AGENTS.md`** — authoritative repository-owned operating contract for every autonomous development agent.
+5. **`.github/agents/*.agent.md` and `.github/instructions/*.instructions.md`** — role-, lane-, or surface-specific additions that must remain consistent with `AGENTS.md`.
+6. **`README.md`** — architecture, product invariants, environment map, and contributor orientation.
+7. **`docs/agent-bootstrap.md`** — intentionally tiny external-session bootstrap text.
 
-Do not carry stale assumptions from a previous session when the repository can answer the question now.
+If a lane or specialist guide conflicts with `AGENTS.md`, follow `AGENTS.md` and record the conflict for correction. Do not carry stale assumptions from a previous session when the repository can answer the question now.
 
 ## Start every session from the repository
 
@@ -23,7 +24,7 @@ Assume each session has little or no reliable memory.
 
 Before choosing work:
 
-1. Read the current `README.md` and this file from `main`.
+1. Read the current `AGENTS.md` and `README.md` from `main`. If operating as JFL or DRU, also read both `.github/agents/jfl.agent.md` and `.github/agents/dru.agent.md`; the peer guide is required reading, not optional reference material.
 2. Reconcile latest `main`, open PRs, recently merged PRs, open issues, milestones/parent stories, and current CI/workflow state.
 3. Check whether another agent is already implementing the area you are considering.
 4. Read the most relevant issue and linked dependencies before editing code.
@@ -118,6 +119,24 @@ Track each implementation card through these stages in the issue body or project
 7. **Verified** — the merged behavior has been validated at the appropriate source/CI/staging/production level and evidence is recorded on the card.
 8. **Closed** — only after acceptance criteria are satisfied and follow-up cards are linked.
 
+### Card label contract
+
+Labels make ownership and lifecycle state filterable across the backlog; the issue body and comments remain the evidence. Every open implementation card must carry:
+
+- exactly one `agent:*` label: current implementation owner, or `agent:unclaimed`;
+- exactly one `stage:*` label matching the lifecycle above;
+- exactly one `priority:p0` through `priority:p3`;
+- at least one `area:*` label;
+- optional coordination flags such as `blocked`, `collision-risk`, `human-required`, or `handoff:*`.
+
+New implementation cards start with `agent:unclaimed`, `stage:ready`, and `priority:p2`. Before coding, replace `agent:unclaimed` with the accepting owner, set the correct priority and area, then advance `stage:claimed` to `stage:in-progress` when the focused branch exists.
+
+**Human-required exception:** cards labeled `human-required` are owned by a human/project author for dashboard-only work (Cloudflare, Supabase SQL editor, identity provider consoles). They still need `stage:*`, `priority:*`, and `area:*`. They do **not** require an `agent:*` implementation owner while blocked on a human. Agents may automate steps only when repository secrets and workflows already allow it; otherwise leave exact steps on the card and do not close it.
+
+Lifecycle labels are mutually exclusive. Replace the previous `stage:*` label when state changes; never stack several stages or owner labels. Use `stage:merged` after merge, `stage:verified` only after evidence is recorded, and `stage:closed` immediately before closing the issue. PRs reference the card but do not duplicate its lifecycle labels.
+
+The canonical names, colors, and descriptions live in `.github/collaboration-labels.json` and are synchronized by `.github/workflows/sync-collaboration-labels.yml`. Agents may not invent near-duplicate owner or stage labels. Change the manifest through a tracked governance PR when the system needs to evolve.
+
 Do not use an auto-closing PR keyword such as `Closes #123` as the normal tracking mechanism. Prefer `Tracks #123` or `Refs #123` so merge does not close the card before post-merge verification.
 
 ## Parallel agent ownership and branch discipline
@@ -129,13 +148,14 @@ Before editing:
 1. claim one card by recording the agent/owner lane on the issue;
 2. sync from current `main`;
 3. search open PRs/issues for overlapping behavior and likely touched surfaces;
-4. create a dedicated feature branch from current `main`, preferably `issue-<number>-<short-slug>`;
+4. create a dedicated feature branch from current `main`; JFL uses `jfl/issue-<number>-<short-slug>`, DRU uses `dru/issue-<number>-<short-slug>`, and every other agent uses a branch whose owner is unambiguous;
 5. keep the branch limited to that card's acceptance criteria.
 
 While implementing:
 
-- Do not commit directly to another agent's active feature branch unless that agent explicitly hands it off on the issue/PR.
-- Do not force-update, rebase, reset, or rewrite another agent's branch history.
+- Branch ownership is immutable. No agent may ever check out, commit to, push to, merge into, rebase, reset, rename, delete, update the ref of, or otherwise mutate another agent's branch. A handoff does not create an exception.
+- Read-only inspection through GitHub PRs, diffs, compare views, or commit objects is allowed and encouraged for coordination; do not attach a working tree to the peer branch.
+- If another agent takes over a card, it creates a new branch in its own namespace from current `main`. The old branch remains owned only by its creator.
 - Do not make sweeping repository-wide formatting, rename, cleanup, dependency, architecture, or style changes as incidental work.
 - Do not rewrite unrelated files merely because they are nearby, noisy, or could be cleaner.
 - Do not revert unfamiliar code to make your branch easier to merge. First determine which card/PR owns it.
@@ -145,19 +165,59 @@ While implementing:
 
 A good branch changes the smallest coherent set of files needed for its card. Broad changes require their own card and deliberate coordination rather than being bundled into a feature PR.
 
+### JFL and DRU lane guides
+
+JFL and DRU have separate lane guides:
+
+- `.github/agents/jfl.agent.md`
+- `.github/agents/dru.agent.md`
+
+Both guides are subordinate to this file. They may add stricter lane-specific habits but may not redefine product rules, relax safety requirements, claim broad repository ownership, or override this operating contract.
+
+JFL and DRU must read both lane guides before claiming work. Cross-reading exists to find useful practices and detect drift, not to create shared ownership. A useful peer practice may be followed immediately only when it is compatible with this file and the active card; it does not become a repository-wide rule until adopted through the joint proposal process below.
+
+Agent identity and deployment lanes are different concepts. The permanent `fremontderby-jfl` and `fremontderby-dru` branches exist to deploy their named test environments. They are owned exclusively by JFL and DRU respectively, are not general-purpose implementation branches, and are never shared mutable workspaces. JFL must never mutate `fremontderby-dru`; DRU must never mutate `fremontderby-jfl`. Normal JFL implementation uses `jfl/issue-<number>-<short-slug>` and normal DRU implementation uses `dru/issue-<number>-<short-slug>`, each created from current `main`.
+
+### Joint JFL/DRU practice proposals
+
+Neither JFL nor DRU may unilaterally promote its lane-specific preference into `AGENTS.md`.
+
+1. One agent records a candidate practice in the relevant issue or PR with the problem, concrete evidence, proposed rule, and expected benefit.
+2. The peer agent reviews it against `AGENTS.md`, current repository behavior, and its own lane experience, then records explicit agreement or disagreement in GitHub.
+3. When both agents explicitly agree, they submit a dedicated `[AGENT-PRACTICE]` proposal card containing:
+   - the problem and repeated evidence;
+   - exact proposed `AGENTS.md` wording;
+   - scope, tradeoffs, and risks;
+   - links to JFL's and DRU's recorded agreement;
+   - migration or enforcement changes, if any.
+4. Adoption uses its own claimed governance card, focused branch, review, merge, and verification lifecycle. The proposal is not authoritative until the resulting `AGENTS.md` change is merged and verified.
+5. If the agents disagree, keep the practice lane-local when allowed, document the disagreement, and continue without changing the top-level contract.
+
+Do not bundle top-level instruction promotion into an unrelated feature PR.
+
 ### Clean handoff protocol
 
-When handing work from JFL to DRU, DRU to JFL, or any agent to another:
+A handoff is explicit and accepted; silence never transfers ownership.
 
-- push/commit the current coherent state before handoff;
-- link the card and PR/branch;
-- state exactly what is complete, what remains, and what is blocked;
-- list important files/surfaces changed and any known collision risk;
-- record tests/CI already run and failures still present;
-- identify the next exact action and who now owns implementation;
-- do not have both agents continue modifying the same branch after ownership transfers.
+The outgoing agent must:
 
-The receiving agent starts by reading the card/PR, refreshing `main`, and confirming the handoff is still current before editing.
+1. commit and push a coherent state;
+2. set `stage:handoff` and add `handoff:jfl`, `handoff:dru`, or `handoff:review` as appropriate;
+3. retain its current `agent:*` owner label until an incoming implementation owner accepts;
+4. leave a GitHub issue or PR comment containing:
+   - outgoing owner;
+   - requested incoming owner or reviewer;
+   - card and branch/PR;
+   - completed work;
+   - remaining work;
+   - touched files/surfaces;
+   - proof run and known failures;
+   - risks, blockers, and collision concerns;
+   - exact next action.
+
+For an ownership transfer, the incoming agent reads the current card/PR and repository state through read-only GitHub views, posts explicit acceptance, replaces the outgoing `agent:*` label with its own, removes the `handoff:*` label, and creates a new branch in its own namespace from current `main` before editing. Any still-needed work is reproduced or selectively applied onto the new branch without checking out or updating the outgoing branch. The issue comment must record both the retired outgoing branch and the new incoming branch.
+
+Branch ownership never transfers and is never transferred back. The outgoing branch remains exclusively owned by its creator even after the card owner changes. For review-only handoffs, the implementation owner label does not change; the reviewer inspects through the PR/diff, records findings and completion, and never checks out or mutates the owner's branch.
 
 ## Implementation behavior
 
@@ -198,6 +258,19 @@ For meaningful changes:
 
 A green unit test does not prove a live deployment. A successful login does not prove authorization. A hosted hotfix does not prove the repository is synchronized.
 
+### Live platform verification (non-negotiable for lane/infra cards)
+
+When the card touches hostnames, Worker envs, auth bypass, or Supabase migrations:
+
+1. **Probe the live hostname**, not only CI. Record `/health/environment` (or equivalent) showing the expected `environment` value.
+2. **DNS exists is not success.** A resolving host that reports `environment=production` on a beta/DRU/JFL URL is still failing the card.
+3. **Merge is not apply.** A merged migration file on `main` does not close data cards until it is applied to the **target** database (DRU/JFL/gamma/prod as named) and re-probed.
+4. **Open-auth cards** must prove an authenticated API without a bearer where intended, and must prove production/gamma still require a bearer.
+5. Prefer GitHub Actions workflows that use existing `CLOUDFLARE_*` (or similar) repository secrets for domain/Worker automation over asking a human to click the same API-capable step. Inventory what secrets Actions already has before cutting a human card.
+6. If a custom domain is attached via API, re-check public DNS and health a few minutes later; attachment acknowledgements can race propagation or wrong-Worker routing.
+
+Close platform cards only after these live checks match acceptance criteria.
+
 ## Pull requests and merges
 
 Every implementation PR must link exactly which card(s) it implements. Normally one focused PR implements one primary card. If multiple cards are included, explain why they are inseparable and keep each card's acceptance criteria visible.
@@ -235,7 +308,7 @@ Use the platform best suited to the evidence needed.
 - Read current issues and PRs before coding.
 - Claim a card and work from a dedicated focused branch based on current `main`.
 - Prefer small changes with tests.
-- Do not duplicate an existing implementation PR or modify another agent's active branch without an explicit handoff.
+- Do not duplicate an existing implementation PR. Never check out or mutate another agent's branch; handoffs transfer cards, not branches.
 
 **Supabase / database agents**
 - Treat repository migrations as the durable database source of truth.
