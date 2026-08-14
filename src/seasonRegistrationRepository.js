@@ -1,3 +1,4 @@
+import { withSupabaseSchema } from './supabaseSchema.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);
@@ -39,6 +40,7 @@ function firstRow(result) {
 
 export function createSeasonRegistrationRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
+  fetchImpl = withSupabaseSchema(fetchImpl, env);
   const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
   const serviceRoleKey = requireEnvValue(env, 'SUPABASE_SERVICE_ROLE_KEY');
   const headers = jsonHeaders(serviceRoleKey);
