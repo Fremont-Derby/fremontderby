@@ -1,3 +1,4 @@
+import { normalizeStatusTone } from './statusTone.js';
 export function renderAdminSeasonsPage() {
   return `<!doctype html>
 <html lang="en">
@@ -84,9 +85,14 @@ export function renderAdminSeasonsPage() {
     function token() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
+    const normalizeStatusTone = ${normalizeStatusTone.toString()};
     function setStatus(message, tone = '') {
       statusEl.textContent = message;
-      statusEl.dataset.tone = tone;
+      if (!message) {
+        statusEl.removeAttribute('data-tone');
+        return;
+      }
+      statusEl.dataset.tone = tone ? normalizeStatusTone(tone) : '';
     }
     function normalize(value) {
       return String(value || '').trim().toLowerCase();

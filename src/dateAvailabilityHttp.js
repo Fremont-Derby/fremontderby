@@ -1,11 +1,10 @@
+import { jsonNoStore } from './httpJson.js';
 import { createDateAvailabilityRepository } from './dateAvailabilityRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
 const statuses = new Set(['available', 'unsure', 'unavailable']);
 
-function json(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
-}
+const json = jsonNoStore;
 
 export function dateAvailabilityErrorStatus(error) {
   if (error instanceof AuthError) return error.status;

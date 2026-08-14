@@ -1,3 +1,4 @@
+import { jsonNoStore } from './httpJson.js';
 import {
   chooseTeamMatchTeamCommand,
   listMyTeamMatchChoicesCommand,
@@ -5,9 +6,7 @@ import {
 import { createTeamMatchChoiceRepository } from './teamMatchChoiceRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
-function jsonResponse(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
-}
+const jsonResponse = jsonNoStore;
 
 async function readJsonBody(request) {
   const text = await request.text();

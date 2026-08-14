@@ -1,3 +1,4 @@
+import { jsonNoStore } from './httpJson.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   getAdminPlayerContactCommand,
@@ -6,17 +7,7 @@ import {
 } from './playerContactCommands.js';
 import { createPlayerContactRepository } from './playerContactRepository.js';
 
-function json(body, status = 200) {
-  return Response.json(body, {
-    status,
-    headers: {
-      'cache-control': 'no-store, no-cache, private',
-      pragma: 'no-cache',
-      // WHY: contact payloads must never be shared or bf-cached.
-      vary: 'Authorization',
-    },
-  });
-}
+const json = (body, status = 200) => jsonNoStore(body, status, { pragma: 'no-cache', vary: 'Authorization' });
 
 export function playerContactErrorStatus(error) {
   if (error instanceof AuthError) return error.status;
