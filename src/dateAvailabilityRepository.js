@@ -37,6 +37,9 @@ async function rpc(fetchImpl, env, name, body) {
 
 export function createDateAvailabilityRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
+  // Fail closed at construction so missing lane secrets surface before first request.
+  requireEnvValue(env, 'SUPABASE_URL');
+  requireEnvValue(env, 'SUPABASE_SERVICE_ROLE_KEY');
   return {
     getOwn({ actorUserId, seasonId, availabilityDate }) {
       return rpc(fetchImpl, env, 'get_own_date_availability', {
