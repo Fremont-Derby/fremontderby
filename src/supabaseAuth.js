@@ -6,6 +6,9 @@ export class AuthError extends Error {
   }
 }
 
+/** Lanes allowed to use no-bearer test actors when BETA_AUTH_BYPASS=1. */
+export const OPEN_AUTH_ENVIRONMENTS = new Set(['beta', 'beta-jfl', 'beta-dru']);
+
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -31,13 +34,13 @@ async function parseJson(response) {
 }
 
 /**
- * Beta/gamma open-auth: only when ENVIRONMENT is exactly "beta" and
- * BETA_AUTH_BYPASS is "1". Never active for production or staging.
+ * Open-auth bypass: only for isolated beta lanes (beta, beta-jfl, beta-dru)
+ * when BETA_AUTH_BYPASS is "1". Never production, staging, or gamma.
  */
 export function betaAuthBypassEnabled(env = {}) {
   const environment = String(env.ENVIRONMENT || '').trim();
   const bypass = String(env.BETA_AUTH_BYPASS || '').trim();
-  return environment === 'beta' && bypass === '1';
+  return OPEN_AUTH_ENVIRONMENTS.has(environment) && bypass === '1';
 }
 
 export function resolveBetaBypassActor(env = {}) {
@@ -66,9 +69,7 @@ export async function authenticateSupabaseUser(
 
   const token = bearerToken(request);
 
-  // Beta bypass is only for deliberately unauthenticated automation. Once a
-  // caller supplies a bearer token, validate that token and fail normally if
-  // it is invalid rather than escalating to the shared beta actor.
+  // Bypass only when no Authorization header is present.
   if (!token && betaAuthBypassEnabled(env)) {
     return resolveBetaBypassActor(env);
   }
@@ -77,7 +78,7 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Missing bearer token');
   }
 
-  // Real bearer tokens still work on beta when provided.
+  // Supplied bearer: validate normally. Invalid token does not fall through to bypass.
   const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
   const publishableKey = requireEnvValue(env, 'SUPABASE_PUBLISHABLE_KEY');
   const response = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {

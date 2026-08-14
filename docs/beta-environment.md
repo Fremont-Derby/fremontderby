@@ -1,13 +1,25 @@
-# Beta environment — superseded
+# Beta lanes (open auth)
 
-This single-beta guide was superseded on 2026-08-13 by the dual-beta → gamma → production release topology.
+Canonical plan: [`docs/ENVIRONMENTS.md`](./ENVIRONMENTS.md) and epic #573.
 
-Use [`docs/ENVIRONMENTS.md`](./ENVIRONMENTS.md) as the canonical environment and promotion plan and issue #573 as the implementation epic.
+## Live hostnames
+| Lane | `ENVIRONMENT` | Public host |
+|------|---------------|-------------|
+| JFL beta | `beta-jfl` | `https://jfl.fremontderby.com` |
+| DRU beta | `beta-dru` | `https://dru.fremontderby.com` |
+| Gamma | `gamma` | `https://gamma.fremontderby.com` (no auth bypass) |
 
-The replacement lanes are:
-- `beta-jfl`
-- `beta-dru`
-- `gamma`
-- protected `main` / production
+## Open auth
+Allowed only when `ENVIRONMENT` is `beta-jfl` or `beta-dru` (legacy `beta` still recognized in code) **and** `BETA_AUTH_BYPASS=1`.
 
-Historical single-beta issues #545 and #572 are closed as superseded. Do not provision the old single-beta path from this file.
+Requires non-production Supabase project ref, `BETA_ACTOR_USER_ID`, and service-role secret on that Worker only.
+
+## Deploy
+```bash
+npx wrangler deploy --env beta-jfl
+npx wrangler deploy --env beta-dru
+npx wrangler deploy --env gamma
+```
+
+## Cloudflare
+Custom domains should match the table above. Do not point these hosts at the production Worker with `ENVIRONMENT=production`.

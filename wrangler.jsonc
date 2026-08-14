@@ -20,17 +20,40 @@
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB"
       }
     },
-    "beta": {
-      "name": "fremontderby-beta",
+    "beta-jfl": {
+      "name": "fremontderby-beta-jfl",
       "workers_dev": true,
       "vars": {
-        "ENVIRONMENT": "beta",
+        "ENVIRONMENT": "beta-jfl",
         "BETA_AUTH_BYPASS": "1",
-        "SUPABASE_URL": "https://REPLACE_BETA_PROJECT.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "REPLACE_BETA_PUBLISHABLE_KEY",
-        "BETA_ACTOR_USER_ID": "REPLACE_BETA_ACTOR_USER_UUID",
-        "BETA_ACTOR_EMAIL": "beta-actor@localhost",
-        "BETA_EXPECTED_SUPABASE_PROJECT_REF": "REPLACE_BETA_PROJECT_REF"
+        "SUPABASE_URL": "https://REPLACE_JFL_PROJECT.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "REPLACE_JFL_PUBLISHABLE_KEY",
+        "BETA_ACTOR_USER_ID": "REPLACE_JFL_ACTOR_USER_UUID",
+        "BETA_ACTOR_EMAIL": "beta-jfl-actor@localhost",
+        "BETA_EXPECTED_SUPABASE_PROJECT_REF": "REPLACE_JFL_PROJECT_REF"
+      }
+    },
+    "beta-dru": {
+      "name": "fremontderby-beta-dru",
+      "workers_dev": true,
+      "vars": {
+        "ENVIRONMENT": "beta-dru",
+        "BETA_AUTH_BYPASS": "1",
+        "SUPABASE_URL": "https://REPLACE_DRU_PROJECT.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "REPLACE_DRU_PUBLISHABLE_KEY",
+        "BETA_ACTOR_USER_ID": "REPLACE_DRU_ACTOR_USER_UUID",
+        "BETA_ACTOR_EMAIL": "beta-dru-actor@localhost",
+        "BETA_EXPECTED_SUPABASE_PROJECT_REF": "REPLACE_DRU_PROJECT_REF"
+      }
+    },
+    "gamma": {
+      "name": "fremontderby-gamma",
+      "workers_dev": true,
+      "vars": {
+        "ENVIRONMENT": "gamma",
+        "SUPABASE_URL": "https://REPLACE_GAMMA_PROJECT.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "REPLACE_GAMMA_PUBLISHABLE_KEY",
+        "EXPECTED_SUPABASE_PROJECT_REF": "REPLACE_GAMMA_PROJECT_REF"
       }
     }
   }

@@ -1,17 +1,19 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+const ALLOWED = new Set(['beta-jfl', 'beta-dru', 'gamma']);
+
 /**
- * Deploy the Worker to the wrangler `beta` environment only.
- * Never targets production. Author must configure beta vars/secrets first.
+ * Deploy a non-production lane: beta-jfl | beta-dru | gamma
+ * Usage: node scripts/deploy-beta.mjs beta-jfl
  */
-export function runBetaDeploy({ env = process.env, spawn = spawnSync } = {}) {
-  if (env.ENVIRONMENT === 'production' && env.FORCE_BETA_DEPLOY !== '1') {
-    // informational only; wrangler --env beta is the real guard
+export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
+  if (!ALLOWED.has(lane)) {
+    throw new Error(`Unsupported lane "${lane}". Use: ${[...ALLOWED].join(', ')}`);
   }
 
   const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const result = spawn(command, ['wrangler', 'deploy', '--env', 'beta'], {
+  const result = spawn(command, ['wrangler', 'deploy', '--env', lane], {
     env,
     stdio: 'inherit',
   });
@@ -23,7 +25,8 @@ export function runBetaDeploy({ env = process.env, spawn = spawnSync } = {}) {
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirectRun) {
   try {
-    runBetaDeploy();
+    const lane = process.argv[2] || 'beta-jfl';
+    runLaneDeploy(lane);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

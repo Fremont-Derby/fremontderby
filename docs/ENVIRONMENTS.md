@@ -7,10 +7,12 @@ Fremont Derby uses explicit release lanes so independent testing can happen with
 | Lane | Git branch | Public host | Data | Purpose |
 |---|---|---|---|---|
 | Local | feature/local | local only | local/test only | development |
-| JFL beta | `beta-jfl` | `https://beta-jfl.fremontderby.com` | isolated JFL sandbox Supabase project | independent JFL testing |
-| DRU beta | `beta-dru` | `https://beta-dru.fremontderby.com` | isolated DRU sandbox Supabase project | independent DRU testing |
+| JFL beta | `beta-jfl` | `https://jfl.fremontderby.com` | isolated JFL sandbox Supabase project | independent JFL testing |
+| DRU beta | `beta-dru` | `https://dru.fremontderby.com` | isolated DRU sandbox Supabase project | independent DRU testing |
 | Gamma | `gamma` | `https://gamma.fremontderby.com` | isolated gamma Supabase project | integrated release-candidate testing |
 | Production | `main` | `https://fremontderby.com` | production Supabase project | live league |
+
+**DNS note (2026-08-14):** live custom domains are `jfl.fremontderby.com` and `dru.fremontderby.com` (not `beta-jfl` / `beta-dru` subdomains). Worker `ENVIRONMENT` values remain `beta-jfl` and `beta-dru`.
 
 The normal promotion path is:
 

@@ -5,6 +5,9 @@ const expectedSupabaseProjectRefs = {
 
 const reservedSupabaseProjectRefs = new Set(Object.values(expectedSupabaseProjectRefs));
 
+/** Isolated beta lanes (hostname may be jfl./dru.; env name stays beta-jfl / beta-dru). */
+const BETA_LANE_ENVIRONMENTS = new Set(['beta', 'beta-jfl', 'beta-dru']);
+
 function normalizeSupabaseUrl(value) {
   if (!value || typeof value !== 'string') return '';
   return value.trim().replace(/\/+$/, '');
@@ -42,28 +45,33 @@ export function environmentReadiness(env = {}) {
     ? env.SUPABASE_PUBLISHABLE_KEY !== env.SUPABASE_SERVICE_ROLE_KEY
     : null;
 
-  const isBeta = environment === 'beta';
-  const expectedProjectRef = isBeta
+  const isBetaLane = BETA_LANE_ENVIRONMENTS.has(environment);
+  const isGamma = environment === 'gamma';
+
+  const expectedProjectRef = isBetaLane || isGamma
     ? (configured(env.BETA_EXPECTED_SUPABASE_PROJECT_REF)
       ? env.BETA_EXPECTED_SUPABASE_PROJECT_REF.trim()
-      : null)
+      : (configured(env.EXPECTED_SUPABASE_PROJECT_REF)
+        ? env.EXPECTED_SUPABASE_PROJECT_REF.trim()
+        : null))
     : (expectedSupabaseProjectRefs[environment] || null);
 
   const knownWorkerEnvironment =
-    environment in expectedSupabaseProjectRefs || isBeta;
+    environment in expectedSupabaseProjectRefs
+    || isBetaLane
+    || isGamma;
 
-  const betaExpectedProjectConfigured = !isBeta || Boolean(expectedProjectRef);
-  const betaExpectedProjectIsolated = !isBeta
+  const expectedIsolated = !isBetaLane && !isGamma
     || Boolean(expectedProjectRef && !reservedSupabaseProjectRefs.has(expectedProjectRef));
-  const betaActualProjectIsolated = !isBeta
+  const actualIsolated = !isBetaLane && !isGamma
     || Boolean(projectRef && !reservedSupabaseProjectRefs.has(projectRef));
 
-  const projectMatches = isBeta
+  const projectMatches = isBetaLane || isGamma
     ? Boolean(
       expectedProjectRef
-      && betaExpectedProjectIsolated
-      && betaActualProjectIsolated
-      && projectRef === expectedProjectRef
+      && expectedIsolated
+      && actualIsolated
+      && projectRef === expectedProjectRef,
     )
     : Boolean(expectedProjectRef && projectRef === expectedProjectRef);
 
@@ -82,13 +90,22 @@ export function environmentReadiness(env = {}) {
     }),
   ];
 
-  if (isBeta) {
+  if (isBetaLane) {
     checks.push(
-      check('betaExpectedProjectRefConfigured', betaExpectedProjectConfigured),
-      check('betaExpectedProjectRefIsolated', betaExpectedProjectIsolated, { expectedProjectRef }),
-      check('betaActualProjectIsolated', betaActualProjectIsolated, { projectRef }),
+      check('betaExpectedProjectConfigured', Boolean(expectedProjectRef)),
+      check('betaExpectedProjectIsolated', expectedIsolated, { expectedProjectRef }),
+      check('betaActualProjectIsolated', actualIsolated, { projectRef }),
       check('betaAuthBypassFlag', String(env.BETA_AUTH_BYPASS || '').trim() === '1'),
       check('betaActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
+    );
+  }
+
+  if (isGamma) {
+    checks.push(
+      check('gammaAuthBypassDisabled', String(env.BETA_AUTH_BYPASS || '').trim() !== '1'),
+      check('gammaExpectedProjectConfigured', Boolean(expectedProjectRef)),
+      check('gammaExpectedProjectIsolated', expectedIsolated, { expectedProjectRef }),
+      check('gammaActualProjectIsolated', actualIsolated, { projectRef }),
     );
   }
 
