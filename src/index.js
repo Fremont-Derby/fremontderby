@@ -1,3 +1,4 @@
+import { createChatRepository } from './chatRepository.js';
 import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
 import {
   listTeamRoundAvailabilityCommand,
@@ -712,14 +713,18 @@ export async function handleUpdateTeamPracticeRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const chatRepository = createChatRepository(env, { fetch: fetchImpl });
     const practice = await updateTeamPracticeCommand(
       {
         actorUserId: actor.id,
         teamId,
         practiceLocation: body.practiceLocation ?? body.practice_location ?? null,
         practiceSchedule: body.practiceSchedule ?? body.practice_schedule ?? null,
+        practiceRecurrence: body.practiceRecurrence ?? body.practice_recurrence ?? null,
+        practiceOn: body.practiceOn ?? body.practice_on ?? null,
       },
       repository,
+      { chatRepository },
     );
     return jsonResponse({ practice });
   } catch (error) {

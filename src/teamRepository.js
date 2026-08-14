@@ -343,7 +343,7 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
           const inList = captainIds.map(encodeURIComponent).join(',');
           const practiceRows = await requestJson(
             fetchImpl,
-            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule&id=in.(${inList})`,
+            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule,practice_recurrence,practice_on&id=in.(${inList})`,
             { method: 'GET', headers },
           );
           const byId = new Map(
@@ -358,12 +358,43 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
                 ...team,
                 practiceLocation: row.practice_location ?? null,
                 practiceSchedule: row.practice_schedule ?? null,
+                practiceRecurrence: row.practice_recurrence ?? null,
+                practiceOn: row.practice_on ?? null,
               };
             }),
           };
         }
       } catch {
         // Practice enrichment is optional.
+      }
+
+
+      try {
+        const playerId = finalManagement.player_id;
+        if (playerId) {
+          const memberships = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/team_memberships?select=team_id,teams(id,name,season_id,practice_location,practice_schedule,practice_recurrence,practice_on)&player_id=eq.${encodeURIComponent(playerId)}&ends_at=is.null`,
+            { method: 'GET', headers },
+          );
+          const membershipPractice = (Array.isArray(memberships) ? memberships : [])
+            .map((row) => {
+              const team = row.teams || row.team || {};
+              return {
+                teamId: team.id || row.team_id,
+                teamName: team.name || null,
+                seasonId: team.season_id || null,
+                practiceLocation: team.practice_location ?? null,
+                practiceSchedule: team.practice_schedule ?? null,
+                practiceRecurrence: team.practice_recurrence ?? null,
+                practiceOn: team.practice_on ?? null,
+              };
+            })
+            .filter((row) => row.teamId);
+          finalManagement = { ...finalManagement, membership_practice: membershipPractice };
+        }
+      } catch {
+        // membership practice is optional enrichment
       }
 
       return finalManagement;
@@ -398,7 +429,14 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
     },
 
 
-    async updateTeamPractice({ actorUserId, teamId, practiceLocation, practiceSchedule }) {
+    async updateTeamPractice({
+      actorUserId,
+      teamId,
+      practiceLocation,
+      practiceSchedule,
+      practiceRecurrence,
+      practiceOn,
+    }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/set_team_practice`, {
         method: 'POST',
         headers,
@@ -407,6 +445,8 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
           target_team_id: teamId,
           practice_location: practiceLocation,
           practice_schedule: practiceSchedule,
+          practice_recurrence: practiceRecurrence,
+          practice_on: practiceOn,
         }),
       });
       const row = Array.isArray(result) ? result[0] : result;
@@ -415,6 +455,8 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         teamName: row?.team_name ?? null,
         practiceLocation: row?.practice_location ?? null,
         practiceSchedule: row?.practice_schedule ?? null,
+        practiceRecurrence: row?.practice_recurrence ?? null,
+        practiceOn: row?.practice_on ?? null,
       };
     },
 

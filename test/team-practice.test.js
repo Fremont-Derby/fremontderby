@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { updateTeamPracticeCommand } from '../src/teamCommands.js';
+import {
+  formatTeamPracticeAnnouncement,
+  updateTeamPracticeCommand,
+} from '../src/teamCommands.js';
 import { renderTeamsPage } from '../src/teamsPage.js';
 import { readFileSync } from 'node:fs';
 
-test('updateTeamPracticeCommand requires captain context fields and trims text', async () => {
+test('updateTeamPracticeCommand saves weekly practice and notifies team chat', async () => {
   const calls = [];
+  const chatCalls = [];
   const repository = {
     async updateTeamPractice(payload) {
       calls.push(payload);
@@ -14,7 +18,15 @@ test('updateTeamPracticeCommand requires captain context fields and trims text',
         teamName: 'Breakers',
         practiceLocation: payload.practiceLocation,
         practiceSchedule: payload.practiceSchedule,
+        practiceRecurrence: payload.practiceRecurrence,
+        practiceOn: payload.practiceOn,
       };
+    },
+  };
+  const chatRepository = {
+    async sendTeamMessage(payload) {
+      chatCalls.push(payload);
+      return { id: 'msg-1' };
     },
   };
 
@@ -23,50 +35,69 @@ test('updateTeamPracticeCommand requires captain context fields and trims text',
       actorUserId: 'user-1',
       teamId: 'team-1',
       practiceLocation: '  Fremont Bowl  ',
-      practiceSchedule: '  Thu 7pm  ',
+      practiceSchedule: '  7pm  ',
+      practiceRecurrence: 'weekly',
     },
     repository,
+    { chatRepository },
   );
 
-  assert.deepEqual(calls[0], {
-    actorUserId: 'user-1',
-    teamId: 'team-1',
-    practiceLocation: 'Fremont Bowl',
-    practiceSchedule: 'Thu 7pm',
-  });
+  assert.equal(calls[0].practiceRecurrence, 'weekly');
+  assert.equal(calls[0].practiceOn, null);
   assert.equal(result.practiceLocation, 'Fremont Bowl');
+  assert.equal(chatCalls.length, 1);
+  assert.match(chatCalls[0].body, /Weekly practice/);
+  assert.match(chatCalls[0].body, /Fremont Bowl/);
 });
 
-test('updateTeamPracticeCommand rejects overlong practice fields', async () => {
+test('one-off practice requires a date', async () => {
   await assert.rejects(
     () => updateTeamPracticeCommand(
       {
         actorUserId: 'user-1',
         teamId: 'team-1',
-        practiceLocation: 'x'.repeat(121),
+        practiceLocation: 'Fremont Bowl',
+        practiceRecurrence: 'once',
       },
       { async updateTeamPractice() { return {}; } },
     ),
-    /120 characters/,
+    /practiceOn is required/,
   );
 });
 
-test('teams page exposes captain practice editor and API path', () => {
-  const html = renderTeamsPage();
-  assert.match(html, /Team practice/);
-  assert.match(html, /data-practice-location/);
-  assert.match(html, /data-practice-schedule/);
-  assert.match(html, /savePractice/);
-  assert.match(html, /\/api\/teams\/.*\/practice/);
+test('formatTeamPracticeAnnouncement covers clear and once cases', () => {
+  assert.match(
+    formatTeamPracticeAnnouncement({
+      teamName: 'Breakers',
+      practiceRecurrence: 'once',
+      practiceOn: '2026-08-20',
+      practiceLocation: 'Fremont Bowl',
+      practiceSchedule: '6pm',
+    }),
+    /One-off practice on 2026-08-20/,
+  );
+  assert.match(
+    formatTeamPracticeAnnouncement({ teamName: 'Breakers' }),
+    /cleared/,
+  );
 });
 
-test('migration defines set_team_practice for active captains only', () => {
+test('teams page exposes recurrence and membership practice display', () => {
+  const html = renderTeamsPage();
+  assert.match(html, /data-practice-recurrence/);
+  assert.match(html, /data-practice-on/);
+  assert.match(html, /One-off/);
+  assert.match(html, /renderMembershipPractice/);
+  assert.match(html, /Teammates were notified in team chat/);
+});
+
+test('recurrence migration expands set_team_practice', () => {
   const sql = readFileSync(
-    new URL('../supabase/migrations/20260814140000_team_practice.sql', import.meta.url),
+    new URL('../supabase/migrations/20260814143000_team_practice_recurrence.sql', import.meta.url),
     'utf8',
   );
-  assert.match(sql, /set_team_practice/);
-  assert.match(sql, /Only the active team captain can set practice details/);
-  assert.match(sql, /practice_location/);
-  assert.match(sql, /practice_schedule/);
+  assert.match(sql, /practice_recurrence/);
+  assert.match(sql, /practice_on/);
+  assert.match(sql, /weekly/);
+  assert.match(sql, /once/);
 });

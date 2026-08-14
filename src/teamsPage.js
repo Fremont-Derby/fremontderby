@@ -185,7 +185,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         const practice=document.createElement('div');
         practice.className='practice-block';
         const practiceTitle=node('h3','Team practice');
-        const practiceHelp=node('div','Optional. Teammates use this for where/when you meet outside league night.','muted');
+        const practiceHelp=node('div','Optional. Saving posts a note to the team chat so the roster sees it.','muted');
         const locLabel=document.createElement('label');
         locLabel.textContent='Practice location';
         const locInput=document.createElement('input');
@@ -200,17 +200,38 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         const schedInput=document.createElement('input');
         schedInput.type='text';
         schedInput.maxLength=120;
-        schedInput.placeholder='e.g. Thursdays 6:30–8:00 PM';
+        schedInput.placeholder='e.g. 6:30–8:00 PM';
         schedInput.dataset.practiceSchedule=team.teamId||team.id||'';
         schedInput.value=team.practiceSchedule||team.practice_schedule||'';
         schedLabel.append(schedInput);
-        const summary=node('div',null,'practice-summary muted');
-        const hasPractice=Boolean((team.practiceLocation||team.practice_location)||(team.practiceSchedule||team.practice_schedule));
-        summary.textContent=hasPractice
-          ? [team.practiceLocation||team.practice_location,team.practiceSchedule||team.practice_schedule].filter(Boolean).join(' · ')
-          : 'No practice set yet.';
+        const recLabel=document.createElement('label');
+        recLabel.textContent='Repeats';
+        const recSelect=document.createElement('select');
+        recSelect.dataset.practiceRecurrence=team.teamId||team.id||'';
+        for(const [value,label] of [['','Not set'],['weekly','Weekly'],['once','One-off']]){
+          const option=document.createElement('option');
+          option.value=value;
+          option.textContent=label;
+          recSelect.append(option);
+        }
+        recSelect.value=team.practiceRecurrence||team.practice_recurrence||'';
+        recLabel.append(recSelect);
+        const onLabel=document.createElement('label');
+        onLabel.textContent='One-off date';
+        const onInput=document.createElement('input');
+        onInput.type='date';
+        onInput.dataset.practiceOn=team.teamId||team.id||'';
+        onInput.value=team.practiceOn||team.practice_on||'';
+        onLabel.append(onInput);
+        function syncPracticeDateVisibility(){
+          onLabel.hidden=recSelect.value!=='once';
+          if(recSelect.value!=='once')onInput.value='';
+        }
+        recSelect.addEventListener('change',syncPracticeDateVisibility);
+        syncPracticeDateVisibility();
+        const summary=node('div',practiceSummaryText(team),'practice-summary muted');
         const save=actionButton('Save practice','primary',{savePractice:team.teamId||team.id||''});
-        practice.append(practiceTitle,practiceHelp,locLabel,schedLabel,summary,save);
+        practice.append(practiceTitle,practiceHelp,locLabel,schedLabel,recLabel,onLabel,summary,save);
         card.append(practice);
         captainTeamsEl.append(card);
       }
@@ -315,24 +336,76 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
       return el;
     }
 
-function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);renderInvitations(data.invitations||[]);renderCaptainTeams(data.captain_teams||[])}function renderMembershipRequests(data){renderJoinTeams(data.joinable_teams||[]);renderPlayerRequests(data.player_requests||[]);renderCaptainRequests(data.captain_requests||[])}
+function renderMembershipPractice(rows){
+      let host=document.querySelector('[data-membership-practice]');
+      if(!host){
+        host=document.createElement('section');
+        host.className='panel';
+        host.dataset.membershipPractice='';
+        const title=document.createElement('h2');
+        title.textContent='Team practice';
+        host.append(title);
+        if(teamContentEl)teamContentEl.insertBefore(host,teamContentEl.firstChild);
+      }
+      // clear previous cards except title
+      Array.from(host.querySelectorAll('[data-practice-card]')).forEach((n)=>n.remove());
+      const list=Array.isArray(rows)?rows:[];
+      const withPractice=list.filter((row)=>row.practiceLocation||row.practiceSchedule||row.practiceRecurrence);
+      if(!withPractice.length){
+        const empty=node('div','No team practice is posted yet. Captains can set location, time, and weekly vs one-off under their team.','muted');
+        empty.dataset.practiceCard='';
+        host.append(empty);
+        return;
+      }
+      for(const row of withPractice){
+        const card=document.createElement('div');
+        card.className='card';
+        card.dataset.practiceCard='';
+        card.append(node('strong',row.teamName||'Team'));
+        card.append(node('div',practiceSummaryText(row),'muted'));
+        const chat=document.createElement('a');
+        chat.className='chat-link';
+        chat.href='/messages?team='+encodeURIComponent(row.teamId||'');
+        chat.textContent='Open team chat';
+        card.append(chat);
+        host.append(card);
+      }
+    }
+function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);renderInvitations(data.invitations||[]);renderCaptainTeams(data.captain_teams||[]);renderMembershipPractice(data.membership_practice||data.captain_teams||[])}function renderMembershipRequests(data){renderJoinTeams(data.joinable_teams||[]);renderPlayerRequests(data.player_requests||[]);renderCaptainRequests(data.captain_requests||[])}
     async function loadTeams(opts={}){const quiet=Boolean(opts&&opts.quiet);const token=sessionStorage.getItem('fd.accessToken')||'';const scorablePromise=token?fetch('/api/me/scorable-matches',{headers:{authorization:'Bearer '+token}}).then(async(r)=>{try{const b=await r.json();return r.ok?(b.matches||[]):[]}catch{return[]}}).catch(()=>[]):Promise.resolve([]);const [teamsBody,requestsBody,seasonsBody,scorable]=await Promise.all([api('/api/me/teams',{method:'GET'}),api('/api/me/team-membership-requests',{method:'GET'}),api('/api/seasons',{method:'GET'}),scorablePromise]);if(teamsBody&&teamsBody.__notModified){if(!quiet)setStatus('Teams up to date','ok');return teamsBody}const data=teamsBody.teamManagement||{captain_teams:[],invitations:[],open_seasons:[],players:[]};playerDirectory=data.players||[];publicSeasons=(seasonsBody.seasons||[]).filter((season)=>season.status==='registration');renderSeasonOptions(publicSeasons);renderManagement(data,scorable);renderMembershipRequests(requestsBody.requests||{});await loadRegistration();return data}
     async function loadInitialTeams(){showPageState('loading');try{await loadTeams();showTeamContent();setStatus('Teams loaded','ok')}catch(error){if(error.name==='SessionExpiredError')showPageState('expired');else showPageState('failure')}}
     async function applyForTeam(){const seasonId=seasonSelect.value;const teamName=teamNameInput.value.trim();if(!seasonId)throw new Error('No registration season is open.');if(!teamName)throw new Error('Team name is required');localStorage.setItem('fd.teamsSeasonId',seasonId);setStatus('Submitting application...');await api('/api/seasons/'+encodeURIComponent(seasonId)+'/team-applications',{method:'POST',body:JSON.stringify({teamName})});teamNameInput.value='';await loadTeams();setStatus('Application submitted for admin review','ok')}
     async function withdrawApplication(applicationId){setStatus('Withdrawing application...');await api('/api/team-applications/'+encodeURIComponent(applicationId)+'/withdraw',{method:'POST',body:'{}'});await loadTeams();setStatus('Application withdrawn','ok')}
     async function respondToSlot(slotId,action){const select=document.querySelector('[data-transfer-player="'+slotId+'"]');const transferPlayerId=select?select.value:'';if(action==='transfer'&&!transferPlayerId)throw new Error('Choose a player for the transfer');setStatus('Updating reservation...');await api('/api/team-slots/'+encodeURIComponent(slotId)+'/respond',{method:'POST',body:JSON.stringify({action,transferPlayerId:transferPlayerId||null})});await loadTeams();setStatus(action==='confirm'?'Returning team confirmed':'Reservation updated','ok')}
+    function practiceSummaryText(team){
+      const location=team.practiceLocation||team.practice_location||'';
+      const schedule=team.practiceSchedule||team.practice_schedule||'';
+      const recurrence=team.practiceRecurrence||team.practice_recurrence||'';
+      const on=team.practiceOn||team.practice_on||'';
+      if(!location&&!schedule&&!recurrence)return'No practice set yet.';
+      const bits=[];
+      if(recurrence==='weekly')bits.push('Weekly');
+      else if(recurrence==='once')bits.push(on?('One-off · '+on):'One-off');
+      if(location)bits.push(location);
+      if(schedule)bits.push(schedule);
+      return bits.join(' · ');
+    }
     async function savePractice(teamId){
       const locationEl=document.querySelector('[data-practice-location="'+teamId+'"]');
       const scheduleEl=document.querySelector('[data-practice-schedule="'+teamId+'"]');
+      const recurrenceEl=document.querySelector('[data-practice-recurrence="'+teamId+'"]');
+      const onEl=document.querySelector('[data-practice-on="'+teamId+'"]');
       const practiceLocation=locationEl?locationEl.value.trim():'';
       const practiceSchedule=scheduleEl?scheduleEl.value.trim():'';
+      const practiceRecurrence=recurrenceEl?recurrenceEl.value:'';
+      const practiceOn=onEl?onEl.value:'';
       setStatus('Saving practice details…');
       await api('/api/teams/'+encodeURIComponent(teamId)+'/practice',{
         method:'PUT',
-        body:JSON.stringify({practiceLocation,practiceSchedule}),
+        body:JSON.stringify({practiceLocation,practiceSchedule,practiceRecurrence,practiceOn}),
       });
       await loadTeams();
-      setStatus(practiceLocation||practiceSchedule?'Practice details saved.':'Practice details cleared.','ok');
+      setStatus(practiceLocation||practiceSchedule||practiceRecurrence?'Practice saved. Teammates were notified in team chat.':'Practice details cleared.','ok');
     }
     async function invitePlayer(teamId){const select=Array.from(document.querySelectorAll('[data-invite-player-select]')).find((candidate)=>candidate.dataset.invitePlayerSelect===teamId);const playerId=select?select.value:'';if(!playerId)throw new Error('Choose a player to invite');const chosen=select.options[select.selectedIndex];const label=chosen?chosen.textContent:'';const player=Array.isArray(playerDirectory)?playerDirectory.find((item)=>(item.playerId||item.id)===playerId):null;if((player&&player.isDuplicateName)||(label&&label.includes(' — ')&&/#\w{4}\b/.test(label))){if(!confirm('More than one player may share this name.\n\nInvite this record?\n'+label))return}setStatus('Sending invitation...');await api('/api/teams/'+encodeURIComponent(teamId)+'/invitations',{method:'POST',body:JSON.stringify({playerId})});await loadTeams();setStatus('Invitation sent','ok')}
     async function requestMembership(teamId){setStatus('Sending join request...');await api('/api/teams/'+encodeURIComponent(teamId)+'/membership-request',{method:'POST',body:'{}'});await loadTeams();setStatus('Join request sent','ok')}async function cancelMembershipRequest(requestId){setStatus('Canceling join request...');await api('/api/team-membership-requests/'+encodeURIComponent(requestId)+'/cancel',{method:'POST',body:'{}'});await loadTeams();setStatus('Join request canceled','ok')}async function respondToMembershipRequest(requestId,response){setStatus(response==='approved'?'Approving player...':'Declining request...');await api('/api/team-membership-requests/'+encodeURIComponent(requestId)+'/respond',{method:'POST',body:JSON.stringify({response})});await loadTeams();setStatus(response==='approved'?'Player added to team':'Request declined','ok')}
