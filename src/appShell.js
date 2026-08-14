@@ -190,10 +190,49 @@ export const shellStyles = `
   .fd-message-preview__all { min-height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid #244936; border-radius: 0 0 8px 8px; color: #b7e2c5; text-decoration: none; font: 850 .78rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-message-preview__all:hover, .fd-message-preview__all:focus-visible { color: #fff; background: #10291d; }
   .fd-nav-menu { display: none; margin-left: auto; position: relative; font: 700 .9rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
-  .fd-nav-menu summary { cursor: pointer; list-style: none; min-height: 42px; display: inline-flex; align-items: center; padding: 9px 12px; border: 1px solid #315d45; border-radius: 10px; background: #0b2418; color: #f4f7f5; }
+  .fd-nav-menu summary {
+    cursor: pointer;
+    list-style: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 14px;
+    border: 1px solid #315d45;
+    border-radius: 10px;
+    background: #0b2418;
+    color: #f4f7f5;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+  }
   .fd-nav-menu summary::-webkit-details-marker { display: none; }
-  .fd-nav--mobile { position: absolute; right: 0; top: calc(100% + 8px); width: min(260px, calc(100vw - 24px)); padding: 8px; display: grid; gap: 4px; border: 1px solid #315d45; border-radius: 12px; background: #081a12; box-shadow: 0 14px 38px rgba(0,0,0,.35); }
-  .fd-nav--mobile a { width: 100%; }
+  .fd-nav-menu summary::marker { content: ''; }
+  .fd-nav-menu[open] summary { border-color: #9ad6ae; background: #123522; }
+  .fd-nav--mobile {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: min(280px, calc(100vw - 24px));
+    max-height: min(70vh, 480px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 8px;
+    display: grid;
+    gap: 4px;
+    border: 1px solid #315d45;
+    border-radius: 12px;
+    background: #081a12;
+    box-shadow: 0 14px 38px rgba(0,0,0,.35);
+    z-index: 1200;
+  }
+  .fd-nav--mobile a {
+    width: 100%;
+    min-height: 48px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
   .fd-error-popup { position: fixed; top: 72px; right: 16px; z-index: 2100; width: min(430px, calc(100vw - 24px)); display: grid; grid-template-columns: 30px minmax(0,1fr) 40px; gap: 10px; align-items: start; padding: 14px; border: 2px solid #ff8f87; border-radius: 13px; background: #32110f; box-shadow: 0 18px 48px rgba(0,0,0,.48); color: #fff4f2; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-error-popup[hidden] { display: none; }
   .fd-error-popup__icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #f06a60; color: #250605; font-weight: 950; }
@@ -208,7 +247,17 @@ export const shellStyles = `
     .fd-nav--desktop { display: none; }
     .fd-message-notifications { margin-left: auto; }
     .fd-message-preview { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; }
-    .fd-nav-menu { display: block; margin-left: 0; }
+    .fd-nav-menu { display: block; margin-left: 0; position: static; }
+    .fd-nav-menu[open] { z-index: 1200; }
+    .fd-nav--mobile {
+      position: fixed;
+      top: calc(56px + env(safe-area-inset-top, 0px));
+      right: 12px;
+      left: auto;
+      width: min(280px, calc(100vw - 24px));
+      max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px));
+      z-index: 1200;
+    }
     .fd-error-popup { top: 66px; right: 12px; left: 12px; width: auto; }
     .fd-mobile-dock {
       position: fixed;
@@ -403,6 +452,30 @@ const shellScript = `<script data-fd-message-indicator-script>
   })();
 </script>`;
 
+const navMenuScript = `<script data-fd-nav-menu-script>
+  (() => {
+    const menu = document.querySelector('details.fd-nav-menu');
+    if (!menu) return;
+    const close = () => { if (menu.open) menu.open = false; };
+    menu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => close());
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (!menu.open) return;
+      if (!menu.contains(event.target)) close();
+    }, { passive: true });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+    // iOS: closing/opening details can leave sticky header in a bad paint state
+    menu.addEventListener('toggle', () => {
+      if (!menu.open) return;
+      const shell = document.querySelector('[data-fd-shell]');
+      if (shell) shell.style.transform = 'translateZ(0)';
+    });
+  })();
+</script>`;
+
 const errorPopupScript = `<script data-fd-error-popup-script>
   (() => {
     const popup = document.querySelector('[data-error-popup]');
@@ -466,8 +539,8 @@ export function decorateHtmlWithShell(html, pathname = '/') {
     ? ''
     : '<div class="fd-mobile-dock-spacer" aria-hidden="true"></div>\n';
   return /<\/body>/i.test(withShell)
-    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}\n${errorPopupScript}\n</body>`)
-    : `${withShell}${mobileSpacer}${shellScript}${errorPopupScript}`;
+    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}${navMenuScript}\n${errorPopupScript}\n</body>`)
+    : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}`;
 }
 
 export function isKnownAppPagePath(pathname) {
