@@ -657,11 +657,14 @@ export function decorateHtmlWithShell(html, pathname = '/') {
   if (typeof html !== 'string' || html.includes('data-fd-shell')) return html;
   if (!/<body(?:\s|>)/i.test(html)) return html;
 
+  const referrerPolicyTag = html.includes('name="referrer"') || html.includes("name='referrer'")
+    ? ''
+    : '<meta name="referrer" content="no-referrer" />\n';
   const themeColorTag = html.includes('name="theme-color"') || html.includes("name='theme-color'")
     ? ''
     : '<meta name="theme-color" content="#07150f" />\n';
   const withStyles = /<\/head>/i.test(html)
-    ? html.replace(/<\/head>/i, `${themeColorTag}<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
+    ? html.replace(/<\/head>/i, `${referrerPolicyTag}${themeColorTag}<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
     : html;
 
   const withShell = withStyles.replace(

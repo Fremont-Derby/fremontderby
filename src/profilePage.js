@@ -423,12 +423,21 @@ export function renderProfilePage(env = {}) {
     async function signOut() {
       const accessToken = token();
       if (accessToken && config.supabaseUrl && config.supabasePublishableKey) {
-        await fetch(config.supabaseUrl.replace(/\\/+$/, '') + '/auth/v1/logout', {
+        await fetch(config.supabaseUrl.replace(/\/+$/, '') + '/auth/v1/logout', {
           method: 'POST',
           headers: { apikey: config.supabasePublishableKey, authorization: 'Bearer ' + accessToken },
         }).catch(() => {});
       }
       setSession('', '');
+      // WHY: drop cached API bodies/ETags so the next account cannot see prior PII.
+      try {
+        const keys = [];
+        for (let i = 0; i < sessionStorage.length; i += 1) {
+          const key = sessionStorage.key(i);
+          if (key && (key.startsWith('fd.body:') || key.startsWith('fd.etag:'))) keys.push(key);
+        }
+        for (const key of keys) sessionStorage.removeItem(key);
+      } catch {}
     }
 
     async function run(action) {
