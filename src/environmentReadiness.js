@@ -3,8 +3,8 @@ const fixedExpectedSupabaseProjectRefs = {
   staging: 'oqkkvqkerusepyokzbmt',
 };
 
-const isolatedRuntimeEnvironments = new Set(['beta-jfl', 'beta-dru', 'gamma']);
-const betaRuntimeEnvironments = new Set(['beta-jfl', 'beta-dru']);
+const isolatedRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
+const testAuthRuntimeEnvironments = new Set(['jfl', 'dru']);
 const knownRuntimeEnvironments = new Set([
   ...Object.keys(fixedExpectedSupabaseProjectRefs),
   ...isolatedRuntimeEnvironments,
@@ -59,14 +59,14 @@ export function environmentReadiness(env = {}) {
     : null;
 
   const isIsolatedRuntime = isolatedRuntimeEnvironments.has(environment);
-  const isBeta = betaRuntimeEnvironments.has(environment);
+  const isTestAuthRuntime = testAuthRuntimeEnvironments.has(environment);
   const expectedProjectRef = configuredExpectedProjectRef(env, environment);
   const expectedProjectConfigured = !isIsolatedRuntime || Boolean(expectedProjectRef);
   const expectedProjectIsolated = !isIsolatedRuntime
     || Boolean(expectedProjectRef && !reservedSupabaseProjectRefs.has(expectedProjectRef));
   const actualProjectIsolated = !isIsolatedRuntime
     || Boolean(projectRef && !reservedSupabaseProjectRefs.has(projectRef));
-  const authBypassAllowed = isBeta;
+  const authBypassAllowed = isTestAuthRuntime;
   const authBypassEnabled = String(env.BETA_AUTH_BYPASS || '').trim() === '1';
 
   const projectMatches = Boolean(
@@ -90,7 +90,7 @@ export function environmentReadiness(env = {}) {
     check('supabaseKeysAreDistinct', keysAreDistinct === true, {
       evaluated: keysAreDistinct !== null,
     }),
-    check('authBypassRestrictedToBeta', !authBypassEnabled || authBypassAllowed, {
+    check('authBypassRestrictedToTestLane', !authBypassEnabled || authBypassAllowed, {
       authBypassAllowed,
       authBypassEnabled,
     }),
@@ -103,10 +103,10 @@ export function environmentReadiness(env = {}) {
     );
   }
 
-  if (isBeta) {
+  if (isTestAuthRuntime) {
     checks.push(
-      check('betaAuthBypassFlag', authBypassEnabled),
-      check('betaActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
+      check('testAuthBypassFlag', authBypassEnabled),
+      check('testActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
     );
   }
 
