@@ -356,3 +356,13 @@ export async function updateTeamPracticeCommand(
 
   return practice;
 }
+
+
+export async function listTradeCounterpartyOptionsCommand({ actorUserId, seasonId }, repository) {
+  if (!actorUserId) throw new Error('actorUserId is required');
+  if (!seasonId) throw new Error('seasonId is required');
+  if (!repository || typeof repository.listTradeCounterpartyOptions !== 'function') {
+    throw new Error('repository must implement listTradeCounterpartyOptions');
+  }
+  return repository.listTradeCounterpartyOptions({ actorUserId, seasonId });
+}

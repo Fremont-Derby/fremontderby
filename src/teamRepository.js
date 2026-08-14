@@ -400,6 +400,26 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       return finalManagement;
     },
 
+    async listTradeCounterpartyOptions({ actorUserId, seasonId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_trade_counterparty_options`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_season_id: seasonId,
+        }),
+      });
+      return (Array.isArray(result) ? result : []).map((row) => ({
+        teamId: row.team_id,
+        teamName: row.team_name,
+        players: Array.isArray(row.players) ? row.players.map((p) => ({
+          playerId: p.playerId || p.player_id,
+          displayName: p.displayName || p.display_name,
+          role: p.role,
+        })) : [],
+      }));
+    },
+
     async listOwnTeamTrades({ actorUserId }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/get_own_team_trades`, {
         method: 'POST',

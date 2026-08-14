@@ -74,6 +74,7 @@ import {
   updateTeamPracticeCommand,
   listOwnTeamManagementCommand,
   listOwnTeamTradesCommand,
+  listTradeCounterpartyOptionsCommand,
   proposeTeamTradeCommand,
   removeTeamMemberCommand,
   respondToTeamTradePlayerCommand,
@@ -679,6 +680,26 @@ export async function handleListOwnTeamManagementRequest(
     return conditionalJsonResponse(request, { teamManagement }, {
       cacheControl: 'private, no-store',
     });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+export async function handleListTradeCounterpartyOptionsRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teams = await listTradeCounterpartyOptionsCommand(
+      { actorUserId: actor.id, seasonId },
+      repository,
+    );
+    return jsonResponse({ teams });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -2140,6 +2161,20 @@ export default {
     if (url.pathname === "/api/me/team-membership-requests") {
       if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405);
       return handleListOwnTeamMembershipRequestsRequest(request, env);
+    }
+
+    const tradeCounterpartiesMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/trade-counterparties$/,
+    );
+    if (tradeCounterpartiesMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleListTradeCounterpartyOptionsRequest(
+        request,
+        env,
+        decodeURIComponent(tradeCounterpartiesMatch[1]),
+      );
     }
 
     if (url.pathname === "/api/me/trades") {
