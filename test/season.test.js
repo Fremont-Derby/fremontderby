@@ -104,3 +104,24 @@ test('season publication rejects non-positive interval and missing season id', (
     /seasonId is required/,
   );
 });
+
+test('publishing supports custom positive intervalDays', () => {
+  const schedule = publishRegularSeasonSchedule({
+    seasonId: 'season-1',
+    teamIds: teams,
+    firstRoundDate: '2026-09-03',
+    intervalDays: 14,
+  });
+  assert.deepEqual(
+    schedule.rounds.map((round) => round.scheduledOn),
+    [
+      '2026-09-03',
+      '2026-09-17',
+      '2026-10-01',
+      '2026-10-15',
+      '2026-10-29',
+      '2026-11-12',
+      '2026-11-26',
+    ],
+  );
+});
