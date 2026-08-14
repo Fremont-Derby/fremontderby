@@ -59,6 +59,17 @@ export const designSystemStyles = `
     --fd-radius-pill: 999px;
   }
 
+
+  /* UX: clearer focus and denser readable status chips when pages opt in. */
+  :focus-visible {
+    outline: 3px solid var(--fd-focus) !important;
+    outline-offset: 2px !important;
+  }
+  ::selection {
+    background: #cfe8d8;
+    color: var(--fd-ink);
+  }
+
   /* Universal primitives. */
   html { background: var(--fd-bg-page) !important; }
   body {
