@@ -1,4 +1,5 @@
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { conditionalJsonResponse } from './httpConditional.js';
 import { createScorableMatchesRepository } from './scorableMatchesRepository.js';
 
 function jsonResponse(body, status = 200) {
@@ -26,7 +27,7 @@ export function createScorableMatchesHttpHandlers({
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         const repository = createRepository(env, { fetch: fetchImpl });
         const matches = await repository.listScorableMatches({ actorUserId: actor.id });
-        return jsonResponse({ matches });
+        return conditionalJsonResponse(request, { matches }, { cacheControl: 'private, no-store' });
       } catch (error) {
         return jsonResponse({ error: error.message }, scorableMatchesStatusForError(error));
       }
