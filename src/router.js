@@ -3,6 +3,7 @@ import app from './index.js';
 import { renderDesignSystemCatalogPage } from './designSystemCatalogPage.js';
 import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
 import { renderAdminOperationsPage } from './adminOperationsPage.js';
+import { renderAdminAuditPage } from './adminAuditPage.js';
 import { adminPlayersHttpHandlers } from './adminPlayersHttp.js';
 import { renderAdminPlayersPage } from './adminPlayersPage.js';
 import { renderAdminSeasonsPage } from './adminSeasonsPage.js';
@@ -206,6 +207,9 @@ export default {
       return htmlResponse(renderChatModerationPage(env), url.pathname);
     }
 
+    if (url.pathname === '/admin/audit') {
+      return htmlResponse(renderAdminAuditPage(), url.pathname);
+    }
     if (url.pathname === '/admin/operations') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderAdminOperationsPage(env), url.pathname);
