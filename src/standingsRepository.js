@@ -84,28 +84,48 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         );
         return (Array.isArray(seasons) ? seasons : []).map(mapRegistrationRow);
       } catch (error) {
-        // Production has been observed with missing execute grants on this RPC.
-        // Fall back to a minimal public seasons list so auth/session flows can load.
-        const message = String(error?.message || '');
-        const grantOrMissing =
-          /permission denied|42501|PGRST202|Could not find the function|404/i.test(message);
-        if (!grantOrMissing) throw error;
-
+        // Any RPC failure (grants, JWT, missing function) should not break public season pickers.
+        // Prefer a minimal seasons table read; then a bare fetch without schema profile headers.
         const params = new URLSearchParams({
           select: 'id,name,status,first_round_date',
-          order: 'created_at.desc',
+          order: 'name.asc',
         });
-        const rows = await requestJson(
-          fetchImpl,
-          `${supabaseUrl}/rest/v1/seasons?${params}`,
-          { method: 'GET', headers },
-        );
-        return (Array.isArray(rows) ? rows : []).map((season) => mapRegistrationRow({
-          id: season.id,
-          name: season.name,
-          status: season.status,
-          first_round_date: season.first_round_date,
-        }));
+        try {
+          const rows = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/seasons?${params}`,
+            { method: 'GET', headers },
+          );
+          return (Array.isArray(rows) ? rows : []).map((season) => mapRegistrationRow({
+            id: season.id,
+            name: season.name,
+            status: season.status,
+            first_round_date: season.first_round_date,
+          }));
+        } catch (tableError) {
+          // Last resort: direct REST without Accept-Profile (publishable path is not available here).
+          // Re-throw original RPC error if table also fails so logs stay useful.
+          const bareHeaders = {
+            apikey: serviceRoleKey,
+            authorization: `Bearer ${serviceRoleKey}`,
+            accept: 'application/json',
+          };
+          try {
+            const rows = await requestJson(
+              globalThis.fetch,
+              `${supabaseUrl}/rest/v1/seasons?${params}`,
+              { method: 'GET', headers: bareHeaders },
+            );
+            return (Array.isArray(rows) ? rows : []).map((season) => mapRegistrationRow({
+              id: season.id,
+              name: season.name,
+              status: season.status,
+              first_round_date: season.first_round_date,
+            }));
+          } catch {
+            throw error;
+          }
+        }
       }
     },
 
