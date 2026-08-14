@@ -1899,6 +1899,54 @@ export default {
       );
     }
 
+    if (url.pathname === "/health/features") {
+      // Lightweight schema probes for operator/agent readiness (no secrets returned).
+      const features = {
+        teamPractice: { ready: false, detail: 'not_checked' },
+      };
+      try {
+        const supabaseUrl = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+        const key = env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!supabaseUrl || !key) {
+          features.teamPractice = { ready: false, detail: 'missing_supabase_env' };
+        } else {
+          const response = await fetch(
+            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule,practice_recurrence,practice_on&limit=1`,
+            {
+              method: 'GET',
+              headers: {
+                apikey: key,
+                authorization: `Bearer ${key}`,
+                accept: 'application/json',
+              },
+            },
+          );
+          const text = await response.text();
+          if (response.ok) {
+            features.teamPractice = { ready: true, detail: 'ok' };
+          } else if (/practice_location|42703|PGRST/i.test(text)) {
+            features.teamPractice = { ready: false, detail: 'migration_pending' };
+          } else {
+            features.teamPractice = { ready: false, detail: `http_${response.status}` };
+          }
+        }
+      } catch {
+        features.teamPractice = { ready: false, detail: 'probe_failed' };
+      }
+      const allReady = Object.values(features).every((f) => f && f.ready);
+      return Response.json(
+        {
+          ok: true,
+          service: serviceName,
+          version: version.id,
+          deployedAt: version.timestamp,
+          features,
+          allReady,
+        },
+        { status: 200, headers: { 'cache-control': 'no-store' } },
+      );
+    }
+
     if (url.pathname === "/scorecard") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);

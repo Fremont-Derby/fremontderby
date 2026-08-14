@@ -39,3 +39,5 @@ curl -sS -H "x-probe-key: $HOURLY_PROBE_KEY" \
 2. (Optional) Set `HOURLY_PROBE_GITHUB_TOKEN` + confirm issue `806` exists.
 3. Keep Grok hourly automation enabled.
 4. Restore runners (#723 / #755) so Actions backup and PR CI are not theater.
+
+Also useful: `GET /health/features` reports schema readiness (e.g. teamPractice.migration_pending).
