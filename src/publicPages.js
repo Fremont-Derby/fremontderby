@@ -41,7 +41,7 @@ export function renderIntroPage() {
       <li><strong>Where:</strong> Fremont venue — four tables, one house.</li>
       <li><strong>Cost:</strong> Team + individual cash stakes (see Rules for current season amounts).</li>
       <li><strong>How to join:</strong> Sign in on Profile, register for the open season, then join or form a team.</li>
-      <li><strong>Availability:</strong> On league-night mornings, mark if you will be there so your captain can lock a lineup.</li>
+      <li><strong>Availability:</strong> Before each league night, mark <em>I'll be there</em>, <em>Not sure</em>, or <em>Can't make it</em> (roster or free agent) so captains can set lineups.</li>
     </ul>
     <p>The 12-week calendar is built around a <strong>seven-match single round robin</strong>: every team plays every other team once, with the remaining calendar space reserved for flexibility, makeup dates, and postseason play.</p>
     <p>Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
@@ -50,6 +50,7 @@ export function renderIntroPage() {
     <div class="actions">
       <a class="button primary" href="/profile">Join / sign in</a>
       <a class="button demo" href="/demo">Test drive the app</a>
+      <a class="button" href="/availability">Check in</a>
       <a class="button" href="/schedule">Schedule</a>
       <a class="button" href="/teams">Teams</a>
       <a class="button" href="/standings">Standings</a>

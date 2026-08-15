@@ -113,6 +113,7 @@ export function renderProfilePage(env = {}) {
       <div class="status" role="status" aria-live="polite" aria-atomic="true" data-status></div>
     </header>
     <nav class="profile-shortcuts" aria-label="Common destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px">
+      <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Check in</a>
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
       <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>

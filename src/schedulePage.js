@@ -16,6 +16,12 @@ export function renderSchedulePage() {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Schedule</span></div><div class="status" data-status>Loading…</div></header>
+    <nav data-schedule-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
+      <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Check in</a>
+      <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Lineup</a>
+      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+    </nav>
     <section class="controls" aria-label="Schedule selection">
       <label>Season<select data-season-select disabled><option value="">Loading seasons…</option></select></label>
       <label>League night<select data-round-select disabled><option value="">Choose a season</option></select></label>
@@ -27,7 +33,7 @@ export function renderSchedulePage() {
       </div>
       <div class="matches" data-match-list></div>
     </section>
-    <div class="empty" data-empty hidden>No schedule has been published for this season yet. <a href="/standings">View standings</a> · <a href="/teams">Teams</a> · <a href="/players">Players</a></div>
+    <div class="empty" data-empty hidden>No schedule has been published for this season yet. <a href="/standings">View standings</a> · <a href="/availability">Check in</a> · <a href="/teams">Teams</a> · <a href="/players">Players</a></div>
   </main>
   <script>
     const seasonSelect=document.querySelector('[data-season-select]');const roundSelect=document.querySelector('[data-round-select]');const statusEl=document.querySelector('[data-status]');const panel=document.querySelector('[data-round-panel]');const roundKicker=document.querySelector('[data-round-kicker]');const roundTitle=document.querySelector('[data-round-title]');const roundDate=document.querySelector('[data-round-date]');const roundStatus=document.querySelector('[data-round-status]');const matchList=document.querySelector('[data-match-list]');const emptyEl=document.querySelector('[data-empty]');const query=new URLSearchParams(location.search);const requestedSeason=query.get('season')||localStorage.getItem('fd.scheduleSeasonId')||'';const requestedRound=query.get('round')||localStorage.getItem('fd.scheduleRoundId')||'';let seasons=[];let rounds=[];

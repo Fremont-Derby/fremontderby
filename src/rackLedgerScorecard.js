@@ -64,6 +64,7 @@ export const sharedRackLedgerScorecardMarkup = `
     <div class="match-context"><span data-match-context>Loading round and match…</span><a data-switch-match href="/scorecard">Switch match</a></div>
     <nav class="score-hub-links" aria-label="League night" style="display:flex;flex-wrap:wrap;gap:8px;padding:0 0 8px">
       <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid currentColor;border-radius:10px;opacity:.85;text-decoration:none;color:inherit">Match list</a>
+      <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid currentColor;border-radius:10px;opacity:.85;text-decoration:none;color:inherit">Check in</a>
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid currentColor;border-radius:10px;opacity:.85;text-decoration:none;color:inherit">Schedule</a>
       <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid currentColor;border-radius:10px;opacity:.85;text-decoration:none;color:inherit">Lineup</a>
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid currentColor;border-radius:10px;opacity:.85;text-decoration:none;color:inherit">Teams</a>

@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/standings', label: 'Standings', key: 'standings' },
   { href: '/players', label: 'Players', key: 'players' },
   { href: '/lineup', label: 'Lineup', key: 'lineup' },
+  { href: '/availability', label: 'Check in', key: 'availability' },
   { href: '/prizes', label: 'Prizes', key: 'prizes' },
   { href: '/trades', label: 'Trades', key: 'trades' },
   { href: '/rules', label: 'Rules', key: 'rules' },
