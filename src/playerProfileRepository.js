@@ -78,5 +78,19 @@ export function createPlayerProfileRepository(env, { fetch: fetchImpl = globalTh
 
       return Array.isArray(result) ? result[0] : result;
     },
+
+    async saveStandingAvailability({ actorUserId, standingStatus, standingNote }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/set_own_standing_availability`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          standing_status: standingStatus,
+          standing_note: standingNote,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
   };
 }
