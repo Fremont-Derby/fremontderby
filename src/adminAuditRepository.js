@@ -46,7 +46,7 @@ export function createAdminAuditRepository(env, { fetch: fetchImpl = globalThis.
       });
       return (Array.isArray(result) ? result : []).map((row) => ({
         id: row.id,
-        actorUserId: row.actor_user_id,
+        actorUserId: row.event_actor_user_id ?? row.actor_user_id,
         actorDisplayName: row.actor_display_name,
         action: row.action,
         entityType: row.entity_type,

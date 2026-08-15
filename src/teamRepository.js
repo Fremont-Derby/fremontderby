@@ -467,10 +467,10 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         body: JSON.stringify({
           actor_user_id: actorUserId,
           target_team_id: teamId,
-          practice_location: practiceLocation,
-          practice_schedule: practiceSchedule,
-          practice_recurrence: practiceRecurrence,
-          practice_on: practiceOn,
+          arg_practice_location: practiceLocation,
+          arg_practice_schedule: practiceSchedule,
+          arg_practice_recurrence: practiceRecurrence,
+          arg_practice_on: practiceOn,
         }),
       });
       const row = Array.isArray(result) ? result[0] : result;
@@ -492,9 +492,9 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         body: JSON.stringify({
           actor_user_id: actorUserId,
           target_team_match_id: teamMatchId,
-          makeup_on: makeupOn,
-          makeup_location: makeupLocation,
-          makeup_note: makeupNote,
+          arg_makeup_on: makeupOn,
+          arg_makeup_location: makeupLocation,
+          arg_makeup_note: makeupNote,
         }),
       });
       const row = Array.isArray(result) ? result[0] : result;
@@ -515,7 +515,7 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         body: JSON.stringify({
           actor_user_id: actorUserId,
           target_team_match_id: teamMatchId,
-          response,
+          arg_response: response,
         }),
       });
       const row = Array.isArray(result) ? result[0] : result;
