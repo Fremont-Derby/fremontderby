@@ -76,7 +76,20 @@ export function renderNotificationsPage() {
       return card;
     }
     function render(items){
-      if(!items.length){listEl.replaceChildren();listEl.textContent='No notifications yet.';return}
+      if(!items.length){
+        listEl.replaceChildren();
+        const empty=document.createElement('div');
+        empty.className='item';
+        empty.innerHTML='<strong>No notices yet</strong><div class="muted">League broadcasts and team alerts will show up here.</div>';
+        const links=document.createElement('div');
+        links.className='actions';
+        for(const [label,href] of [['Schedule','/schedule'],['Teams','/teams'],['Messages','/messages']]){
+          const a=document.createElement('a');a.href=href;a.textContent=label;links.append(a);
+        }
+        empty.append(links);
+        listEl.append(empty);
+        return;
+      }
       if(window.fdStableList){
         window.fdStableList(listEl,items,{
           key:(item)=>String(item.id||item.title||''),
@@ -90,7 +103,7 @@ export function renderNotificationsPage() {
     }
     async function load(opts={}){
       const quiet=Boolean(opts&&opts.quiet);
-      if(!token()){setStatus('Sign in required','muted');listEl.textContent='Open Profile and sign in to see notifications.';return}
+      if(!token()){setStatus('Sign in required','muted');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.innerHTML='<strong>Sign in to see notices</strong><div class="muted">Notifications follow your player account.</div>';const a=document.createElement('a');a.href='/profile';a.textContent='Open Profile';empty.append(a);listEl.append(empty);return}
       if(!quiet) setStatus('Loading…','muted',{quiet:false});
       const body=await api('/api/me/notifications');
       render(body.notifications||[]);

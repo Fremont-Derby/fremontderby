@@ -30,6 +30,12 @@ export function renderPlayersDirectoryPage() {
       <div class="brand"><span class="mark">9</span><span>Player directory</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
     </header>
+    <nav aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+      <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+      <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
+    </nav>
     <p class="muted">Public roster from individual standings. Sort and search to find substitutes or teammates. Phone numbers are never shown.</p>
     <div class="toolbar">
       <label>Season

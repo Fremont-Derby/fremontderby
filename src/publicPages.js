@@ -41,6 +41,7 @@ export function renderIntroPage() {
       <li><strong>Where:</strong> Fremont venue — four tables, one house.</li>
       <li><strong>Cost:</strong> Team + individual cash stakes (see Rules for current season amounts).</li>
       <li><strong>How to join:</strong> Sign in on Profile, register for the open season, then join or form a team.</li>
+      <li><strong>Availability:</strong> On league-night mornings, mark if you will be there so your captain can lock a lineup.</li>
     </ul>
     <p>The 12-week calendar is built around a <strong>seven-match single round robin</strong>: every team plays every other team once, with the remaining calendar space reserved for flexibility, makeup dates, and postseason play.</p>
     <p>Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
