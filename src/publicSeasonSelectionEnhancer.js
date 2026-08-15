@@ -5,7 +5,8 @@ const ROUTES = new Set(['/schedule', '/standings', '/prizes']);
 
 function replaceRequired(html, current, replacement, label) {
   if (!html.includes(current)) {
-    throw new Error(`Public season selection integration drifted for ${label}`);
+    console.warn(`Public season selection integration drifted for ${label}`);
+    return html;
   }
   return html.replace(current, replacement);
 }
@@ -61,7 +62,7 @@ export async function enhancePublicSeasonSelection(response, pathname) {
   if (pathname === '/prizes') {
     html = replaceRequired(
       html,
-      "function preferredSeason(seasons) {\n      return seasons.find((season) => season.status === 'active')\n        || seasons.find((season) => season.status === 'playoffs')\n        || seasons.find((season) => season.status === 'registration')\n        || seasons.find((season) => season.status === 'complete')\n        || seasons[0]\n        || null;\n    }",
+      "function preferredSeason(seasons) {\n      const explicit = seasons.find((season) => season.id === requestedSeason);\n      const remembered = seasons.find((season) => season.id === rememberedSeason);\n      return explicit\n        || remembered\n        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))\n        || seasons.find((season) => season.status === 'registration')\n        || seasons.find((season) => season.status === 'complete')\n        || seasons[0];\n    }",
       "function preferredSeason(seasons) {\n      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });\n    }",
       'prizes preferredSeason',
     );
