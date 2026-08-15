@@ -21,6 +21,15 @@ function nonceFromHtmlOrHeaders(html, headers) {
 
 export async function enhancePublicSeasonSelection(response, pathname) {
   if (!ROUTES.has(pathname)) return response;
+  try {
+    return await enhancePublicSeasonSelectionInner(response, pathname);
+  } catch (error) {
+    console.warn('enhancePublicSeasonSelection failed', pathname, error);
+    return response;
+  }
+}
+
+async function enhancePublicSeasonSelectionInner(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
@@ -60,12 +69,48 @@ export async function enhancePublicSeasonSelection(response, pathname) {
   }
 
   if (pathname === '/prizes') {
-    html = replaceRequired(
-      html,
-      "function preferredSeason(seasons) {\n      const explicit = seasons.find((season) => season.id === requestedSeason);\n      const remembered = seasons.find((season) => season.id === rememberedSeason);\n      return explicit\n        || remembered\n        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))\n        || seasons.find((season) => season.status === 'registration')\n        || seasons.find((season) => season.status === 'complete')\n        || seasons[0];\n    }",
-      "function preferredSeason(seasons) {\n      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });\n    }",
-      'prizes preferredSeason',
-    );
+    const prizesFrom = [
+      `function preferredSeason(seasons) {
+      return seasons.find((season) => season.status === 'active')
+        || seasons.find((season) => season.status === 'playoffs')
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0]
+        || null;
+    }`,
+      `function preferredSeason(seasons) {
+      const explicit = seasons.find((season) => season.id === requestedSeason);
+      const remembered = seasons.find((season) => season.id === rememberedSeason);
+      return explicit
+        || remembered
+        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0];
+    }`,
+      `function preferredSeason(seasons) {
+      if (typeof choosePublicSeason === 'function') {
+        return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
+      }
+      const explicit = seasons.find((season) => season.id === requestedSeason);
+      const remembered = seasons.find((season) => season.id === rememberedSeason);
+      return explicit
+        || remembered
+        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0];
+    }`,
+    ];
+    const prizesTo = `function preferredSeason(seasons) {
+      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
+    }`;
+    for (const from of prizesFrom) {
+      if (html.includes(from)) {
+        html = html.replace(from, prizesTo);
+        break;
+      }
+    }
   }
 
   return new Response(html, {

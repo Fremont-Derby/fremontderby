@@ -361,6 +361,9 @@ export function renderPrizesPage() {
     }
 
     function preferredSeason(seasons) {
+      if (typeof choosePublicSeason === 'function') {
+        return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
+      }
       const explicit = seasons.find((season) => season.id === requestedSeason);
       const remembered = seasons.find((season) => season.id === rememberedSeason);
       return explicit
