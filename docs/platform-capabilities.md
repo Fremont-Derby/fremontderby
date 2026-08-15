@@ -81,3 +81,8 @@ Error strings for users go through `friendlyErrorMessage` (offline, 503, rate li
 - Local `setStatus` wrappers should delegate to `fdSetStatus` when present so quiet polls never flash Loading.
 
 - Profile surfaces Fargo rating detail and linked ID when present (#365 partial; write path still backend).
+
+### Availability write path
+
+- `/availability` and schedule check-in both write **date-keyed** availability (`/api/seasons/:id/availability/me`), which bridges into round roster/free-agent caches.
+- Multi-team players: one status per calendar date; team representation for a dual-membership matchup is a separate **team-match choice**.
