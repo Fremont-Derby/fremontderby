@@ -1907,6 +1907,7 @@ export default {
 
     if (url.pathname === "/health/environment") {
       const readiness = environmentReadiness(env, { host: url.hostname || request.headers.get('host') });
+      const failedChecks = (readiness.checks || []).filter((item) => !item.ok).map((item) => item.name);
       return jsonResponse(
         {
           service: serviceName,
@@ -1920,6 +1921,12 @@ export default {
           hostMatchesEnvironment: readiness.hostMatchesEnvironment,
           expectedSupabaseSchema: readiness.expectedSupabaseSchema,
           expectedPrivateSupabaseSchema: readiness.expectedPrivateSupabaseSchema,
+          checks: readiness.checks || [],
+          failedChecks,
+          noAuthTeamTest: {
+            note: 'JFL/DRU only: unauthenticated /api/me/* uses BETA_AUTH_BYPASS + BETA_ACTOR_USER_ID',
+            requires: ['ENVIRONMENT=jfl|dru', 'BETA_AUTH_BYPASS=1', 'BETA_ACTOR_USER_ID', 'SUPABASE_SCHEMA=lane'],
+          },
         },
         readiness.ok ? 200 : 503,
       );
