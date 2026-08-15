@@ -32,6 +32,7 @@ import { createLineupRepository } from './lineupRepository.js';
 import {
   getOwnPlayerProfileCommand,
   saveOwnPlayerProfileCommand,
+  saveOwnStandingAvailabilityCommand,
 } from './playerProfileCommands.js';
 import { renderProfilePage } from './profilePage.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
@@ -374,6 +375,30 @@ export async function handleSaveOwnProfileRequest(
       {
         actorUserId: actor.id,
         displayName: body.displayName,
+      },
+      repository,
+    );
+
+    return jsonResponse({ profile });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleSaveOwnStandingAvailabilityRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
+    const profile = await saveOwnStandingAvailabilityCommand(
+      {
+        actorUserId: actor.id,
+        standingStatus: body.standingStatus ?? body.standing_availability_status,
+        standingNote: body.standingNote ?? body.standing_availability_note,
       },
       repository,
     );
@@ -2200,6 +2225,13 @@ if (url.pathname === "/standings") {
         env,
         decodeURIComponent(adminTeamTradeExceptionMatch[1]),
       );
+    }
+
+    if (url.pathname === "/api/me/profile/standing-availability") {
+      if (request.method === "PUT") {
+        return handleSaveOwnStandingAvailabilityRequest(request, env);
+      }
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (url.pathname === "/api/me/profile") {

@@ -154,6 +154,23 @@ export function renderProfilePage(env = {}) {
               <div data-fargo-detail>Rating appears here after league staff or a linked Fargo ID establishes it.</div>
               <div class="muted" data-fargo-id-line style="margin-top:6px"></div>
             </div>
+            <form class="actions" data-standing-form style="margin-top:14px;display:grid;gap:10px">
+              <strong>Standing availability for captains</strong>
+              <p class="hint" style="margin:0">Optional signal for recruiting and subs. Night-of check-in on a published date still wins.</p>
+              <label>Status
+                <select name="standingStatus" data-standing-status>
+                  <option value="">Prefer not to say / unset</option>
+                  <option value="available_for_subs">Available for subs</option>
+                  <option value="limited">Limited availability</option>
+                  <option value="unavailable">Not available for extra matches</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
+                </select>
+              </label>
+              <label>Short note (optional)
+                <input name="standingNote" data-standing-note maxlength="120" placeholder="e.g. Weeknights only after 7pm" />
+              </label>
+              <button class="primary" type="submit">Save standing availability</button>
+            </form>
           </div>
         </article>
 
@@ -382,6 +399,14 @@ export function renderProfilePage(env = {}) {
           ? ('Linked Fargo ID: ' + fid)
           : 'Self-serve Fargo ID linking is on the roadmap; league staff can still maintain ratings.';
       }
+      const standingStatusEl = document.querySelector('[data-standing-status]');
+      const standingNoteEl = document.querySelector('[data-standing-note]');
+      if (standingStatusEl) {
+        standingStatusEl.value = (profile && (profile.standing_availability_status || profile.standingAvailabilityStatus)) || '';
+      }
+      if (standingNoteEl) {
+        standingNoteEl.value = (profile && (profile.standing_availability_note || profile.standingAvailabilityNote)) || '';
+      }
       const teams = profile && Array.isArray(profile.teams) ? profile.teams : [];
       const seasons = profile && Array.isArray(profile.seasons) ? profile.seasons : [];
       renderRows(
@@ -514,3 +539,23 @@ ${safeAutocompleteClientScript}
 </body>
 </html>`;
 }
+    const standingForm = document.querySelector('[data-standing-form]');
+    if (standingForm) {
+      standingForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        try {
+          setStatus('Saving standing availability…');
+          const standingStatus = document.querySelector('[data-standing-status]')?.value || '';
+          const standingNote = document.querySelector('[data-standing-note]')?.value || '';
+          await api('/api/me/profile/standing-availability', {
+            method: 'PUT',
+            body: JSON.stringify({ standingStatus, standingNote }),
+          });
+          setStatus('Standing availability saved', 'ok');
+          await load({ quiet: true });
+        } catch (error) {
+          setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
+        }
+      });
+    }
+

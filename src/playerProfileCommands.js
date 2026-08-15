@@ -1,4 +1,4 @@
-const requiredRepositoryMethods = ['getProfileByUserId', 'saveProfile'];
+const requiredRepositoryMethods = ['getProfileByUserId', 'saveProfile', 'saveStandingAvailability'];
 
 function assertRepository(repository) {
   if (!repository || typeof repository !== 'object') {
@@ -46,5 +46,30 @@ export async function saveOwnPlayerProfileCommand({ actorUserId, displayName }, 
   return repository.saveProfile({
     actorUserId,
     displayName: normalizeDisplayName(displayName),
+  });
+}
+
+
+const standingStatuses = new Set(['available_for_subs', 'limited', 'unavailable', 'prefer_not_to_say', '']);
+
+export async function saveOwnStandingAvailabilityCommand(
+  { actorUserId, standingStatus, standingNote },
+  repository,
+) {
+  assertActor(actorUserId);
+  assertRepository(repository);
+  const status = standingStatus == null ? '' : String(standingStatus).trim().toLowerCase();
+  if (!standingStatuses.has(status)) {
+    throw new Error('standingStatus must be available_for_subs, limited, unavailable, prefer_not_to_say, or empty');
+  }
+  let note = standingNote == null ? null : String(standingNote).trim();
+  if (note === '') note = null;
+  if (note && note.length > 120) {
+    throw new Error('standingNote must be 120 characters or fewer');
+  }
+  return repository.saveStandingAvailability({
+    actorUserId,
+    standingStatus: status || null,
+    standingNote: note,
   });
 }
