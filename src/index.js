@@ -2018,12 +2018,23 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderPrizesPage(), {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      });
+      try {
+        const html = renderPrizesPage();
+        return new Response(html, {
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        });
+      } catch (error) {
+        return new Response(
+          `<!doctype html><html lang="en"><body><h1>Prizes unavailable</h1><p>${String(error?.message || error)}</p><p><a href="/">Home</a></p></body></html>`,
+          {
+            status: 500,
+            headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+          },
+        );
+      }
     }
 
     if (url.pathname === "/season-setup") {
