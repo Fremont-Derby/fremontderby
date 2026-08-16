@@ -31,6 +31,7 @@ import { readyCheckHttpHandlers } from './readyCheckHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
 import { teamMatchChoiceHttpHandlers } from './teamMatchChoiceHttp.js';
 import { teamMembershipRequestHttpHandlers } from './teamMembershipRequestHttp.js';
+import { matchApiTeamsPath } from './pathMatch.js';
 
 function htmlResponse(html, pathname, status = 200) {
   const nonce = createRequestNonce();
@@ -118,12 +119,7 @@ export default {
     const dualScoreFinalizeMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/finalize-reconciled$/,
     );
-    const teamChatMessagesMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/(?:messages|chat|team-messages)$/,
-    );
-    const teamChatReadMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/messages\/read$/,
-    );
+    const teamPath = matchApiTeamsPath(url.pathname);
     const directMessagesMatch = url.pathname.match(
       /^\/api\/direct-conversations\/([^/]+)\/messages$/,
     );
@@ -150,9 +146,6 @@ export default {
     );
     const teamChoiceMatch = url.pathname.match(
       /^\/api\/team-matches\/([^/]+)\/team-choice\/me$/,
-    );
-    const teamMembershipRequestMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/membership-request$/,
     );
     const membershipRequestResponseMatch = url.pathname.match(
       /^\/api\/team-membership-requests\/([^/]+)\/respond$/,
@@ -300,12 +293,12 @@ export default {
       return teamMembershipRequestHttpHandlers.list(request, env);
     }
 
-    if (teamMembershipRequestMatch) {
+    if (teamPath?.kind === 'membership-request') {
       if (request.method !== 'POST') return methodNotAllowed();
       return teamMembershipRequestHttpHandlers.requestJoin(
         request,
         env,
-        decodeURIComponent(teamMembershipRequestMatch[1]),
+        teamPath.teamId,
       );
     }
 
@@ -475,22 +468,21 @@ export default {
       return methodNotAllowed();
     }
 
-    if (teamChatReadMatch) {
+    if (teamPath?.kind === 'messages-read') {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.markTeamChatRead(
         request,
         env,
-        decodeURIComponent(teamChatReadMatch[1]),
+        teamPath.teamId,
       );
     }
 
-    if (teamChatMessagesMatch) {
-      const teamId = decodeURIComponent(teamChatMessagesMatch[1]);
+    if (teamPath?.kind === 'messages') {
       if (request.method === 'GET') {
-        return chatHttpHandlers.listTeamMessages(request, env, teamId);
+        return chatHttpHandlers.listTeamMessages(request, env, teamPath.teamId);
       }
       if (request.method === 'POST') {
-        return chatHttpHandlers.sendTeamMessage(request, env, teamId);
+        return chatHttpHandlers.sendTeamMessage(request, env, teamPath.teamId);
       }
       return methodNotAllowed();
     }
