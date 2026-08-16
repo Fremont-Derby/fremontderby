@@ -74,3 +74,7 @@ If domain restore Actions fail, check `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_
 - Lane hostnames (`dru` / `jfl` / `gamma`) must come from `wrangler deploy --env <lane>` with `custom_domain: true` routes.
 - Do not treat ad-hoc `/workers/domains` attach or restore scripts as the durable source of truth.
 - After deploy, confirm `/health/environment` reports the matching lane `environment` value (not `production` on a lane host).
+
+## Ops recovery baseline
+
+Backups, audit, health probes, and recovery runbooks: [ops-backup-audit-recovery.md](./ops-backup-audit-recovery.md) (#30).
