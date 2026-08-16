@@ -65,3 +65,28 @@ test('ordinary local and GitHub CI builds remain allowed', () => {
   assert.doesNotThrow(() => assertCloudflareBuildContext({}));
   assert.doesNotThrow(() => assertCloudflareBuildContext({ GITHUB_ACTIONS: 'true' }));
 });
+
+test('refuses pull-request style branches for every lane', () => {
+  assert.equal(branchAllowedForLane('pull/123/head', 'production'), false);
+  assert.equal(branchAllowedForLane('pull/123/head', 'jfl'), false);
+  assert.throws(
+    () => assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'pull/99/merge',
+      FREMONT_BUILD_LANE: 'jfl',
+    }),
+    /Refusing Cloudflare jfl build/,
+  );
+});
+
+test('refuses pull_request CI events even on an allowlisted branch name', () => {
+  assert.throws(
+    () => assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'main',
+      FREMONT_BUILD_LANE: 'production',
+      WORKERS_CI_EVENT: 'pull_request',
+    }),
+    /pull_request event/,
+  );
+});

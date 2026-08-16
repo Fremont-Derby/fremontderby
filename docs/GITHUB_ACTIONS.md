@@ -38,6 +38,7 @@ Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl
 3. Restrict **Branch control** / production branch so only the allowlisted refs start a build (fail-closed: no “all branches”).
 4. Build command must run `npm run prebuild` (calls the guard) before deploy.
 5. Proof: open a no-op PR on `jfl/issue-…` and confirm **only** the JFL project builds; zero prod/DRU/gamma starts.
+6. Guard also refuses `pull/N/head` style refs and `WORKERS_CI_EVENT=pull_request` when set (#873).
 
 ## Workflow inventory (`main`)
 
