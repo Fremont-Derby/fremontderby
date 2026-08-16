@@ -6,6 +6,7 @@ export const liveRackLedgerAdapterSource = String.raw`
     const scoringTeamName=params.get('teamName')||'your team';
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
+    function isOpenAuthLane(){const h=String(location.hostname||'');return h.startsWith('dru.')||h.startsWith('jfl.')||h.startsWith('gamma.');}
     function showSignInRecovery(){
       const context=document.querySelector('[data-match-context]');
       if(context)context.innerHTML='<a href="/profile">Open Profile to sign in</a>';
@@ -20,7 +21,7 @@ export const liveRackLedgerAdapterSource = String.raw`
       const token=accessToken();
       if(!matchId)throw new Error('Choose a match from the scorecard list.');
       if(!scoringTeamId)throw new Error('Choose which team you are scoring for.');
-      if(!token){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
+      if(!token&&!isOpenAuthLane()){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
       return{matchId,scoringTeamId,token};
     }
     async function api(path,options={},attempt=0){
@@ -34,7 +35,7 @@ export const liveRackLedgerAdapterSource = String.raw`
       const contextualPath=base+separator+'scoringTeamId='+encodeURIComponent(inputs.scoringTeamId);
       let response;
       try{
-        response=await fetch(contextualPath,{...options,headers:{authorization:'Bearer '+inputs.token,'content-type':'application/json',...(options.headers||{})}});
+        response=await fetch(contextualPath,{...options,headers:{...(inputs.token?{authorization:'Bearer '+inputs.token}:{}), 'content-type':'application/json',...(options.headers||{})}});
       }catch(error){
         if(attempt<1){
           await new Promise((resolve)=>setTimeout(resolve,450));
