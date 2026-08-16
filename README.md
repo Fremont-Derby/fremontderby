@@ -281,3 +281,7 @@ Copyright 2026 Fremont Derby contributors.
 Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE) for the full text and [`NOTICE`](NOTICE) for attribution.
 
 Third-party services used at runtime (for example Cloudflare and Supabase) remain subject to their own terms; secrets and proprietary account credentials are not licensed under this repository license.
+
+## API reference
+
+Agent-oriented HTTP inventory: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (#363).
