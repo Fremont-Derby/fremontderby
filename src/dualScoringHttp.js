@@ -229,10 +229,11 @@ export function createDualScoringHttpHandlers({
 
     finalize(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const body = await readJsonBody(request);
         const match = await finalizeReconciledPlayerMatchCommand({
           actorUserId: actor.id,
           playerMatchId,
-          scoringTeamId: scoringTeamFromRequest(request),
+          scoringTeamId: scoringTeamFromRequest(request, body),
         }, repository);
         return jsonResponse({ match });
       });
