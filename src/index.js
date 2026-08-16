@@ -2276,7 +2276,7 @@ if (url.pathname === "/standings") {
       return handleListOwnTeamManagementRequest(request, env);
     }
 
-    if (url.pathname === "/api/me/team-membership-requests") {
+    if (url.pathname === "/api/me/team-membership-requests" || url.pathname === "/api/me/membership-requests") {
       if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405);
       return handleListOwnTeamMembershipRequestsRequest(request, env);
     }
