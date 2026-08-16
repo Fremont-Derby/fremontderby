@@ -255,6 +255,17 @@ export default {
       return readyCheckHttpHandlers.start(request, env);
     }
 
+    const teamReadyCheckStartMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/ready-checks?$/,
+    );
+    if (teamReadyCheckStartMatch && request.method === 'POST') {
+      return readyCheckHttpHandlers.startForTeam(
+        request,
+        env,
+        decodeURIComponent(teamReadyCheckStartMatch[1]),
+      );
+    }
+
     const readyCheckRespondMatch = url.pathname.match(/^\/api\/ready-checks\/([^/]+)\/respond$/);
     if (readyCheckRespondMatch) {
       if (request.method !== 'POST') return methodNotAllowed();

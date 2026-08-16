@@ -57,6 +57,12 @@ export const SEGMENT_ALIAS_RULES = [
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'lineups',
     apply: (p) => `/api/teams/${p[3]}/lineup`,
   },
+  {
+    // POST body still supplies roundId; team comes from path (handled in router startForTeam).
+    // Alias keeps /ready-check singular form discoverable for clients that only rewrite paths.
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'ready-check',
+    apply: (p) => `/api/teams/${p[3]}/ready-checks`,
+  },
 ];
 
 /**
