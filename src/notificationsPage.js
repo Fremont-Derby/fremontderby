@@ -61,6 +61,7 @@ export function renderNotificationsPage() {
         const link=document.createElement('a');
         link.href=item.href;
         link.textContent='Open';
+        link.style.cssText='display:inline-flex;min-height:44px;align-items:center;margin-top:6px';
         card.append(link);
       }
       if(!item.readAt){
