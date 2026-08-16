@@ -28,9 +28,9 @@ alter table public.team_matches
 create or replace function public.propose_team_match_makeup(
   actor_user_id uuid,
   target_team_match_id uuid,
-  makeup_on date,
-  makeup_location text default null,
-  makeup_note text default null
+  arg_makeup_on date,
+  arg_makeup_location text default null,
+  arg_makeup_note text default null
 )
 returns table (
   team_match_id uuid,
@@ -48,12 +48,12 @@ declare
   actor_player_id uuid;
   match public.team_matches%rowtype;
   actor_team_id uuid;
-  cleaned_location text := nullif(btrim(coalesce(makeup_location, '')), '');
-  cleaned_note text := nullif(btrim(coalesce(makeup_note, '')), '');
+  cleaned_location text := nullif(btrim(coalesce(arg_makeup_location, '')), '');
+  cleaned_note text := nullif(btrim(coalesce(arg_makeup_note, '')), '');
 begin
   if actor_user_id is null then raise exception 'actor_user_id is required'; end if;
   if target_team_match_id is null then raise exception 'target_team_match_id is required'; end if;
-  if makeup_on is null then raise exception 'makeup_on is required'; end if;
+  if arg_makeup_on is null then raise exception 'makeup_on is required'; end if;
   if cleaned_location is not null and char_length(cleaned_location) > 120 then
     raise exception 'makeup_location must be 120 characters or fewer';
   end if;
@@ -84,7 +84,7 @@ begin
 
   update public.team_matches tm
   set
-    makeup_on = propose_team_match_makeup.makeup_on,
+    makeup_on = arg_makeup_on,
     makeup_location = cleaned_location,
     makeup_note = cleaned_note,
     makeup_status = 'proposed',

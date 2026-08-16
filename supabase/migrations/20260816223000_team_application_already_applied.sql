@@ -75,8 +75,7 @@ begin
   select ta.id, ta.season_id, ta.status, ta.proposed_team_name, ta.submitted_at
   from private.team_applications ta where ta.id = inserted_id;
 end;
-$function$
-
+$function$;
 
 comment on function public.submit_team_application(uuid, uuid, text) is
   'Submit a team application during registration; rejects duplicate active applications.';
