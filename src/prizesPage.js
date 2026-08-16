@@ -240,7 +240,15 @@ export function renderPrizesPage() {
           </thead>
           <tbody data-projected-body></tbody>
         </table>
-        <div class="empty" data-projected-empty>No projected payouts loaded.</div>
+        <div class="empty" data-projected-empty>
+          <strong style="display:block;margin-bottom:6px">No projected payouts yet</strong>
+          Open standings for eligibility, or check back once the season pool is configured.
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+            <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+            <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+            <a href="/rules" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Rules</a>
+          </div>
+        </div>
       </article>
 
       <article class="panel">
@@ -252,7 +260,14 @@ export function renderPrizesPage() {
           </thead>
           <tbody data-finalized-body></tbody>
         </table>
-        <div class="empty" data-finalized-empty>No finalized payouts loaded.</div>
+        <div class="empty" data-finalized-empty>
+          <strong style="display:block;margin-bottom:6px">No finalized prizes yet</strong>
+          Finalized payouts appear after the season closes and an admin publishes results.
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+            <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+            <a href="/playoffs" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Playoffs</a>
+          </div>
+        </div>
       </article>
     </section>
   </main>
