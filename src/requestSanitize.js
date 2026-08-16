@@ -8,11 +8,21 @@ export const MAX_JSON_DEPTH = 8;
 export const MAX_JSON_KEYS = 80;
 export const MAX_STRING_LENGTH = 4000;
 
-const UUID_RE =
+// 8-4-4-4-12 hex shape (Postgres uuid text form). Intentionally not RFC 4122 version/variant
+// strict: JFL mock seasons and some seed rows use non-RFC variant nibbles but are valid in DB.
+const UUID_HEX_SHAPE_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** RFC 4122 version (1-5) + variant (8/9/a/b). Prefer for newly generated ids. */
+const UUID_RFC4122_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function isUuid(value) {
-  return typeof value === 'string' && UUID_RE.test(value.trim());
+  return typeof value === 'string' && UUID_HEX_SHAPE_RE.test(value.trim());
+}
+
+export function isRfc4122Uuid(value) {
+  return typeof value === 'string' && UUID_RFC4122_RE.test(value.trim());
 }
 
 export function requireUuid(value, label = 'id') {

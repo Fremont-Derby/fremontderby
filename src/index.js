@@ -9,6 +9,7 @@ import {
   readSanitizedJsonBody,
   safeClientErrorMessage,
   requireUuid,
+  isUuid,
 } from './requestSanitize.js';
 import {
   listTeamRoundAvailabilityCommand,
@@ -1875,9 +1876,9 @@ export default {
     const seasonPrizesMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/prizes$/,
     );
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const requireSeasonUuid = (value) => {
-      if (!UUID_RE.test(String(value || ""))) {
+      // Hex-shape only (shared isUuid) so persisted non-RFC seed season ids remain readable.
+      if (!isUuid(String(value || "").trim())) {
         return jsonResponse({ error: "That season or match link is invalid." }, 400);
       }
       return null;
