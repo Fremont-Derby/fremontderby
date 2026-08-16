@@ -207,3 +207,13 @@ A 200 with `"environment":"production"` on `dru.fremontderby.com` is a **failed*
 ## Publish paths (summary)
 
 See **`docs/GITHUB_ACTIONS.md`** for the production source-of-truth table (Workers Builds vs Actions), lane branch allowlists, and Cloudflare dashboard containment steps for #727 / #732.
+
+## Lane tip lockstep
+
+`dru`, `jfl`, and `gamma` must run the **same Worker tip** (same `versionTag` / git SHA). Only these differ by design:
+
+- `ENVIRONMENT` / host name
+- `SUPABASE_SCHEMA` (`dru` | `jfl` | `gamma`) and matching `*_private` schema
+- `BETA_ACTOR_EMAIL` (open-auth actor identity)
+
+Deploy with `lane=all-lanes` (workflow default) so tips stay unified. Single-lane deploys are for emergency hotfixes only; follow with the other two as soon as possible.
