@@ -56,10 +56,48 @@ const script = `<script data-profile-season-status-script>
   async function load(){
     errorEl.hidden=true;action.hidden=true;badge.textContent='Loading…';copy.textContent='Loading your registration and payment status.';
     const seasonsBody=await publicJson('/api/seasons');const seasons=seasonsBody.seasons||[];
-    const open=seasons.find((season)=>season.status==='registration');
-    if(!open){renderClosed(seasons.find((season)=>['active','playoffs','published'].includes(season.status))||seasons[0]||null);return}
-    selectedSeason=open;nameEl.textContent=open.name;badge.textContent='Checking…';
-    const statusBody=await request('/api/seasons/'+encodeURIComponent(open.id)+'/registration/me',{method:'GET'});renderRegistration(statusBody.registration||null);
+    const open=seasons.find((season)=>String(season.status||'').toLowerCase()==='registration');
+    const current=open
+      || seasons.find((season)=>['active','playoffs'].includes(String(season.status||'').toLowerCase()))
+      || seasons.find((season)=>String(season.status||'').toLowerCase()==='published')
+      || seasons[0]
+      || null;
+    if(!current){renderClosed(null);return}
+    selectedSeason=current;nameEl.textContent=current.name||'Fremont Derby';badge.textContent='Checking…';
+    const canJoin=String(current.status||'').toLowerCase()==='registration';
+    try{
+      const statusBody=await request('/api/seasons/'+encodeURIComponent(current.id)+'/registration/me',{method:'GET'});
+      const registration=statusBody.registration||null;
+      if(canJoin){renderRegistration(registration);return}
+      // Active / playoffs: still show registered vs not + payment, without a join CTA when closed.
+      states.hidden=false;
+      if(!registration){
+        badge.textContent='Not registered';
+        registrationState.textContent='Not registered';
+        registrationState.dataset.kind='registered';
+        paymentState.textContent='Payment status unavailable';
+        paymentState.dataset.kind='due';
+        copy.textContent='Registration is closed for this season. Ask an admin if you need to be added.';
+        action.hidden=true;
+        note.textContent='You can still use Score, Schedule, and Teams if you already have a roster or free-agent path.';
+        return;
+      }
+      renderRegistration(registration);
+      if(!canJoin){
+        action.hidden=true;
+        if(String(registration.paymentStatus||'').toLowerCase()==='paid'||String(registration.paymentStatus||'').toLowerCase()==='waived'){
+          badge.textContent='In season';
+        }else{
+          badge.textContent='Payment due';
+          copy.textContent='You are registered. Payment is still due for this season.';
+          note.textContent='Payment is tracked by the league — contact an admin or your captain if you already paid.';
+        }
+      }
+    }catch(error){
+      if(canJoin)throw error;
+      renderClosed(current);
+      note.textContent=(error&&error.message)||note.textContent;
+    }
   }
   async function join(){
     if(!selectedSeason)throw new Error('Registration is not open.');
