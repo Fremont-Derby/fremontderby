@@ -8,7 +8,7 @@ test('trades page links score hub', () => {
   assert.match(src, /href="\/scorecard"/);
 });
 
-test('trade path aliases', () => {
-  assert.equal(normalizeApiPathname('/api/my-trades'), '/api/trades');
-  assert.equal(normalizeApiPathname('/api/me/trades'), '/api/trades');
+test('trade path aliases resolve to me/trades', () => {
+  assert.equal(normalizeApiPathname('/api/my-trades'), '/api/me/trades');
+  assert.equal(normalizeApiPathname('/api/trades'), '/api/me/trades');
 });
