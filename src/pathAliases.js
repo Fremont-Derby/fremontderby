@@ -90,6 +90,18 @@ export const SEGMENT_ALIAS_RULES = [
     apply: (p) => `/api/direct-conversations/${p[3]}/messages/read`,
   },
   {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && (p[4] === 'practice-schedule' || p[4] === 'practices'),
+    apply: (p) => `/api/teams/${p[3]}/practice`,
+  },
+  {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'roster',
+    apply: (p) => `/api/me/teams`,
+  },
+  {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'seasons' && p[4] === 'fa',
+    apply: (p) => `/api/seasons/${p[3]}/free-agents`,
+  },
+  {
     test: (p) => p.length === 4 && p[1] === 'api' && p[2] === 'dms',
     apply: (p) => `/api/direct-conversations/${p[3]}/messages`,
   },

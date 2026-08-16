@@ -67,3 +67,14 @@ test('direct message path aliases', () => {
     '/api/direct-conversations/c1/messages',
   );
 });
+
+test('practice and fa short aliases', () => {
+  assert.equal(
+    normalizeApiPathname('/api/teams/t1/practice-schedule'),
+    '/api/teams/t1/practice',
+  );
+  assert.equal(
+    normalizeApiPathname('/api/seasons/s1/fa'),
+    '/api/seasons/s1/free-agents',
+  );
+});
