@@ -17,3 +17,10 @@ test('preserves already-captain product text', () => {
   const wrapped = 'Supabase request failed with 400: You already captain a team in this season';
   assert.match(friendlyErrorMessage(wrapped), /already captain/i);
 });
+
+test('duplicate active application has readable message', () => {
+  assert.equal(
+    friendlyErrorMessage('Supabase request failed with 400: You already have a team application in this season'),
+    'You already have a team application in this season.',
+  );
+});
