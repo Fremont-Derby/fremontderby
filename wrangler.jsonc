@@ -63,9 +63,8 @@
           "SUPABASE_URL",
           "SUPABASE_PUBLISHABLE_KEY",
           "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
-          "BETA_ACTOR_USER_ID"
-        ]
+          "EXPECTED_SUPABASE_PROJECT_REF"
+]
       }
     },
     "dru": {
@@ -92,9 +91,8 @@
           "SUPABASE_URL",
           "SUPABASE_PUBLISHABLE_KEY",
           "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
-          "BETA_ACTOR_USER_ID"
-        ]
+          "EXPECTED_SUPABASE_PROJECT_REF"
+]
       }
     },
     "gamma": {
