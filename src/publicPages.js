@@ -145,7 +145,11 @@ export function renderRulesPage() {
       <a class="button" href="/teams">Teams</a>
       <a class="button" href="/players">Players</a>
       <a class="button" href="/schedule">Schedule</a>
+      <a class="button" href="/scorecard">Score</a>
+      <a class="button" href="/availability">Check in</a>
+      <a class="button" href="/lineup">Lineup</a>
       <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/playoffs">Playoffs</a>
       <a class="button" href="/demo">Test drive</a>
     </div>
 `);
