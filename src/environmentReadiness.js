@@ -18,7 +18,7 @@ const expectedSchemas = {
 };
 
 const isolatedRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
-const testAuthRuntimeEnvironments = new Set(['jfl', 'dru']);
+const testAuthRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
 const knownRuntimeEnvironments = new Set(Object.keys(fixedExpectedSupabaseProjectRefs));
 
 function normalizeSupabaseUrl(value) {
