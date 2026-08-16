@@ -268,8 +268,8 @@ export async function handleStartDirectConversationRequest(
     const body = await readJsonBody(request);
     const conversation = await startDirectConversationCommand({
       actorUserId: actor.id,
-      seasonId: body.seasonId,
-      playerId: body.playerId,
+      seasonId: body.seasonId ?? body.season_id,
+      playerId: body.playerId ?? body.player_id ?? body.otherPlayerId ?? body.other_player_id,
     }, repository);
     return jsonResponse({ conversation }, 201);
   } catch (error) {
