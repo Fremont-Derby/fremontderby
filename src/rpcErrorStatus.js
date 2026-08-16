@@ -83,6 +83,8 @@ export function rpcErrorStatus(error, options = {}) {
     || /prize payouts are already finalized/i.test(message)
     || /Season setup can only change before publication/i.test(message)
     || /Roster lock has passed/i.test(message)
+    || /Availability date is not a scheduled league date/i.test(message)
+    || /Active season registration is required to set availability/i.test(message)
     || /pending trade already includes/i.test(message)
     || /Trade is no longer pending/i.test(message)
     || /active membership changed/i.test(message)

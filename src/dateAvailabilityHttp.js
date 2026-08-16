@@ -35,7 +35,7 @@ export async function routeDateAvailability(request, env, { fetch: fetchImpl = g
 
     const body = await request.json();
     const availabilityDate = normalizeDate(body.date ?? body.availabilityDate);
-    const availabilityStatus = String(body.status ?? body.availabilityStatus ?? '').toLowerCase();
+    const availabilityStatus = String(body.status ?? body.availabilityStatus ?? body.availability_status ?? '').toLowerCase();
     if (!statuses.has(availabilityStatus)) {
       throw new Error('status must be available, unsure, or unavailable');
     }
