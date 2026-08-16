@@ -123,6 +123,13 @@ export function renderChatPage(env = {}) {
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
       <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
     </header>
+    <nav aria-label="League destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px">
+      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+      <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Lineup</a>
+      <a href="/notifications" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Alerts</a>
+    </nav>
 
     <section class="state-card" data-page-state data-tone="warning" hidden>
       <h2 data-page-state-title>Messages unavailable</h2>
@@ -487,7 +494,7 @@ export function renderChatPage(env = {}) {
         threadListEl.replaceChildren();
         const actions = candidates.length
           ? [emptyButton('Start a player message', () => { newDirectFormEl.hidden = false; candidateSelectEl.focus(); }, true)]
-          : [emptyLink('Open Teams', '/teams', true), emptyLink('Open Players', '/players'), emptyLink('See tonight', '/schedule')];
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('Open Players', '/players'), emptyLink('See tonight', '/schedule'), emptyLink('Score hub', '/scorecard'), emptyLink('Lineup', '/lineup')];
         threadListEl.append(emptyState(
           'No conversations yet',
           candidates.length
@@ -719,7 +726,7 @@ export function renderChatPage(env = {}) {
       if (!thread) {
         const actions = candidates.length
           ? [emptyButton('Start a player message', () => { mobileNewDirectFormEl.hidden = false; mobileCandidateSelectEl.focus(); }, true)]
-          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule')];
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule'), emptyLink('Score hub', '/scorecard'), emptyLink('Lineup', '/lineup')];
         messageListEl.replaceChildren(emptyState(
           'No conversations yet',
           candidates.length
