@@ -1,4 +1,5 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 
 function requireEnvValue(env, name) {
   const value = env?.[name];
@@ -7,7 +8,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return value.replace(/\/+$/, '');
+  return stripTrailingSlashes(value);
 }
 
 async function rpc(fetchImpl, env, name, body) {

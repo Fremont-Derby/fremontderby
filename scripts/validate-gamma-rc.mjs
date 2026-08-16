@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 #!/usr/bin/env node
 /**
  * Gamma release-candidate validation (#581).
@@ -9,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const defaultBaseUrl = 'https://gamma.fremontderby.com';
 
 function normalizeBaseUrl(value) {
-  return String(value || defaultBaseUrl).trim().replace(/\/+$/, '');
+  return stripTrailingSlashes(String(value || defaultBaseUrl).trim());
 }
 
 async function readJson(url) {

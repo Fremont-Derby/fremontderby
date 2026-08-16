@@ -1,5 +1,6 @@
 import { expectedEnvironmentForHost, hostMatchesEnvironment, normalizeRequestHost } from './hostEnvironment.js';
 import { TEST_LANE_DEFAULT_ACTORS } from './supabaseAuth.js';
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 
 const fixedExpectedSupabaseProjectRefs = {
   production: 'cpiucsxlkicmlbvdvhww',
@@ -23,7 +24,7 @@ const knownRuntimeEnvironments = new Set(Object.keys(fixedExpectedSupabaseProjec
 
 function normalizeSupabaseUrl(value) {
   if (!value || typeof value !== 'string') return '';
-  return value.trim().replace(/\/+$/, '');
+  return stripTrailingSlashes(value.trim());
 }
 
 export function supabaseProjectRefFromUrl(value) {
