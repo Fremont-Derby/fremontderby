@@ -5,6 +5,7 @@ import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
+import { renderJflNotFoundPage } from './jflNotFoundPage.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
@@ -49,6 +50,17 @@ function retiredTradeResponse(request, pathname) {
     status: 404,
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
+}
+
+function jflNotFoundResponse(pathname) {
+  return new Response(decorateHtmlWithShell(renderJflNotFoundPage(pathname), pathname), {
+    status: 404,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
+
+function isHtmlResponse(response) {
+  return (response.headers.get('content-type') || '').includes('text/html');
 }
 
 async function reconcileProductShell(response, pathname) {
@@ -96,7 +108,12 @@ async function finalizeBrowserResponse(response, pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (isRetiredTradePath(url.pathname)) return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    if (isRetiredTradePath(url.pathname)) {
+      const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
+        ? jflNotFoundResponse(url.pathname)
+        : retiredTradeResponse(request, url.pathname);
+      return finalizeBrowserResponse(response, url.pathname);
+    }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
@@ -113,6 +130,9 @@ export default {
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
     if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
     const response = await legacyRouter.fetch(request, env, ctx);
+    if (env.ENVIRONMENT === 'jfl' && response.status === 404 && isHtmlResponse(response)) {
+      return finalizeBrowserResponse(jflNotFoundResponse(url.pathname), url.pathname);
+    }
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
     if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
