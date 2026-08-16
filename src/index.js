@@ -1386,14 +1386,27 @@ export async function handleSetFreeAgentAvailabilityRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    let status = body.status ?? body.availabilityStatus ?? body.availability_status;
+    if (typeof status === 'string') {
+      const s = status.trim().toLowerCase();
+      if (s === 'yes' || s === 'open' || s === 'in') status = 'available';
+      if (s === 'no' || s === 'out') status = 'unavailable';
+      if (s === 'maybe') status = 'unsure';
+    }
     const availability = await setFreeAgentAvailabilityCommand(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus ?? body.availability_status,
+        availabilityStatus: status,
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'free_agent.availability_set',
+      entityType: 'round',
+      entityId: roundId,
+      afterState: availability ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ availability });
   } catch (error) {
@@ -1409,7 +1422,12 @@ export async function handleListSeasonFreeAgentsRequest(
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
-    await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    // Public-ish list (standings-adjacent); auth optional on open lanes.
+    try {
+      await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    } catch {
+      // continue unauthenticated
+    }
     const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
     const freeAgents = await listSeasonFreeAgentsCommand({ seasonId }, repository);
     return jsonResponse({ freeAgents });
@@ -1452,11 +1470,18 @@ export async function handleSetRosterAvailabilityRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createAvailabilityRepository(env, { fetch: fetchImpl });
+    let status = body.status ?? body.availabilityStatus ?? body.availability_status;
+    if (typeof status === 'string') {
+      const s = status.trim().toLowerCase();
+      if (s === 'yes' || s === 'open' || s === 'in') status = 'available';
+      if (s === 'no' || s === 'out') status = 'unavailable';
+      if (s === 'maybe') status = 'unsure';
+    }
     const availability = await setRosterAvailabilityCommand(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus ?? body.availability_status,
+        availabilityStatus: status,
       },
       repository,
     );
@@ -2734,7 +2759,7 @@ if (url.pathname === "/standings") {
     }
 
     if (freeAgentAvailabilityMatch) {
-      if (request.method !== "PUT") {
+      if (request.method !== "PUT" && request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
