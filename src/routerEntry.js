@@ -24,6 +24,8 @@ import { injectPublicSurfaceTheme } from './publicSurfaceTheme.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
+import { routeSeasonLifecycle } from './seasonLifecycleHttp.js';
+import { enhanceSeasonLifecycle } from './seasonLifecycleEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
@@ -132,6 +134,8 @@ export default {
     if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
     const seasonCloseResponse = await routeSeasonClose(request, env);
     if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
+    const seasonLifecycleResponse = await routeSeasonLifecycle(request, env);
+    if (seasonLifecycleResponse) return finalizeBrowserResponse(seasonLifecycleResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);
     if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse, url.pathname);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
@@ -140,9 +144,11 @@ export default {
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
     if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
+    if (url.pathname === '/admin/seasons' && request.method === 'GET') return finalizeBrowserResponse(await enhanceSeasonLifecycle(reconciled), url.pathname);
     if (url.pathname === '/season-setup' && request.method === 'GET') {
       const withPublishReadiness = await enhanceSeasonPublishReadiness(reconciled);
-      return finalizeBrowserResponse(await enhanceSeasonClose(withPublishReadiness), url.pathname);
+      const withClose = await enhanceSeasonClose(withPublishReadiness);
+      return finalizeBrowserResponse(await enhanceSeasonLifecycle(withClose), url.pathname);
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
