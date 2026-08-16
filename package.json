@@ -24,6 +24,7 @@
     "lint:inner-html": "node scripts/lint-inner-html.mjs",
     "validate:gamma-rc": "node scripts/validate-gamma-rc.mjs",
     "gamma:refresh:dry": "node scripts/gamma-prod-refresh.mjs",
-    "gamma:refresh": "GAMMA_REFRESH_EXECUTE=1 node scripts/gamma-prod-refresh.mjs"
+    "gamma:refresh": "GAMMA_REFRESH_EXECUTE=1 node scripts/gamma-prod-refresh.mjs",
+    "check:epic-status": "node scripts/check-parent-epic-drift.mjs"
   }
 }
