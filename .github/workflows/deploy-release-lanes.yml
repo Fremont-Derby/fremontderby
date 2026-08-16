@@ -1,6 +1,5 @@
 name: Deploy release lanes
 
-# Manual dispatch. Windows self-hosted uses Git for Windows bash (full path).
 concurrency:
   group: deploy-release-lanes-${{ github.event.inputs.lane || github.run_id }}
   cancel-in-progress: false
@@ -14,14 +13,12 @@ on:
         default: 'self-hosted'
         type: choice
         options: [self-hosted, ubuntu-latest]
-
       lane:
         description: 'Lane to deploy (prefer all-lanes so tips stay unified)'
         required: true
         default: 'all-lanes'
         type: choice
         options: [all-lanes, gamma, jfl, dru, production]
-
       skip_tests:
         description: 'Skip unit tests (lint+check still run)'
         required: false
