@@ -115,7 +115,43 @@ export async function handleSetAdminRoleRequest(
   }
 }
 
+
+export async function handleRecordRatingObservationRequest(
+  request,
+  env,
+  playerId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await request.json().catch(() => ({}));
+    const ratingValue = body.ratingValue ?? body.rating ?? body.fargo_rating;
+    if (ratingValue == null || Number.isNaN(Number(ratingValue))) {
+      return Response.json({ error: 'ratingValue is required (0–1000)' }, { status: 400, headers: { 'cache-control': 'no-store' } });
+    }
+    const sourceKind = body.sourceKind || body.source || 'admin_provisional';
+    const allowed = new Set(['official_fargo', 'derby_estimate', 'admin_provisional', 'fremont_open_import', 'other']);
+    if (!allowed.has(sourceKind)) {
+      return Response.json({ error: 'Invalid sourceKind' }, { status: 400, headers: { 'cache-control': 'no-store' } });
+    }
+    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
+    const observation = await repository.recordRatingObservation({
+      actorUserId: actor.id,
+      playerId,
+      sourceKind,
+      ratingValue: Number(ratingValue),
+      robustness: body.robustness ?? null,
+      confidence: body.confidence ?? null,
+      note: body.note || body.reason || null,
+    });
+    return Response.json({ observation }, { headers: { 'cache-control': 'no-store' } });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export const adminPlayersHttpHandlers = {
+  recordRatingObservation: handleRecordRatingObservationRequest,
   list: handleListAdminPlayersRequest,
   setAdminRole: handleSetAdminRoleRequest,
 };

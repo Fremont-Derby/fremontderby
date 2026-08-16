@@ -6,6 +6,7 @@ import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
+import { handleRecordRatingObservationRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
@@ -141,7 +142,17 @@ if (url.pathname === '/admin/player-contact') {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    
+    {
+      const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
+      if (ratingObs && request.method === 'POST') {
+        return finalizeBrowserResponse(
+          await handleRecordRatingObservationRequest(request, env, decodeURIComponent(ratingObs[1])),
+          url.pathname,
+        );
+      }
+    }
+if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const adminSupportResponse = await routeAdminSupport(request, env);
