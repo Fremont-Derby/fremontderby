@@ -1,11 +1,15 @@
 name: CI
 
-# POC mode (#679): GitHub-hosted runners are unavailable because of account
-# billing/spending limits. Keep this workflow intact for later reactivation,
-# but do not create automatic failed checks on PRs or branch pushes.
-# Inventory + reactivation: docs/GITHUB_ACTIONS.md · restore gates: #701
+# Safe public-repo CI (#872 / #701): run validation on PRs and pushes without
+# any deploy or Cloudflare secret access. Deploy remains workflow_dispatch-only
+# in deploy-release-lanes.yml. Workers Builds isolation is #873 (dashboard + guard).
+# Inventory: docs/GITHUB_ACTIONS.md
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
+  push:
+    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
 
 permissions:
   contents: read
