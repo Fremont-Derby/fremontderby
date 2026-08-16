@@ -18,6 +18,7 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/team-invitations': '/api/me/invitations',
   '/api/me/invites': '/api/me/invitations',
   '/api/me/pending-ready-checks': '/api/me/ready-checks',
+  '/api/ready-check': '/api/ready-checks',
   '/api/me/scorable': '/api/me/scorable-matches',
   '/api/me/score': '/api/me/scorable-matches',
   '/api/me/team-invites': '/api/me/invitations',
