@@ -52,6 +52,7 @@ export function renderIntroPage() {
       <a class="button demo" href="/demo">Test drive the app</a>
       <a class="button" href="/availability">Check in</a>
       <a class="button" href="/scorecard">Score</a>
+      <a class="button" href="/scorecard">Score</a>
       <a class="button" href="/schedule">Schedule</a>
       <a class="button" href="/teams">Teams</a>
       <a class="button" href="/standings">Standings</a>
