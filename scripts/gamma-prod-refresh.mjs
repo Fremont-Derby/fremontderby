@@ -107,10 +107,21 @@ export async function runGammaProdRefresh(env = process.env) {
   const managementToken = String(process.env.SUPABASE_ACCESS_TOKEN || '').trim();
   const sourceUrl = String(process.env.PRODUCTION_DATABASE_URL || '').trim();
   const targetUrl = String(process.env.GAMMA_DATABASE_URL || '').trim();
+  const mode = String(process.env.GAMMA_REFRESH_MODE || 'auto').trim().toLowerCase() || 'auto';
+  // mode: auto | management | pg — never log secret values
+  const canManagement = Boolean(managementToken);
+  const canPg = Boolean(sourceUrl && targetUrl);
+  const useManagement =
+    (mode === 'management' && canManagement)
+    || (mode === 'auto' && canManagement)
+    || (mode === 'pg' && !canPg && canManagement);
+  const usePg =
+    (mode === 'pg' && canPg)
+    || (mode === 'auto' && !canManagement && canPg)
+    || (mode === 'management' && !canManagement && canPg);
 
-  // Preferred: Actions secret SUPABASE_ACCESS_TOKEN (never log the value).
-  if (managementToken) {
-    console.log(JSON.stringify({ phase: 'execute', mode: 'management-api', trigger: plan.trigger }));
+  if (useManagement) {
+    console.log(JSON.stringify({ phase: 'execute', mode: 'management-api', trigger: plan.trigger, requestedMode: mode }));
     const result = await refreshViaManagementApi({
       token: managementToken,
       trigger: plan.trigger,
@@ -120,16 +131,19 @@ export async function runGammaProdRefresh(env = process.env) {
     return { ok: true, dryRun: false, plan, result };
   }
 
-  if (!sourceUrl || !targetUrl) {
+  if (!usePg) {
     console.log(JSON.stringify({
       phase: 'skipped',
-      reason: 'Need SUPABASE_ACCESS_TOKEN or PRODUCTION_DATABASE_URL+GAMMA_DATABASE_URL',
+      reason: 'Need SUPABASE_ACCESS_TOKEN and/or PRODUCTION_DATABASE_URL+GAMMA_DATABASE_URL for the selected mode',
       trigger: plan.trigger,
+      requestedMode: mode,
       ok: true,
     }));
-    console.log('Execute requested but no refresh secrets configured; skipping apply (success).');
+    console.log('Execute requested but no usable secrets for mode=' + mode + '; skipping apply (success).');
     return { ok: true, dryRun: false, skipped: true, plan };
   }
+
+  console.log(JSON.stringify({ phase: 'execute', mode: 'pg-dump', trigger: plan.trigger, requestedMode: mode }));
   // Re-check with required URLs
   const gate = evaluateGammaRefreshPreflight({
     sourceUrl,
