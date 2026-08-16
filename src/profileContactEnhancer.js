@@ -4,7 +4,7 @@ const style = `<style data-profile-contact-style>
   .profile-contact-actions{display:flex;flex-wrap:wrap;gap:8px}
   .profile-contact-note{color:var(--muted);font-size:.82rem;line-height:1.45}
   .profile-contact-state{font-size:.82rem;font-weight:900}
-  .profile-contact-state[data-ready="true"]{color:#26734e}
+  .profile-contact-state[data-ready="true"]{color:#26734e}.profile-contact-state[data-required="true"]{padding:10px 12px;border-left:4px solid var(--gold,#c9a227);border-radius:8px;background:#2b2412;color:#ffe8a6;line-height:1.45}
   .profile-contact-error{color:#9b3129;font-weight:800}
   .profile-contact button{min-height:48px;padding:0 16px}
   .profile-contact [hidden]{display:none!important}
@@ -45,7 +45,7 @@ const script = `<script data-profile-contact-script>
   const errorEl=root.querySelector('[data-contact-error]');
   const revealBtn=root.querySelector('[data-contact-reveal]');
   const hideBtn=root.querySelector('[data-contact-hide]');
-  let revealed=false;
+  let revealed=false;let activeCaptain=false;
   let hasPhone=false;
 
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
@@ -80,8 +80,9 @@ const script = `<script data-profile-contact-script>
 
   function renderMasked(contact){
     hasPhone=Boolean(contact?.hasPhone);
-    badge.textContent=hasPhone?'Contact on file':'Phone missing';
+    badge.textContent=hasPhone?'Contact on file':(activeCaptain?'Required now':'Phone missing');
     state.dataset.ready=String(hasPhone);
+    state.dataset.required=String(!hasPhone&&activeCaptain);
     const masked=contact?.phoneMasked||'••••';
     state.replaceChildren();
     if(hasPhone){
@@ -91,7 +92,7 @@ const script = `<script data-profile-contact-script>
       mask.textContent=masked;
       state.append(mask, '.');
     }else{
-      state.textContent='No phone is on file. Normal player features still work; active captaincy requires a phone.';
+      state.textContent=activeCaptain?'Your captain contact is incomplete. Add and save a phone number here to keep active captaincy available.':'No phone is on file. Normal player features still work; active captaincy requires a phone.';
     }
     errorEl.hidden=true;
     setRevealed(false);
@@ -106,8 +107,17 @@ const script = `<script data-profile-contact-script>
   async function load(){
     badge.textContent='Loading…';
     // WHY: default GET omits full phone; UI stays masked until explicit reveal.
-    const body=await request('/api/me/contact',{method:'GET'});
-    renderMasked(body.contact);
+    // Detect active captain so missing contact becomes an explicit recovery state (#335).
+    const [contactResult, profileResult] = await Promise.allSettled([
+      request('/api/me/contact',{method:'GET'}),
+      request('/api/me/profile',{method:'GET'}),
+    ]);
+    if (profileResult.status === 'fulfilled') {
+      const teams = Array.isArray(profileResult.value?.profile?.teams) ? profileResult.value.profile.teams : [];
+      activeCaptain = teams.some((team) => String(team?.role || '').toLowerCase() === 'captain');
+    }
+    if (contactResult.status === 'rejected') throw contactResult.reason;
+    renderMasked(contactResult.value.contact);
   }
 
   async function revealPhone(){
