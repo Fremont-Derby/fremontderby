@@ -165,6 +165,16 @@ async function readJsonBody(request) {
   return readSanitizedJsonBody(request);
 }
 
+function normalizeApproveDecline(body) {
+  const raw =
+    body?.response
+    ?? body?.decision
+    ?? body?.action
+    ?? (body?.accept === true || body?.accepted === true ? 'approved' : null)
+    ?? (body?.decline === true || body?.declined === true ? 'declined' : null);
+  return raw == null ? raw : String(raw).toLowerCase();
+}
+
 function clientErrorMessage(error) {
   // Prefer safe mapping first, then preserve a few product-specific uuid phrases.
   const safe = safeClientErrorMessage(error);
@@ -647,14 +657,15 @@ export async function handleRespondToTeamMembershipRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    if (!['approved', 'declined'].includes(body.response)) {
+    const response = normalizeApproveDecline(body);
+    if (!['approved', 'declined'].includes(response)) {
       throw new Error('response must be approved or declined');
     }
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.respond({
       actorUserId: actor.id,
       requestId,
-      response: body.response,
+      response,
     });
     return jsonResponse({ membershipRequest });
   } catch (error) {
