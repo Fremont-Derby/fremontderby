@@ -138,6 +138,7 @@ export function renderPlayersDirectoryPage() {
               msg.className='primary';
               msg.href='/messages?player='+encodeURIComponent(pid);
               msg.textContent='Message';
+              msg.style.cssText='display:inline-flex;min-height:44px;align-items:center;margin-top:6px;color:#9ee5bd;text-decoration:none';
               actions.append(msg);
             }
             row.append(left,mid,actions);

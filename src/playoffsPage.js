@@ -28,7 +28,7 @@ export function renderPlayoffsPage() {
     .matches{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
     .match{padding:13px;border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:11px;background:#14181d}
     .versus{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin:8px 0}
-    .versus span{color:var(--gold);font-size:.72rem;font-weight:950;text-align:center}
+    .match-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.versus span{color:var(--gold);font-size:.72rem;font-weight:950;text-align:center}
     .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .actions a{min-height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;text-decoration:none;color:#f5f0e8;font-weight:900;font-size:.8rem}
     .actions a.primary{background:var(--green);border-color:var(--green);color:#06120d}
@@ -137,7 +137,7 @@ export function renderPlayoffsPage() {
           const msgs=document.createElement('a');
           msgs.href='/messages?matchup='+encodeURIComponent(match.teamMatchId||'');
           msgs.textContent='Messages';
-          actions.append(score,msgs);
+          const lineup=document.createElement('a');lineup.href='/lineup?match='+encodeURIComponent(match.teamMatchId||'');lineup.textContent='Lineup';lineup.style.cssText='min-height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;color:inherit;text-decoration:none';actions.append(score,lineup,msgs);
           card.append(actions);
           if(token() && match.teamMatchId){
             const post=document.createElement('div');
