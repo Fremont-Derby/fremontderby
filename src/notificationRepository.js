@@ -52,6 +52,7 @@ export function createNotificationRepository(env, { fetch: fetchImpl = globalThi
         teamMatchId: row.team_match_id,
         seasonId: row.season_id,
         readAt: row.read_at,
+        read_at: row.read_at,
         createdAt: row.created_at,
       }));
     },
@@ -66,7 +67,7 @@ export function createNotificationRepository(env, { fetch: fetchImpl = globalThi
         }),
       });
       const row = Array.isArray(result) ? result[0] : result;
-      return { id: row?.id ?? notificationId, readAt: row?.read_at ?? null };
+      return { id: row?.id ?? notificationId, readAt: row?.read_at ?? null, read_at: row?.read_at ?? null };
     },
 
     async markAllNotificationsRead({ actorUserId }) {
