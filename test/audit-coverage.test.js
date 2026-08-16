@@ -61,3 +61,9 @@ test('batch2 audit actions wired', () => {
   assert.match(ready, /team_ready_check\.start/);
   assert.match(ready, /team_ready_check\.respond/);
 });
+
+test('admin audit cards can deep-link entities', () => {
+  const src = readFileSync(new URL('../src/adminAuditPage.js', import.meta.url), 'utf8');
+  assert.match(src, /function entityHref/);
+  assert.match(src, /Open related/);
+});

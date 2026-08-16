@@ -50,6 +50,10 @@ export const SEGMENT_ALIAS_RULES = [
     apply: (p) => `/api/seasons/${p[3]}/prizes`,
   },
   {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'seasons' && (p[4] === 'eligible-free-agents' || p[4] === 'free_agents'),
+    apply: (p) => `/api/seasons/${p[3]}/free-agents`,
+  },
+  {
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && (p[4] === 'chat' || p[4] === 'team-messages'),
     apply: (p) => `/api/teams/${p[3]}/messages`,
   },

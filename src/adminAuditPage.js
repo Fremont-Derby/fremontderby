@@ -80,6 +80,18 @@ export function renderAdminAuditPage() {
         listEl.textContent='No audit events yet.';
         return;
       }
+      function entityHref(event){
+        const type=String(event.entityType||event.entity_type||'');
+        const id=event.entityId||event.entity_id;
+        if(!id) return null;
+        if(type==='team'||type==='team_membership') return '/teams';
+        if(type==='season'||type==='season_team_slot') return '/admin/seasons';
+        if(type==='player'||type==='player_match') return '/admin/players';
+        if(type==='team_match') return '/scorecard?match='+encodeURIComponent(id);
+        if(type==='team_trade'||type==='team_invitation') return '/teams';
+        if(type==='team_ready_check') return '/schedule';
+        return null;
+      }
       function buildAuditCard(event){
         const card=document.createElement('article');
         card.className='item';
@@ -96,6 +108,14 @@ export function renderAdminAuditPage() {
         when.textContent=fmtTime(event.createdAt);
         head.append(left,when);
         card.append(head);
+        const href=entityHref(event);
+        if(href){
+          const link=document.createElement('a');
+          link.href=href;
+          link.textContent='Open related';
+          link.style.cssText='display:inline-flex;min-height:44px;align-items:center;margin-top:6px;color:var(--accent,#43bd7d)';
+          card.append(link);
+        }
         if(event.reason){
           const reason=document.createElement('div');
           reason.className='reason';
