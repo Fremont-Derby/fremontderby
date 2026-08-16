@@ -273,3 +273,11 @@ For affected behavior, aim to leave:
 ## Testing
 
 Season 1 push confidence contract: [`docs/SEASON1_TEST_CONTRACT.md`](docs/SEASON1_TEST_CONTRACT.md).
+
+## License
+
+Copyright 2026 Fremont Derby contributors.
+
+Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE) for the full text and [`NOTICE`](NOTICE) for attribution.
+
+Third-party services used at runtime (for example Cloudflare and Supabase) remain subject to their own terms; secrets and proprietary account credentials are not licensed under this repository license.
