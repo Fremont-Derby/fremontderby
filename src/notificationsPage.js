@@ -47,6 +47,20 @@ export function renderNotificationsPage() {
       if(!response.ok)throw new Error(body.error||'Request failed');
       return body;
     }
+    function resolveHref(item){
+      if(item.href) return item.href;
+      const blob=((item.title||'')+' '+(item.body||'')+' '+(item.type||'')+' '+(item.kind||'')).toLowerCase();
+      if(blob.includes('ready check')||blob.includes('ready-check')) return '/teams';
+      if(blob.includes('lineup')) return '/lineup';
+      if(blob.includes('score')||blob.includes('rack')||blob.includes('match')) return '/scorecard';
+      if(blob.includes('trade')) return '/trades';
+      if(blob.includes('invite')||blob.includes('invitation')) return '/teams';
+      if(blob.includes('availability')||blob.includes('check-in')||blob.includes('check in')) return '/availability';
+      if(blob.includes('message')||blob.includes('chat')) return '/messages';
+      if(blob.includes('standings')) return '/standings';
+      if(blob.includes('schedule')||blob.includes('makeup')) return '/schedule';
+      return '';
+    }
     function buildNotificationCard(item){
       const card=document.createElement('article');
       card.className='item';
@@ -57,9 +71,10 @@ export function renderNotificationsPage() {
       body.className='muted';
       body.textContent=item.body;
       card.append(title,body);
-      if(item.href){
+      const href=resolveHref(item);
+      if(href){
         const link=document.createElement('a');
-        link.href=item.href;
+        link.href=href;
         link.textContent='Open';
         link.style.cssText='display:inline-flex;min-height:44px;align-items:center;margin-top:6px';
         card.append(link);
@@ -94,7 +109,7 @@ export function renderNotificationsPage() {
       if(window.fdStableList){
         window.fdStableList(listEl,items,{
           key:(item)=>String(item.id||item.title||''),
-          signature:(item)=>[item.title,item.body,item.readAt,item.href].join('|'),
+          signature:(item)=>[item.title,item.body,item.readAt,resolveHref(item)].join('|'),
           render:(item)=>buildNotificationCard(item),
         });
         return;
