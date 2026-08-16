@@ -1,7 +1,6 @@
 name: Deploy release lanes
 
-# Manual dispatch. Supports GitHub-hosted (ubuntu-latest) and Windows self-hosted
-# laptop runners (pwsh — no bash required).
+# Manual dispatch. Windows self-hosted uses Git for Windows bash (full path).
 concurrency:
   group: deploy-release-lanes-${{ github.event.inputs.lane || github.run_id }}
   cancel-in-progress: false
@@ -10,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       runner_target:
-        description: 'Runner (ubuntu-latest or self-hosted for laptop INFRA)'
+        description: 'Runner (self-hosted laptop or ubuntu-latest)'
         required: false
         default: 'self-hosted'
         type: choice
@@ -24,7 +23,7 @@ on:
         options: [all-lanes, gamma, jfl, dru, production]
 
       skip_tests:
-        description: 'Skip unit tests (lint+check still run) to clear deploy queue faster'
+        description: 'Skip unit tests (lint+check still run)'
         required: false
         default: true
         type: boolean
@@ -34,7 +33,7 @@ jobs:
     runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     defaults:
       run:
-        shell: pwsh
+        shell: ${{ inputs.runner_target == 'ubuntu-latest' && 'bash' || format('{0}', '"C:/Program Files/Git/bin/bash.exe" -e {0}') }}
     permissions:
       contents: read
     steps:
@@ -45,22 +44,18 @@ jobs:
       - name: Lint and syntax check
         run: |
           npm run lint
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run check
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Unit tests
         if: ${{ github.event.inputs.skip_tests != 'true' }}
         continue-on-error: true
-        run: |
-          npm test
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: npm test
 
   deploy:
     needs: test
     runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     defaults:
       run:
-        shell: pwsh
+        shell: ${{ inputs.runner_target == 'ubuntu-latest' && 'bash' || format('{0}', '"C:/Program Files/Git/bin/bash.exe" -e {0}') }}
     permissions:
       contents: read
     strategy:
@@ -77,9 +72,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if ([string]::IsNullOrEmpty($env:CLOUDFLARE_API_TOKEN)) { Write-Error 'CLOUDFLARE_API_TOKEN missing'; exit 1 }
-          if ([string]::IsNullOrEmpty($env:CLOUDFLARE_ACCOUNT_ID)) { Write-Error 'CLOUDFLARE_ACCOUNT_ID missing'; exit 1 }
-          Write-Host 'Cloudflare secrets present'
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN missing"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
       - name: Align isolated lane secrets to staging Supabase
         if: matrix.lane == 'dru' || matrix.lane == 'jfl' || matrix.lane == 'gamma'
         env:
@@ -87,28 +81,15 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          $LANE = '${{ matrix.lane }}'
-          # Stale CF secrets block wrangler vars (10053). Delete if present; ignore failures.
-          npx --yes wrangler@4 secret delete SUPABASE_URL --env $LANE 2>$null
-          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env $LANE 2>$null
-          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env $LANE 2>$null
-          if ([string]::IsNullOrEmpty($env:LANE_SUPABASE_SERVICE_ROLE_KEY)) {
-            Write-Error 'LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets'
-            exit 1
-          }
-          $key = $env:LANE_SUPABASE_SERVICE_ROLE_KEY
-          $put = { param($cmd) $key | & npx --yes wrangler@4 @cmd }
-          try {
-            $key | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env $LANE
-            if ($LASTEXITCODE -ne 0) { throw "classic put exit $LASTEXITCODE" }
-          } catch {
-            Write-Host 'classic secret put failed; trying versions secret put'
-            try {
-              $key | npx --yes wrangler@4 versions secret put SUPABASE_SERVICE_ROLE_KEY --env $LANE
-            } catch {
-              Write-Host 'secret put deferred until after deploy'
-            }
-          }
+          LANE="${{ matrix.lane }}"
+          npx --yes wrangler@4 secret delete SUPABASE_URL --env "$LANE" || true
+          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env "$LANE" || true
+          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env "$LANE" || true
+          test -n "${LANE_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "LANE_SUPABASE_SERVICE_ROLE_KEY missing"; exit 1; }
+          if ! printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"; then
+            echo "classic secret put failed; trying versions secret put"
+            printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 versions secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE" || echo "secret put deferred until after deploy"
+          fi
       - name: Ensure production service role secret
         if: matrix.lane == 'production'
         env:
@@ -116,12 +97,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PRODUCTION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if ([string]::IsNullOrEmpty($env:PRODUCTION_SUPABASE_SERVICE_ROLE_KEY)) {
-            Write-Error 'PRODUCTION_SUPABASE_SERVICE_ROLE_KEY missing'
-            exit 1
-          }
-          $env:PRODUCTION_SUPABASE_SERVICE_ROLE_KEY | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          test -n "${PRODUCTION_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "PRODUCTION_SUPABASE_SERVICE_ROLE_KEY missing"; exit 1; }
+          printf '%s' "$PRODUCTION_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY
       - name: Deploy ${{ matrix.lane }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -130,17 +107,15 @@ jobs:
           GITHUB_ACTIONS: 'true'
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          $lane = '${{ matrix.lane }}'
-          if ($lane -eq 'production') {
+          if [ "${{ matrix.lane }}" = "production" ]; then
             npm run deploy
-          } else {
-            npm run "deploy:$lane"
-          }
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          else
+            npm run "deploy:${{ matrix.lane }}"
+          fi
       - name: Probe host identity
         continue-on-error: true
         env:
           HOST: ${{ matrix.lane == 'production' && 'fremontderby.com' || format('{0}.fremontderby.com', matrix.lane) }}
           EXPECT: ${{ matrix.lane == 'production' && 'production' || matrix.lane }}
         run: |
-          node -e "const host=process.env.HOST;const expect=process.env.EXPECT;(async()=>{const url='https://'+host+'/health/environment';const response=await fetch(url,{redirect:'manual'});const text=await response.text();let body={};try{body=JSON.parse(text)}catch{};const envName=body.environment||body.ENVIRONMENT||'';console.log(JSON.stringify({host,status:response.status,environment:envName}));if(response.status!==200||String(envName)!==expect){console.error('Probe identity mismatch (non-fatal)');process.exit(1)}})().catch((e)=>{console.error(e);process.exit(1)})"
+          node -e "const host=process.env.HOST;const expect=process.env.EXPECT;(async()=>{const url='https://'+host+'/health/environment';const response=await fetch(url,{redirect:'manual'});const text=await response.text();let body={};try{body=JSON.parse(text)}catch{};const envName=body.environment||body.ENVIRONMENT||'';console.log(JSON.stringify({host,status:response.status,environment:envName}));if(response.status!==200||String(envName)!==expect){console.error('Probe identity mismatch');process.exit(1)}})().catch((e)=>{console.error(e);process.exit(1)})"
