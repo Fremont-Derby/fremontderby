@@ -251,7 +251,10 @@ export default {
       return readyCheckHttpHandlers.listPending(request, env);
     }
 
-    if (url.pathname === '/api/teams/ready-checks' && request.method === 'POST') {
+    if (
+      (url.pathname === '/api/teams/ready-checks' || url.pathname === '/api/ready-checks')
+      && request.method === 'POST'
+    ) {
       return readyCheckHttpHandlers.start(request, env);
     }
 
