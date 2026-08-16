@@ -1,6 +1,7 @@
 import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
+import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
@@ -125,6 +126,12 @@ export default {
     }
 
     // Trades restored — paths served by legacy router / index handlers.
+    if (url.pathname === '/admin/player-contact') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
