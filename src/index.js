@@ -1943,6 +1943,7 @@ export default {
         if (!supabaseUrl || !key) {
           features.teamPractice = { ready: false, detail: 'missing_supabase_env' };
         } else {
+          const schema = String(env.SUPABASE_SCHEMA || 'public').trim() || 'public';
           const response = await fetch(
             `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule,practice_recurrence,practice_on&limit=1`,
             {
@@ -1951,6 +1952,8 @@ export default {
                 apikey: key,
                 authorization: `Bearer ${key}`,
                 accept: 'application/json',
+                'accept-profile': schema,
+                'content-profile': schema,
               },
             },
           );
