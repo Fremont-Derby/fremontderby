@@ -22,6 +22,7 @@ export function teamMembershipStatusForError(error) {
   if (message.includes('not found')) return 404;
   if (message.includes('already pending')) return 409;
   if (message.includes('already has an active team membership')) return 409;
+  if (message.includes('already an active member of this team')) return 409;
   if (message.includes('no longer pending')) return 409;
   return 400;
 }
