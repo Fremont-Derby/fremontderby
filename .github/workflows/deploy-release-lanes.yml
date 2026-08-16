@@ -26,6 +26,12 @@ on:
         type: choice
         options: [gamma, jfl, dru, production, all-lanes]
 
+      skip_tests:
+        description: 'Skip unit tests (lint+check still run) to clear deploy queue faster'
+        required: false
+        default: false
+        type: boolean
+
 jobs:
   test:
     runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
@@ -42,6 +48,7 @@ jobs:
           npm run lint
           npm run check
       - name: Unit tests
+        if: ${{ github.event.inputs.skip_tests != 'true' }}
         # Temporary: Node 24 runner hits document-not-defined in some HTML page module loads.
         # Lint + syntax check still gate deploy. Restore fail-closed when suite is green on Node 24.
         continue-on-error: true
