@@ -291,7 +291,7 @@ export default {
       );
     }
 
-    if (url.pathname === '/api/me/team-membership-requests') {
+    if (url.pathname === '/api/me/team-membership-requests' || url.pathname === '/api/me/membership-requests') {
       if (request.method !== 'GET') return methodNotAllowed();
       return teamMembershipRequestHttpHandlers.list(request, env);
     }
