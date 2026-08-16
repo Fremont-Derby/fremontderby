@@ -48,6 +48,10 @@ export function renderAdminSeasonsPage() {
         <a class="back" href="/admin">Admin home</a>
         <a class="back" href="/admin/season-teams">Season teams</a>
         <a class="back" href="/season-setup">League setup</a>
+        <a class="back" href="/admin/players">Players</a>
+        <a class="back" href="/admin/audit">Audit</a>
+        <a class="back" href="/scorecard">Score</a>
+        <a class="back" href="/schedule">Schedule</a>
       </div>
     </header>
     <section class="panel">
