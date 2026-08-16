@@ -66,13 +66,14 @@ export function createPlayerProfileRepository(env, { fetch: fetchImpl = globalTh
       return Array.isArray(result) ? (result[0] ?? null) : result;
     },
 
-    async saveProfile({ actorUserId, displayName }) {
+    async saveProfile({ actorUserId, displayName, fargoExternalId }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/upsert_player_profile`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           actor_user_id: actorUserId,
           profile_display_name: displayName,
+          profile_fargo_external_id: fargoExternalId ?? null,
         }),
       });
 
