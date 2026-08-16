@@ -1012,6 +1012,25 @@ export async function handleRespondTeamMatchMakeupRequest(
 }
 
 
+
+export async function handleListOwnInvitationsRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teamManagement = await listOwnTeamManagementCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse({
+      invitations: teamManagement?.invitations || [],
+      playerId: teamManagement?.player_id || teamManagement?.playerId || null,
+    });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleListTeamInvitationsRequest(
   request,
   env,
@@ -2376,6 +2395,16 @@ if (url.pathname === "/standings") {
       }
 
       return handleListOwnTeamTradesRequest(request, env);
+    }
+
+    if (
+      url.pathname === "/api/me/invitations"
+      || url.pathname === "/api/me/team-invitations"
+    ) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleListOwnInvitationsRequest(request, env);
     }
 
     if (createTeamMatch) {
