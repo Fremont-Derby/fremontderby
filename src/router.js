@@ -415,13 +415,12 @@ export default {
       return methodNotAllowed();
     }
 
-    if (url.pathname === '/api/me/direct-message-inbox') {
-      if (request.method !== 'GET') return methodNotAllowed();
-      return chatHttpHandlers.listDirectInbox(request, env);
-    }
-
-    // Alias: clients often expect REST collection under /api/me/direct-conversations
-    if (url.pathname === '/api/me/direct-conversations') {
+    if (
+      url.pathname === '/api/me/direct-message-inbox'
+      || url.pathname === '/api/me/direct-conversations'
+      || url.pathname === '/api/me/direct-messages'
+      || url.pathname === '/api/me/dms'
+    ) {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listDirectInbox(request, env);
     }
