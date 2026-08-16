@@ -170,5 +170,28 @@ export function createAdminPlayersRepository(
         endsAt: row?.ends_at ?? null,
       };
     },
+
+    /** #92 Record immutable rating observation (admin provisional / official / estimate). */
+    async recordRatingObservation({
+      actorUserId,
+      playerId,
+      sourceKind = 'admin_provisional',
+      ratingValue,
+      robustness = null,
+      confidence = null,
+      note = null,
+    }) {
+      const rows = await rpc('record_rating_observation', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+        observation_source_kind: sourceKind,
+        observation_rating_value: Number(ratingValue),
+        observation_robustness: robustness,
+        observation_games_count: null,
+        observation_confidence: confidence,
+        observation_provenance: note ? { note: String(note) } : {},
+      });
+      return Array.isArray(rows) ? rows[0] : rows;
+    },
   };
 }
