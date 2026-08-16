@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -15,7 +16,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return value.replace(/\/+$/, '');
+  return stripTrailingSlashes(value);
 }
 
 function bearerToken(request) {

@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 import { createNotificationRepository } from './notificationRepository.js';
 import {
   createAdminAuditRepository,
@@ -2196,7 +2197,7 @@ export default {
         teamPractice: { ready: false, detail: 'not_checked' },
       };
       try {
-        const supabaseUrl = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+        const supabaseUrl = stripTrailingSlashes(String(env.SUPABASE_URL || ''));
         const key = env.SUPABASE_SERVICE_ROLE_KEY;
         if (!supabaseUrl || !key) {
           features.teamPractice = { ready: false, detail: 'missing_supabase_env' };
