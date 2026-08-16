@@ -33,7 +33,7 @@ jobs:
     runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     defaults:
       run:
-        shell: ${{ inputs.runner_target == 'ubuntu-latest' && 'bash' || format('{0}', '"C:/Program Files/Git/bin/bash.exe" -e {0}') }}
+        shell: '"C:/Program Files/Git/bin/bash.exe" -e {0}'
     permissions:
       contents: read
     steps:
@@ -55,7 +55,7 @@ jobs:
     runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     defaults:
       run:
-        shell: ${{ inputs.runner_target == 'ubuntu-latest' && 'bash' || format('{0}', '"C:/Program Files/Git/bin/bash.exe" -e {0}') }}
+        shell: '"C:/Program Files/Git/bin/bash.exe" -e {0}'
     permissions:
       contents: read
     strategy:
