@@ -52,6 +52,11 @@ export function renderPlayoffsPage() {
       <a class="ghost" href="/teams" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Teams</a>
       <a class="ghost" href="/players" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Players</a>
       <a class="ghost" href="/standings" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Standings</a>
+      <a class="ghost" href="/lineup" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Lineup</a>
+      <a class="ghost" href="/availability" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Check in</a>
+      <a class="ghost" href="/trades" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Trades</a>
+      <a class="ghost" href="/messages" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Messages</a>
+      <a class="ghost" href="/prizes" style="min-height:44px;display:grid;place-items:center;text-decoration:none;color:#f5f1e9;border:1px solid var(--line);border-radius:10px;padding:0 12px">Prizes</a>
     </div>
     <section class="admin" data-admin hidden>
       <strong>League admin</strong>
