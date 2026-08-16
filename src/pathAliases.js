@@ -13,6 +13,8 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/notifications/mark-all-read': '/api/me/notifications/read-all',
   '/api/me/ready-check': '/api/me/ready-checks',
   '/api/ready-checks/pending': '/api/me/ready-checks',
+  '/api/trades': '/api/me/trades',
+  '/api/me/trade-management': '/api/me/trades',
 };
 
 /**
@@ -32,6 +34,11 @@ export const SEGMENT_ALIAS_RULES = [
   },
   {
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'seasons' && p[4] === 'rounds',
+    apply: (p) => `/api/seasons/${p[3]}/schedule`,
+  },
+  {
+    // Convenience: clients probing /playoffs get schedule (bracket is derived client-side today)
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'seasons' && (p[4] === 'playoffs' || p[4] === 'playoff-bracket'),
     apply: (p) => `/api/seasons/${p[3]}/schedule`,
   },
   {

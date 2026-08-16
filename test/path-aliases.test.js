@@ -20,3 +20,11 @@ test('non-api paths unchanged', () => {
 test('exact map is non-empty catalog for #950', () => {
   assert.ok(Object.keys(EXACT_PATH_ALIASES).length >= 5);
 });
+
+test('trades and playoffs convenience aliases', () => {
+  assert.equal(normalizeApiPathname('/api/trades'), '/api/me/trades');
+  assert.equal(
+    normalizeApiPathname('/api/seasons/abc/playoffs'),
+    '/api/seasons/abc/schedule',
+  );
+});
