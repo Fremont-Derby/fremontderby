@@ -1,5 +1,5 @@
-import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 #!/usr/bin/env node
+import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 /**
  * Gamma release-candidate validation (#581).
  * Probes the live gamma host: environment identity, optional commit tag, public smoke.
