@@ -17,6 +17,7 @@ import {
   ALLOWED_TARGET_SCHEMA,
 } from './gamma-refresh/preflight.mjs';
 import { describeScrubPolicy, scrubSqlStatements } from './gamma-refresh/scrub-policy.mjs';
+import { refreshViaManagementApi } from './gamma-refresh/mgmt-copy.mjs';
 
 function requireEnv(name) {
   const v = String(process.env[name] || '').trim();
@@ -103,18 +104,30 @@ export async function runGammaProdRefresh(env = process.env) {
     return { ok: true, dryRun: true, plan };
   }
 
+  const managementToken = String(process.env.SUPABASE_ACCESS_TOKEN || '').trim();
   const sourceUrl = String(process.env.PRODUCTION_DATABASE_URL || '').trim();
   const targetUrl = String(process.env.GAMMA_DATABASE_URL || '').trim();
-  // Soft-skip when operator secrets are not configured — keep Actions green.
-  // Live copies can still be run out-of-band; this job must not red the pipeline.
+
+  // Preferred: Actions secret SUPABASE_ACCESS_TOKEN (never log the value).
+  if (managementToken) {
+    console.log(JSON.stringify({ phase: 'execute', mode: 'management-api', trigger: plan.trigger }));
+    const result = await refreshViaManagementApi({
+      token: managementToken,
+      trigger: plan.trigger,
+      gitSha: env.GITHUB_SHA || '',
+    });
+    console.log(JSON.stringify({ phase: 'complete', mode: 'management-api', ok: true, tables: result.results }));
+    return { ok: true, dryRun: false, plan, result };
+  }
+
   if (!sourceUrl || !targetUrl) {
     console.log(JSON.stringify({
       phase: 'skipped',
-      reason: 'PRODUCTION_DATABASE_URL and/or GAMMA_DATABASE_URL not configured',
+      reason: 'Need SUPABASE_ACCESS_TOKEN or PRODUCTION_DATABASE_URL+GAMMA_DATABASE_URL',
       trigger: plan.trigger,
       ok: true,
     }));
-    console.log('Execute requested but DB URL secrets are missing; skipping apply (success).');
+    console.log('Execute requested but no refresh secrets configured; skipping apply (success).');
     return { ok: true, dryRun: false, skipped: true, plan };
   }
   // Re-check with required URLs
