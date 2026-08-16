@@ -32,8 +32,7 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/scorecard': '/api/me/scorable-matches',
   '/api/me/races': '/api/me/scorable-matches',
   '/api/score/matches': '/api/me/scorable-matches',
-  '/api/my-trades': '/api/trades',
-  '/api/me/trades': '/api/trades',
+  '/api/my-trades': '/api/me/trades',
   '/api/me/free-agent': '/api/me/teams',
   '/api/me/fa': '/api/me/teams',
 };
