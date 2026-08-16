@@ -985,7 +985,7 @@ export async function handleInvitePlayerToTeamRequest(
       {
         actorUserId: actor.id,
         teamId,
-        playerId: body.playerId ?? body.invitedPlayerId,
+        playerId: body.playerId ?? body.player_id ?? body.invitedPlayerId ?? body.invited_player_id,
       },
       repository,
     );
