@@ -25,6 +25,7 @@ const MOBILE_DOCK_ITEMS = [
   { href: '/teams', label: 'Teams', key: 'teams', ball: 'T' },
   { href: '/schedule', label: 'Schedule', key: 'schedule', ball: '9' },
   { href: '/scorecard', label: 'Score', key: 'score', ball: '8' },
+  { href: '/availability', label: 'Check in', key: 'availability', ball: 'C' },
   { href: '/messages', label: 'Messages', key: 'messages', ball: 'M' },
   { href: '/profile', label: 'Profile', key: 'profile', ball: 'P' },
 ];
@@ -72,6 +73,7 @@ function sectionForPath(pathname) {
   if (pathname.startsWith('/standings')) return 'standings';
   if (pathname === '/players' || pathname.startsWith('/players/')) return 'players';
   if (pathname.startsWith('/scorecard')) return 'score';
+  if (pathname.startsWith('/availability')) return 'availability';
   if (pathname.startsWith('/messages')) return 'messages';
   if (pathname === '/season-setup' || pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
   if (pathname.startsWith('/profile')) return 'profile';
@@ -319,7 +321,7 @@ export const shellStyles = `
       left: max(8px, env(safe-area-inset-left, 0px));
       z-index: 1050;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 5px;
       padding: 6px;
       border: 1px solid #46694f;
@@ -356,6 +358,7 @@ export const shellStyles = `
     .fd-mobile-dock a[data-nav-key="schedule"] { --fd-dock-accent: #ffd166; }
     .fd-mobile-dock a[data-nav-key="standings"] { --fd-dock-accent: #ffd166; }
     .fd-mobile-dock a[data-nav-key="score"] { --fd-dock-accent: #63e79a; }
+    .fd-mobile-dock a[data-nav-key="availability"] { --fd-dock-accent: #7dd3fc; }
     .fd-mobile-dock a[data-nav-key="messages"] { --fd-dock-accent: #d8a6ff; }
     .fd-mobile-dock a[data-nav-key="profile"] { --fd-dock-accent: #ffad8f; }
     .fd-mobile-dock__ball {
