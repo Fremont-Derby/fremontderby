@@ -119,7 +119,7 @@ export default {
       /^\/api\/player-matches\/([^/]+)\/finalize-reconciled$/,
     );
     const teamChatMessagesMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/messages$/,
+      /^\/api\/teams\/([^/]+)\/(?:messages|chat|team-messages)$/,
     );
     const teamChatReadMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/messages\/read$/,
