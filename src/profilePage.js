@@ -386,8 +386,16 @@ export function renderProfilePage(env = {}) {
     }
 
     function signInWithGoogle() {
+      // #655 JFL-only: simulate Google OIDC without leaving the site.
+      const host = String(window.location.hostname || '').toLowerCase();
+      const jflHost = host === 'jfl.fremontderby.com' || host.startsWith('jfl.');
+      if (jflHost) {
+        setSession('fd-jfl-simulated-google-oidc-v1', '');
+        setStatus('Signed in (JFL test actor)', 'ok');
+        return loadProfile();
+      }
       requireConfig();
-      const baseUrl = config.supabaseUrl.replace(/\\/+$/, '');
+      const baseUrl = config.supabaseUrl.replace(/\/+$/, '');
       const redirectTo = window.location.origin + '/profile';
       const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
       authorizeUrl.searchParams.set('provider', 'google');
@@ -418,10 +426,11 @@ export function renderProfilePage(env = {}) {
       setStatus('Profile saved', 'ok');
     }
 
-    async function signOut() {
+        async function signOut() {
       const accessToken = token();
-      if (accessToken && config.supabaseUrl && config.supabasePublishableKey) {
-        await fetch(config.supabaseUrl.replace(/\\/+$/, '') + '/auth/v1/logout', {
+      // #655: simulated JFL session is local-only — never call Supabase logout.
+      if (accessToken && accessToken !== 'fd-jfl-simulated-google-oidc-v1' && accessToken !== 'fd-jfl-simulated-google-v1' && config.supabaseUrl && config.supabasePublishableKey) {
+        await fetch(config.supabaseUrl.replace(/\/+$/, '') + '/auth/v1/logout', {
           method: 'POST',
           headers: { apikey: config.supabasePublishableKey, authorization: 'Bearer ' + accessToken },
         }).catch(() => {});
@@ -429,7 +438,7 @@ export function renderProfilePage(env = {}) {
       setSession('', '');
     }
 
-    async function run(action) {
+async function run(action) {
       try {
         await action();
       } catch (error) {
