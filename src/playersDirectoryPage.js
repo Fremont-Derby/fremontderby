@@ -33,6 +33,7 @@ export function renderPlayersDirectoryPage() {
     <nav aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
       <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
       <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
     </nav>
@@ -107,7 +108,25 @@ export function renderPlayersDirectoryPage() {
       const list=filtered();
       metaEl.textContent=rows.length?(list.length+' of '+rows.length+' players'):'';
       emptyEl.hidden=list.length>0;
-      emptyEl.textContent=q.length===1?'Type at least 2 characters to search.':(q?'No players match “'+q+'”.':'No players in this season yet.');
+      emptyEl.replaceChildren();
+      const emptyTitle=document.createElement('strong');
+      emptyTitle.style.display='block';
+      emptyTitle.style.marginBottom='6px';
+      emptyTitle.textContent=q.length===1?'Keep typing':(q?'No players match':'No players yet');
+      const emptyCopy=document.createElement('div');
+      emptyCopy.className='muted';
+      emptyCopy.textContent=q.length===1?'Type at least 2 characters to search.':(q?('No players match “'+q+'”.'):'No players in this season yet.');
+      emptyEl.append(emptyTitle,emptyCopy);
+      if(list.length===0){
+        const links=document.createElement('div');
+        links.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:10px';
+        for(const [label,href] of [['Teams','/teams'],['Standings','/standings'],['Score','/scorecard'],['Schedule','/schedule']]){
+          const a=document.createElement('a');a.href=href;a.textContent=label;
+          a.style.cssText='min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none';
+          links.append(a);
+        }
+        emptyEl.append(links);
+      }
       if(window.fdStableList){
         window.fdStableList(listEl,list,{
           key:(r)=>String(r.player_id||r.display_name||''),
