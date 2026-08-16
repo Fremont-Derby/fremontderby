@@ -974,9 +974,9 @@ export async function handleProposeTeamMatchMakeupRequest(
       {
         actorUserId: actor.id,
         teamMatchId,
-        makeupOn: body.makeupOn ?? body.makeup_on ?? body.date,
-        makeupLocation: body.makeupLocation ?? body.makeup_location ?? null,
-        makeupNote: body.makeupNote ?? body.makeup_note ?? null,
+        makeupOn: body.makeupOn ?? body.makeup_on ?? body.date ?? body.on ?? body.proposedOn ?? body.proposed_on,
+        makeupLocation: body.makeupLocation ?? body.makeup_location ?? body.location ?? body.venue ?? null,
+        makeupNote: body.makeupNote ?? body.makeup_note ?? body.note ?? body.message ?? null,
       },
       repository,
     );
