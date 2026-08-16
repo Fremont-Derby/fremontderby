@@ -10,6 +10,7 @@ const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 's
 test('team management loads applications for open seasons', () => {
   assert.match(repo, /get_own_team_registration/);
   assert.match(repo, /applications/);
+  assert.match(repo, /registration,draft,active/);
   assert.match(page, /function renderApplications/);
   assert.match(page, /data\.applications/);
 });

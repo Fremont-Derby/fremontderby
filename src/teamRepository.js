@@ -338,12 +338,29 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       }
 
       try {
-        const openSeasons = Array.isArray(finalManagement.open_seasons)
+        let seasonsForRegistration = Array.isArray(finalManagement.open_seasons)
           ? finalManagement.open_seasons
           : [];
+        try {
+          const moreSeasons = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date&status=in.(registration,draft,active)&order=created_at.desc&limit=12`,
+            { method: 'GET', headers },
+          );
+          if (Array.isArray(moreSeasons) && moreSeasons.length) {
+            const byId = new Map(seasonsForRegistration.map((s) => [s.id || s.seasonId, s]));
+            for (const season of moreSeasons) {
+              const id = season.id || season.seasonId;
+              if (id && !byId.has(id)) byId.set(id, season);
+            }
+            seasonsForRegistration = Array.from(byId.values());
+          }
+        } catch {
+          // Fall back to open registration seasons only.
+        }
         const applications = [];
         const returningSlots = [];
-        for (const season of openSeasons) {
+        for (const season of seasonsForRegistration) {
           const seasonId = season.id || season.seasonId;
           if (!seasonId) continue;
           try {
