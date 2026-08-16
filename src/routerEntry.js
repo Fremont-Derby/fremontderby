@@ -1,3 +1,4 @@
+import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
 import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
 import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
 import { renderAdminSupportPage } from './adminSupportPage.js';
@@ -178,6 +179,13 @@ if (url.pathname === '/admin/player-contact') {
           url.pathname,
         );
       }
+    }
+
+    if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
+      return finalizeBrowserResponse(
+        await handleChallongePublishDryRunRequest(request, env),
+        url.pathname,
+      );
     }
 if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
