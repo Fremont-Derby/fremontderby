@@ -75,6 +75,18 @@ export const SEGMENT_ALIAS_RULES = [
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'ready-check',
     apply: (p) => `/api/teams/${p[3]}/ready-checks`,
   },
+  {
+    test: (p) => p.length === 4 && p[1] === 'api' && p[2] === 'direct-messages',
+    apply: (p) => `/api/direct-conversations/${p[3]}/messages`,
+  },
+  {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'direct-messages' && p[4] === 'read',
+    apply: (p) => `/api/direct-conversations/${p[3]}/messages/read`,
+  },
+  {
+    test: (p) => p.length === 4 && p[1] === 'api' && p[2] === 'dms',
+    apply: (p) => `/api/direct-conversations/${p[3]}/messages`,
+  },
 ];
 
 /**
