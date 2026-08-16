@@ -258,7 +258,11 @@ export default {
       return scorableMatchesHttpHandlers.list(request, env);
     }
 
-    if (url.pathname === '/api/me/ready-checks') {
+    if (
+      url.pathname === '/api/me/ready-checks'
+      || url.pathname === '/api/me/ready-check'
+      || url.pathname === '/api/ready-checks/pending'
+    ) {
       if (request.method !== 'GET') return methodNotAllowed();
       return readyCheckHttpHandlers.listPending(request, env);
     }
