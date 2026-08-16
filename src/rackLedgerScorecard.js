@@ -59,7 +59,7 @@ export const sharedRackLedgerScorecardStyles = `
 
 export const sharedRackLedgerScorecardMarkup = `
   <main class="scorecard-app" data-shared-rack-ledger-scorecard data-primary-scoring>
-    <div class="scorecard-status" data-status aria-live="polite">Loading…</div>
+    <h1 style="margin:0 0 6px;font-size:.95rem;font-weight:950">Live scorecard</h1><div class="scorecard-status" data-status aria-live="polite">Loading…</div>
     <aside class="sandbox-banner" data-sandbox-banner hidden><strong>SEASON 1 WAR GAMES · THROWAWAY DATA</strong><span>No sign-in or setup required. You are using the production scoring interface against isolated practice data.</span></aside>
     <div class="match-context"><span data-match-context>Loading round and match…</span><a data-switch-match href="/scorecard">Switch match</a></div>
     <nav class="score-hub-links" aria-label="League night" style="display:flex;flex-wrap:wrap;gap:8px;padding:0 0 8px">

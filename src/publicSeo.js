@@ -30,6 +30,18 @@ const PAGE_SEO = Object.freeze({
     title: 'Teams · Fremont Derby',
     description: 'Team registration, rosters, and captain tools for Fremont Derby.',
   },
+  '/scorecard/live': {
+    title: 'Live Scorecard · Fremont Derby',
+    description: 'Live rack-ledger scorecard for a Fremont Derby matchup.',
+  },
+  '/availability': {
+    title: 'League Night Check-in · Fremont Derby',
+    description: 'Mark availability for the next Fremont Derby league night.',
+  },
+  '/lineup': {
+    title: 'Lineup · Fremont Derby',
+    description: 'Build and lock Fremont Derby lineups before match time.',
+  },
   '/scorecard': {
     title: 'Score a Match · Fremont Derby',
     description: 'Score a Fremont Derby matchup and keep both sides on the same card.',
