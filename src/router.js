@@ -143,7 +143,7 @@ export default {
       /^\/api\/admin\/chat-reports\/([^/]+)\/resolve$/,
     );
     const matchupMessagesMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/messages$/,
+      /^\/api\/team-matches\/([^/]+)\/(?:messages|chat)$/,
     );
     const matchupReadMatch = url.pathname.match(
       /^\/api\/team-matches\/([^/]+)\/messages\/read$/,
