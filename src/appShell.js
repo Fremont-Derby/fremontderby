@@ -459,16 +459,20 @@ const shellScript = `<script data-fd-message-indicator-script>
       indicator.title = label;
       renderPreviews(previews, unread);
     };
+    const isOpenAuthLane = () => {
+      const host = String(location.hostname || '');
+      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
+    };
     const refresh = async () => {
       const accessToken = token();
-      if (!accessToken) { render(0); return; }
+      if (!accessToken && !isOpenAuthLane()) { render(0); return; }
       notifications.hidden = false;
       if (loading || document.hidden) return;
       loading = true;
       try {
-        const response = await fetch('/api/me/message-notification-summary', {
-          headers: { authorization: 'Bearer ' + accessToken },
-        });
+        const headers = {};
+        if (accessToken) headers.authorization = 'Bearer ' + accessToken;
+        const response = await fetch('/api/me/message-notification-summary', { headers });
         if (response.status === 401) { render(0); return; }
         if (!response.ok) return;
         const body = await response.json();
@@ -575,12 +579,16 @@ const readyCheckScript = `<script data-fd-ready-check-script>
       banner.hidden = false;
       banner.dataset.open = 'true';
     };
+    const isOpenAuthLane = () => {
+      const host = String(location.hostname || '');
+      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
+    };
     const load = async () => {
-      if (!token()) return paint(null);
+      if (!token() && !isOpenAuthLane()) return paint(null);
       try {
-        const response = await fetch('/api/me/ready-checks', {
-          headers: { authorization: 'Bearer ' + token() },
-        });
+        const headers = {};
+        if (token()) headers.authorization = 'Bearer ' + token();
+        const response = await fetch('/api/me/ready-checks', { headers });
         if (!response.ok) return paint(null);
         const body = await response.json();
         const rows = body.readyChecks || [];
@@ -594,12 +602,11 @@ const readyCheckScript = `<script data-fd-ready-check-script>
         if (!current?.id) return;
         button.disabled = true;
         try {
+          const headers = { 'content-type': 'application/json' };
+          if (token()) headers.authorization = 'Bearer ' + token();
           const response = await fetch('/api/ready-checks/' + encodeURIComponent(current.id) + '/respond', {
             method: 'POST',
-            headers: {
-              authorization: 'Bearer ' + token(),
-              'content-type': 'application/json',
-            },
+            headers,
             body: JSON.stringify({ response: button.getAttribute('data-ready-response') }),
           });
           const body = await response.json().catch(() => ({}));

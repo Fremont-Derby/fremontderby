@@ -371,10 +371,26 @@ export async function handleSaveOwnProfileRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
+    // Standing-only payloads used to 400 with "displayName is required". Accept either shape.
+    const standingOnly =
+      (body.standingStatus != null || body.standing_availability_status != null
+        || body.standingNote != null || body.standing_availability_note != null)
+      && body.displayName == null && body.display_name == null;
+    if (standingOnly) {
+      const profile = await saveOwnStandingAvailabilityCommand(
+        {
+          actorUserId: actor.id,
+          standingStatus: body.standingStatus ?? body.standing_availability_status,
+          standingNote: body.standingNote ?? body.standing_availability_note,
+        },
+        repository,
+      );
+      return jsonResponse({ profile });
+    }
     const profile = await saveOwnPlayerProfileCommand(
       {
         actorUserId: actor.id,
-        displayName: body.displayName,
+        displayName: body.displayName ?? body.display_name,
       },
       repository,
     );
@@ -1996,7 +2012,7 @@ export default {
       });
     }
 
-    
+
     if (url.pathname === "/players") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);

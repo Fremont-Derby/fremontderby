@@ -179,6 +179,7 @@ export function renderPrizesPage() {
       td.numeric { text-align: left; }
     }
     @media (max-width: 360px) {
+      .metric strong { font-size: 1.15rem; }
       tr { grid-template-columns: 1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -344,6 +345,25 @@ export function renderPrizesPage() {
       fields.entryFee.textContent = money(summary.entry_fee_cents);
       fields.administration.textContent = money(summary.administration_amount_cents);
       fields.prizePool.textContent = money(summary.projected_prize_pool_cents);
+      // Truthful empty state when admin has not configured entry fee / pools yet (#557).
+      let note = document.querySelector('[data-prize-config-note]');
+      if (!note) {
+        note = document.createElement('p');
+        note.className = 'muted';
+        note.setAttribute('data-prize-config-note', '');
+        note.style.margin = '0 0 12px';
+        const metrics = document.querySelector('.metrics') || document.querySelector('[data-prize-pool]')?.closest('section') || document.querySelector('main');
+        if (metrics) metrics.parentNode?.insertBefore(note, metrics.nextSibling) || metrics.appendChild(note);
+      }
+      const fee = Number(summary.entry_fee_cents || 0);
+      const pool = Number(summary.projected_prize_pool_cents || 0);
+      if (!fee && !pool) {
+        note.hidden = false;
+        note.textContent = 'Prize pool is not configured yet for this season (entry fee and allocations still at zero). Figures above are placeholders until an admin sets them.';
+      } else {
+        note.hidden = true;
+        note.textContent = '';
+      }
       fields.projectedField.textContent = summary.projected_field_size || '-';
       fields.teamPool.textContent = money(summary.team_prize_pool_cents);
       fields.individualPool.textContent = money(summary.individual_prize_pool_cents);

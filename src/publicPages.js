@@ -137,7 +137,7 @@ export function renderRulesPage() {
     </ul>
 
     <p class="note">Season-specific settings such as dates, deadlines, race-chart values, and payout amounts are published separately and may change between seasons.</p>
-  
+
 
     <div class="actions">
       <a class="button primary" href="/profile">Join / sign in</a>

@@ -73,7 +73,12 @@ export function createAdminSeasonTeamsHttpHandlers({
           seasonId,
           teamName: body.teamName ?? body.team_name,
         }, repository);
-        return Response.json({ team }, { status: 201 });
+        // Prepared rows are seed-only until captain + minimum roster qualify for a slot (#624).
+        return Response.json({
+          team,
+          occupiesSlot: false,
+          note: 'Prepared teams do not count toward the 8 registration slots until they have a captain, enough roster depth, and an accepted/confirmed slot.',
+        }, { status: 201 });
       });
     },
 

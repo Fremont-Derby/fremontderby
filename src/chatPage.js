@@ -344,16 +344,24 @@ export function renderChatPage(env = {}) {
       if (body.refresh_token) sessionStorage.setItem('fd.refreshToken', body.refresh_token);
       return true;
     }
+    function isOpenAuthLane() {
+      const host = String(location.hostname || '');
+      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
+    }
     async function api(path, options = {}, retry = true) {
       const accessToken = token();
-      if (!accessToken) {
+      // Test lanes authenticate on the Worker (beta bypass). Require a browser
+      // session only on production-style hosts so Messages works without Google.
+      if (!accessToken && !isOpenAuthLane()) {
         const error = new Error('Sign in is required');
         error.code = 'session_required';
         throw error;
       }
+      const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
+      if (accessToken) headers.authorization = 'Bearer ' + accessToken;
       const response = await fetch(path, {
         ...options,
-        headers: { authorization: 'Bearer ' + accessToken, 'content-type': 'application/json' },
+        headers,
       });
       if (response.status === 401 && retry) {
         if (await refreshSession()) return api(path, options, false);
@@ -936,7 +944,7 @@ export function renderChatPage(env = {}) {
       showSignedOut(false);
       setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : (error.message || 'Sign-in failed')), 'error');
     }
-    if (token()) {
+    if (token() || isOpenAuthLane()) {
       signedOutEl.hidden = true;
       layoutEl.hidden = false;
       runLoadThreads();
@@ -946,9 +954,9 @@ export function renderChatPage(env = {}) {
     }
     let pollCount = 0;
     setInterval(() => {
-      if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
+      if (!document.hidden && (token() || isOpenAuthLane()) && currentKey) run(() => loadMessages(true));
       pollCount += 1;
-      if (!document.hidden && token() && pollCount % 4 === 0) run(refreshThreadMetadata);
+      if (!document.hidden && (token() || isOpenAuthLane()) && pollCount % 4 === 0) run(refreshThreadMetadata);
     }, 4000);
     if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>{if(typeof refreshThreadMetadata==='function')refreshThreadMetadata();},{intervalMs:12000,immediate:false});
   </script>

@@ -58,7 +58,7 @@ export function renderAdminOperationsPage(env = {}) {
     async function load(opts={}){const quiet=Boolean(opts&&opts.quiet);if(!quiet){statusEl.textContent='Loading league health…';statusEl.dataset.tone=''}try{const body=await api();render(body.overview)}catch(error){renderFailure(error)}}
     document.querySelector('[data-refresh]').addEventListener('click',()=>load());load();
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts),{intervalMs:30000,immediate:false});
-  
+
     const broadcastSend=document.querySelector('[data-broadcast-send]');
     if(broadcastSend){
       broadcastSend.addEventListener('click',async()=>{
