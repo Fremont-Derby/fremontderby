@@ -1,6 +1,8 @@
 import { environmentReadiness } from './environmentReadiness.js';
 import { createAdminOperationsRepository } from './adminOperationsRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
 const severityRank = { healthy: 0, warning: 1, critical: 2 };
 const lineupWarningWindowMs = 2 * 60 * 60 * 1000;
@@ -249,9 +251,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
 }
 
 export function adminOperationsStatusForError(error) {
-  if (error instanceof AuthError) return error.status;
-  if (/League admin access/i.test(error.message)) return 403;
-  return 502;
+  return rpcErrorStatus(error);
 }
 
 export async function handleAdminOperationsRequest(
@@ -269,7 +269,7 @@ export async function handleAdminOperationsRequest(
     );
   } catch (error) {
     return Response.json(
-      { error: error.message },
+      { error: safeClientErrorMessage(error) },
       { status: adminOperationsStatusForError(error), headers: { 'cache-control': 'no-store' } },
     );
   }

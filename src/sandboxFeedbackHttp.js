@@ -6,6 +6,7 @@ import {
   submitSandboxFeedbackCommand,
 } from './sandboxFeedbackCommands.js';
 import { createSandboxFeedbackRepository } from './sandboxFeedbackRepository.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -19,11 +20,7 @@ async function readJsonBody(request) {
 }
 
 export function sandboxFeedbackStatusForError(error) {
-  const message = error?.message || 'Request failed';
-  if (/401/.test(message)) return 401;
-  if (/403|League admin access is required/i.test(message)) return 403;
-  if (/not found/i.test(message)) return 404;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 export function createSandboxFeedbackHttpHandlers({
@@ -45,7 +42,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, sandboxFeedbackStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, sandboxFeedbackStatusForError(error));
       }
     },
 
@@ -61,7 +58,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback });
       } catch (error) {
-        return jsonResponse({ error: error.message }, sandboxFeedbackStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, sandboxFeedbackStatusForError(error));
       }
     },
 
@@ -75,7 +72,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback });
       } catch (error) {
-        return jsonResponse({ error: error.message }, sandboxFeedbackStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, sandboxFeedbackStatusForError(error));
       }
     },
   };
