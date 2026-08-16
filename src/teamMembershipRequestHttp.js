@@ -1,4 +1,5 @@
 import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 import { createTeamMembershipRequestRepository } from './teamMembershipRequestRepository.js';
 
@@ -14,17 +15,7 @@ async function readJsonBody(request) {
 }
 
 export function teamMembershipStatusForError(error) {
-  const message = error?.message || 'Request failed';
-  if (message.includes('Supabase request failed with 401')) return 401;
-  if (message.includes('Supabase request failed with 403')) return 403;
-  if (message.includes('Only the active captain')) return 403;
-  if (message.includes('Only the requesting player')) return 403;
-  if (message.includes('not found')) return 404;
-  if (message.includes('already pending')) return 409;
-  if (message.includes('already has an active team membership')) return 409;
-  if (message.includes('already an active member of this team')) return 409;
-  if (message.includes('no longer pending')) return 409;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 export function createTeamMembershipRequestHttpHandlers({
@@ -39,7 +30,7 @@ export function createTeamMembershipRequestHttpHandlers({
         const requests = await repository.listOwn({ actorUserId: actor.id });
         return jsonResponse({ requests: requests ?? { player_requests: [], captain_requests: [] } });
       } catch (error) {
-        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, teamMembershipStatusForError(error));
       }
     },
 
@@ -53,7 +44,7 @@ export function createTeamMembershipRequestHttpHandlers({
         });
         return jsonResponse({ membershipRequest }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, teamMembershipStatusForError(error));
       }
     },
 
@@ -73,7 +64,7 @@ export function createTeamMembershipRequestHttpHandlers({
         });
         return jsonResponse({ membershipRequest });
       } catch (error) {
-        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, teamMembershipStatusForError(error));
       }
     },
 
@@ -87,7 +78,7 @@ export function createTeamMembershipRequestHttpHandlers({
         });
         return jsonResponse({ membershipRequest });
       } catch (error) {
-        return jsonResponse({ error: error.message }, teamMembershipStatusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, teamMembershipStatusForError(error));
       }
     },
   };
