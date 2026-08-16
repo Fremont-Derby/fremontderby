@@ -29,6 +29,8 @@ export function renderAdminAuditPage() {
     </header>
     <p class="muted">League-admin actions with actor, time, and detail. Visible only to league admins.</p>
     <nav class="filters">
+      <a class="ghost" href="/scorecard">Score</a>
+      <a class="ghost" href="/schedule">Schedule</a>
       <a class="ghost" href="/admin/operations">Operations</a>
       <a class="ghost" href="/messages/moderation">Moderation</a>
       <a class="ghost" href="/admin/players">Players</a>
@@ -77,7 +79,18 @@ export function renderAdminAuditPage() {
     function render(events){
       if(!events.length){
         listEl.replaceChildren();
-        listEl.textContent='No audit events yet.';
+        const empty=document.createElement('div');
+        empty.className='item';
+        empty.innerHTML='<strong>No audit events yet</strong><div class="muted" style="margin-top:6px">Admin actions (roster changes, captain assigns, season ops) will show up here.</div>';
+        const links=document.createElement('div');
+        links.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:10px';
+        for(const [label,href] of [['Operations','/admin/operations'],['Season teams','/admin/season-teams'],['Players','/admin/players'],['Score','/scorecard']]){
+          const a=document.createElement('a');a.href=href;a.textContent=label;
+          a.style.cssText='min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none';
+          links.append(a);
+        }
+        empty.append(links);
+        listEl.append(empty);
         return;
       }
       function entityHref(event){
@@ -88,6 +101,9 @@ export function renderAdminAuditPage() {
         if(type==='season'||type==='season_team_slot') return '/admin/seasons';
         if(type==='player'||type==='player_match') return '/admin/players';
         if(type==='team_match') return '/scorecard?match='+encodeURIComponent(id);
+        if(type==='ready_check'||type==='team_ready_check') return '/teams';
+        if(type==='team_invitation'||type==='invitation') return '/teams';
+        if(type==='team_trade'||type==='trade') return '/trades';
         if(type==='team_trade'||type==='team_invitation') return '/teams';
         if(type==='team_ready_check') return '/schedule';
         return null;
