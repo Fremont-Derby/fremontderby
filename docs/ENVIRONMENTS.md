@@ -218,3 +218,7 @@ See **`docs/GITHUB_ACTIONS.md`** for the production source-of-truth table (Worke
 - `BETA_ACTOR_EMAIL` (open-auth actor identity)
 
 Deploy with `lane=all-lanes` (workflow default) so tips stay unified. Single-lane deploys are for emergency hotfixes only; follow with the other two as soon as possible.
+
+## Backups, audit, and recovery
+
+See [ops-backup-audit-recovery.md](./ops-backup-audit-recovery.md) for Season 1 backup/PITR expectations, audit surfaces, health probes, and recovery runbooks (#30).
