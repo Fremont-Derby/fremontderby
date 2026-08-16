@@ -52,3 +52,18 @@ test('free-agents aliases', () => {
     '/api/seasons/s1/free-agents',
   );
 });
+
+test('direct message path aliases', () => {
+  assert.equal(
+    normalizeApiPathname('/api/direct-messages/c1'),
+    '/api/direct-conversations/c1/messages',
+  );
+  assert.equal(
+    normalizeApiPathname('/api/direct-messages/c1/read'),
+    '/api/direct-conversations/c1/messages/read',
+  );
+  assert.equal(
+    normalizeApiPathname('/api/dms/c1'),
+    '/api/direct-conversations/c1/messages',
+  );
+});
