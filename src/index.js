@@ -1460,6 +1460,12 @@ export async function handleSetRosterAvailabilityRequest(
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'roster.availability_set',
+      entityType: 'round',
+      entityId: roundId,
+      afterState: availability ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ availability });
   } catch (error) {
@@ -2740,7 +2746,7 @@ if (url.pathname === "/standings") {
     }
 
     if (rosterAvailabilityMatch) {
-      if (request.method !== "PUT") {
+      if (request.method !== "PUT" && request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
@@ -2767,18 +2773,20 @@ if (url.pathname === "/standings") {
     }
 
     if (teamRoundAvailabilityMatch) {
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+      const teamId = decodeURIComponent(teamRoundAvailabilityMatch[1]);
+      const roundId = decodeURIComponent(teamRoundAvailabilityMatch[2]);
+      if (request.method === "GET") {
+        return handleListTeamRoundAvailabilityRequest(
+          request,
+          env,
+          { teamId, roundId },
+        );
       }
-
-      return handleListTeamRoundAvailabilityRequest(
-        request,
-        env,
-        {
-          teamId: decodeURIComponent(teamRoundAvailabilityMatch[1]),
-          roundId: decodeURIComponent(teamRoundAvailabilityMatch[2]),
-        },
-      );
+      // Captains/players probing team-scoped path to set their own status
+      if (request.method === "PUT" || request.method === "POST") {
+        return handleSetRosterAvailabilityRequest(request, env, roundId);
+      }
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (teamLineupMatch) {
