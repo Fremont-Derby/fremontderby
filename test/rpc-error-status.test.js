@@ -37,3 +37,10 @@ test('maps dual-team scoring reject to 403', () => {
     403,
   );
 });
+
+test('registration and admin domain conflicts map to 409', () => {
+  assert.equal(rpcErrorStatus({ message: 'Season registration is not open' }), 409);
+  assert.equal(rpcErrorStatus({ message: 'Rostered players cannot register as free agents' }), 409);
+  assert.equal(rpcErrorStatus({ message: 'already captains another team' }), 409);
+  assert.equal(rpcErrorStatus({ message: 'No team slots are currently available' }), 409);
+});

@@ -6,18 +6,13 @@ import {
   setOwnPlayerContactCommand,
 } from './playerContactCommands.js';
 import { createPlayerContactRepository } from './playerContactRepository.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
 const json = (body, status = 200) => jsonNoStore(body, status, { pragma: 'no-cache', vary: 'Authorization' });
 
 export function playerContactErrorStatus(error) {
-  if (error instanceof AuthError) return error.status;
-  if (/Actor is not a league admin/i.test(error.message)) return 403;
-  if (/Player profile is required|Player not found/i.test(error.message)) return 404;
-  if (/Active captains must keep/i.test(error.message)) return 409;
-  if (/required|phone number|phone must/i.test(error.message)) return 400;
-  if (error.message.startsWith('Supabase request failed with 401')) return 401;
-  if (error.message.startsWith('Supabase request failed with 403')) return 403;
-  return 502;
+  return rpcErrorStatus(error);
 }
 
 /** Mask to last 4 digits only — never echo full phone unless explicitly revealed. */
@@ -94,6 +89,6 @@ export async function routePlayerContact(
     // After save, still default to masked in the response body.
     return json({ contact: normalizeContact(contact, { reveal: false }) });
   } catch (error) {
-    return json({ error: error.message }, playerContactErrorStatus(error));
+    return json({ error: safeClientErrorMessage(error) }, playerContactErrorStatus(error));
   }
 }

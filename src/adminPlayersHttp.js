@@ -1,18 +1,15 @@
 import { createAdminPlayersRepository } from './adminPlayersRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
 export function adminPlayersStatusForError(error) {
-  if (error instanceof AuthError) return error.status;
-  if (/Actor is not a league admin/i.test(error.message)) return 403;
-  if (/last league admin|captain lifecycle/i.test(error.message)) return 409;
-  if (/Player not found|Season not found|Team not found|Active team membership not found/i.test(error.message)) return 404;
-  if (/required|500 characters|must sign in/i.test(error.message)) return 400;
-  return 502;
+  return rpcErrorStatus(error);
 }
 
 function errorResponse(error) {
   return Response.json(
-    { error: error.message },
+    { error: safeClientErrorMessage(error) },
     { status: adminPlayersStatusForError(error), headers: { 'cache-control': 'no-store' } },
   );
 }

@@ -6,17 +6,13 @@ import {
   startTeamReadyCheckCommand,
 } from './readyCheckCommands.js';
 import { createReadyCheckRepository } from './readyCheckRepository.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
 const json = jsonNoStore;
 
 export function readyCheckErrorStatus(error) {
-  if (error instanceof AuthError) return error.status;
-  if (/membership is required|Player profile is required|closed|not found/i.test(error.message)) {
-    return 409;
-  }
-  if (String(error.message || '').startsWith('Supabase request failed with 401')) return 401;
-  if (String(error.message || '').startsWith('Supabase request failed with 403')) return 403;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 export function createReadyCheckHttpHandlers({
@@ -34,7 +30,7 @@ export function createReadyCheckHttpHandlers({
         );
         return json({ readyChecks });
       } catch (error) {
-        return json({ error: error.message }, readyCheckErrorStatus(error));
+        return json({ error: safeClientErrorMessage(error) }, readyCheckErrorStatus(error));
       }
     },
 
@@ -53,7 +49,7 @@ export function createReadyCheckHttpHandlers({
         );
         return json({ readyCheck }, 201);
       } catch (error) {
-        return json({ error: error.message }, readyCheckErrorStatus(error));
+        return json({ error: safeClientErrorMessage(error) }, readyCheckErrorStatus(error));
       }
     },
 
@@ -72,7 +68,7 @@ export function createReadyCheckHttpHandlers({
         );
         return json({ response });
       } catch (error) {
-        return json({ error: error.message }, readyCheckErrorStatus(error));
+        return json({ error: safeClientErrorMessage(error) }, readyCheckErrorStatus(error));
       }
     },
   };

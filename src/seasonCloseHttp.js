@@ -5,17 +5,13 @@ import {
 } from './seasonCloseCommands.js';
 import { createSeasonCloseRepository } from './seasonCloseRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
 const json = jsonNoStore;
 
 export function statusForError(error) {
-  if (error instanceof AuthError) return error.status;
-  if (error.message === 'Season not found') return 404;
-  if (error.message.includes('Actor is not a league admin')) return 403;
-  if (error.message.startsWith('Supabase request failed with 401')) return 401;
-  if (error.message.startsWith('Supabase request failed with 403')) return 403;
-  if (error.message.includes('before closing') || error.message.includes('still need')) return 409;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 async function handle(request, env, seasonId, action, { fetch: fetchImpl = globalThis.fetch } = {}) {
@@ -28,7 +24,7 @@ async function handle(request, env, seasonId, action, { fetch: fetchImpl = globa
       : await getSeasonCloseReadinessCommand(payload, repository);
     return json(action === 'close' ? { season: result } : { readiness: result });
   } catch (error) {
-    return json({ error: error.message }, statusForError(error));
+    return json({ error: safeClientErrorMessage(error) }, statusForError(error));
   }
 }
 

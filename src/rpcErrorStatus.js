@@ -23,12 +23,11 @@ export function rpcErrorStatus(error, options = {}) {
 
   if (/Supabase request failed with 401/i.test(message)) return 401;
   if (/Supabase request failed with 403/i.test(message)) return 403;
-
   if (/invalid input syntax for type uuid/i.test(message)) return 400;
 
-  // AuthZ / role gates
   if (
     /Actor is not a league admin/i.test(message)
+    || /League admin access/i.test(message)
     || /Only the active captain/i.test(message)
     || /Only an active captain/i.test(message)
     || /Only a traded player/i.test(message)
@@ -41,13 +40,12 @@ export function rpcErrorStatus(error, options = {}) {
     || /Scoring team is not part/i.test(message)
     || /membership is required|No team chat access/i.test(message)
     || /Direct messages are blocked|Both players must participate/i.test(message)
-    || /League chat access|Active season participation|League admin access/i.test(message)
+    || /League chat access|Active season participation/i.test(message)
     || /Matchup chat access|matchup team membership|Completed matchup chats/i.test(message)
   ) {
     return 403;
   }
 
-  // Not found
   if (
     /Season not found/i.test(message)
     || /Player match not found/i.test(message)
@@ -57,11 +55,11 @@ export function rpcErrorStatus(error, options = {}) {
     || /Team matchup not found/i.test(message)
     || /Invitation not found|Membership request not found/i.test(message)
     || /Returning team slot not found/i.test(message)
+    || /Active team membership not found/i.test(message)
   ) {
     return 404;
   }
 
-  // Conflicts / lifecycle (product uniqueness and state)
   if (
     /Player is already scheduled/i.test(message)
     || /already complete/i.test(message)
@@ -94,8 +92,11 @@ export function rpcErrorStatus(error, options = {}) {
     || /You already captain a team in this season/i.test(message)
     || /Assigned captain already captains a team in this season/i.test(message)
     || /Transfer player already captains a team in this season/i.test(message)
+    || /already captains another team/i.test(message)
+    || /already has an active captain/i.test(message)
     || /already have a team application in this season/i.test(message)
     || /Season is not open for team applications/i.test(message)
+    || /Season registration is not open/i.test(message)
     || /That team name is already reserved/i.test(message)
     || /That team name is already used in this season/i.test(message)
     || /Trade blocked: player still has an active team membership/i.test(message)
@@ -108,13 +109,28 @@ export function rpcErrorStatus(error, options = {}) {
     || /Player profile is required/i.test(message)
     || /Teams can only be added before season publication/i.test(message)
     || /No team slots are currently available/i.test(message)
-    || /conversation with this player already exists/i.test(message)
+    || /Active team membership is required/i.test(message)
+    || /Rostered players cannot register as free agents/i.test(message)
+    || /Active season registration is required/i.test(message)
+    || /not a scheduled league date/i.test(message)
+    || /Active captains must keep/i.test(message)
+    || /before closing/i.test(message)
+    || /still need/i.test(message)
+    || /last league admin/i.test(message)
+    || /captain lifecycle/i.test(message)
+    || /Phone number is required/i.test(message)
+    || /must be qualified before it can take a season slot/i.test(message)
+    || /already exists/i.test(message)
+    || /regular season/i.test(message)
+    || /Postseason/i.test(message)
+    || /semifinal|championship/i.test(message)
     || /team_applications_active_captain_unique/i.test(message)
     || /team_applications_active_name_unique/i.test(message)
     || /one_active_team_membership_per_player_season/i.test(message)
     || /one_active_captain_team_per_season/i.test(message)
     || /teams_season_id_name_key/i.test(message)
     || /direct_conversations_season_id_player_low_id_player_high_id_key/i.test(message)
+    || /conversation with this player already exists/i.test(message)
   ) {
     return 409;
   }
