@@ -1,6 +1,6 @@
 name: Release source policy
 
-# Fail-closed merge topology for #889. No deployment secrets.
+# Fail-closed merge topology for #889 / #581. No deployment secrets.
 on:
   pull_request:
     branches: [main, fremontderby-gamma]
@@ -28,4 +28,5 @@ jobs:
           GITHUB_BASE_REF: ${{ github.base_ref }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
           PR_IS_FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          STRICT_RELEASE_SOURCE_POLICY: '1'
         run: node scripts/check-release-source-policy.mjs
