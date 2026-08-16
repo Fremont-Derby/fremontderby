@@ -196,7 +196,10 @@ export function safeClientErrorMessage(error) {
   }
   // Pending migration / missing RPC or column — clearer than a generic failure.
   if (
-    /PGRST202|Could not find the function|column .* does not exist|42703/i.test(msg)
+    /PGRST202/i.test(msg)
+    || /Could not find the function/i.test(msg)
+    || msg.includes('does not exist')
+    || /42703/.test(msg)
   ) {
     return 'This action needs a database update that is not applied yet. Nothing was changed.';
   }

@@ -43,6 +43,7 @@ jobs:
         with:
           languages: javascript
           queries: security
+          config-file: ./.github/codeql/codeql-config.yml
       - uses: github/codeql-action/analyze@v3
         with:
           category: "/language:javascript"
