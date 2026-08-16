@@ -2,6 +2,11 @@ name: Deploy release lanes
 
 # Test gate restored (#725). Manual dispatch only — does not depend on PR triggers (#724)
 # still paused while hosted runners/billing recover (#723).
+# Avoid stacking deploys when hosted runners are slow (#723).
+concurrency:
+  group: deploy-release-lanes-${{ github.event.inputs.lane || 'all' }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
     inputs:
