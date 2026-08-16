@@ -41,3 +41,14 @@ test('profile and join path aliases', () => {
     '/api/teams/abc/membership-request',
   );
 });
+
+test('free-agents aliases', () => {
+  assert.equal(
+    normalizeApiPathname('/api/seasons/s1/eligible-free-agents'),
+    '/api/seasons/s1/free-agents',
+  );
+  assert.equal(
+    normalizeApiPathname('/api/seasons/s1/free_agents'),
+    '/api/seasons/s1/free-agents',
+  );
+});
