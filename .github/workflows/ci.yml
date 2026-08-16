@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   test:
+    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +50,7 @@ jobs:
         run: node scripts/count-tests.mjs
 
   accessibility:
+    name: accessibility
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,9 +84,10 @@ jobs:
       - run: npm run test:floor
 
   deploy-nonproduction:
-
+    # #872/#873: never on pull_request (fork or same-repo). Secrets only on trusted push refs.
     if: >-
       github.event_name == 'push' &&
+      github.event.pull_request == null &&
       (github.ref == 'refs/heads/fremontderby-jfl' ||
        github.ref == 'refs/heads/fremontderby-dru' ||
        github.ref == 'refs/heads/fremontderby-gamma')
@@ -117,7 +120,8 @@ jobs:
             "$GITHUB_SHA"
 
   production-smoke:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # #872/#873: production smoke only after push to main — never PR events.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pull_request == null
     needs: test
     runs-on: ubuntu-latest
     concurrency:

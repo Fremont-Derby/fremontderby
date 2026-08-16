@@ -1,8 +1,10 @@
 name: PR card contract
 
-# POC mode (#679): hosted Actions are temporarily unavailable. Keep the
-# executable contract for later reactivation, but do not emit failed PR checks.
+# #872 — automatic, fork-safe validation. Uses pull_request (not untrusted-base-ref PR event).
+# Permissions are read-only. No Cloudflare/Supabase/deploy secrets.
 on:
+  pull_request:
+    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
   workflow_dispatch:
 
 permissions:
@@ -16,6 +18,7 @@ concurrency:
 
 jobs:
   validate:
+    name: pr-card-contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

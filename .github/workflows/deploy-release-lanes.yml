@@ -35,6 +35,22 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Trusted ref gate (#873)
+        shell: bash
+        run: |
+          ref="${GITHUB_REF_NAME}"
+          case "$ref" in
+            main|fremontderby-gamma|fremontderby-jfl|fremontderby-dru) echo "Trusted deploy ref: $ref" ;;
+            *)
+              echo "Ref '$ref' is not a trusted deploy source. Deploy only from main or lane integration branches."
+              exit 1
+              ;;
+          esac
+          if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "Deploy release lanes only accepts workflow_dispatch (got ${GITHUB_EVENT_NAME})."
+            exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
