@@ -60,7 +60,8 @@ JFL, DRU, and gamma share the non-production Supabase project `${stagingRef}` to
 - Gamma never points directly at the production database and never receives production service-role/write credentials.
 
 ### Production data refresh into gamma
-Gamma may receive a production-data copy only through an explicit manual refresh workflow.
+Gamma may receive a production-data copy only through the repository workflow **Gamma prod refresh** (`gamma-prod-refresh.yml`): daily schedule + `workflow_dispatch`. Both entry points share `scripts/gamma-prod-refresh.mjs` (fail-closed preflight). Deploys and branch pushes never trigger refresh.
+
 
 The refresh direction is strictly one-way:
 

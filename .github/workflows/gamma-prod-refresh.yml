@@ -1,0 +1,50 @@
+name: Gamma prod refresh
+
+# #577 — one workflow for daily + on-demand production → gamma copy.
+# Never runs on push/deploy. Production creds stay on this job only.
+on:
+  schedule:
+    # Daily 10:15 UTC
+    - cron: '15 10 * * *'
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: Set to "1" to apply (requires secrets + pg client). Default dry-run.
+        required: false
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gamma-prod-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: prod-to-gamma-refresh
+    runs-on: ${{ vars.FREMONT_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Preflight unit tests
+        run: node --test test/gamma-refresh-preflight.test.js
+      - name: Run refresh (dry-run unless execute=1)
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          GAMMA_DATABASE_URL: ${{ secrets.GAMMA_DATABASE_URL }}
+          GAMMA_REFRESH_TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}
+          GAMMA_REFRESH_EXECUTE: ${{ github.event.inputs.execute || '0' }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: node scripts/gamma-prod-refresh.mjs
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Gamma prod refresh" >> "$GITHUB_STEP_SUMMARY"
+          echo "- trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- execute: ${{ github.event.inputs.execute || '0' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- production creds are job-scoped only (not written to Workers)" >> "$GITHUB_STEP_SUMMARY"
