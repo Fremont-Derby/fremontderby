@@ -15,6 +15,7 @@ export const EXACT_PATH_ALIASES = {
   '/api/ready-checks/pending': '/api/me/ready-checks',
   '/api/trades': '/api/me/trades',
   '/api/me/trade-management': '/api/me/trades',
+  '/api/me/team-invitations': '/api/me/invitations',
 };
 
 /**
