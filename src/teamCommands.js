@@ -11,6 +11,21 @@ function assertRepositoryMethod(repository, method) {
   }
 }
 
+
+function normalizeTradePlayerResponse(value) {
+  const v = String(value || '').toLowerCase().trim();
+  if (v === 'accept') return 'accepted';
+  if (v === 'decline' || v === 'reject' || v === 'rejected') return 'declined';
+  return v;
+}
+
+function normalizeTradeCaptainResponse(value) {
+  const v = String(value || '').toLowerCase().trim();
+  if (v === 'approve') return 'approved';
+  if (v === 'decline' || v === 'reject' || v === 'rejected') return 'declined';
+  return v;
+}
+
 function normalizeTeamName(value) {
   if (typeof value !== 'string') {
     throw new Error('teamName is required');
@@ -185,6 +200,7 @@ export async function respondToTeamTradePlayerCommand(
   if (!tradeId) {
     throw new Error('tradeId is required');
   }
+  response = normalizeTradePlayerResponse(response);
   if (!['accepted', 'declined'].includes(response)) {
     throw new Error('response must be accepted or declined');
   }
@@ -208,6 +224,7 @@ export async function approveTeamTradeCaptainCommand(
   if (!tradeId) {
     throw new Error('tradeId is required');
   }
+  response = normalizeTradeCaptainResponse(response);
   if (!['approved', 'declined'].includes(response)) {
     throw new Error('response must be approved or declined');
   }

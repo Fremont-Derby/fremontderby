@@ -172,9 +172,16 @@ function normalizeApproveDecline(body) {
     body?.response
     ?? body?.decision
     ?? body?.action
-    ?? (body?.accept === true || body?.accepted === true ? 'approved' : null)
+    ?? (body?.accept === true || body?.accepted === true ? 'accepted' : null)
+    ?? (body?.approve === true || body?.approved === true ? 'approved' : null)
     ?? (body?.decline === true || body?.declined === true ? 'declined' : null);
-  return raw == null ? raw : String(raw).toLowerCase();
+  if (raw == null) return raw;
+  const value = String(raw).toLowerCase().trim();
+  // Verb forms clients often send instead of past-participle status words.
+  if (value === 'accept') return 'accepted';
+  if (value === 'approve') return 'approved';
+  if (value === 'decline' || value === 'reject' || value === 'rejected') return 'declined';
+  return value;
 }
 
 function clientErrorMessage(error) {
