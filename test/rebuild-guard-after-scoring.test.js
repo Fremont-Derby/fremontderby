@@ -15,6 +15,8 @@ test('migration guards rebuild after scoring/racks', () => {
   assert.match(sql, /Cannot regenerate player matches after scoring/);
   assert.match(sql, /player_match_racks/);
   assert.match(sql, /in_progress.*finalized.*corrected/s);
+  assert.doesNotMatch(sql, /regexp_replace/i);
+  assert.match(sql, /CREATE OR REPLACE FUNCTION/i);
 });
 
 test('RPC status maps regenerate-after-scoring to client-visible conflict class', () => {
