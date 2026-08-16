@@ -504,6 +504,14 @@ const shellScript = `<script data-fd-message-indicator-script>
     if ('requestIdleCallback' in window) requestIdleCallback(() => prefetchPublic(), { timeout: 4000 });
     else setTimeout(prefetchPublic, 2500);
 
+    window.addEventListener('fd:notifications-changed', () => {
+      refresh().catch(() => {});
+    });
+    // Message inbox may mark threads read without visiting /notifications.
+    window.addEventListener('fd:messages-changed', () => {
+      refresh().catch(() => {});
+    });
+
     notifications.addEventListener('mouseenter', () => setOpen(true));
     notifications.addEventListener('mouseleave', () => {
       if (!notifications.contains(document.activeElement)) setOpen(false);
