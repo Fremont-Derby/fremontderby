@@ -9,7 +9,7 @@ test('unwraps product conflicts to 409 even with Supabase wrapper', () => {
   assert.equal(rpcErrorStatus({ message: wrapped }), 409);
   assert.equal(
     safeClientErrorMessage({ message: wrapped }),
-    'You already have a team application in this season',
+    'You already have a team application in this season.',
   );
 });
 
