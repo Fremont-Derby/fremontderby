@@ -1856,7 +1856,7 @@ export default {
       /^\/api\/seasons\/([^/]+)\/team-standings$/,
     );
     const individualStandingsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/individual-standings$/,
+      /^\/api\/seasons\/([^/]+)\/(?:individual-standings|player-standings)$/,
     );
     const seasonPrizesMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/prizes$/,
