@@ -149,6 +149,9 @@ export function renderProfilePage(env = {}) {
             <div class="hint" data-fargo-panel style="margin-top:12px">
               <strong style="display:block;margin-bottom:4px">Fargo rating</strong>
               <div data-fargo-detail>Rating appears here after league staff or a linked Fargo ID establishes it.</div>
+              <label style="display:grid;gap:4px;margin-top:10px;font-size:.85rem">Fargo ID
+                <input name="fargoId" data-fargo-id-input inputmode="text" autocomplete="off" maxlength="40" placeholder="Optional FargoRate ID" />
+              </label>
               <div class="muted" data-fargo-id-line style="margin-top:6px"></div>
             </div>
             <form class="actions" data-standing-form style="margin-top:14px;display:grid;gap:10px">
@@ -208,6 +211,7 @@ export function renderProfilePage(env = {}) {
     function trimUrl(value){ let s=String(value||''); while(s.endsWith('/')) s=s.slice(0,-1); return s; }
     const profileForm = document.querySelector('[data-profile-form]');
     const displayNameInput = document.querySelector('[data-display-name-input]');
+    const fargoIdInput = document.querySelector('[data-fargo-id-input]');
     const statusEl = document.querySelector('[data-status]');
     const sessionState = document.querySelector('[data-session-state]');
     const googleSignInButton = document.querySelector('[data-google-sign-in]');
@@ -393,11 +397,14 @@ export function renderProfilePage(env = {}) {
           fargoDetail.textContent = 'No rating on file yet. Unrated players can still play; race targets use the season default until a rating is established.';
         }
       }
+      if (fargoIdInput) {
+        fargoIdInput.value = (profile && (profile.fargo_external_id || profile.fargoExternalId || profile.fargo_id || profile.fargoId)) || '';
+      }
       if (fargoIdLine) {
-        const fid = profile && (profile.fargo_id || profile.fargoId || profile.fargo_player_id);
+        const fid = profile && (profile.fargo_external_id || profile.fargoExternalId || profile.fargo_id || profile.fargoId);
         fargoIdLine.textContent = fid
-          ? ('Linked Fargo ID: ' + fid)
-          : 'Self-serve Fargo ID linking is on the roadmap; league staff can still maintain ratings.';
+          ? ('Saved Fargo ID: ' + fid + ' (rating still system-owned until Fargo sync)')
+          : 'Optional. Saving a Fargo ID prepares your profile for future rating sync; it does not change race targets by itself.';
       }
       const standingStatusEl = document.querySelector('[data-standing-status]');
       const standingNoteEl = document.querySelector('[data-standing-note]');
@@ -475,8 +482,9 @@ export function renderProfilePage(env = {}) {
     async function saveProfile() {
       const displayName = displayNameInput.value.trim();
       if (!displayName) throw new Error('Display name is required');
+      const fargoExternalId = fargoIdInput ? fargoIdInput.value.trim() : '';
       setStatus('Saving profile…');
-      const body = await api('/api/me/profile', { method: 'PUT', body: JSON.stringify({ displayName }) });
+      const body = await api('/api/me/profile', { method: 'PUT', body: JSON.stringify({ displayName, fargoExternalId: fargoExternalId || null }) });
       renderProfile(body.profile);
       setStatus('Profile saved', 'ok');
     }

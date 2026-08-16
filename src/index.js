@@ -383,6 +383,7 @@ export async function handleSaveOwnProfileRequest(
       {
         actorUserId: actor.id,
         displayName: body.displayName ?? body.display_name,
+        fargoExternalId: body.fargoExternalId ?? body.fargo_external_id ?? body.fargoId ?? body.fargo_id ?? null,
       },
       repository,
     );

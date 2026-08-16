@@ -40,12 +40,19 @@ export async function getOwnPlayerProfileCommand({ actorUserId }, repository) {
   return repository.getProfileByUserId(actorUserId);
 }
 
-export async function saveOwnPlayerProfileCommand({ actorUserId, displayName }, repository) {
+export async function saveOwnPlayerProfileCommand({ actorUserId, displayName, fargoExternalId }, repository) {
   assertActor(actorUserId);
   assertRepository(repository);
+  let normalizedFargo = fargoExternalId;
+  if (normalizedFargo != null) {
+    normalizedFargo = String(normalizedFargo).trim();
+    if (!normalizedFargo) normalizedFargo = null;
+    else if (normalizedFargo.length > 40) throw new Error('fargo_external_id must be 40 characters or fewer');
+  }
   return repository.saveProfile({
     actorUserId,
     displayName: normalizeDisplayName(displayName),
+    fargoExternalId: normalizedFargo,
   });
 }
 
