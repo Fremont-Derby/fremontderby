@@ -35,6 +35,9 @@ on:
 jobs:
   test:
     runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
     steps:
@@ -59,6 +62,9 @@ jobs:
   deploy:
     needs: test
     runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
     strategy:
