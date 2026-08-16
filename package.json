@@ -25,6 +25,10 @@
     "validate:gamma-rc": "node scripts/validate-gamma-rc.mjs",
     "gamma:refresh:dry": "node scripts/gamma-prod-refresh.mjs",
     "gamma:refresh": "GAMMA_REFRESH_EXECUTE=1 node scripts/gamma-prod-refresh.mjs",
-    "check:epic-status": "node scripts/check-parent-epic-drift.mjs"
+    "check:epic-status": "node scripts/check-parent-epic-drift.mjs",
+    "canary:dns": "node scripts/assert-production-dns.mjs",
+    "canary:surface": "node scripts/assert-public-surface.mjs",
+    "canary:lanes": "node scripts/assert-lane-health.mjs",
+    "canary": "npm run canary:dns && npm run canary:lanes && npm run canary:surface"
   }
 }
