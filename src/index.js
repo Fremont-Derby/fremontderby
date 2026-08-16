@@ -1859,7 +1859,7 @@ export default {
       /^\/api\/seasons\/([^/]+)\/(?:individual-standings|player-standings)$/,
     );
     const seasonPrizesMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/prizes$/,
+      /^\/api\/seasons\/([^/]+)\/(?:prizes|awards|prize-summary)$/,
     );
     const requireSeasonUuid = (value) => {
       // Hex-shape only (shared isUuid) so persisted non-RFC seed season ids remain readable.
