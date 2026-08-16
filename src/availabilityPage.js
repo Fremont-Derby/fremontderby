@@ -18,6 +18,10 @@ export function renderAvailabilityPage() {
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Teams</a>
       <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Messages</a>
       <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Score</a>
+      <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Standings</a>
+      <a href="/trades" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Trades</a>
+      <a href="/playoffs" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Playoffs</a>
+      <a href="/notifications" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Alerts</a>
     </nav>
     <section class="recovery" data-recovery aria-live="polite">
       <h1 data-recovery-title>Finding your next league night…</h1>
