@@ -1508,6 +1508,10 @@ export default {
           deployedAt: version.timestamp,
           ok: readiness.ok,
           environment: readiness.environment,
+          expectedSupabaseProjectRef: readiness.expectedSupabaseProjectRef,
+          expectedSupabaseSchema: readiness.expectedSupabaseSchema,
+          supabase: readiness.supabase,
+          checks: readiness.checks,
         },
         readiness.ok ? 200 : 503,
       );
