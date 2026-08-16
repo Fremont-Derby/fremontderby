@@ -2464,6 +2464,10 @@ if (url.pathname === "/standings") {
     }
 
     if (teamTradeProposalMatch) {
+      if (request.method === "GET") {
+        // Same payload as /api/me/trades; captains probing team-scoped path no longer get 405.
+        return handleListOwnTeamTradesRequest(request, env);
+      }
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
