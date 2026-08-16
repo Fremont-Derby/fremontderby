@@ -43,7 +43,7 @@ Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl
 
 | File | Name | Trigger | Notes |
 |------|------|---------|-------|
-| `ci.yml` | CI | `workflow_dispatch` only | Full test suite; auto push/PR triggers remain off until #723 runners are healthy (#724) |
+| `ci.yml` | CI | `workflow_dispatch` + `pull_request`/`push` on integration branches | Lint/check/tests only — no CF secrets, no deploy (#872) |
 | `deploy-release-lanes.yml` | Deploy release lanes | `workflow_dispatch` | **`needs: test` gate restored** (#725); probe still `continue-on-error` until #713 |
 | `diagnose-worker-domains.yml` | Diagnose worker domains | `workflow_dispatch` | Cloudflare domain diagnostics |
 | `lane-health-monitor.yml` | Lane health monitor | `workflow_dispatch` | Probe `/health/environment` |
