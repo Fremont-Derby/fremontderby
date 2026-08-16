@@ -15,3 +15,7 @@ The external scheduler should only know how to find the repository and bootstrap
 Specialist behavior belongs in `.github/agents/`; file/surface guardrails belong in `.github/instructions/`; repeatable deep procedures belong in `.github/skills/`. This keeps scheduled sessions small while still allowing them to discover deeper context only when needed.
 
 When this bootstrap can be made materially clearer or more robust, update this file. Avoid adding temporary blockers, issue numbers, current release status, or implementation detail here.
+
+## Parent epic status (#395)
+
+Foundation epics #1–#4 are historical. Current pilot readiness is **#247**. Convention and drift check: [parent-epic-status-convention.md](./parent-epic-status-convention.md).
