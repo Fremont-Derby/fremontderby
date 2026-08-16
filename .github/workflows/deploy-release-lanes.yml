@@ -81,9 +81,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          npx --yes wrangler@4 secret delete SUPABASE_URL --env ${{ matrix.lane }}
-          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env ${{ matrix.lane }}
-          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env ${{ matrix.lane }}
+          npx --yes wrangler@4 secret delete SUPABASE_URL --env ${{ matrix.lane }} || ver>nul
+          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env ${{ matrix.lane }} || ver>nul
+          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env ${{ matrix.lane }} || ver>nul
           if "%LANE_SUPABASE_SERVICE_ROLE_KEY%"=="" (echo LANE_SUPABASE_SERVICE_ROLE_KEY missing & exit /b 1)
           set SECRET_VALUE=%LANE_SUPABASE_SERVICE_ROLE_KEY%
           node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY ${{ matrix.lane }}
