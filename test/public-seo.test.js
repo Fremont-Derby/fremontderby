@@ -3,7 +3,7 @@ import test from 'node:test';
 import { injectPublicSeo, seoForPath } from '../src/publicSeo.js';
 
 test('seo map covers primary public surfaces', () => {
-  for (const path of ['/', '/standings', '/schedule', '/rules', '/demo']) {
+  for (const path of ['/', '/standings', '/schedule', '/rules', '/demo', '/scorecard', '/scorecard/live', '/availability', '/lineup']) {
     assert.ok(seoForPath(path)?.description);
   }
 });
