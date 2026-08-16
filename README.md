@@ -31,6 +31,8 @@ Agents should improve these instruction files when they discover a **durable** l
 
 ## Fast contributor start
 
+Public contributors: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 1. Read `AGENTS.md`.
 2. Reconcile latest `main`, open/recent PRs, current issues/milestones, and CI.
 3. Read the issue you intend to work and check for overlapping implementation.
