@@ -1,14 +1,11 @@
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
+import { safeJson } from './textEscape.js';
 function browserConfig(env = {}) {
   return {
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   };
-}
-
-function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
 }
 
 export function renderProfilePage(env = {}) {
