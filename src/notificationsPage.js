@@ -31,6 +31,10 @@ export function renderNotificationsPage() {
       <a class="ghost" href="/players">Players</a>
       <a class="ghost" href="/schedule">Schedule</a>
       <a class="ghost" href="/scorecard">Score</a>
+      <a class="ghost" href="/lineup">Lineup</a>
+      <a class="ghost" href="/availability">Check in</a>
+      <a class="ghost" href="/trades">Trades</a>
+      <a class="ghost" href="/standings">Standings</a>
     </div>
     <section class="list" data-list></section>
   </main>
@@ -99,7 +103,7 @@ export function renderNotificationsPage() {
         empty.innerHTML='<strong>No notices yet</strong><div class="muted">League broadcasts and team alerts will show up here.</div>';
         const links=document.createElement('div');
         links.className='actions';
-        for(const [label,href] of [['Schedule','/schedule'],['Teams','/teams'],['Messages','/messages']]){
+        for(const [label,href] of [['Schedule','/schedule'],['Score','/scorecard'],['Lineup','/lineup'],['Teams','/teams'],['Messages','/messages']]){
           const a=document.createElement('a');a.href=href;a.textContent=label;links.append(a);
         }
         empty.append(links);
