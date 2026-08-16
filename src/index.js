@@ -5,6 +5,7 @@ import {
 } from './adminAuditRepository.js';
 import { createChatRepository } from './chatRepository.js';
 import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
 import {
   readSanitizedJsonBody,
   safeClientErrorMessage,
@@ -175,44 +176,7 @@ function clientErrorMessage(error) {
 }
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
-  if (Number(error?.status) >= 400 && Number(error?.status) < 600) return Number(error.status);
-  if (/invalid input syntax for type uuid/i.test(String(error?.message || ""))) return 400;
-  if (error.message === "Season not found") return 404;
-  if (error.message === "Actor is not a league admin") return 403;
-  if (error.message.includes("Actor is not a league admin")) return 403;
-  if (error.message.includes("Only the active captain")) return 403;
-  if (error.message.includes("Only an active captain")) return 403;
-  if (error.message.includes("Only a traded player")) return 403;
-  if (error.message.includes("Active roster membership is required")) return 403;
-  if (error.message.startsWith("Supabase request failed with 401")) return 401;
-  if (error.message.startsWith("Supabase request failed with 403")) return 403;
-  if (error.message.includes("Player is already scheduled")) return 409;
-  if (error.message.includes("Only match players or active team captains")) return 403;
-  if (error.message.includes("already complete")) return 409;
-  if (error.message.includes("is finalized")) return 409;
-  if (error.message.includes("no racks to undo")) return 409;
-  if (error.message.includes("before finalization")) return 409;
-  if (error.message.includes("before correction")) return 409;
-  if (error.message.includes("valid completed race state")) return 409;
-  if (error.message.includes("valid corrected race state")) return 409;
-  if (error.message.includes("rack history must match")) return 409;
-  if (error.message.includes("Race targets are required")) return 409;
-  if (error.message.includes("prize payouts are already finalized")) return 409;
-  if (error.message.includes("Season setup can only change before publication")) return 409;
-  if (error.message.includes("Roster lock has passed")) return 409;
-  if (error.message.includes("pending trade already includes")) return 409;
-  if (error.message.includes("Trade is no longer pending")) return 409;
-  if (error.message.includes("active membership changed")) return 409;
-  if (error.message.includes("active non-captain roster member")) return 409;
-  if (error.message.includes("Player already has an active team membership")) return 409;
-  if (error.message.includes("You already captain a team in this season")) return 409;
-  if (error.message.includes("already have a team application in this season")) return 409;
-  if (error.message.includes("Season is not open for team applications")) return 409;
-  if (error.message.includes("That team name is already reserved")) return 409;
-  if (error.message.includes("That team name is already used in this season")) return 409;
-  if (error.message.includes("Trade blocked: player still has an active team membership")) return 409;
-  if (error.message === "Player match not found") return 404;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 export async function handlePublishScheduleRequest(

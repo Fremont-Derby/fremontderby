@@ -1,4 +1,5 @@
 import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
 import {
   adminOverrideReconciledPlayerMatchCommand,
   confirmPlayerMatchScoreCommand,
@@ -17,28 +18,7 @@ function jsonResponse(body, status = 200, headers = {}) {
 }
 
 export function dualScoringStatusForError(error) {
-  const message = error?.message || 'Request failed';
-  if (message.includes('Actor is not a league admin')) return 403;
-  if (message.includes('not an active member of the scoring team')) return 403;
-  if (message.includes('active on both teams in the matchup')) return 403;
-  if (message.includes('Scoring team is not part')) return 403;
-  if (message.includes('Supabase request failed with 401')) return 401;
-  if (message.includes('Supabase request failed with 403')) return 403;
-  if (message.includes('Player match not found')) return 404;
-  if (
-    message.includes('finalized')
-    || message.includes('must match')
-    || message.includes('Both teams must confirm')
-    || message.includes('Both team score records are required')
-    || message.includes('Race target')
-    || message.includes('Score record')
-    || message.includes('Resolved rack history')
-    || message.includes('Opening discipline is locked')
-    || message.includes('Rack is not present')
-    || message.includes('Score changed on another device')
-    || message.includes('Refresh the scorecard before changing the score')
-  ) return 409;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 async function readJsonBody(request) {
@@ -114,7 +94,7 @@ export function createDualScoringHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return jsonResponse({ error: error.message }, dualScoringStatusForError(error));
+      return jsonResponse({ error: safeClientErrorMessage(error) }, dualScoringStatusForError(error));
     }
   }
 
