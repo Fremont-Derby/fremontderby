@@ -19,3 +19,7 @@ When this bootstrap can be made materially clearer or more robust, update this f
 ## Parent epic status (#395)
 
 Foundation epics #1–#4 are historical. Current pilot readiness is **#247**. Convention and drift check: [parent-epic-status-convention.md](./parent-epic-status-convention.md).
+
+## API reference
+
+Agent-oriented HTTP inventory: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (#363).
