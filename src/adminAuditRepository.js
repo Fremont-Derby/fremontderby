@@ -124,7 +124,16 @@ export async function deliverAuditWebhooks(env, actorUserId, {
 } = {}) {
   const webhookUrl = String(env?.AUDIT_WEBHOOK_URL || '').trim();
   if (!webhookUrl) {
-    return { delivered: 0, skipped: true };
+    // Drain queue so missing config does not leave unbounded pending rows.
+    const batch = await repository.claimWebhookBatch({ actorUserId, batchSize: 25 });
+    for (const item of batch) {
+      await repository.markWebhookDelivered({
+        actorUserId,
+        outboxId: item.outboxId,
+        error: 'AUDIT_WEBHOOK_URL not configured',
+      });
+    }
+    return { delivered: 0, skipped: true, drained: batch.length };
   }
   const batch = await repository.claimWebhookBatch({ actorUserId, batchSize: 25 });
   let delivered = 0;
@@ -158,4 +167,30 @@ export async function deliverAuditWebhooks(env, actorUserId, {
     }
   }
   return { delivered, pending: batch.length - delivered };
+}
+
+/** Best-effort audit write + optional webhook flush. Never throws to callers. */
+export async function writeAuditBestEffort(env, actorUserId, event, {
+  fetch: fetchImpl = globalThis.fetch,
+} = {}) {
+  try {
+    if (!actorUserId || !event?.action) return { ok: false };
+    const entityId = event.entityId ?? null;
+    // write_admin_audit_event requires a non-null entity uuid
+    if (!entityId) return { ok: false, reason: 'entityId required' };
+    const repository = createAdminAuditRepository(env, { fetch: fetchImpl });
+    await repository.writeAuditEvent({
+      actorUserId,
+      action: event.action,
+      entityType: event.entityType ?? 'unknown',
+      entityId,
+      reason: event.reason ?? null,
+      beforeState: event.beforeState ?? null,
+      afterState: event.afterState ?? null,
+    });
+    await deliverAuditWebhooks(env, actorUserId, { fetch: fetchImpl, repository });
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
 }
