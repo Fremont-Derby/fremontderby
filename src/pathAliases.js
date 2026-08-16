@@ -19,6 +19,8 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/standing-availability': '/api/me/profile/standing-availability',
   '/api/me/player-profile': '/api/me/profile',
   '/api/me/player': '/api/me/profile',
+  '/api/me/notifications/mark-as-read-all': '/api/me/notifications/read-all',
+  '/api/me/notifications/clear': '/api/me/notifications/read-all',
 };
 
 /**
@@ -74,6 +76,10 @@ export const SEGMENT_ALIAS_RULES = [
     // Alias keeps /ready-check singular form discoverable for clients that only rewrite paths.
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'ready-check',
     apply: (p) => `/api/teams/${p[3]}/ready-checks`,
+  },
+  {
+    test: (p) => p.length === 6 && p[1] === 'api' && p[2] === 'me' && p[3] === 'notifications' && p[5] === 'mark-as-read',
+    apply: (p) => `/api/me/notifications/${p[4]}/read`,
   },
   {
     test: (p) => p.length === 4 && p[1] === 'api' && p[2] === 'direct-messages',
