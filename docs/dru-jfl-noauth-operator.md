@@ -54,3 +54,24 @@ GitHub Actions **Deploy release lanes** is currently blocked by **billing/spendi
 ## DB proof (already done)
 
 `dru.create_team_with_captain` / `submit_team_application` enforce season rules correctly. The DRU test actor already captains a team in Season 1; further applications correctly return "You already captain a team in this season".
+
+
+## Critical: PostgREST exposed schemas (staging project)
+
+Staging project `oqkkvqkerusepyokzbmt` PostgREST `db_schema` was observed as:
+
+```text
+public,graphql_public
+```
+
+Lane profiles (`Accept-Profile: dru|jfl|gamma`) **will not work** until the dashboard exposes:
+
+```text
+public, graphql_public, dru, dru_private, jfl, jfl_private, gamma, gamma_private
+```
+
+**Operator path:** Supabase project (staging) → **Settings → API → Exposed schemas** → add the six lane schemas → save.
+
+Without this, Workers with correct `SUPABASE_SCHEMA` still get opaque API failures (often surfaced as 401-ish client errors on `/api/seasons`).
+
+SQL `GRANT USAGE` on those schemas was applied for `anon` / `authenticated` / `service_role`. Exposure is still a **platform config** step (Management API PATCH `/postgrest` returned 403 for the available access token).
