@@ -140,5 +140,35 @@ export function createTeamRegistrationRepository(
         source_season_id: sourceSeasonId,
       });
     },
+
+    listSeasonWaitlist({ actorUserId, seasonId }) {
+      return requestRpc(fetchImpl, supabaseUrl, headers, 'list_season_waitlist', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+      });
+    },
+
+    getMyWaitlistStatus({ actorUserId, seasonId }) {
+      return requestRpc(fetchImpl, supabaseUrl, headers, 'get_my_team_application_waitlist_status', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+      });
+    },
+
+    adminOverrideWaitlistOrder({ actorUserId, applicationId, rank, reason }) {
+      return requestRpc(fetchImpl, supabaseUrl, headers, 'admin_override_waitlist_order', {
+        actor_user_id: actorUserId,
+        target_application_id: applicationId,
+        new_rank: rank,
+        override_reason: reason,
+      });
+    },
+
+    promoteNextWaitlistedTeam({ actorUserId, seasonId }) {
+      return requestRpc(fetchImpl, supabaseUrl, headers, 'promote_next_waitlisted_team', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+      });
+    },
   };
 }
