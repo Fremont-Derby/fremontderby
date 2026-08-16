@@ -171,9 +171,9 @@ export function renderPrimaryNavigation(pathname = '/') {
 }
 
 export const shellStyles = `
-  .fd-shell { position: sticky; top: 0; z-index: 1000; width: 100%; background: rgba(6,17,13,.96); border-bottom: 1px solid #315d45; backdrop-filter: blur(12px); color: #f4f7f5; }
+  .fd-shell { position: sticky; top: 0; z-index: 1000; width: 100%; padding-top: env(safe-area-inset-top, 0px); background: rgba(6,17,13,.96); border-bottom: 1px solid #315d45; backdrop-filter: blur(12px); color: #f4f7f5; }
   .fd-shell, .fd-shell * { box-sizing: border-box; }
-  .fd-shell__inner { width: min(1120px, 100%); min-height: 58px; margin: 0 auto; padding: 8px 16px; display: flex; align-items: center; gap: 18px; }
+  .fd-shell__inner { width: min(1120px, 100%); min-height: 58px; margin: 0 auto; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 12px; }
   .fd-brand { display: inline-flex; align-items: center; gap: 9px; color: #f4f7f5; text-decoration: none; font: 800 .98rem/1 Inter, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; }
   .fd-brand__ball { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #f4f7f5; color: #07150f; border: 3px solid #d9dedb; font-size: .8rem; }
   .fd-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
@@ -187,7 +187,7 @@ export const shellStyles = `
     z-index: 1200;
     display: none;
     gap: 10px;
-    padding: 12px 16px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
     border-bottom: 1px solid #315d45;
     background: linear-gradient(180deg, #123522, #0b2418);
     color: #f4f7f5;
@@ -215,7 +215,7 @@ export const shellStyles = `
   }
   .fd-mobile-dock { display: none; }
   .fd-mobile-dock-spacer { display: none; }
-  .fd-message-notifications { position: relative; flex: 0 0 auto; }
+  .fd-message-notifications { position: relative; flex: 0 0 auto; margin-right: 2px; }
   .fd-message-notifications[hidden] { display: none; }
   .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; overflow: visible; }
   .fd-message-indicator:hover { color: #fff; background: #123522; }
@@ -286,20 +286,20 @@ export const shellStyles = `
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  .fd-error-popup { position: fixed; top: 72px; right: 16px; z-index: 2100; width: min(430px, calc(100vw - 24px)); display: grid; grid-template-columns: 30px minmax(0,1fr) 40px; gap: 10px; align-items: start; padding: 14px; border: 2px solid #ff8f87; border-radius: 13px; background: #32110f; box-shadow: 0 18px 48px rgba(0,0,0,.48); color: #fff4f2; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  .fd-error-popup { position: fixed; top: calc(72px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 2100; width: min(430px, calc(100vw - 24px)); display: grid; grid-template-columns: 30px minmax(0,1fr) 40px; gap: 10px; align-items: start; padding: 14px; border: 2px solid #ff8f87; border-radius: 13px; background: #32110f; box-shadow: 0 18px 48px rgba(0,0,0,.48); color: #fff4f2; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-error-popup[hidden] { display: none; }
   .fd-error-popup__icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #f06a60; color: #250605; font-weight: 950; }
   .fd-error-popup__copy { min-width: 0; display: grid; gap: 4px; line-height: 1.35; }
   .fd-error-popup__copy strong { font-size: .92rem; }
   .fd-error-popup__copy span { overflow-wrap: anywhere; color: #ffd5d1; font-size: .86rem; }
-  .fd-error-popup__close { width: 40px; height: 40px; margin: -7px -7px 0 0; border: 0; border-radius: 9px; background: transparent; color: #fff4f2; font: 700 1.5rem/1 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+  .fd-error-popup__close { width: 40px; height: 40px; margin: 0; border: 0; border-radius: 9px; background: transparent; color: #fff4f2; font: 700 1.5rem/1 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
   .fd-error-popup__close:hover { background: rgba(255,255,255,.12); }
   .fd-error-popup__close:focus-visible { outline: 3px solid #ffd5d1; outline-offset: 2px; }
   @media (max-width: 760px) {
-    .fd-shell__inner { min-height: 56px; padding: 7px 12px; }
+    .fd-shell__inner { min-height: 56px; padding: 7px max(12px, env(safe-area-inset-right, 0px)) 7px max(12px, env(safe-area-inset-left, 0px)); gap: 10px; }
     .fd-nav--desktop { display: none; }
     .fd-message-notifications { margin-left: auto; }
-    .fd-message-preview { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; }
+    .fd-message-preview { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); width: auto; }
     .fd-nav-menu { display: block; margin-left: 0; position: static; }
     .fd-nav-menu[open] { z-index: 1200; }
     .fd-nav--mobile {
@@ -311,12 +311,12 @@ export const shellStyles = `
       max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
       z-index: 1200;
     }
-    .fd-error-popup { top: 66px; right: 12px; left: 12px; width: auto; }
+    .fd-error-popup { top: calc(66px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); width: auto; }
     .fd-mobile-dock {
       position: fixed;
-      right: 8px;
-      bottom: max(8px, env(safe-area-inset-bottom));
-      left: 8px;
+      right: max(8px, env(safe-area-inset-right, 0px));
+      bottom: max(8px, env(safe-area-inset-bottom, 0px));
+      left: max(8px, env(safe-area-inset-left, 0px));
       z-index: 1050;
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
