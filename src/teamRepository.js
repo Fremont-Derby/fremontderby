@@ -1,3 +1,4 @@
+import { accumulateMatchCounts, evaluateRosterEligibility } from './rosterMatchCounts.js';
 import { formatPlayerPickerLabel, markDuplicateNames } from './playerPickerLabel.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
@@ -491,34 +492,31 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
             const teamId = team.teamId || team.team_id;
             const seasonId = team.seasonId || team.season_id;
             const rows = matchBySeason.get(seasonId) || [];
-            const counts = new Map();
-            for (const row of rows) {
-              for (const side of ['a', 'b']) {
-                const pid = row[`player_${side}_id`];
-                if (!pid) continue;
-                const entry = counts.get(pid) || { forUs: 0, elsewhere: 0 };
-                const onThisTeam =
-                  (side === 'a' && row.team_a_id === teamId) ||
-                  (side === 'b' && row.team_b_id === teamId);
-                if (onThisTeam) entry.forUs += 1;
-                else entry.elsewhere += 1;
-                counts.set(pid, entry);
-              }
-            }
-            const roster = (team.roster || team.members || []).map((member) => {
+            const counts = accumulateMatchCounts(rows, teamId);
+            const rosterBase = (team.roster || team.members || []).map((member) => {
               const pid = member.playerId || member.player_id || member.id;
-              const c = counts.get(pid) || { forUs: 0, elsewhere: 0 };
-              // Pool rule: 4+ team matches for core eligibility; 3+ still shown as path-to-eligible.
-              const postseasonEligible = c.forUs >= 4;
-              const approachingEligible = !postseasonEligible && c.forUs >= 3;
+              const c = counts.get(pid) || { forUs: 0, elsewhere: 0, elsewhereByTeam: new Map() };
               return {
                 ...member,
                 matchesForTeam: c.forUs,
                 matchesElsewhere: c.elsewhere,
-                postseasonEligible,
-                approachingEligible,
+                elsewhereByTeam: c.elsewhereByTeam
+                  ? Object.fromEntries(c.elsewhereByTeam.entries())
+                  : {},
               };
             });
+            const evaluated = evaluateRosterEligibility(
+              rosterBase.map((m) => ({
+                forUs: m.matchesForTeam,
+                elsewhere: m.matchesElsewhere,
+              })),
+            );
+            const roster = rosterBase.map((member, i) => ({
+              ...member,
+              postseasonEligible: evaluated[i].postseasonEligible,
+              approachingEligible: evaluated[i].approachingEligible,
+              matchesNeed: evaluated[i].need,
+            }));
             return { ...team, roster, members: roster };
           }),
         };
