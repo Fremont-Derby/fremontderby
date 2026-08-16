@@ -400,11 +400,24 @@ export function renderProfilePage(env = {}) {
       const fargoIdLine = document.querySelector('[data-fargo-id-line]');
       if (fargoDetail) {
         if (profile && profile.fargo_rating != null) {
-          fargoDetail.textContent = 'Current rating: ' + profile.fargo_rating
-            + (profile.rating_status ? (' · ' + profile.rating_status) : '')
-            + '. Used for race targets when both players are rated.';
+          const sourceRaw = String(profile.rating_source || profile.ratingSource || profile.rating_status || '').toLowerCase();
+          const sourceLabel = sourceRaw === 'official_fargo' || sourceRaw === 'established'
+            ? 'Official Fargo'
+            : sourceRaw === 'derby_estimate'
+              ? 'Derby estimate'
+              : sourceRaw === 'admin_provisional' || sourceRaw === 'provisional'
+                ? 'Admin provisional'
+                : (profile.rating_status || 'On file');
+          const robustness = profile.robustness != null ? profile.robustness : profile.fargo_robustness;
+          const parts = [
+            'Current seed: ' + profile.fargo_rating,
+            sourceLabel,
+          ];
+          if (robustness != null && robustness !== '') parts.push('Robustness ' + robustness);
+          if (profile.confidence) parts.push(String(profile.confidence) + ' confidence');
+          fargoDetail.textContent = parts.join(' · ') + '. Official Fargo is never calculated inside Derby. Used for race targets when both players are rated.';
         } else {
-          fargoDetail.textContent = 'No rating on file yet. Unrated players can still play; race targets use the season default until a rating is established.';
+          fargoDetail.textContent = 'No rating on file yet. Unrated players can still play; race targets use the season default until a rating is established. Add a Fargo ID below if you have one — it does not set your rating by itself.';
         }
       }
       if (fargoIdInput) {
