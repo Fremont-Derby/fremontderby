@@ -172,6 +172,14 @@ export function createAdminPlayersRepository(
     },
 
     /** #92 Record immutable rating observation (admin provisional / official / estimate). */
+    async recomputeDerbyEstimate({ actorUserId, playerId }) {
+      const rows = await rpc('recompute_derby_estimate_for_player', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+      });
+      return Array.isArray(rows) ? rows[0] : rows;
+    },
+
     async recordRatingObservation({
       actorUserId,
       playerId,
