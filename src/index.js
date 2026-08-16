@@ -559,8 +559,8 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: body.decision,
-        reason: body.reason,
+        decision: normalizeApproveDecline(body) ?? body.decision,
+        reason: body.reason ?? body.note,
       },
       repository,
     );
@@ -584,8 +584,8 @@ export async function handleManageTeamSlotRequest(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action,
-        reason: body.reason,
+        action: body.action ?? body.decision ?? body.response,
+        reason: body.reason ?? body.note,
         extensionDays: body.extensionDays ?? body.extension_days,
       },
       repository,
