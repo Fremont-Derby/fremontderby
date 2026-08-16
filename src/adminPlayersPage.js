@@ -26,7 +26,7 @@ export function renderAdminPlayersPage() {
       </div>
     </header>
     <section class="panel">
-      <form class="create" data-create-form><label>Player name<input data-create-name data-safe-ac="publicPlayers" maxlength="80" autocomplete="off" placeholder="Example: Jason Lambert" required /></label><button type="submit" data-create-button>Create player</button></form>
+      <form class="create" data-create-form><label>Player name<input data-create-name data-safe-ac="publicPlayers" maxlength="80" autocomplete="off" placeholder="Example: Jason Lambert" required /></label><button type="submit" data-create-button>Create player</button></form><p class="muted" style="margin:8px 0 0"><a href="/admin/player-contact">Look up captain phone (one player)</a></p>
       <form class="search" data-search-form>
         <label class="muted" for="admin-player-search">Find by player or team name</label>
         <input id="admin-player-search" data-search type="search" autocomplete="off" data-safe-ac="publicPlayers" placeholder="Type part of a name — e.g. “jen” or “breakers”" aria-label="Search players by name or team" aria-controls="admin-player-list" />
