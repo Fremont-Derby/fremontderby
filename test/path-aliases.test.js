@@ -28,3 +28,16 @@ test('trades and playoffs convenience aliases', () => {
     '/api/seasons/abc/schedule',
   );
 });
+
+test('profile and join path aliases', () => {
+  assert.equal(normalizeApiPathname('/api/me/standing-availability'), '/api/me/profile/standing-availability');
+  assert.equal(normalizeApiPathname('/api/me/player-profile'), '/api/me/profile');
+  assert.equal(
+    normalizeApiPathname('/api/teams/abc/membership-requests'),
+    '/api/teams/abc/membership-request',
+  );
+  assert.equal(
+    normalizeApiPathname('/api/teams/abc/join'),
+    '/api/teams/abc/membership-request',
+  );
+});
