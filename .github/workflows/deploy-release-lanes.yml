@@ -64,6 +64,22 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN missing"; exit 1; }
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
+      - name: Align isolated lane secrets to staging Supabase
+        if: matrix.lane == 'dru' || matrix.lane == 'jfl' || matrix.lane == 'gamma'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          LANE="${{ matrix.lane }}"
+          # Ensure Worker secret matches staging project (lane vars alone cannot override stale secrets).
+          printf '%s' 'https://oqkkvqkerusepyokzbmt.supabase.co' | npx --yes wrangler@4 secret put SUPABASE_URL --env "$LANE"
+          printf '%s' 'sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB' | npx --yes wrangler@4 secret put SUPABASE_PUBLISHABLE_KEY --env "$LANE"
+          printf '%s' 'oqkkvqkerusepyokzbmt' | npx --yes wrangler@4 secret put EXPECTED_SUPABASE_PROJECT_REF --env "$LANE"
+          test -n "${LANE_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets"; exit 1; }
+          printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"
+
       - name: Deploy ${{ matrix.lane }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
