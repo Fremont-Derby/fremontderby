@@ -1756,6 +1756,28 @@ export async function handleGetSeasonPrizeSummaryRequest(
   }
 }
 
+
+export async function handleGetCurrentPrizeSummaryRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const standingsRepository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await standingsRepository.listPublicSeasons();
+    const preferred =
+      seasons.find((season) => String(season.status || '').toLowerCase() === 'active')
+      || seasons.find((season) => String(season.status || '').toLowerCase() === 'playoffs')
+      || seasons[0];
+    if (!preferred?.id) {
+      return jsonResponse({ error: 'No public seasons available for prize summary.' }, 404);
+    }
+    return handleGetSeasonPrizeSummaryRequest(request, env, preferred.id, { fetch: fetchImpl });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleConfigureSeasonPrizesRequest(
   request,
   env,
@@ -2851,6 +2873,20 @@ if (url.pathname === "/standings") {
       }
 
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+
+    if (url.pathname === "/api/prizes" || url.pathname === "/api/prize-pool") {
+      if (request.method === "HEAD") {
+        return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
+      }
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: { allow: "GET, HEAD, OPTIONS", "cache-control": "no-store" } });
+      }
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleGetCurrentPrizeSummaryRequest(request, env);
     }
 
     if (url.pathname === "/api/seasons") {
