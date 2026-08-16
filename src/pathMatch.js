@@ -1,6 +1,7 @@
 /**
  * Split-based path matchers for hot /api/teams/:id/… routes.
- * Prototype toward #948 (route table) — no regex, no backtracking.
+ * Split matchers for chat/lineup families (#948 progress).
+ * Pair with pathAliases.normalizeApiPathname (#950) before routing.
  */
 
 /**
