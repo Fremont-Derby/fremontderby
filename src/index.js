@@ -484,7 +484,9 @@ export async function handleRespondToReturningTeamSlotRequest(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action,
+        action: body.action ?? body.response ?? body.decision
+          ?? (body.accept === true || body.accepted === true ? 'accept' : null)
+          ?? (body.decline === true || body.declined === true ? 'decline' : null),
         transferPlayerId: body.transferPlayerId ?? body.transfer_player_id,
       },
       repository,
