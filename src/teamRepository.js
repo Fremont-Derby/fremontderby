@@ -337,6 +337,59 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         // Availability selection is optional enrichment of the base management view.
       }
 
+      try {
+        const openSeasons = Array.isArray(finalManagement.open_seasons)
+          ? finalManagement.open_seasons
+          : [];
+        const applications = [];
+        const returningSlots = [];
+        for (const season of openSeasons) {
+          const seasonId = season.id || season.seasonId;
+          if (!seasonId) continue;
+          try {
+            const response = await requestJson(
+              fetchImpl,
+              `${supabaseUrl}/rest/v1/rpc/get_own_team_registration`,
+              {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                  actor_user_id: actorUserId,
+                  target_season_id: seasonId,
+                }),
+              },
+            );
+            const registration = Array.isArray(response)
+              ? (response[0]?.registration ?? response[0])
+              : (response?.registration ?? response);
+            const seasonApplications = registration?.applications || [];
+            for (const app of seasonApplications) {
+              applications.push({
+                ...app,
+                seasonId: app.seasonId || seasonId,
+                seasonName: app.seasonName || season.name || registration?.seasonName || null,
+              });
+            }
+            for (const slot of registration?.returningSlots || []) {
+              returningSlots.push({
+                ...slot,
+                seasonId: slot.seasonId || seasonId,
+                seasonName: slot.seasonName || season.name || registration?.seasonName || null,
+              });
+            }
+          } catch {
+            // Per-season registration is optional for management list.
+          }
+        }
+        finalManagement = {
+          ...finalManagement,
+          applications,
+          returning_slots: returningSlots,
+        };
+      } catch {
+        // Applications panel is optional enrichment.
+      }
+
 
       // Practice location/schedule for captained teams (and any membership teams).
       try {
