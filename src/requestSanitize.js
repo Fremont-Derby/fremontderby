@@ -200,6 +200,22 @@ export function safeClientErrorMessage(error) {
   ) {
     return 'This action needs a database update that is not applied yet. Nothing was changed.';
   }
+  // Unique-index fallbacks when an RPC missed a product RAISE (prefer RPC pre-checks).
+  if (/team_applications_active_captain_unique|already have a team application/i.test(msg)) {
+    return 'You already have a team application in this season.';
+  }
+  if (/team_applications_active_name_unique/i.test(msg)) {
+    return 'That team name is already reserved for this season.';
+  }
+  if (/one_active_team_membership_per_player_season|one_active_captain_team_per_season/i.test(msg)) {
+    return 'Player already has an active team membership.';
+  }
+  if (/teams_season_id_name_key/i.test(msg)) {
+    return 'That team name is already used in this season.';
+  }
+  if (/direct_conversations_season_id_player_low_id_player_high_id_key/i.test(msg)) {
+    return 'A conversation with this player already exists for this season.';
+  }
   if (
     /supabase|postgrest|permission denied|schema|column reference|ambiguous|postgres|PGRST|RPC|relation |duplicate key|violates|statement timeout|service role|stack|at Object\.|at Module/i.test(
       msg,
