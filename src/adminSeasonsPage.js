@@ -62,11 +62,13 @@ export function renderAdminSeasonsPage() {
         <label for="admin-season-status">Status
           <select id="admin-season-status" data-status-filter aria-label="Filter by season status">
             <option value="">All statuses</option>
+            <option value="draft">Draft</option>
             <option value="registration">Registration</option>
             <option value="active">Active</option>
             <option value="playoffs">Playoffs</option>
             <option value="complete">Complete</option>
-            <option value="new">New</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="archived">Archived</option>
           </select>
         </label>
       </div>
