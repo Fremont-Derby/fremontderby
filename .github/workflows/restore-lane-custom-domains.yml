@@ -32,3 +32,5 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/diagnose-worker-domains.mjs
+      - name: Production DNS + /health guard (apex + www)
+        run: node scripts/assert-production-dns.mjs

@@ -5,6 +5,7 @@
  */
 const hosts = [
   process.env.PROBE_HOST,
+  process.env.PROBE_WWW,
   process.env.PROBE_DRU,
   process.env.PROBE_JFL,
   process.env.PROBE_GAMMA,

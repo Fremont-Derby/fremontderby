@@ -33,9 +33,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Production DNS + /health guard (apex + www)
+        run: node scripts/assert-production-dns.mjs
       - name: Probe public routes
         env:
           PROBE_HOST: https://fremontderby.com
+          PROBE_WWW: https://www.fremontderby.com
           PROBE_DRU: https://dru.fremontderby.com
           PROBE_JFL: https://jfl.fremontderby.com
           PROBE_GAMMA: https://gamma.fremontderby.com
