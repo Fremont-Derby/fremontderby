@@ -1850,7 +1850,7 @@ export default {
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
     );
     const seasonScheduleMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/schedule$/,
+      /^\/api\/seasons\/([^/]+)\/(?:schedule|rounds)$/,
     );
     const teamStandingsMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/(?:team-standings|standings)$/,
