@@ -24,3 +24,40 @@ test('split matcher agrees with regex baseline on cases', () => {
     assert.deepEqual(matchApiTeamsPath(path), matchApiTeamsPathRegex(path), path);
   }
 });
+
+import {
+  matchApiTeamMatchesPath,
+  matchApiSeasonMessagesPath,
+} from '../src/pathMatch.js';
+
+test('team-matches split matcher', () => {
+  assert.deepEqual(
+    matchApiTeamMatchesPath('/api/team-matches/tm1/chat'),
+    { kind: 'messages', teamMatchId: 'tm1' },
+  );
+  assert.deepEqual(
+    matchApiTeamMatchesPath('/api/team-matches/tm1/messages/read'),
+    { kind: 'messages-read', teamMatchId: 'tm1' },
+  );
+  assert.deepEqual(
+    matchApiTeamMatchesPath('/api/team-matches/tm1/team-choice/me'),
+    { kind: 'team-choice', teamMatchId: 'tm1' },
+  );
+  assert.deepEqual(
+    matchApiTeamMatchesPath('/api/team-matches/tm1/postseason-lineup'),
+    { kind: 'postseason-lineup', teamMatchId: 'tm1' },
+  );
+  assert.equal(matchApiTeamMatchesPath('/api/teams/x/messages'), null);
+});
+
+test('season messages split matcher', () => {
+  assert.deepEqual(
+    matchApiSeasonMessagesPath('/api/seasons/s1/messages'),
+    { kind: 'messages', seasonId: 's1' },
+  );
+  assert.deepEqual(
+    matchApiSeasonMessagesPath('/api/seasons/s1/messages/read'),
+    { kind: 'messages-read', seasonId: 's1' },
+  );
+  assert.equal(matchApiSeasonMessagesPath('/api/seasons/s1/schedule'), null);
+});
