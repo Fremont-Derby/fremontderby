@@ -471,6 +471,60 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         // membership practice is optional enrichment
       }
 
+      // #354 roster match counts: team-specific vs elsewhere (finalized regular matches)
+      try {
+        const teams = finalManagement.captain_teams || [];
+        const seasonIds = [...new Set(teams.map((t) => t.seasonId || t.season_id).filter(Boolean))];
+        const matchBySeason = new Map();
+        for (const seasonId of seasonIds) {
+          const rows = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/player_matches?select=player_a_id,player_b_id,team_a_id,team_b_id,status,season_id&season_id=eq.${encodeURIComponent(seasonId)}&status=in.(finalized,corrected)`,
+            { method: 'GET', headers },
+          );
+          matchBySeason.set(seasonId, Array.isArray(rows) ? rows : []);
+        }
+        finalManagement = {
+          ...finalManagement,
+          captain_teams: teams.map((team) => {
+            const teamId = team.teamId || team.team_id;
+            const seasonId = team.seasonId || team.season_id;
+            const rows = matchBySeason.get(seasonId) || [];
+            const counts = new Map();
+            for (const row of rows) {
+              for (const side of ['a', 'b']) {
+                const pid = row[`player_${side}_id`];
+                if (!pid) continue;
+                const entry = counts.get(pid) || { forUs: 0, elsewhere: 0 };
+                const onThisTeam =
+                  (side === 'a' && row.team_a_id === teamId) ||
+                  (side === 'b' && row.team_b_id === teamId);
+                if (onThisTeam) entry.forUs += 1;
+                else entry.elsewhere += 1;
+                counts.set(pid, entry);
+              }
+            }
+            const roster = (team.roster || team.members || []).map((member) => {
+              const pid = member.playerId || member.player_id || member.id;
+              const c = counts.get(pid) || { forUs: 0, elsewhere: 0 };
+              // Pool rule: 4+ team matches for core eligibility; 3+ still shown as path-to-eligible.
+              const postseasonEligible = c.forUs >= 4;
+              const approachingEligible = !postseasonEligible && c.forUs >= 3;
+              return {
+                ...member,
+                matchesForTeam: c.forUs,
+                matchesElsewhere: c.elsewhere,
+                postseasonEligible,
+                approachingEligible,
+              };
+            });
+            return { ...team, roster, members: roster };
+          }),
+        };
+      } catch {
+        // Match counts are optional enrichment for captain UX.
+      }
+
       return finalManagement;
     },
 
