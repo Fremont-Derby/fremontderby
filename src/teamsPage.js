@@ -256,6 +256,8 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
       const roster = Array.isArray(members) ? members : [];
       // Prefer explicit registered flags when present; otherwise count active roster seats.
       let registered = 0;
+      let playoffEligible = 0;
+      let approaching = 0;
       for (const m of roster) {
         const status = String(m.registrationStatus || m.registration_status || m.status || '').toLowerCase();
         const paid = m.paymentStatus || m.payment_status;
@@ -265,17 +267,27 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
           // Unknown flags: treat rostered seat as counting toward depth.
           registered += 1;
         }
+        const forUs = Number(m.matchesForTeam ?? m.matches_for_team ?? 0);
+        if (m.postseasonEligible || m.postseason_eligible || forUs >= 4) playoffEligible += 1;
+        else if (m.approachingEligible || m.approaching_eligible || forUs >= 3) approaching += 1;
       }
       const target = 4;
       const entry = String(team.entryStatus || team.entry_status || team.slotStatus || team.slot_status || '').toLowerCase();
       const entryLabel = entry
         ? entry.charAt(0).toUpperCase() + entry.slice(1)
         : (roster.length >= 3 ? 'Rostered' : 'Forming');
+      // Pool rule: three players at 4+ team matches unlocks postseason path.
+      let playoffLine = '';
+      if (playoffEligible >= 3) {
+        playoffLine = ' · Playoffs ready · ' + playoffEligible + ' eligible';
+      } else if (playoffEligible + approaching > 0) {
+        playoffLine = ' · Playoffs: ' + playoffEligible + ' eligible' + (approaching ? (', ' + approaching + ' close') : '');
+      }
       if (registered >= target) {
-        return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Opening-night ready';
+        return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Opening-night ready' + playoffLine;
       }
       const need = Math.max(0, target - registered);
-      return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Needs depth (add ' + need + ' more)';
+      return entryLabel + ' · ' + registered + ' of ' + target + ' registered — Needs depth (add ' + need + ' more)' + playoffLine;
     }
     function buildCaptainTeamCard(team){
         const card=document.createElement('div');
@@ -305,8 +317,9 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
             counts.textContent=forUs+' for us · '+elsewhere+' elsewhere';
             const elig=document.createElement('div');
             elig.style.fontSize='.82rem';
-            elig.textContent=eligible?'✓ Playoff eligible':(approach?'3+ team matches · path to eligible':'Needs more team matches');
-            elig.style.color=eligible?'#9ee5bd':(approach?'#d8ad3f':'#aab3bb');
+            const need=Math.max(0,4-forUs);
+            elig.textContent=eligible?'✓ Playoff eligible':(need===1?'Needs 1':(need?('Needs '+need):(approach?'3+ team matches · path to eligible':'Needs more team matches')));
+            elig.style.color=eligible?'#9ee5bd':(approach||need<=1?'#d8ad3f':'#aab3bb');
             li.append(document.createElement('br'), counts, elig);
             if(pid){
               const msg=document.createElement('a');
