@@ -39,6 +39,31 @@ const testAuthEnvironments = new Set(['jfl', 'dru']);
  * explicit bypass flag is enabled. Gamma, staging, and production always use
  * normal authentication even if a stray bypass flag is present.
  */
+
+/** Opaque browser token used only by JFL "Continue with Google" simulation (#655). */
+export const JFL_SIMULATED_GOOGLE_TOKEN = 'fd-jfl-simulated-google-v1';
+
+export function isJflSimulatedGoogleToken(token) {
+  return String(token || '').trim() === JFL_SIMULATED_GOOGLE_TOKEN;
+}
+
+/**
+ * Accept the JFL simulated Google token only when ENVIRONMENT=jfl and bypass is on.
+ * Gamma/DRU/production must reject this token even if bypass is misconfigured.
+ */
+export function resolveJflSimulatedGoogleActor(token, env = {}) {
+  if (!isJflSimulatedGoogleToken(token)) return null;
+  const environment = String(env.ENVIRONMENT || '').trim();
+  if (environment !== 'jfl') {
+    throw new AuthError('JFL simulated Google token is not valid in this environment', 401);
+  }
+  if (!betaAuthBypassEnabled(env)) {
+    throw new AuthError('JFL simulated Google token requires BETA_AUTH_BYPASS on JFL', 401);
+  }
+  const actor = resolveBetaBypassActor(env);
+  return { ...actor, jflSimulatedGoogle: true };
+}
+
 export function betaAuthBypassEnabled(env = {}) {
   const environment = String(env.ENVIRONMENT || '').trim();
   const bypass = String(env.BETA_AUTH_BYPASS || '').trim();
@@ -83,7 +108,14 @@ export async function authenticateSupabaseUser(
 
   const token = bearerToken(request);
 
-  if (token === JFL_SIMULATED_OIDC_ACCESS_TOKEN) {
+  if (token === JFL_SIMULATED_OIDC_ACCESS_TOKEN || isJflSimulatedGoogleToken(token)) {
+    if (!jflSimulatedOidcEnabled(env) && !isJflSimulatedGoogleToken(token)) {
+      throw new AuthError('Invalid bearer token');
+    }
+    if (isJflSimulatedGoogleToken(token)) {
+      const simulated = resolveJflSimulatedGoogleActor(token, env);
+      if (simulated) return simulated;
+    }
     if (!jflSimulatedOidcEnabled(env)) {
       throw new AuthError('Invalid bearer token');
     }
