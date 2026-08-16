@@ -65,7 +65,7 @@ function expectedRacksFromRequest(request, body, playerMatchId, scoringTeamId) {
   const cookieName = scoreSnapshotCookieName(playerMatchId, scoringTeamId);
   const snapshot = decodeScoreSnapshot(cookieValues(request).get(cookieName));
   if (snapshot) return snapshot;
-  throw new Error('Refresh the scorecard before changing the score');
+  throw new Error('Refresh the scorecard before changing the score (expected rack history is out of date or missing)');
 }
 
 function scoreSnapshotCookie(playerMatchId, scoringTeamId, racks) {
