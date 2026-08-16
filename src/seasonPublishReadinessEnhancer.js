@@ -38,7 +38,9 @@ export function deriveSeasonPublishReadiness(setup = {}, teamState = {}) {
       key: 'confirmed-teams',
       label: 'Confirmed teams',
       status: confirmed === capacity ? 'Ready' : 'Blocked',
-      detail: `${confirmed} of ${capacity} confirmed.`,
+      detail: confirmed === capacity
+        ? `${confirmed} of ${capacity} confirmed.`
+        : `${confirmed} of ${capacity} confirmed. Prepared/forming teams do not count until they qualify and the slot is confirmed.`,
       fix: confirmed === capacity ? null : 'teams',
       action: 'Manage teams',
     },
