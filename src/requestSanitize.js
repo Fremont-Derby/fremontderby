@@ -182,7 +182,9 @@ export async function readSanitizedJsonBody(request, { maxBytes = MAX_JSON_BODY_
 /** Map thrown errors to safe client-facing strings (no SQL/stack/schema leakage). */
 export function safeClientErrorMessage(error) {
   const status = Number(error?.status) || 0;
-  const msg = String(error?.message || 'Request failed').replace(/\s+/g, ' ').trim();
+  let msg = String(error?.message || 'Request failed').replace(/\s+/g, ' ').trim();
+  // Unwrap repository wrappers so product RAISE messages stay readable.
+  msg = msg.replace(/^Supabase request failed with \d{3}:\s*/i, '').trim() || msg;
 
   if (status === 413 || /too large/i.test(msg)) return 'Request body is too large.';
   if (status === 415) return 'Request body must be JSON.';
