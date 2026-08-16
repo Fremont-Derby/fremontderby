@@ -64,11 +64,11 @@ export function renderAdminGatewayPage() {
 
     <section class="state support" data-player-content hidden>
       <strong>Need help from a league admin?</strong>
-      <p>Admin support is being consolidated into Messages. For now, open Messages to contact someone you already coordinate with.</p>
+      <p>Use Messages for league questions, or open Moderation if you are reporting abusive chat. Admins share the same queues.</p>
       <div class="recovery-actions">
         <a class="action" href="/messages">Open messages</a>
+        <a class="action secondary" href="/messages/moderation">Moderation</a>
         <a class="action secondary" href="/teams">Teams</a>
-        <a class="action secondary" href="/players">Players</a>
         <a class="action secondary" href="/schedule">Schedule</a>
       </div>
     </section>
