@@ -16,6 +16,9 @@ export const EXACT_PATH_ALIASES = {
   '/api/trades': '/api/me/trades',
   '/api/me/trade-management': '/api/me/trades',
   '/api/me/team-invitations': '/api/me/invitations',
+  '/api/me/standing-availability': '/api/me/profile/standing-availability',
+  '/api/me/player-profile': '/api/me/profile',
+  '/api/me/player': '/api/me/profile',
 };
 
 /**
@@ -57,6 +60,10 @@ export const SEGMENT_ALIAS_RULES = [
   {
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'lineups',
     apply: (p) => `/api/teams/${p[3]}/lineup`,
+  },
+  {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && (p[4] === 'membership-requests' || p[4] === 'join-requests' || p[4] === 'join'),
+    apply: (p) => `/api/teams/${p[3]}/membership-request`,
   },
   {
     // POST body still supplies roundId; team comes from path (handled in router startForTeam).
