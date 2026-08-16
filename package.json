@@ -29,6 +29,8 @@
     "canary:dns": "node scripts/assert-production-dns.mjs",
     "canary:surface": "node scripts/assert-public-surface.mjs",
     "canary:lanes": "node scripts/assert-lane-health.mjs",
-    "canary": "npm run canary:dns && npm run canary:lanes && npm run canary:surface"
+    "canary": "npm run canary:dns && npm run canary:lanes && npm run canary:surface",
+    "canary:contract": "node --test test/public-surface-contract.test.js test/assert-production-dns.test.js",
+    "do-work:check": "npm run canary:contract && npm run canary"
   }
 }
