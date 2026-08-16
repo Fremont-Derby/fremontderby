@@ -406,6 +406,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
     }
     function renderJoinTeams(items){
       if(!joinTeamsEl)return;
+      items=(items||[]).filter((team)=>!team.hasActiveMembership && !team.has_active_membership);
       joinTeamsEl.replaceChildren();
       if(!items.length){joinTeamsEl.append(empty('No teams are open to join right now.'));return}
       for(const team of items){
@@ -555,6 +556,7 @@ function renderMembershipPractice(rows){
 
     function renderApplications(items){
       if(!applicationsEl)return;
+      items=(items||[]).filter((item)=>String(item.status||'').toLowerCase()!=='withdrawn');
       applicationsEl.replaceChildren();
       if(!items.length){applicationsEl.append(empty('No team applications yet.'));return}
       for(const item of items){
