@@ -20,6 +20,7 @@ export function dualScoringStatusForError(error) {
   const message = error?.message || 'Request failed';
   if (message.includes('Actor is not a league admin')) return 403;
   if (message.includes('not an active member of the scoring team')) return 403;
+  if (message.includes('active on both teams in the matchup')) return 403;
   if (message.includes('Scoring team is not part')) return 403;
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
