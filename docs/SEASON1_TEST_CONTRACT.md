@@ -67,3 +67,10 @@ Before treating a lane as open-auth ready:
 5. Prefer `wrangler deploy --env <lane>` (or branch deploy) so custom domains + vars ship together — ad-hoc domain attach alone is not durable
 
 If domain restore Actions fail, check `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` repository secrets and Cloudflare Workers Builds for `fremontderby-dru` / `fremontderby-jfl`.
+
+
+## Wrangler-owned lane domains (#639)
+
+- Lane hostnames (`dru` / `jfl` / `gamma`) must come from `wrangler deploy --env <lane>` with `custom_domain: true` routes.
+- Do not treat ad-hoc `/workers/domains` attach or restore scripts as the durable source of truth.
+- After deploy, confirm `/health/environment` reports the matching lane `environment` value (not `production` on a lane host).
