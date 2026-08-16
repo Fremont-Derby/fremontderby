@@ -752,6 +752,23 @@ export async function handleListOwnTeamTradesRequest(
 }
 
 
+
+export async function handleGetTeamPracticeRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const practice = await repository.getTeamPractice({ teamId });
+    return jsonResponse({ practice });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleUpdateTeamPracticeRequest(
   request,
   env,
@@ -2379,6 +2396,10 @@ if (url.pathname === "/standings") {
     }
 
     if (teamPracticeMatch) {
+      const practiceTeamId = decodeURIComponent(teamPracticeMatch[1]);
+      if (request.method === "GET") {
+        return handleGetTeamPracticeRequest(request, env, practiceTeamId);
+      }
       if (request.method !== "PUT" && request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -2386,7 +2407,7 @@ if (url.pathname === "/standings") {
       return handleUpdateTeamPracticeRequest(
         request,
         env,
-        decodeURIComponent(teamPracticeMatch[1]),
+        practiceTeamId,
       );
     }
 
