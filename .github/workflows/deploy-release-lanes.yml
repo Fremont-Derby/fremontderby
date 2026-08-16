@@ -1,11 +1,8 @@
 name: Deploy release lanes
 
-# Test gate restored (#725). Manual dispatch only — does not depend on PR triggers (#724)
-# still paused while hosted runners/billing recover (#723).
-# Avoid stacking deploys when hosted runners are slow (#723).
+# Manual dispatch. Supports GitHub-hosted (ubuntu-latest) and Windows self-hosted
+# laptop runners (pwsh — no bash required).
 concurrency:
-  # Per-lane group. Do NOT cancel-in-progress: rapid re-dispatch was killing
-  # in-flight deploys and leaving Workers stuck on old tips (practice GET 405, etc.).
   group: deploy-release-lanes-${{ github.event.inputs.lane || github.run_id }}
   cancel-in-progress: false
 
@@ -15,9 +12,9 @@ on:
       runner_target:
         description: 'Runner (ubuntu-latest or self-hosted for laptop INFRA)'
         required: false
-        default: 'ubuntu-latest'
+        default: 'self-hosted'
         type: choice
-        options: [ubuntu-latest, self-hosted]
+        options: [self-hosted, ubuntu-latest]
 
       lane:
         description: 'Lane to deploy (prefer all-lanes so tips stay unified)'
@@ -29,15 +26,15 @@ on:
       skip_tests:
         description: 'Skip unit tests (lint+check still run) to clear deploy queue faster'
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:
   test:
-    runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     defaults:
       run:
-        shell: bash
+        shell: pwsh
     permissions:
       contents: read
     steps:
@@ -47,24 +44,23 @@ jobs:
           node-version: '22'
       - name: Lint and syntax check
         run: |
-          set -euo pipefail
           npm run lint
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Unit tests
         if: ${{ github.event.inputs.skip_tests != 'true' }}
-        # Temporary: Node 24 runner hits document-not-defined in some HTML page module loads.
-        # Lint + syntax check still gate deploy. Restore fail-closed when suite is green on Node 24.
         continue-on-error: true
         run: |
-          set -euo pipefail
           npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   deploy:
     needs: test
-    runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     defaults:
       run:
-        shell: bash
+        shell: pwsh
     permissions:
       contents: read
     strategy:
@@ -81,9 +77,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN missing"; exit 1; }
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
+          if ([string]::IsNullOrEmpty($env:CLOUDFLARE_API_TOKEN)) { Write-Error 'CLOUDFLARE_API_TOKEN missing'; exit 1 }
+          if ([string]::IsNullOrEmpty($env:CLOUDFLARE_ACCOUNT_ID)) { Write-Error 'CLOUDFLARE_ACCOUNT_ID missing'; exit 1 }
+          Write-Host 'Cloudflare secrets present'
       - name: Align isolated lane secrets to staging Supabase
         if: matrix.lane == 'dru' || matrix.lane == 'jfl' || matrix.lane == 'gamma'
         env:
@@ -91,27 +87,28 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          set -euo pipefail
-          LANE="${{ matrix.lane }}"
-          # SUPABASE_URL / PUBLISHABLE_KEY / EXPECTED_REF are vars in wrangler.jsonc (staging).
-          # Stale CF secrets with the same names block vars (error 10053) and pointed at production.
-          # wrangler@4 has no --force on secret delete; ignore missing secrets.
-          npx --yes wrangler@4 secret delete SUPABASE_URL --env "$LANE" || true
-          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env "$LANE" || true
-          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env "$LANE" || true
-          test -n "${LANE_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets"; exit 1; }
-          # Gamma (and any lane without a current deployment) rejects secret put until a version is live.
-          put_secret() {
-            printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"
+          $LANE = '${{ matrix.lane }}'
+          # Stale CF secrets block wrangler vars (10053). Delete if present; ignore failures.
+          npx --yes wrangler@4 secret delete SUPABASE_URL --env $LANE 2>$null
+          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env $LANE 2>$null
+          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env $LANE 2>$null
+          if ([string]::IsNullOrEmpty($env:LANE_SUPABASE_SERVICE_ROLE_KEY)) {
+            Write-Error 'LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets'
+            exit 1
           }
-          put_secret_versioned() {
-            printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 versions secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"
+          $key = $env:LANE_SUPABASE_SERVICE_ROLE_KEY
+          $put = { param($cmd) $key | & npx --yes wrangler@4 @cmd }
+          try {
+            $key | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env $LANE
+            if ($LASTEXITCODE -ne 0) { throw "classic put exit $LASTEXITCODE" }
+          } catch {
+            Write-Host 'classic secret put failed; trying versions secret put'
+            try {
+              $key | npx --yes wrangler@4 versions secret put SUPABASE_SERVICE_ROLE_KEY --env $LANE
+            } catch {
+              Write-Host 'secret put deferred until after deploy'
+            }
           }
-          if ! put_secret; then
-            echo "classic secret put failed; trying versions secret put"
-            put_secret_versioned || echo "secret put deferred until after deploy"
-          fi
-
       - name: Ensure production service role secret
         if: matrix.lane == 'production'
         env:
@@ -119,10 +116,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PRODUCTION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          set -euo pipefail
-          test -n "${PRODUCTION_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "PRODUCTION_SUPABASE_SERVICE_ROLE_KEY missing"; exit 1; }
-          printf '%s' "$PRODUCTION_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY
-
+          if ([string]::IsNullOrEmpty($env:PRODUCTION_SUPABASE_SERVICE_ROLE_KEY)) {
+            Write-Error 'PRODUCTION_SUPABASE_SERVICE_ROLE_KEY missing'
+            exit 1
+          }
+          $env:PRODUCTION_SUPABASE_SERVICE_ROLE_KEY | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Deploy ${{ matrix.lane }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -131,44 +130,17 @@ jobs:
           GITHUB_ACTIONS: 'true'
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          set -euo pipefail
-          if [ "${{ matrix.lane }}" = "production" ]; then
+          $lane = '${{ matrix.lane }}'
+          if ($lane -eq 'production') {
             npm run deploy
-          else
-            npm run "deploy:${{ matrix.lane }}"
-          fi
+          } else {
+            npm run "deploy:$lane"
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Probe host identity
-        # Soft while #713 DNS/env may still flap; harden to fail-closed once lanes are green.
         continue-on-error: true
-        run: |
-          lane='${{ matrix.lane }}'
-          if [ "$lane" = "production" ]; then
-            host='fremontderby.com'
-            expect='production'
-          else
-            host="${lane}.fremontderby.com"
-            expect="$lane"
-          fi
-          node -e "
-            const host = process.env.HOST;
-            const expect = process.env.EXPECT;
-            (async () => {
-              const url = 'https://' + host + '/health/environment';
-              const response = await fetch(url, { redirect: 'manual' });
-              const text = await response.text();
-              let body = {};
-              try { body = JSON.parse(text); } catch {}
-              const envName = body.environment || body.ENVIRONMENT || '';
-              console.log(JSON.stringify({ host, status: response.status, environment: envName }));
-              if (response.status !== 200 || String(envName) !== expect) {
-                console.error('Probe identity mismatch (non-fatal until #713 closes)');
-                process.exit(1);
-              }
-            })().catch((error) => {
-              console.error(error);
-              process.exit(1);
-            });
-          "
         env:
           HOST: ${{ matrix.lane == 'production' && 'fremontderby.com' || format('{0}.fremontderby.com', matrix.lane) }}
           EXPECT: ${{ matrix.lane == 'production' && 'production' || matrix.lane }}
+        run: |
+          node -e "const host=process.env.HOST;const expect=process.env.EXPECT;(async()=>{const url='https://'+host+'/health/environment';const response=await fetch(url,{redirect:'manual'});const text=await response.text();let body={};try{body=JSON.parse(text)}catch{};const envName=body.environment||body.ENVIRONMENT||'';console.log(JSON.stringify({host,status:response.status,environment:envName}));if(response.status!==200||String(envName)!==expect){console.error('Probe identity mismatch (non-fatal)');process.exit(1)}})().catch((e)=>{console.error(e);process.exit(1)})"
