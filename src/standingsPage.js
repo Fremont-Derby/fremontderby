@@ -19,6 +19,7 @@ export function renderStandingsPage() {
       <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
       <a href="/prizes" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Prizes</a>
     </nav>
     <div class="tabs-wrap"><nav class="tabs" role="tablist" aria-label="Standings views"><button class="tab" data-tab="teams" role="tab" type="button" aria-selected="true" aria-controls="team-standings">Team standings</button><button class="tab" data-tab="individuals" role="tab" type="button" aria-selected="false" aria-controls="individual-standings">Individual standings</button></nav></div>
