@@ -54,6 +54,12 @@ export function friendlyErrorMessage(value) {
   if (/Player already has an active team membership/i.test(message)) {
     return 'You already belong to a team in this season.';
   }
+  if (/already have a team application in this season/i.test(message)) {
+    return 'You already have a team application in this season.';
+  }
+  if (/team_applications_active_captain_unique/i.test(message)) {
+    return 'You already have a team application in this season.';
+  }
 
   const mapped = safeClientErrorMessage({ message });
   if (mapped !== message && /could not complete that action/i.test(mapped)) return mapped;
