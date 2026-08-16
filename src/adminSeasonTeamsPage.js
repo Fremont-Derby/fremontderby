@@ -88,6 +88,7 @@ const card=document.createElement('article');card.className='card';const copy=do
       if(captainPlayerId){
         const msg=document.createElement('a');
         msg.className='roster-link';
+        msg.className='roster-link';
         msg.textContent='Message captain';
         msg.href='/messages?player='+encodeURIComponent(captainPlayerId);
         actions.append(msg);
