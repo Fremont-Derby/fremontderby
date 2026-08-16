@@ -98,6 +98,7 @@ export function rpcErrorStatus(error, options = {}) {
     || /already has an active captain/i.test(message)
     || /already have a team application in this season/i.test(message)
     || /Season is not open for team applications/i.test(message)
+    || /You already have a team application/i.test(message)
     || /Season registration is not open/i.test(message)
     || /That team name is already reserved/i.test(message)
     || /That team name is already used in this season/i.test(message)
