@@ -1996,7 +1996,7 @@ export default {
       });
     }
 
-    
+
     if (url.pathname === "/players") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);

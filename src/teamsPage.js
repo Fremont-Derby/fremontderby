@@ -108,7 +108,7 @@ export function renderTeamsPage() {
     function lineupDeadlineLabel(value){if(!value)return'';const deadline=new Date(value);if(Number.isNaN(deadline.getTime()))return'';const now=Date.now();const ms=deadline.getTime()-now;const abs=Math.abs(ms);const hours=Math.round(abs/3600000);if(ms<0)return hours<=48?('Lineup overdue'+(hours?' · '+hours+'h':'')):'Lineup overdue';if(ms<=2*3600000)return'Lineup due soon · under 2h';if(ms<=24*3600000)return'Lineup due in '+Math.max(1,hours)+'h';const days=Math.round(ms/86400000);return'Lineup due in '+days+'d'}
     function dateLabel(value){if(!value)return'Date TBD';const date=new Date(value+'T12:00:00');return new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric'}).format(date)}
     function nextCaptainMatchup(teams){const contexts=[];for(const team of teams){for(const round of team.lineupRounds||[]){contexts.push({team,round})}}contexts.sort((left,right)=>String(left.round.scheduledOn||'9999-12-31').localeCompare(String(right.round.scheduledOn||'9999-12-31'))||Number(left.round.roundNumber)-Number(right.round.roundNumber));const today=new Date().toISOString().slice(0,10);const open=contexts.filter((item)=>!['finalized','corrected'].includes(item.round.teamMatchStatus));return open.find((item)=>!item.round.scheduledOn||item.round.scheduledOn>=today)||open[0]||contexts[0]||null}
-    
+
     function checklistItem(label,detail,href,tone){
       const li=document.createElement('li');
       li.dataset.tone=tone||'muted';
@@ -689,7 +689,7 @@ function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);ren
       }
     }
     if(accessToken())loadInitialTeams();else loadPublicTeamDirectory()
-  
+
     if(hubReadyCheck){hubReadyCheck.addEventListener('click',async()=>{const teamId=hubReadyCheck.dataset.teamId;const roundId=hubReadyCheck.dataset.roundId;if(!teamId||!roundId){setStatus('Pick a published matchup first so the ready check has a league night.','error');return}hubReadyCheck.disabled=true;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Sending…';try{const token=sessionStorage.getItem('fd.accessToken')||'';if(!token)throw new Error('Sign in to start a ready check.');const response=await fetch('/api/teams/ready-checks',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({teamId,roundId})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||'Could not start ready check');setStatus('Ready check sent — teammates will see a prompt when they open the app.','ok');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Ready check sent';}catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Could not start ready check')),'error');if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';hubReadyCheck.disabled=false}})}
 
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>run(async()=>{await loadTeams(opts)}),{intervalMs:20000,immediate:false});

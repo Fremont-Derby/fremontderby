@@ -18,5 +18,5 @@ Full Storybook (npm Component Explorer) is optional later. This repo ships an **
 Legacy variables (`--panel`, `--line`, `--muted`, `--green`, `--gold`, `--red`, `--bg`, `--text`) resolve to `--fd-*` so page-local agent CSS cannot restore dark skins.
 
 ## Status tones
-Canonical: `ok` | `error` | `warning` | `muted`  
+Canonical: `ok` | `error` | `warning` | `muted`
 Aliases still mapped in CSS: `healthy`→ok, `critical`→error, etc. Prefer canonical at call sites.
