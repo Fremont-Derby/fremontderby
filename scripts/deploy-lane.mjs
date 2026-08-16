@@ -61,10 +61,13 @@ export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
 }
 
 export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
-  const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const result = spawn(command, laneDeployArgs(lane, env, spawn), {
+  // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell.
+  const isWin = process.platform === 'win32';
+  const args = laneDeployArgs(lane, env, spawn);
+  const result = spawn(isWin ? 'npx' : 'npx', args, {
     env,
     stdio: 'inherit',
+    shell: isWin,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exitCode = result.status ?? 1;
