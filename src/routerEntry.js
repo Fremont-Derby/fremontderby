@@ -1,3 +1,5 @@
+import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
+import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
 import { renderAdminSupportPage } from './adminSupportPage.js';
 import { routeAdminSupport } from './adminSupportHttp.js';
 import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
@@ -6,7 +8,7 @@ import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
-import { handleRecordRatingObservationRequest } from './adminPlayersHttp.js';
+import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
@@ -130,7 +132,21 @@ export default {
 
     // Trades restored — paths served by legacy router / index handlers.
     
-    if (url.pathname === '/admin/support') {
+    
+    
+    if (url.pathname === '/admin/player-stats') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+if (url.pathname === '/admin/rating-health') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+if (url.pathname === '/admin/support') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
@@ -144,6 +160,17 @@ if (url.pathname === '/admin/player-contact') {
     }
     
     {
+      
+    {
+      const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
+      if (recompute && request.method === 'POST') {
+        return finalizeBrowserResponse(
+          await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
+          url.pathname,
+        );
+      }
+    }
+
       const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
       if (ratingObs && request.method === 'POST') {
         return finalizeBrowserResponse(

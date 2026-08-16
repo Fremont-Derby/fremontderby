@@ -80,7 +80,9 @@ export function renderAdminPlayersPage() {
         }catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
         finally{btn.disabled=false}
       });
-      row.append(input,select,note,btn);
+      const recompute=node('button','Recompute Derby estimate','action');recompute.type='button';
+      recompute.addEventListener('click',async()=>{recompute.disabled=true;setStatus('Recomputing Derby estimate…');try{await api('/api/admin/players/'+encodeURIComponent(player.playerId||player.id)+'/recompute-derby-estimate',{method:'POST',body:'{}'});setStatus('Derby estimate updated for '+(player.displayName||'player')+'.','ok');await load({quiet:true});}catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}finally{recompute.disabled=false}});
+      row.append(input,select,note,btn,recompute);
       wrap.append(row);
       host.append(wrap);
     }

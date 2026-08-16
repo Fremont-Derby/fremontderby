@@ -116,6 +116,26 @@ export async function handleSetAdminRoleRequest(
 }
 
 
+
+export async function handleRecomputeDerbyEstimateRequest(
+  request,
+  env,
+  playerId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
+    const observation = await repository.recomputeDerbyEstimate({
+      actorUserId: actor.id,
+      playerId,
+    });
+    return Response.json({ observation }, { headers: { 'cache-control': 'no-store' } });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export async function handleRecordRatingObservationRequest(
   request,
   env,
