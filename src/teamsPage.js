@@ -268,7 +268,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
           registered += 1;
         }
         const forUs = Number(m.matchesForTeam ?? m.matches_for_team ?? 0);
-        if (m.postseasonEligible || m.postseason_eligible || forUs >= 4) playoffEligible += 1;
+        if (m.postseasonEligible || m.postseason_eligible) playoffEligible += 1;
         else if (m.approachingEligible || m.approaching_eligible || forUs >= 3) approaching += 1;
       }
       const target = 4;
@@ -311,16 +311,34 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
             const elsewhere=Number(member.matchesElsewhere??member.matches_elsewhere??0);
             const eligible=Boolean(member.postseasonEligible||member.postseason_eligible);
             const approach=Boolean(member.approachingEligible||member.approaching_eligible);
+            const need=Number(member.matchesNeed??member.matches_need??Math.max(0,(eligible?0:4)-forUs));
             const counts=document.createElement('div');
             counts.className='muted';
             counts.style.fontSize='.82rem';
             counts.textContent=forUs+' for us · '+elsewhere+' elsewhere';
             const elig=document.createElement('div');
             elig.style.fontSize='.82rem';
-            const need=Math.max(0,4-forUs);
-            elig.textContent=eligible?'✓ Playoff eligible':(need===1?'Needs 1':(need?('Needs '+need):(approach?'3+ team matches · path to eligible':'Needs more team matches')));
-            elig.style.color=eligible?'#9ee5bd':(approach||need<=1?'#d8ad3f':'#aab3bb');
+            elig.textContent=eligible?'✓ Playoff eligible':(need===1?'Needs 1':(need>1?('Needs '+need):(approach?'3+ team matches · path to eligible':'Needs more team matches')));
+            // Words + checkmark carry status; color is secondary (not sole cue).
+            elig.setAttribute('data-eligibility', eligible?'eligible':(need?'needs':'path'));
             li.append(document.createElement('br'), counts, elig);
+            if(elsewhere>0){
+              const details=document.createElement('details');
+              details.style.marginTop='2px';
+              const summary=document.createElement('summary');
+              summary.textContent='Other teams';
+              summary.style.cursor='pointer';
+              summary.style.fontSize='.78rem';
+              summary.setAttribute('aria-label','Show other-team match breakdown for '+label);
+              const body=document.createElement('div');
+              body.className='muted';
+              body.style.fontSize='.78rem';
+              const by=member.elsewhereByTeam||member.elsewhere_by_team||{};
+              const parts=Object.entries(by).map(([id,n])=>((member.teamNames&&member.teamNames[id])||'Other team')+': '+n);
+              body.textContent=parts.length?parts.join(' · '):(elsewhere+' match'+(elsewhere===1?'':'es')+' for other teams');
+              details.append(summary, body);
+              li.append(details);
+            }
             if(pid){
               const msg=document.createElement('a');
               msg.href='/messages?player='+encodeURIComponent(pid);
