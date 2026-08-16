@@ -27,7 +27,14 @@ async function readJsonBody(request) {
 
 function scoringTeamFromRequest(request, body = {}) {
   const url = new URL(request.url);
-  return body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
+  const scoringTeamId =
+    body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
+  if (!scoringTeamId) {
+    const error = new Error('scoringTeamId is required (query ?scoringTeamId= or JSON body)');
+    error.status = 400;
+    throw error;
+  }
+  return scoringTeamId;
 }
 
 function scoreSnapshotCookieName(playerMatchId, scoringTeamId) {
