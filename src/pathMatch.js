@@ -60,3 +60,59 @@ export function matchApiTeamsPathRegex(pathname) {
   if (pathname === '/api/teams/ready-checks') return { kind: 'ready-checks' };
   return null;
 }
+
+
+/**
+ * @param {string} pathname
+ * @returns {null | { kind: 'messages' | 'messages-read' | 'team-choice' | 'postseason-lineup', teamMatchId: string }}
+ */
+export function matchApiTeamMatchesPath(pathname) {
+  if (typeof pathname !== 'string' || !pathname.startsWith('/api/team-matches/')) {
+    return null;
+  }
+  const parts = pathname.split('/');
+  // ['', 'api', 'team-matches', id, ...]
+  if (parts.length < 5 || parts[1] !== 'api' || parts[2] !== 'team-matches' || !parts[3]) {
+    return null;
+  }
+  const teamMatchId = decodeURIComponent(parts[3]);
+  const a = parts[4];
+  const b = parts[5];
+  if (!a) return null;
+
+  if (a === 'messages' || a === 'chat') {
+    if (parts.length === 5) return { kind: 'messages', teamMatchId };
+    if (a === 'messages' && b === 'read' && parts.length === 6) {
+      return { kind: 'messages-read', teamMatchId };
+    }
+    return null;
+  }
+  if (a === 'team-choice' && b === 'me' && parts.length === 6) {
+    return { kind: 'team-choice', teamMatchId };
+  }
+  if (a === 'postseason-lineup' && parts.length === 5) {
+    return { kind: 'postseason-lineup', teamMatchId };
+  }
+  return null;
+}
+
+/**
+ * Season league chat only (not full /api/seasons tree).
+ * @param {string} pathname
+ * @returns {null | { kind: 'messages' | 'messages-read', seasonId: string }}
+ */
+export function matchApiSeasonMessagesPath(pathname) {
+  if (typeof pathname !== 'string' || !pathname.startsWith('/api/seasons/')) {
+    return null;
+  }
+  const parts = pathname.split('/');
+  // ['', 'api', 'seasons', id, 'messages', ...]
+  if (parts.length < 5 || parts[1] !== 'api' || parts[2] !== 'seasons' || !parts[3]) {
+    return null;
+  }
+  if (parts[4] !== 'messages') return null;
+  const seasonId = decodeURIComponent(parts[3]);
+  if (parts.length === 5) return { kind: 'messages', seasonId };
+  if (parts.length === 6 && parts[5] === 'read') return { kind: 'messages-read', seasonId };
+  return null;
+}
