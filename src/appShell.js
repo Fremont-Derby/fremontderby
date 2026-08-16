@@ -217,11 +217,11 @@ export const shellStyles = `
   .fd-mobile-dock-spacer { display: none; }
   .fd-message-notifications { position: relative; flex: 0 0 auto; }
   .fd-message-notifications[hidden] { display: none; }
-  .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; overflow: visible; }
   .fd-message-indicator:hover { color: #fff; background: #123522; }
   .fd-message-indicator[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-message-indicator svg { width: 23px; height: 23px; }
-  .fd-message-indicator__badge { position: absolute; top: -6px; right: -7px; min-width: 20px; height: 20px; display: grid; place-items: center; padding: 0 5px; border: 2px solid #06110d; border-radius: 999px; color: #fff; background: #d83d37; font: 900 .68rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
+  .fd-message-indicator__badge { position: absolute; top: 2px; right: 2px; z-index: 1; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 4px; border: 2px solid #06110d; border-radius: 999px; color: #fff; background: #d83d37; font: 900 .64rem/1 Inter, ui-sans-serif, system-ui, sans-serif; box-sizing: border-box; pointer-events: none; }
   .fd-message-indicator__badge[hidden] { display: none; }
   .fd-message-indicator:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
   .fd-message-preview { position: absolute; top: calc(100% + 9px); right: 0; width: min(360px, calc(100vw - 24px)); padding: 10px; border: 1px solid #315d45; border-radius: 13px; background: #081a12; box-shadow: 0 18px 46px rgba(0,0,0,.42); color: #f4f7f5; opacity: 0; visibility: hidden; transform: translateY(-4px); pointer-events: none; transition: opacity .14s ease, transform .14s ease, visibility .14s; }
