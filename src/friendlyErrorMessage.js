@@ -57,6 +57,9 @@ export function friendlyErrorMessage(value) {
   if (/already have a team application in this season/i.test(message)) {
     return 'You already have a team application in this season.';
   }
+  if (/team name is already used in this season/i.test(message)) {
+    return 'That team name is already used in this season.';
+  }
   if (/team_applications_active_captain_unique/i.test(message)) {
     return 'You already have a team application in this season.';
   }
