@@ -305,12 +305,13 @@ export function formatTeamPracticeAnnouncement(practice) {
     return `Practice for ${teamName} was cleared by the captain.`;
   }
 
-  const bits = [`Practice update for ${teamName}:`];
+  const bits = [];
   if (recurrence === 'weekly') bits.push('Weekly practice');
   else if (recurrence === 'once') bits.push(on ? `One-off practice on ${on}` : 'One-off practice');
   if (location) bits.push(`Location: ${location}`);
   if (schedule) bits.push(`Time: ${schedule}`);
-  return bits.join(' · ');
+  if (!bits.length) return `Practice update for ${teamName}.`;
+  return `Practice update for ${teamName}: ${bits.join(' · ')}`;
 }
 
 export async function updateTeamPracticeCommand(
