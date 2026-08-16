@@ -38,6 +38,23 @@ export function friendlyErrorMessage(value) {
     return 'This league feature is still being published. Please try again shortly. Nothing was changed.';
   }
 
+  // Team registration / captain rules (after unwrap of Supabase wrapper in safeClientErrorMessage).
+  if (/Season is not open for team applications/i.test(message)) {
+    return 'This season is not open for new team applications.';
+  }
+  if (/You already captain a team in this season/i.test(message)) {
+    return 'You already captain a team in this season.';
+  }
+  if (/That team name is already reserved/i.test(message)) {
+    return 'That team name is already reserved for this season.';
+  }
+  if (/Player profile is required before applying/i.test(message)) {
+    return 'Create your player profile before applying for a team.';
+  }
+  if (/Player already has an active team membership/i.test(message)) {
+    return 'You already belong to a team in this season.';
+  }
+
   const mapped = safeClientErrorMessage({ message });
   if (mapped !== message && /could not complete that action/i.test(mapped)) return mapped;
   if (
