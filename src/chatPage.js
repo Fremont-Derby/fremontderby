@@ -606,7 +606,14 @@ export function renderChatPage(env = {}) {
       }
       return article;
     }
-    function renderMessages(messages, { keepPosition = false } = {}) {
+    let lastMessagesSignature='';
+    function messagesSignature(messages){
+      return (messages||[]).map((m)=>[m.message_id||m.messageId||'',m.body||m.message_body||'',m.created_at||m.createdAt||''].join(':')).join('|');
+    }
+    function renderMessages(messages, { keepPosition = false, force = false } = {}) {
+      const sig=messagesSignature(messages);
+      if(!force&&sig&&sig===lastMessagesSignature&&messages.length){return}
+      lastMessagesSignature=sig;
       const nearBottom = messageListEl.scrollHeight - messageListEl.scrollTop - messageListEl.clientHeight < 100;
       loadOlderButtonEl.hidden = !canLoadOlder;
       if (!messages.length) {
@@ -699,7 +706,7 @@ export function renderChatPage(env = {}) {
           a.created_at.localeCompare(b.created_at) || a.message_id.localeCompare(b.message_id));
         canLoadOlder = older.length === 50;
         reachedConversationStart = older.length < 50;
-        renderMessages(displayedMessages, { keepPosition: true });
+        renderMessages(displayedMessages, { keepPosition: true, force: true });
         messageListEl.scrollTop = messageListEl.scrollHeight - priorHeight;
         setStatus(older.length ? 'Older messages loaded' : 'Beginning of conversation', 'ok');
       } finally {
