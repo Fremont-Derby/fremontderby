@@ -1011,6 +1011,33 @@ export async function handleRespondTeamMatchMakeupRequest(
   }
 }
 
+
+export async function handleListTeamInvitationsRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teamManagement = await listOwnTeamManagementCommand({ actorUserId: actor.id }, repository);
+    const invitations = [];
+    for (const row of teamManagement?.invitations || []) {
+      if (!teamId || row.teamId === teamId || row.team_id === teamId) invitations.push(row);
+    }
+    for (const team of teamManagement?.captain_teams || []) {
+      if (teamId && team.teamId !== teamId && team.team_id !== teamId) continue;
+      for (const inv of team.invitations || team.pendingInvitations || []) {
+        invitations.push({ ...inv, teamId: team.teamId || team.team_id || teamId });
+      }
+    }
+    return jsonResponse({ invitations, teamId });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleInvitePlayerToTeamRequest(
   request,
   env,
@@ -2459,6 +2486,13 @@ if (url.pathname === "/standings") {
     }
 
     if (teamInvitationMatch) {
+      if (request.method === "GET") {
+        return handleListTeamInvitationsRequest(
+          request,
+          env,
+          decodeURIComponent(teamInvitationMatch[1]),
+        );
+      }
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
