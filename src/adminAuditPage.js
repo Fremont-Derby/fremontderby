@@ -36,6 +36,9 @@ export function renderAdminAuditPage() {
       <a class="ghost" href="/admin/players">Players</a>
       <a class="ghost" href="/admin/seasons">Seasons</a>
       <a class="ghost" href="/admin/season-teams">Season teams</a>
+      <a class="ghost" href="/season-setup">Season setup</a>
+      <a class="ghost" href="/standings">Standings</a>
+      <a class="ghost" href="/teams">Teams</a>
       <a class="ghost" href="/admin">Admin home</a>
     </nav>
     <div class="filters">
