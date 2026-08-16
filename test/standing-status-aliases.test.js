@@ -7,6 +7,9 @@ test('maps available shorthand to available_for_subs', async () => {
   await saveOwnStandingAvailabilityCommand(
     { actorUserId: 'u1', standingStatus: 'available', standingNote: 'n' },
     {
+      async getProfileByUserId() {
+        return { id: 'p1' };
+      },
       async saveStandingAvailability(args) {
         calls.push(args);
         return { standing_availability_status: args.standingStatus };
