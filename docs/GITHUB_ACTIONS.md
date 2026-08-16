@@ -73,3 +73,8 @@ Long-lived agent branches may still carry an older `ci.yml` with `push` / `pull_
 - `CLOUDFLARE_ACCOUNT_ID`
 
 Lane Workers still need Wrangler secrets (`SUPABASE_*`, `BETA_ACTOR_USER_ID`); Actions cannot invent them (#651).
+
+
+## Concurrency
+
+Workflows use `concurrency` groups with `cancel-in-progress: true` so repeated pushes/dispatches do not stack on slow hosted runners (#723). Deploy lanes group by lane input; CI/CodeQL group by PR number or ref.

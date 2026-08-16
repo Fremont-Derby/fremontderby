@@ -9,6 +9,10 @@ on:
         type: choice
         options: [ubuntu-latest, self-hosted]
 
+concurrency:
+  group: diagnose-worker-domains
+  cancel-in-progress: true
+
 jobs:
   diagnose:
     runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}

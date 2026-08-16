@@ -12,6 +12,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: hourly-live-probe
+  cancel-in-progress: true
+
 jobs:
   probe:
     runs-on: ubuntu-latest
