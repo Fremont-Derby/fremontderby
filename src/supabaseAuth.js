@@ -1,4 +1,3 @@
-import { assertBetaBypassLane } from './securityHeaders.js';
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -33,20 +32,38 @@ async function parseJson(response) {
 
 const testAuthEnvironments = new Set(['jfl', 'dru']);
 
+/** Known staging auth.users ids for isolated lane open-auth (see docs/dru-jfl-noauth-operator.md). */
+export const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
+  dru: {
+    id: '05d025ff-1c97-4070-a691-46a896fb9b83',
+    email: 'dru-actor@fremontderby.com',
+  },
+  jfl: {
+    id: 'b22805b6-92ba-44bd-a92e-0c82f0be6613',
+    email: 'jfl-actor@fremontderby.com',
+  },
+});
+
 /**
- * Open-auth is allowed only in the two isolated test lanes and only when the
- * explicit bypass flag is enabled. Gamma, staging, and production always use
- * normal authentication even if a stray bypass flag is present.
+ * Open-auth is allowed only in the two isolated test lanes.
+ * Gamma, staging, and production always use normal authentication.
+ *
+ * For jfl/dru, bypass defaults ON unless explicitly disabled (BETA_AUTH_BYPASS=0).
+ * That matches wrangler.jsonc and keeps automation working when dashboard vars lag.
  */
 export function betaAuthBypassEnabled(env = {}) {
-  assertBetaBypassLane(env);
   const environment = String(env.ENVIRONMENT || '').trim();
-  const bypass = String(env.BETA_AUTH_BYPASS || '').trim();
-  return testAuthEnvironments.has(environment) && bypass === '1';
+  if (!testAuthEnvironments.has(environment)) return false;
+  const bypass = String(env.BETA_AUTH_BYPASS || '').trim().toLowerCase();
+  if (bypass === '0' || bypass === 'false' || bypass === 'off') return false;
+  // Explicit 1, or unset/empty on a test lane → enabled
+  return true;
 }
 
 export function resolveBetaBypassActor(env = {}) {
-  const id = String(env.BETA_ACTOR_USER_ID || '').trim();
+  const environment = String(env.ENVIRONMENT || '').trim();
+  const defaults = TEST_LANE_DEFAULT_ACTORS[environment] || null;
+  const id = String(env.BETA_ACTOR_USER_ID || defaults?.id || '').trim();
   if (!id) {
     throw new AuthError(
       'Test auth bypass is enabled but BETA_ACTOR_USER_ID is not configured',
@@ -55,7 +72,9 @@ export function resolveBetaBypassActor(env = {}) {
   }
   return {
     id,
-    email: String(env.BETA_ACTOR_EMAIL || 'test-actor@localhost').trim() || 'test-actor@localhost',
+    email:
+      String(env.BETA_ACTOR_EMAIL || defaults?.email || 'test-actor@localhost').trim() ||
+      'test-actor@localhost',
     betaBypass: true,
   };
 }
@@ -65,7 +84,6 @@ export async function authenticateSupabaseUser(
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
-  assertBetaBypassLane(env);
   if (typeof fetchImpl !== 'function') {
     throw new Error('fetch implementation is required');
   }
