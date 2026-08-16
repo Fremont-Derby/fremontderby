@@ -1853,7 +1853,7 @@ export default {
       /^\/api\/seasons\/([^/]+)\/schedule$/,
     );
     const teamStandingsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/team-standings$/,
+      /^\/api\/seasons\/([^/]+)\/(?:team-standings|standings)$/,
     );
     const individualStandingsMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/(?:individual-standings|player-standings)$/,
