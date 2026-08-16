@@ -43,6 +43,11 @@ export const EXACT_PATH_ALIASES = {
  */
 export const SEGMENT_ALIAS_RULES = [
   {
+    test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'team-matches' && (p[4] === 'postseason' || p[4] === 'playoff-lineup'),
+    apply: (p) => `/api/team-matches/${p[3]}/postseason-lineup`,
+  },
+
+  {
     // /api/seasons/:id/standings → team-standings
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'seasons' && p[4] === 'standings',
     apply: (p) => `/api/seasons/${p[3]}/team-standings`,
