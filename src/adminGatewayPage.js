@@ -56,6 +56,12 @@ export function renderAdminGatewayPage() {
         <a class="card" href="/playoffs">
           <strong>Playoffs</strong><span>Bracket, lineup, and postseason match progress.</span><b>Open playoffs →</b>
         </a>
+        <a class="card" data-accent="green" href="/scorecard">
+          <strong>Score hub</strong><span>League-night scoring, play dates, and live match tools.</span><b>Open score →</b>
+        </a>
+        <a class="card" href="/standings">
+          <strong>Standings</strong><span>Team table and individual race board for the current season.</span><b>Open standings →</b>
+        </a>
         <a class="card" data-accent="blue" href="/players">
           <strong>Public player directory</strong><span>Same A–Z roster captains use for recruiting (no phone numbers).</span><b>Browse players →</b>
         </a>
@@ -70,6 +76,8 @@ export function renderAdminGatewayPage() {
         <a class="action secondary" href="/messages/moderation">Moderation</a>
         <a class="action secondary" href="/teams">Teams</a>
         <a class="action secondary" href="/schedule">Schedule</a>
+        <a class="action secondary" href="/scorecard">Score</a>
+        <a class="action secondary" href="/standings">Standings</a>
       </div>
     </section>
 
