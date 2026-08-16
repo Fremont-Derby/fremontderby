@@ -111,7 +111,7 @@ export function renderNotificationsPage() {
       setStatus(unread?unread+' unread':'Up to date','ok');
     }
     document.querySelector('[data-mark-all]').addEventListener('click',async()=>{
-      try{await api('/api/me/notifications/read-all',{method:'POST'});await load()}
+      try{await api('/api/me/notifications/read-all',{method:'POST'});try{window.dispatchEvent(new CustomEvent('fd:notifications-changed'))}catch(_){ }await load()}
       catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
     load().catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error'));
