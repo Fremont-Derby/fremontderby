@@ -28,6 +28,8 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/checkin': '/api/me/availability',
   '/api/check-in': '/api/me/availability',
   '/api/me/lineup': '/api/me/teams',
+  '/api/me/prizes': '/api/prizes',
+  '/api/prize-pool': '/api/prizes',
   '/api/me/player-profile': '/api/me/profile',
   '/api/me/player': '/api/me/profile',
   '/api/me/notifications/mark-as-read-all': '/api/me/notifications/read-all',
