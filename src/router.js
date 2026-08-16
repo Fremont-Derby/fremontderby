@@ -420,6 +420,12 @@ export default {
       return chatHttpHandlers.listDirectInbox(request, env);
     }
 
+    // Alias: clients often expect REST collection under /api/me/direct-conversations
+    if (url.pathname === '/api/me/direct-conversations') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return chatHttpHandlers.listDirectInbox(request, env);
+    }
+
     if (url.pathname === '/api/me/direct-message-candidates') {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listDirectCandidates(request, env);
