@@ -253,7 +253,7 @@ export default {
       return decorateAppResponse(response, '/scorecard');
     }
 
-    if (url.pathname === '/api/me/scorable-matches') {
+    if (url.pathname === '/api/me/scorable-matches' || url.pathname === '/api/me/matches') {
       if (request.method !== 'GET') return methodNotAllowed();
       return scorableMatchesHttpHandlers.list(request, env);
     }
