@@ -108,6 +108,7 @@ export function rpcErrorStatus(error, options = {}) {
     || /Player profile is required/i.test(message)
     || /Teams can only be added before season publication/i.test(message)
     || /No team slots are currently available/i.test(message)
+    || /conversation with this player already exists/i.test(message)
   ) {
     return 409;
   }
