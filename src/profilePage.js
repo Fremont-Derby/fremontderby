@@ -195,6 +195,10 @@ export function renderProfilePage(env = {}) {
         </article>
 
         <article class="panel">
+          <div class="panel" data-season-status-panel style="margin-bottom:12px;padding:12px;border:1px solid var(--line,#343c45);border-radius:12px;background:var(--panel,#191d22)">
+            <strong style="display:block;margin-bottom:6px">Season & payment</strong>
+            <div data-season-status-summary class="muted">Loading…</div>
+          </div>
           <div class="panel-head"><span>Seasons</span><span class="badge" data-season-count>—</span></div>
           <table>
             <thead><tr><th>Season</th><th>Type</th><th>Status</th></tr></thead>
@@ -424,12 +428,37 @@ export function renderProfilePage(env = {}) {
         (row) => [['Season', row.seasonName], ['Team', row.teamName], ['Role', row.role]],
         ['No team memberships yet.', '/teams', 'Browse teams'],
       );
+      const statusSummary = document.querySelector('[data-season-status-summary]');
+      if (statusSummary) {
+        if (!seasons.length) {
+          statusSummary.textContent = 'You are not registered for a season yet.';
+        } else {
+          statusSummary.replaceChildren();
+          for (const row of seasons) {
+            const line = document.createElement('div');
+            line.style.marginTop = '6px';
+            const name = row.seasonName || row.season_name || 'Season';
+            const part = row.participationType || row.participation_type || 'player';
+            const pay = String(row.paymentStatus || row.payment_status || 'unpaid').toLowerCase();
+            const payLabel = pay === 'paid' || pay === 'waived' ? (pay === 'waived' ? 'Payment waived' : 'Paid') : 'Payment due';
+            const inSeason = String(row.status || '').toLowerCase() === 'active' || part;
+            line.innerHTML = '<strong>' + name + '</strong> · ' + part
+              + ' · <span style="color:' + (pay === 'paid' || pay === 'waived' ? '#9ee5bd' : '#d8ad3f') + '">' + payLabel + '</span>';
+            statusSummary.append(line);
+          }
+        }
+      }
       renderRows(
         seasonBody,
         seasonEmpty,
         seasonCount,
         seasons,
-        (row) => [['Season', row.seasonName], ['Type', row.participationType], ['Status', row.status]],
+        (row) => [
+          ['Season', row.seasonName],
+          ['Type', row.participationType],
+          ['Status', row.status],
+          ['Payment', row.paymentStatus || row.payment_status || 'unpaid'],
+        ],
         ['No season participation yet.', '/schedule', 'View the league schedule'],
       );
     }
