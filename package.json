@@ -21,6 +21,7 @@
     "test:floor": "node scripts/count-tests.mjs",
     "a11y": "node scripts/pa11y-rendered.mjs",
     "lint:templates": "node scripts/lint-template-regex.mjs",
-    "lint:inner-html": "node scripts/lint-inner-html.mjs"
+    "lint:inner-html": "node scripts/lint-inner-html.mjs",
+    "validate:gamma-rc": "node scripts/validate-gamma-rc.mjs"
   }
 }
