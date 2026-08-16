@@ -9,9 +9,14 @@ on:
   workflow_dispatch:
     inputs:
       execute:
-        description: Set to "1" to apply (requires secrets + pg client). Default dry-run.
+        description: Set to "1" to apply. Default dry-run.
         required: false
         default: '0'
+        type: string
+      mode:
+        description: "auto (management then pg), management, or pg (DATABASE_URL + pg_dump)"
+        required: false
+        default: 'auto'
         type: string
 
 permissions:
@@ -39,6 +44,7 @@ jobs:
           GAMMA_DATABASE_URL: ${{ secrets.GAMMA_DATABASE_URL }}
           GAMMA_REFRESH_TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}
           GAMMA_REFRESH_EXECUTE: ${{ github.event.inputs.execute || '0' }}
+          GAMMA_REFRESH_MODE: ${{ github.event.inputs.mode || 'auto' }}
           GITHUB_SHA: ${{ github.sha }}
         run: node scripts/gamma-prod-refresh.mjs
       - name: Job summary
