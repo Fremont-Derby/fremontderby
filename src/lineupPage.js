@@ -46,7 +46,19 @@ export function renderLineupPage() {
     function dateLabel(value){if(!value)return'Date TBD';const d=new Date(value+'T12:00:00');return new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric'}).format(d)}function activeTeam(){return captainTeams.find((team)=>team.teamId===teamSelect.value)||null}function preferredRound(rounds){if(requestedRound&&rounds.some((round)=>round.roundId===requestedRound))return requestedRound;const today=new Date().toISOString().slice(0,10);const upcoming=rounds.find((round)=>!['finalized','corrected'].includes(round.teamMatchStatus)&&(!round.scheduledOn||round.scheduledOn>=today));return(upcoming||rounds.find((round)=>!['finalized','corrected'].includes(round.teamMatchStatus))||rounds[0]||{}).roundId||''}
     function renderTeamOptions(){teamSelect.replaceChildren();if(!captainTeams.length){const option=document.createElement('option');option.value='';option.textContent='No captained teams';teamSelect.append(option);teamSelect.disabled=true;roundSelect.disabled=true;loadButton.disabled=true;return}for(const team of captainTeams){const option=document.createElement('option');option.value=team.teamId;option.textContent=team.teamName+' · '+team.seasonName;teamSelect.append(option)}if(requestedTeam&&captainTeams.some((team)=>team.teamId===requestedTeam))teamSelect.value=requestedTeam;teamSelect.disabled=false;renderRoundOptions()}
     function renderRoundOptions(){const team=activeTeam();const rounds=team?.lineupRounds||[];roundSelect.replaceChildren();if(!rounds.length){const option=document.createElement('option');option.value='';option.textContent='No published rounds for this team';roundSelect.append(option);roundSelect.disabled=true;loadButton.disabled=true;return}for(const round of rounds){const option=document.createElement('option');option.value=round.roundId;option.textContent='Round '+round.roundNumber+' · vs '+(round.opponentName||'Opponent')+' · '+dateLabel(round.scheduledOn)+' · Table '+round.tableNumber;roundSelect.append(option)}roundSelect.value=preferredRound(rounds);roundSelect.disabled=false;loadButton.disabled=false;localStorage.setItem('fd.lineupTeamId',team.teamId);localStorage.setItem('fd.lineupRoundId',roundSelect.value)}
-    const liveLineupAdapter={setStatus,scoreHref:'/scorecard',async loadCandidates(){const body=await api('/api/teams/:teamId/rounds/:roundId/availability',{method:'GET'});return body.availability||[]},async loadLineups(){const body=await api('/api/teams/:teamId/rounds/:roundId/lineup',{method:'GET'});return body.lineups||[]},async submit(slots){await api('/api/teams/:teamId/rounds/:roundId/lineup',{method:'POST',body:JSON.stringify({slots})})}};
+    const liveLineupAdapter={setStatus,scoreHref:()=>{
+      const teamId=teamSelect.value;
+      const roundId=roundSelect.value;
+      const team=(captainTeams||[]).find((item)=>String(item.teamId||item.team_id||'')===String(teamId));
+      const rounds=team?(team.lineupRounds||team.lineup_rounds||[]):[];
+      const hit=rounds.find((r)=>String(r.roundId||r.round_id||'')===String(roundId));
+      const matchId=hit?(hit.teamMatchId||hit.team_match_id||''):'';
+      const qs=new URLSearchParams();
+      if(matchId)qs.set('match',matchId);
+      if(teamId)qs.set('team',teamId);
+      if(roundId)qs.set('round',roundId);
+      return '/scorecard'+(qs.toString()?('?'+qs.toString()):'');
+    },async loadCandidates(){const body=await api('/api/teams/:teamId/rounds/:roundId/availability',{method:'GET'});return body.availability||[]},async loadLineups(){const body=await api('/api/teams/:teamId/rounds/:roundId/lineup',{method:'GET'});return body.lineups||[]},async submit(slots){await api('/api/teams/:teamId/rounds/:roundId/lineup',{method:'POST',body:JSON.stringify({slots})})}};
     ${sharedBlindLineupControllerSource}
     const lineupController=createBlindLineupController(liveLineupAdapter);
     async function loadPage(opts={}){await lineupController.loadPage(opts)}async function bootstrap(){showGate('Loading lineup…','Preparing your lineup workspace.');const body=await meApi('/api/me/teams');captainTeams=body.teamManagement?.captain_teams||[];
