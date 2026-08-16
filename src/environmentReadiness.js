@@ -1,4 +1,5 @@
 import { expectedEnvironmentForHost, hostMatchesEnvironment, normalizeRequestHost } from './hostEnvironment.js';
+import { TEST_LANE_DEFAULT_ACTORS } from './supabaseAuth.js';
 
 const fixedExpectedSupabaseProjectRefs = {
   production: 'cpiucsxlkicmlbvdvhww',
@@ -61,7 +62,8 @@ export function environmentReadiness(env = {}, options = {}) {
   const isIsolatedRuntime = isolatedRuntimeEnvironments.has(environment);
   const isTestAuthRuntime = testAuthRuntimeEnvironments.has(environment);
   const authBypassAllowed = isTestAuthRuntime;
-  const authBypassEnabled = String(env.BETA_AUTH_BYPASS || '').trim() === '1';
+  const bypassRaw = String(env.BETA_AUTH_BYPASS || '').trim().toLowerCase();
+  const authBypassEnabled = isTestAuthRuntime && bypassRaw !== '0' && bypassRaw !== 'false' && bypassRaw !== 'off';
   const projectMatches = Boolean(expectedProjectRef && projectRef === expectedProjectRef);
   const schemaMatches = Boolean(expectedSchema && schema === expectedSchema);
   const actualProjectIsolated = !isIsolatedRuntime
@@ -78,9 +80,10 @@ export function environmentReadiness(env = {}, options = {}) {
     check('supabasePublishableKeyConfigured', hasPublishableKey),
     check('supabaseServiceRoleKeyConfigured', hasServiceRoleKey),
     check('supabaseKeysAreDistinct', keysAreDistinct === true, { evaluated: keysAreDistinct !== null }),
-    check('authBypassRestrictedToTestLane', !authBypassEnabled || authBypassAllowed, {
+    check('authBypassRestrictedToTestLane', !(bypassRaw === '1' || bypassRaw === 'true' || bypassRaw === 'on') || authBypassAllowed, {
       authBypassAllowed,
       authBypassEnabled,
+      bypassRaw,
     }),
   ];
 
@@ -93,7 +96,7 @@ export function environmentReadiness(env = {}, options = {}) {
   if (isTestAuthRuntime) {
     checks.push(
       check('testAuthBypassFlag', authBypassEnabled),
-      check('testActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
+      check('testActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID) || Boolean(TEST_LANE_DEFAULT_ACTORS[environment])),
     );
   }
 

@@ -25,6 +25,8 @@ test('test auth bypass is limited to JFL and DRU', () => {
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'production', BETA_AUTH_BYPASS: '1' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'staging', BETA_AUTH_BYPASS: '1' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'jfl', BETA_AUTH_BYPASS: '0' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'jfl' }), true);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'dru', BETA_AUTH_BYPASS: '' }), true);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'beta', BETA_AUTH_BYPASS: '1' }), false);
 });
 
@@ -74,9 +76,17 @@ test('gamma and production still require bearer even if a bypass flag is present
   }
 });
 
-test('resolveBetaBypassActor fails closed without actor id', () => {
+test('resolveBetaBypassActor uses lane default actor when secret unset', () => {
+  const actor = resolveBetaBypassActor({ ENVIRONMENT: 'jfl', BETA_AUTH_BYPASS: '1' });
+  assert.equal(actor.id, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
+  assert.equal(actor.email, 'jfl-actor@fremontderby.com');
+  const dru = resolveBetaBypassActor({ ENVIRONMENT: 'dru' });
+  assert.equal(dru.id, '05d025ff-1c97-4070-a691-46a896fb9b83');
+});
+
+test('resolveBetaBypassActor fails closed without actor id outside known lanes', () => {
   assert.throws(
-    () => resolveBetaBypassActor({ ENVIRONMENT: 'jfl', BETA_AUTH_BYPASS: '1' }),
+    () => resolveBetaBypassActor({ ENVIRONMENT: 'staging', BETA_AUTH_BYPASS: '1' }),
     (error) => error.name === 'AuthError',
   );
 });
