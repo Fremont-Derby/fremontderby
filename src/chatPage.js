@@ -944,7 +944,7 @@ export function renderChatPage(env = {}) {
       showSignedOut(false);
       setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : (error.message || 'Sign-in failed')), 'error');
     }
-    if (token()) {
+    if (token() || isOpenAuthLane()) {
       signedOutEl.hidden = true;
       layoutEl.hidden = false;
       runLoadThreads();
@@ -954,9 +954,9 @@ export function renderChatPage(env = {}) {
     }
     let pollCount = 0;
     setInterval(() => {
-      if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
+      if (!document.hidden && (token() || isOpenAuthLane()) && currentKey) run(() => loadMessages(true));
       pollCount += 1;
-      if (!document.hidden && token() && pollCount % 4 === 0) run(refreshThreadMetadata);
+      if (!document.hidden && (token() || isOpenAuthLane()) && pollCount % 4 === 0) run(refreshThreadMetadata);
     }, 4000);
     if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>{if(typeof refreshThreadMetadata==='function')refreshThreadMetadata();},{intervalMs:12000,immediate:false});
   </script>
