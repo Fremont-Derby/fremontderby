@@ -16,6 +16,9 @@ export function renderAdminSeasonTeamsPage() {
         <a href="/admin" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Admin home</a>
         <a href="/admin/seasons" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Seasons</a>
         <a href="/admin/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Players</a>
+        <a href="/season-setup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Season setup</a>
+        <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+        <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
         <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Public directory</a>
       </div>
     </header>
@@ -78,7 +81,16 @@ export function renderAdminSeasonTeamsPage() {
       if(!filtered.length){
         const empty=document.createElement('div');
         empty.className='empty';
-        empty.textContent=query||activeLetter?(('No teams match '+(query?('“'+search.value.trim()+'”'):'')+(query&&activeLetter?' · ':'')+(activeLetter?('letter '+activeLetter):'')+'.')):activeTab==='returning'?'No returning teams available to reserve.':activeTab==='new'?'No new teams yet. Use Create team above to prepare one.':'No teams are in this season yet.';if(query||activeLetter){setState(empty.textContent,'error');}else{setState('');}
+        empty.textContent=query||activeLetter?(('No teams match '+(query?('“'+search.value.trim()+'”'):'')+(query&&activeLetter?' · ':'')+(activeLetter?('letter '+activeLetter):'')+'.')):activeTab==='returning'?'No returning teams available to reserve.':activeTab==='new'?'No new teams yet. Use Create team above to prepare one.':'No teams are in this season yet.';
+        const links=document.createElement('div');
+        links.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:10px';
+        for(const [label,href] of [['Season setup','/season-setup'],['Seasons','/admin/seasons'],['Players','/admin/players'],['Score','/scorecard']]){
+          const a=document.createElement('a');a.href=href;a.textContent=label;
+          a.style.cssText='min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#32473a);border-radius:10px;color:inherit;text-decoration:none';
+          links.append(a);
+        }
+        empty.append(links);
+if(query||activeLetter){setState(empty.textContent,'error');}else{setState('');}
         list.append(empty);
         return;
       }
