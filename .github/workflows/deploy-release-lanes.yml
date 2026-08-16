@@ -75,11 +75,17 @@ jobs:
           LANE="${{ matrix.lane }}"
           # SUPABASE_URL / PUBLISHABLE_KEY / EXPECTED_REF are vars in wrangler.jsonc (staging).
           # Stale CF secrets with the same names block vars (error 10053) and pointed at production.
-          npx --yes wrangler@4 secret delete SUPABASE_URL --env "$LANE" --force || true
-          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env "$LANE" --force || true
-          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env "$LANE" --force || true
+          # wrangler@4 has no --force on secret delete; ignore missing secrets.
+          npx --yes wrangler@4 secret delete SUPABASE_URL --env "$LANE" || true
+          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env "$LANE" || true
+          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env "$LANE" || true
           test -n "${LANE_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets"; exit 1; }
-          printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"
+          # Gamma (and any lane without a current deployment) rejects secret put until a version is live.
+          # Try classic put; on failure use versions secret put so deploy can proceed.
+          if ! printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"; then
+            echo "classic secret put failed; trying versions secret put"
+            printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 versions secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE" || true
+          fi
 
       - name: Ensure production service role secret
         if: matrix.lane == 'production'
