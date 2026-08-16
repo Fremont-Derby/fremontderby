@@ -44,6 +44,10 @@ export function matchApiTeamsPath(pathname) {
     return { kind: 'membership-request', teamId };
   }
 
+  if (a === 'practice' && parts.length === 5) {
+    return { kind: 'practice', teamId };
+  }
+
   return null;
 }
 
