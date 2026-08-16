@@ -1774,7 +1774,7 @@ export default {
     if (url.pathname === '/api/me/notifications' && request.method === 'GET') {
       return handleListMyNotificationsRequest(request, env);
     }
-    if (url.pathname === '/api/me/notifications/read-all') {
+    if (url.pathname === '/api/me/notifications/read-all' || url.pathname === '/api/me/notifications/mark-all-read') {
       return handleMarkAllNotificationsReadRequest(request, env);
     }
     const notificationReadMatch = url.pathname.match(/^\/api\/me\/notifications\/([^/]+)\/read$/);
