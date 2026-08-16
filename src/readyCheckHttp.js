@@ -8,6 +8,7 @@ import {
 import { createReadyCheckRepository } from './readyCheckRepository.js';
 import { rpcErrorStatus } from './rpcErrorStatus.js';
 import { safeClientErrorMessage } from './requestSanitize.js';
+import { writeAuditBestEffort } from './adminAuditRepository.js';
 
 const json = jsonNoStore;
 
@@ -47,6 +48,12 @@ export function createReadyCheckHttpHandlers({
           },
           repository,
         );
+        await writeAuditBestEffort(env, actor.id, {
+          action: 'team_ready_check.start',
+          entityType: 'team_ready_check',
+          entityId: readyCheck?.id ?? readyCheck?.readyCheckId ?? body.roundId ?? body.round_id,
+          afterState: { teamId: body.teamId ?? body.team_id, roundId: body.roundId ?? body.round_id },
+        }, { fetch: fetchImpl });
         return json({ readyCheck }, 201);
       } catch (error) {
         return json({ error: safeClientErrorMessage(error) }, readyCheckErrorStatus(error));
@@ -67,6 +74,12 @@ export function createReadyCheckHttpHandlers({
           },
           repository,
         );
+        await writeAuditBestEffort(env, actor.id, {
+          action: 'team_ready_check.start',
+          entityType: 'team_ready_check',
+          entityId: readyCheck?.id ?? readyCheck?.readyCheckId ?? body.roundId ?? body.round_id ?? teamId,
+          afterState: { teamId, roundId: body.roundId ?? body.round_id },
+        }, { fetch: fetchImpl });
         return json({ readyCheck }, 201);
       } catch (error) {
         return json({ error: safeClientErrorMessage(error) }, readyCheckErrorStatus(error));
@@ -88,6 +101,12 @@ export function createReadyCheckHttpHandlers({
           },
           repository,
         );
+        await writeAuditBestEffort(env, actor.id, {
+          action: 'team_ready_check.respond',
+          entityType: 'team_ready_check',
+          entityId: readyCheckId,
+          afterState: response ?? null,
+        }, { fetch: fetchImpl });
         return json({ response });
       } catch (error) {
         return json({ error: safeClientErrorMessage(error) }, readyCheckErrorStatus(error));

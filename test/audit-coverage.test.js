@@ -45,3 +45,19 @@ test('admin audit page has action prefix chips', () => {
   assert.match(src, /data-prefix-chip/);
   assert.match(src, /team_invitation\./);
 });
+
+test('batch2 audit actions wired', () => {
+  const index = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  const ready = readFileSync(new URL('../src/readyCheckHttp.js', import.meta.url), 'utf8');
+  for (const action of [
+    'team_membership_request.create',
+    'team_membership_request.approve',
+    'team_membership_request.cancel',
+    'team.practice_update',
+    'team_membership.remove',
+  ]) {
+    assert.match(index, new RegExp(action.replaceAll('.', '\\.')));
+  }
+  assert.match(ready, /team_ready_check\.start/);
+  assert.match(ready, /team_ready_check\.respond/);
+});
