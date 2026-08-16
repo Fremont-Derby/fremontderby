@@ -35,7 +35,7 @@ export function renderTeamsPage() {
           <span class="action-meta" data-hub-matchup-meta>Round, opponent, date, and table</span>
           <span class="action-cta" data-hub-lineup-cta>Build lineup →</span>
         </a>
-        <a class="action-card" data-accent="blue" data-hub-availability href="/availability">
+        <a class="action-card" data-accent="blue" data-hub-availability href="/schedule">
           <span class="action-label">League night</span>
           <strong>Weekly check-in</strong>
           <span class="action-meta">Morning of the match: say you&rsquo;ll be there, you&rsquo;re unsure, or you can&rsquo;t make it.</span>
@@ -62,13 +62,13 @@ export function renderTeamsPage() {
         <a class="action-card" data-accent="purple" data-hub-chat href="/messages">
           <span class="action-label">Coordinate</span>
           <strong>Team chat</strong>
-          <span class="action-meta">Message your team or tonight's opponent.</span>
+          <span class="action-meta">Message your team or players directly.</span>
           <span class="action-cta">Open messages →</span>
         </a>
-        <a class="action-card" data-accent="orange" data-hub-manage href="/trades">
+        <a class="action-card" data-accent="orange" data-hub-manage href="#captain-tools">
           <span class="action-label">Team management</span>
-          <strong data-hub-manage-title>Roster & trades</strong>
-          <span class="action-meta" data-hub-manage-meta>Handle invites, requests, and player moves.</span>
+          <strong data-hub-manage-title>Roster management</strong>
+          <span class="action-meta" data-hub-manage-meta>Handle invites, requests, and roster changes.</span>
           <span class="action-cta" data-hub-manage-cta>Manage team →</span>
         </a>
       </div>
@@ -98,7 +98,7 @@ export function renderTeamsPage() {
       <article class="panel"><div class="panel-head"><span>My membership requests</span></div><div data-player-requests></div></article>
       <article class="panel"><div class="panel-head"><span>Requests for teams I captain</span></div><div data-captain-requests></div></article>
       <article class="panel"><div class="panel-head"><span>My invitations</span></div><div data-invitations></div></article>
-      <div data-captain-teams></div>
+      <div id="captain-tools" data-captain-teams></div>
     </section>
     </div>
   </main>
@@ -143,7 +143,7 @@ export function renderTeamsPage() {
       list.append(checklistItem(
         '1. Check-in',
         'Ask the roster for available / unsure / out for this date.',
-        '/availability',
+        '/schedule',
         'ok'
       ));
       list.append(checklistItem(
@@ -201,7 +201,7 @@ export function renderTeamsPage() {
     }
 
     function renderLeagueNightHub(data,scorable){const teams=data.captain_teams||[];const liveMatches=(scorable||[]).filter((m)=>String(m.status||m.match_status||'')==='in_progress');const readyMatches=scorable||[];function paintScoreCard(match){if(!hubScore)return;if(!match){hubScore.href='/scorecard';if(hubScoreLabel)hubScoreLabel.textContent='During play';if(hubScoreTitle)hubScoreTitle.textContent='Score a match';if(hubScoreMeta)hubScoreMeta.textContent='Open a ready matchup and keep both scores together.';if(hubScoreCta)hubScoreCta.textContent='Open scoring →';return}const live=String(match.status||match.match_status||'')==='in_progress';const matchId=match.playerMatchId||match.player_match_id||match.teamMatchId||match.team_match_id||'';const teamId=match.scoringTeamId||match.scoring_team_id||match.teamId||'';const teamName=match.scoringTeamName||match.scoring_team_name||match.teamName||'Your team';const qs=new URLSearchParams();if(matchId)qs.set('match',matchId);if(teamId)qs.set('team',teamId);if(teamName)qs.set('teamName',teamName);hubScore.href='/scorecard'+(qs.toString()?('?'+qs.toString()):'');if(hubScoreLabel)hubScoreLabel.textContent=live?'Live now':'Ready to score';if(hubScoreTitle)hubScoreTitle.textContent=live?'Score live':'Score this match';if(hubScoreMeta)hubScoreMeta.textContent=(match.opponentName||match.opponent_name||match.matchupLabel||'Your matchup')+(live?' · in progress':' · open scoring');if(hubScoreCta)hubScoreCta.textContent=live?'Continue scoring →':'Start scoring →'}
-const context=nextCaptainMatchup(teams);if(context){const team=context.team;const round=context.round;hubTeamEl.textContent=team.teamName;hubLabel.textContent='Next matchup';hubMatchup.textContent='Round '+round.roundNumber+' vs '+(round.opponentName||'Opponent');hubMatchupMeta.textContent=[dateLabel(round.scheduledOn),round.tableNumber?('Table '+round.tableNumber):'',lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at)].filter(Boolean).join(' · ');hubLineupCta.textContent=(function(){const due=lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at);if(due&&due.indexOf('overdue')>=0)return'Lock lineup now →';if(due&&due.indexOf('due soon')>=0)return'Finish lineup →';return'Build lineup →'})();hubLineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);if(hubReadyCheck){hubReadyCheck.dataset.teamId=team.teamId;hubReadyCheck.dataset.roundId=round.roundId;hubReadyCheck.disabled=false;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';}hubChat.href='/messages?team='+encodeURIComponent(team.teamId);hubManage.href='/trades';hubManageTitle.textContent='Roster & trades';hubManageMeta.textContent='Handle invites, requests, and player moves.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}if(teams.length){hubTeamEl.textContent=teams[0].teamName;hubLabel.textContent='Captain tools';hubMatchup.textContent='No published matchup yet';hubMatchupMeta.textContent='Your next round will appear here as soon as it is scheduled.';hubLineupCta.textContent='Review lineups →';hubLineup.href='/lineup';hubChat.href='/messages?team='+encodeURIComponent(teams[0].teamId);hubManage.href='/trades';hubManageTitle.textContent='Roster & trades';hubManageMeta.textContent='Handle invites, requests, and player moves.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}hubTeamEl.textContent='Player';hubLabel.textContent='Your next step';hubMatchup.textContent='Find your team';hubMatchupMeta.textContent='Request to join a team or apply for an open team slot.';hubLineupCta.textContent='Join or apply →';hubLineup.href='#join-teams';hubManage.href='#join-teams';hubManageTitle.textContent='Join a team';hubManageMeta.textContent='See open teams and send a request to the captain.';hubManageCta.textContent='View teams →';paintScoreCard(liveMatches[0]||readyMatches[0]||null)}
+const context=nextCaptainMatchup(teams);if(context){const team=context.team;const round=context.round;hubTeamEl.textContent=team.teamName;hubLabel.textContent='Next matchup';hubMatchup.textContent='Round '+round.roundNumber+' vs '+(round.opponentName||'Opponent');hubMatchupMeta.textContent=[dateLabel(round.scheduledOn),round.tableNumber?('Table '+round.tableNumber):'',lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at)].filter(Boolean).join(' · ');hubLineupCta.textContent=(function(){const due=lineupDeadlineLabel(round.lineupDeadlineAt||round.lineup_deadline_at);if(due&&due.indexOf('overdue')>=0)return'Lock lineup now →';if(due&&due.indexOf('due soon')>=0)return'Finish lineup →';return'Build lineup →'})();hubLineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);if(hubReadyCheck){hubReadyCheck.dataset.teamId=team.teamId;hubReadyCheck.dataset.roundId=round.roundId;hubReadyCheck.disabled=false;if(hubReadyCheckCta)hubReadyCheckCta.textContent='Send ready check →';}hubChat.href='/messages?team='+encodeURIComponent(team.teamId);hubManage.href='#captain-tools';hubManageTitle.textContent='Roster management';hubManageMeta.textContent='Handle invites, requests, and roster changes.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}if(teams.length){hubTeamEl.textContent=teams[0].teamName;hubLabel.textContent='Captain tools';hubMatchup.textContent='No published matchup yet';hubMatchupMeta.textContent='Your next round will appear here as soon as it is scheduled.';hubLineupCta.textContent='Review lineups →';hubLineup.href='/lineup';hubChat.href='/messages?team='+encodeURIComponent(teams[0].teamId);hubManage.href='#captain-tools';hubManageTitle.textContent='Roster management';hubManageMeta.textContent='Handle invites, requests, and roster changes.';hubManageCta.textContent='Manage team →';paintScoreCard(liveMatches[0]||readyMatches[0]||null);return}hubTeamEl.textContent='Player';hubLabel.textContent='Your next step';hubMatchup.textContent='Find your team';hubMatchupMeta.textContent='Request to join a team or apply for an open team slot.';hubLineupCta.textContent='Join or apply →';hubLineup.href='#join-teams';hubManage.href='#join-teams';hubManageTitle.textContent='Join a team';hubManageMeta.textContent='See open teams and send a request to the captain.';hubManageCta.textContent='View teams →';paintScoreCard(liveMatches[0]||readyMatches[0]||null)}
 
     function playerOptionLabel(player){
       if(player&&player.label)return player.label;
