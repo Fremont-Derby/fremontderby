@@ -73,10 +73,11 @@ jobs:
         run: |
           set -euo pipefail
           LANE="${{ matrix.lane }}"
-          # Ensure Worker secret matches staging project (lane vars alone cannot override stale secrets).
-          printf '%s' 'https://oqkkvqkerusepyokzbmt.supabase.co' | npx --yes wrangler@4 secret put SUPABASE_URL --env "$LANE"
-          printf '%s' 'sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB' | npx --yes wrangler@4 secret put SUPABASE_PUBLISHABLE_KEY --env "$LANE"
-          printf '%s' 'oqkkvqkerusepyokzbmt' | npx --yes wrangler@4 secret put EXPECTED_SUPABASE_PROJECT_REF --env "$LANE"
+          # SUPABASE_URL / PUBLISHABLE_KEY / EXPECTED_REF are vars in wrangler.jsonc (staging).
+          # Stale CF secrets with the same names block vars (error 10053) and pointed at production.
+          npx --yes wrangler@4 secret delete SUPABASE_URL --env "$LANE" --force || true
+          npx --yes wrangler@4 secret delete SUPABASE_PUBLISHABLE_KEY --env "$LANE" --force || true
+          npx --yes wrangler@4 secret delete EXPECTED_SUPABASE_PROJECT_REF --env "$LANE" --force || true
           test -n "${LANE_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets"; exit 1; }
           printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"
 
