@@ -1,6 +1,6 @@
 export const adminGatewayThemeStyles = `
   main.app:has([data-admin-content]) {
-    color-scheme: light;
+    color-scheme: light !important;
     color: var(--fd-text, #171b19) !important;
   }
   main.app:has([data-admin-content]) .hero {

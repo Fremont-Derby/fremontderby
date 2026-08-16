@@ -1,6 +1,7 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { deriveAdminSeasonTeamEntry } from './adminSeasonTeamEntry.js';
 
+import { withSupabaseSchema } from './supabaseSchema.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);

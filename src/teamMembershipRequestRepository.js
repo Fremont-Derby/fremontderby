@@ -38,12 +38,16 @@ async function requestJson(fetchImpl, url, init) {
   return payload;
 }
 
-async function requestRpc(fetchImpl, supabaseUrl, serviceRoleKey, rpcName, body) {
+async function requestRpc(fetchImpl, supabaseUrl, serviceRoleKey, rpcName, body, { expectArray = false } = {}) {
   const payload = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
     method: 'POST',
     headers: headers(serviceRoleKey),
     body: JSON.stringify(body),
   });
+  if (expectArray) {
+    return Array.isArray(payload) ? payload : [];
+  }
+  // PostgREST may wrap a single composite row as a one-element array.
   return Array.isArray(payload) ? payload[0] : payload;
 }
 
@@ -82,9 +86,9 @@ export function createTeamMembershipRequestRepository(
           { method: 'GET', headers: serviceHeaders },
         );
       }
-      const activeSeasonIds = new Set(
-        (Array.isArray(activeMemberships) ? activeMemberships : []).map((row) => row.season_id),
-      );
+      const membershipRows = Array.isArray(activeMemberships) ? activeMemberships : [];
+      const activeSeasonIds = new Set(membershipRows.map((row) => row.season_id));
+      const activeTeamIds = new Set(membershipRows.map((row) => row.team_id));
 
       const teams = await requestRpc(
         fetchImpl,
@@ -92,22 +96,27 @@ export function createTeamMembershipRequestRepository(
         serviceRoleKey,
         'list_joinable_team_registration',
         {},
+        { expectArray: true },
       );
       const pendingByTeam = new Map(
         (requests?.player_requests ?? [])
           .filter((request) => request.status === 'pending')
           .map((request) => [request.teamId, request]),
       );
-      const joinableTeams = (Array.isArray(teams) ? teams : []).map((team) => ({
-        teamId: team.team_id,
-        teamName: team.team_name,
-        seasonId: team.season_id,
-        seasonName: team.season_name,
-        seasonStatus: team.season_status,
-        slotStatus: team.slot_status,
-        hasActiveMembership: activeSeasonIds.has(team.season_id),
-        pendingRequestId: pendingByTeam.get(team.team_id)?.requestId ?? null,
-      }));
+      // Season-wide membership uniqueness: hide teams in seasons the player already belongs to,
+      // and never list a team the player is already on.
+      const joinableTeams = (Array.isArray(teams) ? teams : [])
+        .filter((team) => !activeTeamIds.has(team.team_id) && !activeSeasonIds.has(team.season_id))
+        .map((team) => ({
+          teamId: team.team_id,
+          teamName: team.team_name,
+          seasonId: team.season_id,
+          seasonName: team.season_name,
+          seasonStatus: team.season_status,
+          slotStatus: team.slot_status,
+          hasActiveMembership: false,
+          pendingRequestId: pendingByTeam.get(team.team_id)?.requestId ?? null,
+        }));
 
       return {
         ...(requests ?? { player_requests: [], captain_requests: [] }),

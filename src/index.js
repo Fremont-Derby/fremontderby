@@ -1,3 +1,18 @@
+import { createNotificationRepository } from './notificationRepository.js';
+import {
+  createAdminAuditRepository,
+  deliverAuditWebhooks,
+  writeAuditBestEffort,
+} from './adminAuditRepository.js';
+import { createChatRepository } from './chatRepository.js';
+import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import {
+  readSanitizedJsonBody,
+  safeClientErrorMessage,
+  requireUuid,
+  isUuid,
+} from './requestSanitize.js';
 import {
   listTeamRoundAvailabilityCommand,
   setRosterAvailabilityCommand,
@@ -6,6 +21,7 @@ import { renderAvailabilityPage } from './availabilityPage.js';
 import { createAvailabilityRepository } from './availabilityRepository.js';
 import {
   listEligibleFreeAgentsCommand,
+  listSeasonFreeAgentsCommand,
   registerFreeAgentCommand,
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
@@ -20,6 +36,7 @@ import { createLineupRepository } from './lineupRepository.js';
 import {
   getOwnPlayerProfileCommand,
   saveOwnPlayerProfileCommand,
+  saveOwnStandingAvailabilityCommand,
 } from './playerProfileCommands.js';
 import { renderProfilePage } from './profilePage.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
@@ -49,8 +66,10 @@ import {
   listIndividualStandingsCommand,
   listTeamStandingsCommand,
 } from './standingsCommands.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderStandingsPage } from './standingsPage.js';
 import { createStandingsRepository } from './standingsRepository.js';
+import { conditionalJsonFromVersion, conditionalJsonResponse, versionTokenFromValue } from './httpConditional.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
 import {
@@ -58,13 +77,25 @@ import {
   approveTeamTradeCaptainCommand,
   cancelTeamInvitationCommand,
   invitePlayerToTeamCommand,
+  updateTeamPracticeCommand,
   listOwnTeamManagementCommand,
   listOwnTeamTradesCommand,
+  listTradeCounterpartyOptionsCommand,
   proposeTeamTradeCommand,
   removeTeamMemberCommand,
   respondToTeamTradePlayerCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
+import {
+  proposeTeamMatchMakeupCommand,
+  respondTeamMatchMakeupCommand,
+} from './makeupCommands.js';
+import {
+  listMyNotificationsCommand,
+  markNotificationReadCommand,
+  markAllNotificationsReadCommand,
+  adminBroadcastNotificationCommand,
+} from './notificationCommands.js';
 import { createTeamMembershipRequestRepository } from './teamMembershipRequestRepository.js';
 import { createTeamRepository } from './teamRepository.js';
 import {
@@ -81,6 +112,7 @@ import {
 import { createTeamRegistrationRepository } from './teamRegistrationRepository.js';
 import { renderTeamsPage } from './teamsPage.js';
 import { renderTradesPage } from './tradesPage.js';
+import { normalizeApiPathname } from './pathAliases.js';
 
 const serviceName = "fremontderby";
 
@@ -129,76 +161,42 @@ export function renderLandingPage(env = {}) {
 }
 
 function jsonResponse(body, status = 200) {
-  return Response.json(body, {
-    status,
-    headers: {
-      "cache-control": "no-store",
-    },
-  });
+  return Response.json(body, { status, headers: apiSecurityHeaders() });
 }
 
 async function readJsonBody(request) {
-  try {
-    const text = await request.text();
-    if (!text.trim()) {
-      return {};
-    }
+  return readSanitizedJsonBody(request);
+}
 
-    const body = JSON.parse(text);
-    if (!body || Array.isArray(body) || typeof body !== "object") {
-      throw new Error("Request body must be a JSON object");
-    }
-    return body;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error("Request body must be valid JSON");
-    }
-    throw error;
-  }
+function normalizeApproveDecline(body) {
+  const raw =
+    body?.response
+    ?? body?.decision
+    ?? body?.action
+    ?? (body?.accept === true || body?.accepted === true ? 'accepted' : null)
+    ?? (body?.approve === true || body?.approved === true ? 'approved' : null)
+    ?? (body?.decline === true || body?.declined === true ? 'declined' : null);
+  if (raw == null) return raw;
+  const value = String(raw).toLowerCase().trim();
+  // Verb forms clients often send instead of past-participle status words.
+  if (value === 'accept') return 'accepted';
+  if (value === 'approve') return 'approved';
+  if (value === 'decline' || value === 'reject' || value === 'rejected') return 'declined';
+  return value;
 }
 
 function clientErrorMessage(error) {
-  const msg = String(error?.message || "Request failed");
-  if (/invalid input syntax for type uuid/i.test(msg)) {
-    return "That season or match link is invalid.";
+  // Prefer safe mapping first, then preserve a few product-specific uuid phrases.
+  const safe = safeClientErrorMessage(error);
+  const raw = String(error?.message || '');
+  if (/invalid input syntax for type uuid/i.test(raw) || /Supabase request failed with 400:.*uuid/i.test(raw)) {
+    return 'That season or match link is invalid.';
   }
-  if (/Supabase request failed with 400:.*uuid/i.test(msg)) {
-    return "That season or match link is invalid.";
-  }
-  return msg;
+  return safe;
 }
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
-  if (/invalid input syntax for type uuid/i.test(String(error?.message || ""))) return 400;
-  if (error.message === "Season not found") return 404;
-  if (error.message === "Actor is not a league admin") return 403;
-  if (error.message.includes("Actor is not a league admin")) return 403;
-  if (error.message.includes("Only the active captain")) return 403;
-  if (error.message.includes("Only an active captain")) return 403;
-  if (error.message.includes("Only a traded player")) return 403;
-  if (error.message.includes("Active roster membership is required")) return 403;
-  if (error.message.startsWith("Supabase request failed with 401")) return 401;
-  if (error.message.startsWith("Supabase request failed with 403")) return 403;
-  if (error.message.includes("Player is already scheduled")) return 409;
-  if (error.message.includes("Only match players or active team captains")) return 403;
-  if (error.message.includes("already complete")) return 409;
-  if (error.message.includes("is finalized")) return 409;
-  if (error.message.includes("no racks to undo")) return 409;
-  if (error.message.includes("before finalization")) return 409;
-  if (error.message.includes("before correction")) return 409;
-  if (error.message.includes("valid completed race state")) return 409;
-  if (error.message.includes("valid corrected race state")) return 409;
-  if (error.message.includes("rack history must match")) return 409;
-  if (error.message.includes("Race targets are required")) return 409;
-  if (error.message.includes("prize payouts are already finalized")) return 409;
-  if (error.message.includes("Season setup can only change before publication")) return 409;
-  if (error.message.includes("Roster lock has passed")) return 409;
-  if (error.message.includes("pending trade already includes")) return 409;
-  if (error.message.includes("Trade is no longer pending")) return 409;
-  if (error.message.includes("active membership changed")) return 409;
-  if (error.message.includes("active non-captain roster member")) return 409;
-  if (error.message === "Player match not found") return 404;
-  return 400;
+  return rpcErrorStatus(error);
 }
 
 export async function handlePublishScheduleRequest(
@@ -365,10 +363,51 @@ export async function handleSaveOwnProfileRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
+    // Standing-only payloads used to 400 with "displayName is required". Accept either shape.
+    const standingOnly =
+      (body.standingStatus != null || body.standing_availability_status != null
+        || body.standingNote != null || body.standing_availability_note != null)
+      && body.displayName == null && body.display_name == null;
+    if (standingOnly) {
+      const profile = await saveOwnStandingAvailabilityCommand(
+        {
+          actorUserId: actor.id,
+          standingStatus: body.standingStatus ?? body.standing_availability_status,
+          standingNote: body.standingNote ?? body.standing_availability_note,
+        },
+        repository,
+      );
+      return jsonResponse({ profile });
+    }
     const profile = await saveOwnPlayerProfileCommand(
       {
         actorUserId: actor.id,
-        displayName: body.displayName,
+        displayName: body.displayName ?? body.display_name,
+        fargoExternalId: body.fargoExternalId ?? body.fargo_external_id ?? body.fargoId ?? body.fargo_id ?? null,
+      },
+      repository,
+    );
+
+    return jsonResponse({ profile });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleSaveOwnStandingAvailabilityRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
+    const profile = await saveOwnStandingAvailabilityCommand(
+      {
+        actorUserId: actor.id,
+        standingStatus: body.standingStatus ?? body.standing_availability_status,
+        standingNote: body.standingNote ?? body.standing_availability_note,
       },
       repository,
     );
@@ -393,7 +432,7 @@ export async function handleCreateTeamRequest(
       {
         actorUserId: actor.id,
         seasonId,
-        teamName: body.teamName ?? body.name,
+        teamName: body.teamName ?? body.team_name ?? body.name,
       },
       repository,
     );
@@ -456,7 +495,9 @@ export async function handleRespondToReturningTeamSlotRequest(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action,
+        action: body.action ?? body.response ?? body.decision
+          ?? (body.accept === true || body.accepted === true ? 'accept' : null)
+          ?? (body.decline === true || body.declined === true ? 'decline' : null),
         transferPlayerId: body.transferPlayerId ?? body.transfer_player_id,
       },
       repository,
@@ -529,8 +570,8 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: body.decision,
-        reason: body.reason,
+        decision: normalizeApproveDecline(body) ?? body.decision,
+        reason: body.reason ?? body.note,
       },
       repository,
     );
@@ -554,8 +595,8 @@ export async function handleManageTeamSlotRequest(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action,
-        reason: body.reason,
+        action: body.action ?? body.decision ?? body.response,
+        reason: body.reason ?? body.note,
         extensionDays: body.extensionDays ?? body.extension_days,
       },
       repository,
@@ -614,6 +655,13 @@ export async function handleRequestTeamMembershipRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.requestJoin({ actorUserId: actor.id, teamId });
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_membership_request.create',
+      entityType: 'team',
+      entityId: teamId,
+      afterState: { membershipRequestId: membershipRequest?.id ?? membershipRequest?.requestId ?? null },
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membershipRequest }, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -629,15 +677,25 @@ export async function handleRespondToTeamMembershipRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    if (!['approved', 'declined'].includes(body.response)) {
+    const response = normalizeApproveDecline(body);
+    if (!['approved', 'declined'].includes(response)) {
       throw new Error('response must be approved or declined');
     }
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.respond({
       actorUserId: actor.id,
       requestId,
-      response: body.response,
+      response,
     });
+    await writeAuditBestEffort(env, actor.id, {
+      action: response === 'approved'
+        ? 'team_membership_request.approve'
+        : 'team_membership_request.decline',
+      entityType: 'team_membership_request',
+      entityId: requestId,
+      afterState: { response },
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -654,6 +712,12 @@ export async function handleCancelTeamMembershipRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.cancel({ actorUserId: actor.id, requestId });
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_membership_request.cancel',
+      entityType: 'team_membership_request',
+      entityId: requestId,
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -668,12 +732,34 @@ export async function handleListOwnTeamManagementRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamRepository(env, { fetch: fetchImpl });
+    // Actor-scoped: strong ETag after load still enables 304 bandwidth savings on live refresh.
     const teamManagement = await listOwnTeamManagementCommand(
       { actorUserId: actor.id },
       repository,
     );
+    return conditionalJsonResponse(request, { teamManagement }, {
+      cacheControl: 'private, no-store',
+    });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
 
-    return jsonResponse({ teamManagement });
+
+export async function handleListTradeCounterpartyOptionsRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teams = await listTradeCounterpartyOptionsCommand(
+      { actorUserId: actor.id, seasonId },
+      repository,
+    );
+    return jsonResponse({ teams });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -698,6 +784,335 @@ export async function handleListOwnTeamTradesRequest(
   }
 }
 
+
+
+export async function handleGetTeamPracticeRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const practice = await repository.getTeamPractice({ teamId });
+    return jsonResponse({ practice });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleUpdateTeamPracticeRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'PUT' && request.method !== 'POST') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const chatRepository = createChatRepository(env, { fetch: fetchImpl });
+    const practice = await updateTeamPracticeCommand(
+      {
+        actorUserId: actor.id,
+        teamId,
+        practiceLocation: body.practiceLocation ?? body.practice_location ?? body.location ?? null,
+        practiceSchedule: body.practiceSchedule ?? body.practice_schedule ?? body.time ?? body.schedule ?? null,
+        practiceRecurrence: body.practiceRecurrence ?? body.practice_recurrence ?? (body.recurring === true || body.recurring === 'weekly' ? 'weekly' : body.recurring === false ? 'once' : null) ?? null,
+        practiceOn: body.practiceOn ?? body.practice_on ?? body.date ?? null,
+      },
+      repository,
+      { chatRepository },
+    );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team.practice_update',
+      entityType: 'team',
+      entityId: teamId,
+      afterState: practice ?? null,
+    }, { fetch: fetchImpl });
+
+    return jsonResponse({ practice });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+
+
+export async function handleListAdminAuditEventsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const url = new URL(request.url);
+    url.pathname = normalizeApiPathname(url.pathname);
+    const repository = createAdminAuditRepository(env, { fetch: fetchImpl });
+    const events = await repository.listAuditEvents({
+      actorUserId: actor.id,
+      limit: Number(url.searchParams.get('limit') || 50),
+      actionPrefix: url.searchParams.get('prefix') || null,
+    });
+    return jsonResponse({ events });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleFlushAdminAuditWebhooksRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const result = await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
+    return jsonResponse(result);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleListMyNotificationsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const notifications = await listMyNotificationsCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse({ notifications });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleMarkNotificationReadRequest(request, env, notificationId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const result = await markNotificationReadCommand(
+      { actorUserId: actor.id, notificationId },
+      repository,
+    );
+    return jsonResponse({ notification: result });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleMarkAllNotificationsReadRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const result = await markAllNotificationsReadCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse(result);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleAdminBroadcastNotificationRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createNotificationRepository(env, { fetch: fetchImpl });
+    const result = await adminBroadcastNotificationCommand(
+      {
+        actorUserId: actor.id,
+        title: body.title,
+        body: body.body ?? body.message,
+        seasonId: body.seasonId ?? body.season_id ?? null,
+        href: body.href ?? null,
+      },
+      repository,
+    );
+    try {
+      const auditRepository = createAdminAuditRepository(env, { fetch: fetchImpl });
+      const seasonId = body.seasonId ?? body.season_id ?? null;
+      await auditRepository.writeAuditEvent({
+        actorUserId: actor.id,
+        action: 'admin.broadcast_notification',
+        entityType: 'season',
+        entityId: seasonId || '00000000-0000-4000-8000-000000000000',
+        reason: String(body.title || '').slice(0, 120) || null,
+        afterState: { sent: result.sent, href: body.href ?? null },
+      });
+      await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
+    } catch {
+      // best-effort audit
+    }
+    return jsonResponse(result, 201);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+export async function handleTeamMatchDisputeRequest(
+  request,
+  env,
+  teamMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
+    const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
+    // Store a packet notice for the requesting user (audit trail in their inbox).
+    await notificationRepository.createUserNotification({
+      recipientUserId: actor.id,
+      kind: 'dispute_request',
+      title: 'Dispute submitted',
+      body: note || 'Match dispute submitted for admin review.',
+      href: '/scorecard?match=' + encodeURIComponent(teamMatchId),
+      teamMatchId,
+      actorUserId: actor.id,
+    });
+    // Best-effort: also post matchup chat if available.
+    try {
+      const chatRepository = createChatRepository(env, { fetch: fetchImpl });
+      if (typeof chatRepository.sendMatchupMessage === 'function') {
+        await chatRepository.sendMatchupMessage({
+          actorUserId: actor.id,
+          teamMatchId,
+          body: 'Dispute requested: ' + (note || 'Please review this match.'),
+          clientMessageId: null,
+        });
+      }
+    } catch {
+      // optional
+    }
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_match.dispute',
+      entityType: 'team_match',
+      entityId: teamMatchId,
+      reason: note || null,
+      afterState: { href: '/scorecard?match=' + teamMatchId },
+    }, { fetch: fetchImpl });
+    return jsonResponse({ ok: true }, 201);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleProposeTeamMatchMakeupRequest(
+  request,
+  env,
+  teamMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const makeup = await proposeTeamMatchMakeupCommand(
+      {
+        actorUserId: actor.id,
+        teamMatchId,
+        makeupOn: body.makeupOn ?? body.makeup_on ?? body.date ?? body.on ?? body.proposedOn ?? body.proposed_on,
+        makeupLocation: body.makeupLocation ?? body.makeup_location ?? body.location ?? body.venue ?? null,
+        makeupNote: body.makeupNote ?? body.makeup_note ?? body.note ?? body.message ?? null,
+      },
+      repository,
+    );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_match.makeup_propose',
+      entityType: 'team_match',
+      entityId: teamMatchId,
+      afterState: makeup ?? null,
+    }, { fetch: fetchImpl });
+
+    return jsonResponse({ makeup }, 201);
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleRespondTeamMatchMakeupRequest(
+  request,
+  env,
+  teamMatchId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const body = await readJsonBody(request);
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const makeup = await respondTeamMatchMakeupCommand(
+      {
+        actorUserId: actor.id,
+        teamMatchId,
+        response: normalizeApproveDecline(body) ?? body.response ?? body.status,
+      },
+      repository,
+    );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_match.makeup_respond',
+      entityType: 'team_match',
+      entityId: teamMatchId,
+      afterState: { response: body.response ?? body.status, makeup },
+    }, { fetch: fetchImpl });
+
+    return jsonResponse({ makeup });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+
+export async function handleListOwnInvitationsRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teamManagement = await listOwnTeamManagementCommand({ actorUserId: actor.id }, repository);
+    return jsonResponse({
+      invitations: teamManagement?.invitations || [],
+      playerId: teamManagement?.player_id || teamManagement?.playerId || null,
+    });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+export async function handleListTeamInvitationsRequest(
+  request,
+  env,
+  teamId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const teamManagement = await listOwnTeamManagementCommand({ actorUserId: actor.id }, repository);
+    const invitations = [];
+    for (const row of teamManagement?.invitations || []) {
+      if (!teamId || row.teamId === teamId || row.team_id === teamId) invitations.push(row);
+    }
+    for (const team of teamManagement?.captain_teams || []) {
+      if (teamId && team.teamId !== teamId && team.team_id !== teamId) continue;
+      for (const inv of team.invitations || team.pendingInvitations || []) {
+        invitations.push({ ...inv, teamId: team.teamId || team.team_id || teamId });
+      }
+    }
+    return jsonResponse({ invitations, teamId });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleInvitePlayerToTeamRequest(
   request,
   env,
@@ -712,10 +1127,20 @@ export async function handleInvitePlayerToTeamRequest(
       {
         actorUserId: actor.id,
         teamId,
-        playerId: body.playerId ?? body.invitedPlayerId,
+        playerId: body.playerId ?? body.player_id ?? body.invitedPlayerId ?? body.invited_player_id,
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_invitation.create',
+      entityType: 'team_invitation',
+      entityId: invitation?.id ?? invitation?.invitationId ?? null,
+      afterState: {
+        teamId,
+        playerId: body.playerId ?? body.player_id ?? body.invitedPlayerId ?? body.invited_player_id,
+      },
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ invitation }, 201);
   } catch (error) {
@@ -743,6 +1168,18 @@ export async function handleProposeTeamTradeRequest(
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_trade.propose',
+      entityType: 'team_trade',
+      entityId: trade?.id ?? trade?.tradeId ?? null,
+      afterState: {
+        teamId,
+        offeredPlayerId: body.offeredPlayerId ?? body.offered_player_id,
+        requestedTeamId: body.requestedTeamId ?? body.requested_team_id,
+        requestedPlayerId: body.requestedPlayerId ?? body.requested_player_id,
+      },
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ trade }, 201);
   } catch (error) {
@@ -787,14 +1224,24 @@ export async function handleRespondToTeamInvitationRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createTeamRepository(env, { fetch: fetchImpl });
+    const response = normalizeApproveDecline(body);
     const invitation = await respondToTeamInvitationCommand(
       {
         actorUserId: actor.id,
         invitationId,
-        response: body.response,
+        response,
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: (response === 'accepted' || response === 'approved')
+        ? 'team_invitation.accept'
+        : 'team_invitation.decline',
+      entityType: 'team_invitation',
+      entityId: invitationId,
+      afterState: { response },
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ invitation });
   } catch (error) {
@@ -816,7 +1263,7 @@ export async function handleRespondToTeamTradePlayerRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: body.response,
+        response: normalizeApproveDecline(body) ?? body.response,
       },
       repository,
     );
@@ -841,7 +1288,7 @@ export async function handleApproveTeamTradeCaptainRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: body.response,
+        response: normalizeApproveDecline(body) ?? body.response,
       },
       repository,
     );
@@ -869,6 +1316,12 @@ export async function handleCancelTeamInvitationRequest(
       repository,
     );
 
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_invitation.cancel',
+      entityType: 'team_invitation',
+      entityId: invitationId,
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ invitation });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -892,6 +1345,13 @@ export async function handleRemoveTeamMemberRequest(
       repository,
     );
 
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_membership.remove',
+      entityType: 'team_membership',
+      entityId: membershipId,
+      afterState: membership ?? null,
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membership });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -914,6 +1374,12 @@ export async function handleRegisterFreeAgentRequest(
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'free_agent.register',
+      entityType: 'season',
+      entityId: seasonId,
+      afterState: freeAgent ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ freeAgent }, 201);
   } catch (error) {
@@ -931,16 +1397,51 @@ export async function handleSetFreeAgentAvailabilityRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    let status = body.status ?? body.availabilityStatus ?? body.availability_status;
+    if (typeof status === 'string') {
+      const s = status.trim().toLowerCase();
+      if (s === 'yes' || s === 'open' || s === 'in') status = 'available';
+      if (s === 'no' || s === 'out') status = 'unavailable';
+      if (s === 'maybe') status = 'unsure';
+    }
     const availability = await setFreeAgentAvailabilityCommand(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus,
+        availabilityStatus: status,
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'free_agent.availability_set',
+      entityType: 'round',
+      entityId: roundId,
+      afterState: availability ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ availability });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
+
+export async function handleListSeasonFreeAgentsRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    // Public-ish list (standings-adjacent); auth optional on open lanes.
+    try {
+      await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    } catch {
+      // continue unauthenticated
+    }
+    const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    const freeAgents = await listSeasonFreeAgentsCommand({ seasonId }, repository);
+    return jsonResponse({ freeAgents });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -980,14 +1481,27 @@ export async function handleSetRosterAvailabilityRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createAvailabilityRepository(env, { fetch: fetchImpl });
+    let status = body.status ?? body.availabilityStatus ?? body.availability_status;
+    if (typeof status === 'string') {
+      const s = status.trim().toLowerCase();
+      if (s === 'yes' || s === 'open' || s === 'in') status = 'available';
+      if (s === 'no' || s === 'out') status = 'unavailable';
+      if (s === 'maybe') status = 'unsure';
+    }
     const availability = await setRosterAvailabilityCommand(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus,
+        availabilityStatus: status,
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'roster.availability_set',
+      entityType: 'round',
+      entityId: roundId,
+      afterState: availability ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ availability });
   } catch (error) {
@@ -1034,10 +1548,38 @@ export async function handleSubmitTeamLineupRequest(
         actorUserId: actor.id,
         teamId,
         roundId,
-        slots: body.slots ?? body.lineupSlots,
+        slots: body.slots ?? body.lineupSlots ?? body.lineup_slots,
       },
       repository,
     );
+
+    // Lifecycle: team chat + in-app notice (best-effort).
+    try {
+      const chatRepository = createChatRepository(env, { fetch: fetchImpl });
+      await chatRepository.sendTeamMessage({
+        actorUserId: actor.id,
+        teamId,
+        body: 'Lineup locked for this matchup. Open Lineup/Scorecard when both sides are ready.',
+        clientMessageId: null,
+      });
+    } catch {
+      // ignore chat failures
+    }
+    try {
+      const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
+      // Notify actor as confirmation; roster-wide fanout can expand later.
+      await notificationRepository.createUserNotification({
+        recipientUserId: actor.id,
+        kind: 'lineup_locked',
+        title: 'Lineup locked',
+        body: 'Your team lineup is locked for this matchup.',
+        href: '/lineup?team=' + encodeURIComponent(teamId) + '&round=' + encodeURIComponent(roundId),
+        teamId,
+        actorUserId: actor.id,
+      });
+    } catch {
+      // ignore notification failures
+    }
 
     return jsonResponse({ lineup });
   } catch (error) {
@@ -1070,81 +1612,132 @@ export async function handleListVisibleTeamLineupsRequest(
 }
 
 export async function handleListPublicSeasonsRequest(
+  request,
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
     const seasons = await repository.listPublicSeasons();
-    return jsonResponse({ seasons });
+    // Public, anonymous-safe list: strong ETag + short shared edge TTL (Phase 3).
+    return conditionalJsonResponse(request || new Request('https://example.test/api/seasons'), { seasons }, {
+      cacheControl: 'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListSeasonScheduleRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await repository.listPublicSeasons();
-    if (!seasons.some((season) => season.id === seasonId)) {
+    const ifNoneMatch = request?.headers?.get?.('if-none-match') || '';
+    // WHY: warm polls parallelize exists+version (independent I/O) before any heavy build.
+    if (ifNoneMatch) {
+      const [exists, versionState] = await Promise.all([
+        repository.seasonExists({ seasonId }),
+        repository.getSeasonScheduleVersion({ seasonId }),
+      ]);
+      if (!exists) return jsonResponse({ error: "Season not found" }, 404);
+      return conditionalJsonFromVersion(request, {
+        scope: `schedule:${seasonId}`,
+        cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+        getVersion: async () => versionTokenFromValue(versionState),
+        buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+      });
+    }
+    if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const rounds = await repository.listSeasonSchedule({ seasonId });
-    return jsonResponse({ rounds });
+    return conditionalJsonFromVersion(request, {
+      scope: `schedule:${seasonId}`,
+      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+      versionFromBody: async (body) => {
+        // WHY: must match getSeasonScheduleVersion() shape so cold and warm ETags agree.
+        const rounds = (body?.rounds || []).map((round) => ({
+          id: round.roundId,
+          round_number: round.roundNumber,
+          scheduled_on: round.scheduledOn,
+          status: round.status,
+          stage: round.stage,
+        }));
+        const matches = [];
+        for (const round of body?.rounds || []) {
+          for (const m of round.matches || []) {
+            matches.push({
+              id: m.teamMatchId,
+              round_id: round.roundId,
+              status: m.status,
+              table_number: m.tableNumber,
+            });
+          }
+        }
+        return versionTokenFromValue({ rounds, matches });
+      },
+      buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListTeamStandingsRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await repository.listPublicSeasons();
-    if (!seasons.some((season) => season.id === seasonId)) {
+    if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const standings = await listTeamStandingsCommand(
-      { seasonId },
-      repository,
-    );
-
-    return jsonResponse({ standings });
+    return conditionalJsonFromVersion(request, {
+      scope: `team-standings:${seasonId}`,
+      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+      getVersion: async () => versionTokenFromValue(await repository.getSeasonStandingsVersion({ seasonId })),
+      buildBody: async () => {
+        const standings = await listTeamStandingsCommand({ seasonId }, repository);
+        return { standings };
+      },
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListIndividualStandingsRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await repository.listPublicSeasons();
-    if (!seasons.some((season) => season.id === seasonId)) {
+    if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    const standings = await listIndividualStandingsCommand(
-      { seasonId },
-      repository,
-    );
-
-    return jsonResponse({ standings });
+    return conditionalJsonFromVersion(request, {
+      scope: `individual-standings:${seasonId}`,
+      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
+      getVersion: async () => versionTokenFromValue(await repository.getSeasonStandingsVersion({ seasonId })),
+      buildBody: async () => {
+        const standings = await listIndividualStandingsCommand({ seasonId }, repository);
+        return { standings };
+      },
+    });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleGetSeasonPrizeSummaryRequest(
+  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -1155,8 +1748,31 @@ export async function handleGetSeasonPrizeSummaryRequest(
       { seasonId },
       repository,
     );
+    return conditionalJsonResponse(request || new Request('https://example.test/api/prizes'), { summary }, {
+      cacheControl: 'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
+    });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
 
-    return jsonResponse({ summary });
+
+export async function handleGetCurrentPrizeSummaryRequest(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    const standingsRepository = createStandingsRepository(env, { fetch: fetchImpl });
+    const seasons = await standingsRepository.listPublicSeasons();
+    const preferred =
+      seasons.find((season) => String(season.status || '').toLowerCase() === 'active')
+      || seasons.find((season) => String(season.status || '').toLowerCase() === 'playoffs')
+      || seasons[0];
+    if (!preferred?.id) {
+      return jsonResponse({ error: 'No public seasons available for prize summary.' }, 404);
+    }
+    return handleGetSeasonPrizeSummaryRequest(request, env, preferred.id, { fetch: fetchImpl });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1346,6 +1962,7 @@ export async function handleCorrectPlayerMatchRequest(
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    url.pathname = normalizeApiPathname(url.pathname);
     const version = versionMetadata(env);
     const publishScheduleMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
@@ -1401,6 +2018,51 @@ export default {
     const membershipRequestCancelMatch = url.pathname.match(
       /^\/api\/team-membership-requests\/([^/]+)\/cancel$/,
     );
+    const teamPracticeMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/practice$/,
+    );
+    if (url.pathname === '/api/me/notifications' && request.method === 'GET') {
+      return handleListMyNotificationsRequest(request, env);
+    }
+    if (url.pathname === '/api/me/notifications/read-all' || url.pathname === '/api/me/notifications/mark-all-read') {
+      return handleMarkAllNotificationsReadRequest(request, env);
+    }
+    const notificationReadMatch = url.pathname.match(/^\/api\/me\/notifications\/([^/]+)\/read$/);
+    if (notificationReadMatch) {
+      if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+        return jsonResponse({ error: 'Method not allowed' }, 405);
+      }
+      return handleMarkNotificationReadRequest(
+        request,
+        env,
+        decodeURIComponent(notificationReadMatch[1]),
+      );
+    }
+    if (url.pathname === '/api/admin/audit-events' && request.method === 'GET') {
+      return handleListAdminAuditEventsRequest(request, env);
+    }
+    if (url.pathname === '/api/admin/audit-webhooks/flush') {
+      return handleFlushAdminAuditWebhooksRequest(request, env);
+    }
+    if (url.pathname === '/api/admin/notifications/broadcast') {
+      return handleAdminBroadcastNotificationRequest(request, env);
+    }
+    const teamMatchDisputeMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/dispute$/,
+    );
+    if (teamMatchDisputeMatch) {
+      return handleTeamMatchDisputeRequest(
+        request,
+        env,
+        decodeURIComponent(teamMatchDisputeMatch[1]),
+      );
+    }
+    const teamMatchMakeupProposeMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/makeup$/,
+    );
+    const teamMatchMakeupRespondMatch = url.pathname.match(
+      /^\/api\/team-matches\/([^/]+)\/makeup\/respond$/,
+    );
     const teamInvitationMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/invitations$/,
     );
@@ -1428,33 +2090,36 @@ export default {
     const freeAgentAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/free-agent-availability\/me$/,
     );
+    const seasonFreeAgentsMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/free-agents$/,
+    );
     const rosterAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/availability\/me$/,
     );
     const eligibleFreeAgentsMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/eligible-free-agents$/,
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/(?:eligible-free-agents|free-agents)$/,
     );
     const teamRoundAvailabilityMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/availability$/,
     );
     const teamLineupMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineups?$/,
     );
     const seasonScheduleMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/schedule$/,
+      /^\/api\/seasons\/([^/]+)\/(?:schedule|rounds)$/,
     );
     const teamStandingsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/team-standings$/,
+      /^\/api\/seasons\/([^/]+)\/(?:team-standings|standings)$/,
     );
     const individualStandingsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/individual-standings$/,
+      /^\/api\/seasons\/([^/]+)\/(?:individual-standings|player-standings)$/,
     );
     const seasonPrizesMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/prizes$/,
+      /^\/api\/seasons\/([^/]+)\/(?:prizes|awards|prize-summary)$/,
     );
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const requireSeasonUuid = (value) => {
-      if (!UUID_RE.test(String(value || ""))) {
+      // Hex-shape only (shared isUuid) so persisted non-RFC seed season ids remain readable.
+      if (!isUuid(String(value || "").trim())) {
         return jsonResponse({ error: "That season or match link is invalid." }, 400);
       }
       return null;
@@ -1499,7 +2164,8 @@ export default {
     }
 
     if (url.pathname === "/health/environment") {
-      const readiness = environmentReadiness(env);
+      const readiness = environmentReadiness(env, { host: url.hostname || request.headers.get('host') });
+      const failedChecks = (readiness.checks || []).filter((item) => !item.ok).map((item) => item.name);
       return jsonResponse(
         {
           service: serviceName,
@@ -1508,8 +2174,70 @@ export default {
           deployedAt: version.timestamp,
           ok: readiness.ok,
           environment: readiness.environment,
+          host: readiness.host,
+          expectedHostEnvironment: readiness.expectedHostEnvironment,
+          hostMatchesEnvironment: readiness.hostMatchesEnvironment,
+          expectedSupabaseSchema: readiness.expectedSupabaseSchema,
+          expectedPrivateSupabaseSchema: readiness.expectedPrivateSupabaseSchema,
+          checks: readiness.checks || [],
+          failedChecks,
+          noAuthTeamTest: {
+            note: 'JFL/DRU only: unauthenticated /api/me/* uses BETA_AUTH_BYPASS + BETA_ACTOR_USER_ID',
+            requires: ['ENVIRONMENT=jfl|dru', 'BETA_AUTH_BYPASS=1', 'BETA_ACTOR_USER_ID', 'SUPABASE_SCHEMA=lane'],
+          },
         },
         readiness.ok ? 200 : 503,
+      );
+    }
+
+    if (url.pathname === "/health/features") {
+      // Lightweight schema probes for operator/agent readiness (no secrets returned).
+      const features = {
+        teamPractice: { ready: false, detail: 'not_checked' },
+      };
+      try {
+        const supabaseUrl = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+        const key = env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!supabaseUrl || !key) {
+          features.teamPractice = { ready: false, detail: 'missing_supabase_env' };
+        } else {
+          const schema = String(env.SUPABASE_SCHEMA || 'public').trim() || 'public';
+          const response = await fetch(
+            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule,practice_recurrence,practice_on&limit=1`,
+            {
+              method: 'GET',
+              headers: {
+                apikey: key,
+                authorization: `Bearer ${key}`,
+                accept: 'application/json',
+                'accept-profile': schema,
+                'content-profile': schema,
+              },
+            },
+          );
+          const text = await response.text();
+          if (response.ok) {
+            features.teamPractice = { ready: true, detail: 'ok' };
+          } else if (/practice_location|42703|PGRST/i.test(text)) {
+            features.teamPractice = { ready: false, detail: 'migration_pending' };
+          } else {
+            features.teamPractice = { ready: false, detail: `http_${response.status}` };
+          }
+        }
+      } catch {
+        features.teamPractice = { ready: false, detail: 'probe_failed' };
+      }
+      const allReady = Object.values(features).every((f) => f && f.ready);
+      return Response.json(
+        {
+          ok: true,
+          service: serviceName,
+          version: version.id,
+          deployedAt: version.timestamp,
+          features,
+          allReady,
+        },
+        { status: 200, headers: { 'cache-control': 'no-store' } },
       );
     }
 
@@ -1526,7 +2254,21 @@ export default {
       });
     }
 
-    if (url.pathname === "/standings") {
+
+    if (url.pathname === "/players") {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return new Response(renderPlayersDirectoryPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+if (url.pathname === "/standings") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -1544,12 +2286,23 @@ export default {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderPrizesPage(), {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      });
+      try {
+        const html = renderPrizesPage();
+        return new Response(html, {
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        });
+      } catch (error) {
+        return new Response(
+          `<!doctype html><html lang="en"><body><h1>Prizes unavailable</h1><p>${String(error?.message || error)}</p><p><a href="/">Home</a></p></body></html>`,
+          {
+            status: 500,
+            headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+          },
+        );
+      }
     }
 
     if (url.pathname === "/season-setup") {
@@ -1753,6 +2506,13 @@ export default {
       );
     }
 
+    if (url.pathname === "/api/me/profile/standing-availability") {
+      if (request.method === "PUT") {
+        return handleSaveOwnStandingAvailabilityRequest(request, env);
+      }
+      return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
     if (url.pathname === "/api/me/profile") {
       if (request.method === "GET") {
         return handleGetOwnProfileRequest(request, env);
@@ -1772,9 +2532,23 @@ export default {
       return handleListOwnTeamManagementRequest(request, env);
     }
 
-    if (url.pathname === "/api/me/team-membership-requests") {
+    if (url.pathname === "/api/me/team-membership-requests" || url.pathname === "/api/me/membership-requests") {
       if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405);
       return handleListOwnTeamMembershipRequestsRequest(request, env);
+    }
+
+    const tradeCounterpartiesMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/trade-counterparties$/,
+    );
+    if (tradeCounterpartiesMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleListTradeCounterpartyOptionsRequest(
+        request,
+        env,
+        decodeURIComponent(tradeCounterpartiesMatch[1]),
+      );
     }
 
     if (url.pathname === "/api/me/trades") {
@@ -1783,6 +2557,16 @@ export default {
       }
 
       return handleListOwnTeamTradesRequest(request, env);
+    }
+
+    if (
+      url.pathname === "/api/me/invitations"
+      || url.pathname === "/api/me/team-invitations"
+    ) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleListOwnInvitationsRequest(request, env);
     }
 
     if (createTeamMatch) {
@@ -1860,7 +2644,46 @@ export default {
       );
     }
 
+    if (teamPracticeMatch) {
+      const practiceTeamId = decodeURIComponent(teamPracticeMatch[1]);
+      if (request.method === "GET") {
+        return handleGetTeamPracticeRequest(request, env, practiceTeamId);
+      }
+      if (request.method !== "PUT" && request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+
+      return handleUpdateTeamPracticeRequest(
+        request,
+        env,
+        practiceTeamId,
+      );
+    }
+
+    if (teamMatchMakeupProposeMatch) {
+      return handleProposeTeamMatchMakeupRequest(
+        request,
+        env,
+        decodeURIComponent(teamMatchMakeupProposeMatch[1]),
+      );
+    }
+
+    if (teamMatchMakeupRespondMatch) {
+      return handleRespondTeamMatchMakeupRequest(
+        request,
+        env,
+        decodeURIComponent(teamMatchMakeupRespondMatch[1]),
+      );
+    }
+
     if (teamInvitationMatch) {
+      if (request.method === "GET") {
+        return handleListTeamInvitationsRequest(
+          request,
+          env,
+          decodeURIComponent(teamInvitationMatch[1]),
+        );
+      }
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -1873,6 +2696,10 @@ export default {
     }
 
     if (teamTradeProposalMatch) {
+      if (request.method === "GET") {
+        // Same payload as /api/me/trades; captains probing team-scoped path no longer get 405.
+        return handleListOwnTeamTradesRequest(request, env);
+      }
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -1944,6 +2771,17 @@ export default {
       );
     }
 
+    if (seasonFreeAgentsMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleListSeasonFreeAgentsRequest(
+        request,
+        env,
+        decodeURIComponent(seasonFreeAgentsMatch[1]),
+      );
+    }
+
     if (registerFreeAgentMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -1957,7 +2795,7 @@ export default {
     }
 
     if (freeAgentAvailabilityMatch) {
-      if (request.method !== "PUT") {
+      if (request.method !== "PUT" && request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
@@ -1969,7 +2807,7 @@ export default {
     }
 
     if (rosterAvailabilityMatch) {
-      if (request.method !== "PUT") {
+      if (request.method !== "PUT" && request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
@@ -1996,18 +2834,20 @@ export default {
     }
 
     if (teamRoundAvailabilityMatch) {
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+      const teamId = decodeURIComponent(teamRoundAvailabilityMatch[1]);
+      const roundId = decodeURIComponent(teamRoundAvailabilityMatch[2]);
+      if (request.method === "GET") {
+        return handleListTeamRoundAvailabilityRequest(
+          request,
+          env,
+          { teamId, roundId },
+        );
       }
-
-      return handleListTeamRoundAvailabilityRequest(
-        request,
-        env,
-        {
-          teamId: decodeURIComponent(teamRoundAvailabilityMatch[1]),
-          roundId: decodeURIComponent(teamRoundAvailabilityMatch[2]),
-        },
-      );
+      // Captains/players probing team-scoped path to set their own status
+      if (request.method === "PUT" || request.method === "POST") {
+        return handleSetRosterAvailabilityRequest(request, env, roundId);
+      }
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
     if (teamLineupMatch) {
@@ -2035,6 +2875,20 @@ export default {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
+
+    if (url.pathname === "/api/prizes" || url.pathname === "/api/prize-pool") {
+      if (request.method === "HEAD") {
+        return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
+      }
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: { allow: "GET, HEAD, OPTIONS", "cache-control": "no-store" } });
+      }
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleGetCurrentPrizeSummaryRequest(request, env);
+    }
+
     if (url.pathname === "/api/seasons") {
       if (request.method === "HEAD") {
         return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
@@ -2046,7 +2900,7 @@ export default {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return handleListPublicSeasonsRequest(env);
+      return handleListPublicSeasonsRequest(request, env);
     }
 
     if (seasonScheduleMatch) {
@@ -2055,6 +2909,7 @@ export default {
       }
 
       return handleListSeasonScheduleRequest(
+        request,
         env,
         decodeURIComponent(seasonScheduleMatch[1]),
       );
@@ -2066,6 +2921,7 @@ export default {
       }
 
       return handleListTeamStandingsRequest(
+        request,
         env,
         decodeURIComponent(teamStandingsMatch[1]),
       );
@@ -2077,6 +2933,7 @@ export default {
       }
 
       return handleListIndividualStandingsRequest(
+        request,
         env,
         decodeURIComponent(individualStandingsMatch[1]),
       );
@@ -2088,6 +2945,7 @@ export default {
       }
 
       return handleGetSeasonPrizeSummaryRequest(
+        request,
         env,
         decodeURIComponent(seasonPrizesMatch[1]),
       );

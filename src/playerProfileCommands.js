@@ -1,4 +1,4 @@
-const requiredRepositoryMethods = ['getProfileByUserId', 'saveProfile'];
+const requiredRepositoryMethods = ['getProfileByUserId', 'saveProfile', 'saveStandingAvailability'];
 
 function assertRepository(repository) {
   if (!repository || typeof repository !== 'object') {
@@ -40,11 +40,46 @@ export async function getOwnPlayerProfileCommand({ actorUserId }, repository) {
   return repository.getProfileByUserId(actorUserId);
 }
 
-export async function saveOwnPlayerProfileCommand({ actorUserId, displayName }, repository) {
+export async function saveOwnPlayerProfileCommand({ actorUserId, displayName, fargoExternalId }, repository) {
   assertActor(actorUserId);
   assertRepository(repository);
+  let normalizedFargo = fargoExternalId;
+  if (normalizedFargo != null) {
+    normalizedFargo = String(normalizedFargo).trim();
+    if (!normalizedFargo) normalizedFargo = null;
+    else if (normalizedFargo.length > 40) throw new Error('fargo_external_id must be 40 characters or fewer');
+  }
   return repository.saveProfile({
     actorUserId,
     displayName: normalizeDisplayName(displayName),
+    fargoExternalId: normalizedFargo,
+  });
+}
+
+
+const standingStatuses = new Set(['available_for_subs', 'limited', 'unavailable', 'prefer_not_to_say', '']);
+
+export async function saveOwnStandingAvailabilityCommand(
+  { actorUserId, standingStatus, standingNote },
+  repository,
+) {
+  assertActor(actorUserId);
+  assertRepository(repository);
+  let status = standingStatus == null ? '' : String(standingStatus).trim().toLowerCase();
+  // Common shorthand clients send
+  if (status === 'available' || status === 'open' || status === 'yes') status = 'available_for_subs';
+  if (status === 'no' || status === 'out') status = 'unavailable';
+  if (!standingStatuses.has(status)) {
+    throw new Error('standingStatus must be available_for_subs, limited, unavailable, prefer_not_to_say, or empty');
+  }
+  let note = standingNote == null ? null : String(standingNote).trim();
+  if (note === '') note = null;
+  if (note && note.length > 120) {
+    throw new Error('standingNote must be 120 characters or fewer');
+  }
+  return repository.saveStandingAvailability({
+    actorUserId,
+    standingStatus: status || null,
+    standingNote: note,
   });
 }

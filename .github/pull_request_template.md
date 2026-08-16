@@ -24,7 +24,7 @@
 - [ ] Checked open PRs/cards for overlapping work before implementation.
 - [ ] Rechecked overlap/current `main` before merge.
 - [ ] No unrelated sweeping formatting/refactor/cleanup is bundled into this PR.
-- [ ] I did not overwrite or rewrite another agent's active branch/work without an explicit handoff.
+- [ ] I never checked out or mutated another agent's branch; handoffs transfer cards, not branches.
 
 ## Risk / safety
 <!-- Auth, RLS, data, migrations, environment isolation, compatibility, rollback, shared-file collision, or other meaningful risk. -->
@@ -39,7 +39,17 @@
 <!-- Issues created/updated or durable docs/instructions improved. Use `None` when truly complete. -->
 
 ## Handoff
-<!-- Recommended reviewer/next specialist lane and why. If ownership is transferring, name the incoming owner and exact next action. -->
+<!-- Complete every field. Use "Same as owner" or "None" only when accurate. For ownership transfer, also update the card labels and require explicit acceptance before the incoming agent edits. -->
+
+- Outgoing owner:
+- Requested incoming owner/reviewer:
+- Completed:
+- Remaining:
+- Touched surfaces:
+- Proof and known failures:
+- Risks/blockers/collision concerns:
+- Exact next action:
+- Acceptance status: pending / accepted / review-only
 
 ## After merge
 <!-- Do not close the tracking card at merge. Mark it Merged, perform appropriate post-merge verification, record evidence on the card, mark Verified, then close only after acceptance criteria are satisfied. -->

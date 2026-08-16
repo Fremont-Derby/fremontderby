@@ -108,7 +108,29 @@ export async function getSeasonPrizeSummaryCommand({ seasonId }, repository) {
   assertRepository(repository, 'getSeasonPrizeSummary');
   const summary = await repository.getSeasonPrizeSummary({ seasonId });
   if (!summary) {
-    throw new Error('Season not found');
+    // QA/fixture seasons (purpose != league) return no public prize summary row.
+    return {
+      season_id: seasonId,
+      season_name: null,
+      season_status: null,
+      player_count: 0,
+      paid_amount_cents: 0,
+      committed_amount_cents: 0,
+      entry_fee_cents: 0,
+      administration_amount_cents: 0,
+      projected_field_size: 0,
+      projected_gross_cents: 0,
+      projected_prize_pool_cents: 0,
+      team_allocation_basis_points: 0,
+      individual_allocation_basis_points: 0,
+      team_prize_pool_cents: 0,
+      individual_prize_pool_cents: 0,
+      configuration_version: null,
+      configured_at: null,
+      projected_payouts: [],
+      finalized_payouts: [],
+      unconfigured: true,
+    };
   }
 
   return summary;

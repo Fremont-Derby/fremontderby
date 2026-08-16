@@ -34,8 +34,16 @@ function pageShell(title, body) {
 export function renderIntroPage() {
   return pageShell('Welcome', `
     <div class="eyebrow">Cash league · 8 teams · 12 weeks · flexible calendar</div>
+    <div data-e2e-deploy="835" class="e2e-deploy-marker" style="display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;padding:6px 12px;border-radius:999px;border:1px solid #e2bd58;background:linear-gradient(90deg,#2a2210,#1a2818);color:#f0d78a;font-size:.78rem;font-weight:800;letter-spacing:.04em">E2E deploy · #835</div>
     <h1>Fremont Derby</h1>
     <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
+    <ul>
+      <li><strong>When:</strong> Weekly league nights across a 12-week season (seven-match round robin + flex / makeup / postseason).</li>
+      <li><strong>Where:</strong> Fremont venue — four tables, one house.</li>
+      <li><strong>Cost:</strong> Team + individual cash stakes (see Rules for current season amounts).</li>
+      <li><strong>How to join:</strong> Sign in on Profile, register for the open season, then join or form a team.</li>
+      <li><strong>Availability:</strong> Before each league night, mark <em>I'll be there</em>, <em>Not sure</em>, or <em>Can't make it</em> (roster or free agent) so captains can set lineups.</li>
+    </ul>
     <p>The 12-week calendar is built around a <strong>seven-match single round robin</strong>: every team plays every other team once, with the remaining calendar space reserved for flexibility, makeup dates, and postseason play.</p>
     <p>Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
     <p>Every match also counts toward the <strong>individual cash competition</strong>. Flexible scheduling and simple team management make it easy to use subs and keep matches moving.</p>
@@ -43,6 +51,13 @@ export function renderIntroPage() {
     <div class="actions">
       <a class="button primary" href="/profile">Join / sign in</a>
       <a class="button demo" href="/demo">Test drive the app</a>
+      <a class="button" href="/availability">Check in</a>
+      <a class="button" href="/scorecard">Score</a>
+      <a class="button" href="/schedule">Schedule</a>
+      <a class="button" href="/teams">Teams</a>
+      <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/players">Players</a>
+      <a class="button" href="/playoffs">Playoffs</a>
       <a class="button" href="/rules">Read the rules</a>
     </div>
   `);
@@ -124,5 +139,19 @@ export function renderRulesPage() {
     </ul>
 
     <p class="note">Season-specific settings such as dates, deadlines, race-chart values, and payout amounts are published separately and may change between seasons.</p>
-  `);
+
+
+    <div class="actions">
+      <a class="button primary" href="/profile">Join / sign in</a>
+      <a class="button" href="/teams">Teams</a>
+      <a class="button" href="/players">Players</a>
+      <a class="button" href="/schedule">Schedule</a>
+      <a class="button" href="/scorecard">Score</a>
+      <a class="button" href="/availability">Check in</a>
+      <a class="button" href="/lineup">Lineup</a>
+      <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/playoffs">Playoffs</a>
+      <a class="button" href="/demo">Test drive</a>
+    </div>
+`);
 }

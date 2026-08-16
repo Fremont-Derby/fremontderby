@@ -1,0 +1,26 @@
+name: Lane health monitor
+# POC mode (#679): manual only while GitHub-hosted runners are unavailable.
+on:
+  workflow_dispatch:
+    inputs:
+      runner_target:
+        description: 'Runner (ubuntu-latest or self-hosted for laptop INFRA)'
+        required: false
+        default: 'ubuntu-latest'
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+
+concurrency:
+  group: lane-health-monitor
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert lane environment identities
+        run: node scripts/assert-lane-health.mjs

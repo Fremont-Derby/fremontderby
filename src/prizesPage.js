@@ -21,7 +21,9 @@ export function renderPrizesPage() {
       --focus: #9ee5bd;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: #111316; }
+    input, select, textarea { font-size: 16px; }
+    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: #111316; }
     button, select { font: inherit; }
     button {
       min-height: 44px;
@@ -177,6 +179,7 @@ export function renderPrizesPage() {
       td.numeric { text-align: left; }
     }
     @media (max-width: 360px) {
+      .metric strong { font-size: 1.15rem; }
       tr { grid-template-columns: 1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -185,7 +188,7 @@ export function renderPrizesPage() {
     @media (forced-colors: active) {
       button, select, .panel, .metric, .state-card, .state-action { border: 1px solid CanvasText; }
     }
-  </style>
+  @media(max-width:720px){.app,main{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
   <main class="app">
@@ -198,6 +201,12 @@ export function renderPrizesPage() {
       <label>Season
         <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
       </label>
+      <a class="ghost" href="/standings" style="min-height:44px;display:inline-flex;align-items:center">Standings</a>
+      <a class="ghost" href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center">Score</a>
+      <a class="ghost" href="/schedule" style="min-height:44px;display:inline-flex;align-items:center">Schedule</a>
+      <a class="ghost" href="/playoffs" style="min-height:44px;display:inline-flex;align-items:center">Playoffs</a>
+      <a class="ghost" href="/teams" style="min-height:44px;display:inline-flex;align-items:center">Teams</a>
+      <a class="ghost" href="/players" style="min-height:44px;display:inline-flex;align-items:center">Players</a>
       <button class="load" data-load type="submit" disabled>Load prizes</button>
     </form>
 
@@ -219,6 +228,12 @@ export function renderPrizesPage() {
       <div class="metric"><span>Individual pool</span><strong data-individual-pool>-</strong></div>
     </section>
 
+    <section class="panel" data-admin-finalize hidden>
+      <div class="panel-head"><span>Admin finalize</span></div>
+      <p class="muted">Locks payouts for this season using the current projected table. Requires league admin sign-in.</p>
+      <button type="button" class="load" data-finalize>Finalize projected payouts</button>
+    </section>
+
     <section class="grid">
       <article class="panel">
         <div class="panel-head"><span>Projected payouts</span><span class="badge" data-config-version>-</span></div>
@@ -228,10 +243,19 @@ export function renderPrizesPage() {
           </thead>
           <tbody data-projected-body></tbody>
         </table>
-        <div class="empty" data-projected-empty>No projected payouts loaded.</div>
+        <div class="empty" data-projected-empty>
+          <strong style="display:block;margin-bottom:6px">No projected payouts yet</strong>
+          Open standings for eligibility, or check back once the season pool is configured.
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+            <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+            <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+            <a href="/rules" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Rules</a>
+          </div>
+        </div>
       </article>
 
       <article class="panel">
+        <p class="muted" style="margin:0 0 12px">Singles prize eligibility follows individual standings (minimum matches). Team prizes follow final team rank. Open Standings for the live “why” line on each player.</p>
         <div class="panel-head"><span>Finalized payouts</span><span class="badge" data-finalized-count>0</span></div>
         <table>
           <thead>
@@ -239,7 +263,14 @@ export function renderPrizesPage() {
           </thead>
           <tbody data-finalized-body></tbody>
         </table>
-        <div class="empty" data-finalized-empty>No finalized payouts loaded.</div>
+        <div class="empty" data-finalized-empty>
+          <strong style="display:block;margin-bottom:6px">No finalized prizes yet</strong>
+          Finalized payouts appear after the season closes and an admin publishes results.
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+            <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+            <a href="/playoffs" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Playoffs</a>
+          </div>
+        </div>
       </article>
     </section>
   </main>
@@ -273,6 +304,9 @@ export function renderPrizesPage() {
     const query = new URLSearchParams(location.search);
     const requestedSeason = query.get('season') || '';
     const rememberedSeason = localStorage.getItem('fd.prizesSeasonId') || '';
+    let lastSummary = null;
+    const finalizePanel = document.querySelector('[data-admin-finalize]');
+    const finalizeBtn = document.querySelector('[data-finalize]');
 
     function setStatus(message, tone) {
       statusEl.textContent = message;
@@ -329,6 +363,25 @@ export function renderPrizesPage() {
       fields.entryFee.textContent = money(summary.entry_fee_cents);
       fields.administration.textContent = money(summary.administration_amount_cents);
       fields.prizePool.textContent = money(summary.projected_prize_pool_cents);
+      // Truthful empty state when admin has not configured entry fee / pools yet (#557).
+      let note = document.querySelector('[data-prize-config-note]');
+      if (!note) {
+        note = document.createElement('p');
+        note.className = 'muted';
+        note.setAttribute('data-prize-config-note', '');
+        note.style.margin = '0 0 12px';
+        const metrics = document.querySelector('.metrics') || document.querySelector('[data-prize-pool]')?.closest('section') || document.querySelector('main');
+        if (metrics) metrics.parentNode?.insertBefore(note, metrics.nextSibling) || metrics.appendChild(note);
+      }
+      const fee = Number(summary.entry_fee_cents || 0);
+      const pool = Number(summary.projected_prize_pool_cents || 0);
+      if (!fee && !pool) {
+        note.hidden = false;
+        note.textContent = 'Prize pool is not configured yet for this season (entry fee and allocations still at zero). Figures above are placeholders until an admin sets them.';
+      } else {
+        note.hidden = true;
+        note.textContent = '';
+      }
       fields.projectedField.textContent = summary.projected_field_size || '-';
       fields.teamPool.textContent = money(summary.team_prize_pool_cents);
       fields.individualPool.textContent = money(summary.individual_prize_pool_cents);
@@ -339,9 +392,16 @@ export function renderPrizesPage() {
 
       renderPayoutRows(summary.projected_payouts || [], projectedBody, projectedEmpty);
       renderPayoutRows(summary.finalized_payouts || [], finalizedBody, finalizedEmpty);
+      lastSummary = summary;
+      if (finalizePanel) {
+        finalizePanel.hidden = !sessionStorage.getItem('fd.accessToken');
+      }
     }
 
     function preferredSeason(seasons) {
+      if (typeof choosePublicSeason === 'function') {
+        return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
+      }
       const explicit = seasons.find((season) => season.id === requestedSeason);
       const remembered = seasons.find((season) => season.id === rememberedSeason);
       return explicit
@@ -384,13 +444,14 @@ export function renderPrizesPage() {
       return true;
     }
 
-    async function loadPrizes() {
+    async function loadPrizes(opts={}) {
+      const quiet = Boolean(opts && opts.quiet);
       const seasonId = seasonInput.value.trim();
       if (!seasonId) return;
-      hideState();
+      if (!quiet) hideState();
       localStorage.setItem('fd.prizesSeasonId', seasonId);
-      setStatus('Loading prizes…');
-      loadButton.disabled = true;
+      if (!quiet) setStatus('Loading prizes…');
+      if (!quiet) loadButton.disabled = true;
       try {
         const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
         const body = await response.json();
@@ -408,7 +469,7 @@ export function renderPrizesPage() {
       try {
         await action();
       } catch (error) {
-        setStatus(error.message, 'error');
+        setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
         showState('Could not load prizes', error.message, '/prizes', 'Try again');
       }
     }
@@ -423,6 +484,35 @@ export function renderPrizesPage() {
       if (hasSeason) await loadPrizes();
     });
     seasonInput.addEventListener('change', () => run(loadPrizes));
+    if (finalizeBtn) {
+      finalizeBtn.addEventListener('click', () => run(async () => {
+        const token = sessionStorage.getItem('fd.accessToken');
+        if (!token) throw new Error('Sign in on Profile as a league admin first.');
+        const seasonId = seasonInput.value;
+        if (!seasonId) throw new Error('Choose a season');
+        const projected = (lastSummary && lastSummary.projected_payouts) || [];
+        if (!projected.length) throw new Error('No projected payouts to finalize');
+        if (!confirm('Finalize ' + projected.length + ' projected payout rows for this season?')) return;
+        setStatus('Finalizing prizes…');
+        const response = await fetch('/api/admin/seasons/' + encodeURIComponent(seasonId) + '/prizes/finalize', {
+          method: 'POST',
+          headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            finalizedPayouts: projected.map((row) => ({
+              pool: row.pool,
+              place: row.place,
+              label: row.label,
+              amountCents: row.amount_cents ?? row.amountCents,
+            })),
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || 'Finalize failed');
+        await loadPrizes();
+        setStatus('Prize payouts finalized', 'ok');
+      }));
+    }
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>run(()=>loadPrizes(opts)),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

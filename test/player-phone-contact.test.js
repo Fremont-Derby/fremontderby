@@ -98,7 +98,8 @@ test('Profile contact enhancer is private, touch-friendly, and explains captain 
   const html = await (await enhanceProfileContact(response)).text();
   assert.match(html, /Private contact/);
   assert.match(html, /type="tel"/);
-  assert.match(html, /private league-administration contact information/i);
+  assert.match(html, /private league-administration contact/i);
+  assert.match(html, /Show phone number/i);
   assert.match(html, /active team captain/i);
   assert.match(html, /\/api\/me\/contact/);
   assert.match(html, /min-height:48px/);

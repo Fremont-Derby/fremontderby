@@ -1,3 +1,5 @@
+import { escapeHtml } from './textEscape.js';
+
 const teams = [
   'Break Room Bandits',
   'Corner Pocket Club',
@@ -52,15 +54,6 @@ const postseason = {
     winner: 'Break Room Bandits',
   },
 };
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
 
 function buildRoundRobin(teamNames) {
   const rotation = [...teamNames];
@@ -122,6 +115,8 @@ export function renderDemoSeasonPage() {
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#07150f; color:#f4f7f5; --gold:#e9bd45; --green:#2fa972; }
     * { box-sizing:border-box; }
+    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    input, select, textarea { font-size: 16px; }
     body { margin:0; background:linear-gradient(180deg,#081a12,#06110d); }
     main { width:min(1080px,calc(100% - 24px)); margin:auto; padding:20px 0 56px; }
     a { color:#d7f6e2; }
@@ -228,7 +223,7 @@ export function renderDemoSeasonPage() {
     <h2>Ready for the real league?</h2>
     <section class="card">
       <p>When you are done practicing, look at current teams or read the rules. The practice state stays separate from competitive records.</p>
-      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/rules">Read the rules</a></div>
+      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/players">Player directory</a><a class="button secondary" href="/schedule">Schedule</a><a class="button secondary" href="/scorecard">Score</a><a class="button secondary" href="/availability">Check in</a><a class="button secondary" href="/lineup">Lineup</a><a class="button secondary" href="/rules">Read the rules</a></div>
     </section>
 
     <details>

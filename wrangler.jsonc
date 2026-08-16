@@ -3,6 +3,11 @@
   "name": "fremontderby",
   "main": "src/routerEntry.js",
   "compatibility_date": "2026-08-09",
+  "triggers": {
+    "crons": [
+      "0 * * * *"
+    ]
+  },
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
@@ -51,15 +56,14 @@
         "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
-        "SUPABASE_SCHEMA": "jfl"
+        "SUPABASE_SCHEMA": "jfl",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       },
       "secrets": {
         "required": [
-          "SUPABASE_URL",
-          "SUPABASE_PUBLISHABLE_KEY",
-          "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
-          "BETA_ACTOR_USER_ID"
+          "SUPABASE_SERVICE_ROLE_KEY"
         ]
       }
     },
@@ -80,15 +84,14 @@
         "ENVIRONMENT": "dru",
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "dru-actor@fremontderby.com",
-        "SUPABASE_SCHEMA": "dru"
+        "SUPABASE_SCHEMA": "dru",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       },
       "secrets": {
         "required": [
-          "SUPABASE_URL",
-          "SUPABASE_PUBLISHABLE_KEY",
-          "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF",
-          "BETA_ACTOR_USER_ID"
+          "SUPABASE_SERVICE_ROLE_KEY"
         ]
       }
     },
@@ -107,15 +110,16 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
-        "BETA_AUTH_BYPASS": "0",
-        "SUPABASE_SCHEMA": "gamma"
+        "BETA_AUTH_BYPASS": "1",
+        "BETA_ACTOR_EMAIL": "gamma-actor@fremontderby.com",
+        "SUPABASE_SCHEMA": "gamma",
+        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
+        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
+        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       },
       "secrets": {
         "required": [
-          "SUPABASE_URL",
-          "SUPABASE_PUBLISHABLE_KEY",
-          "SUPABASE_SERVICE_ROLE_KEY",
-          "EXPECTED_SUPABASE_PROJECT_REF"
+          "SUPABASE_SERVICE_ROLE_KEY"
         ]
       }
     }
