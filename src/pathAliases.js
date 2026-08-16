@@ -14,6 +14,7 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/ready-check': '/api/me/ready-checks',
   '/api/ready-checks/pending': '/api/me/ready-checks',
   '/api/trades': '/api/me/trades',
+  '/api/my-trades': '/api/me/trades',
   '/api/me/trade-management': '/api/me/trades',
   '/api/me/team-invitations': '/api/me/invitations',
   '/api/me/invites': '/api/me/invitations',
@@ -32,8 +33,6 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/scorecard': '/api/me/scorable-matches',
   '/api/me/races': '/api/me/scorable-matches',
   '/api/score/matches': '/api/me/scorable-matches',
-  '/api/my-trades': '/api/trades',
-  '/api/me/trades': '/api/trades',
   '/api/me/free-agent': '/api/me/teams',
   '/api/me/fa': '/api/me/teams',
 };
