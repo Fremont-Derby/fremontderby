@@ -552,7 +552,46 @@ function renderMembershipPractice(rows){
         host.append(card);
       }
     }
-function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);renderInvitations(data.invitations||[]);renderCaptainTeams(data.captain_teams||[]);renderMembershipPractice(data.membership_practice||data.captain_teams||[])}function renderMembershipRequests(data){renderJoinTeams(data.joinable_teams||[]);renderPlayerRequests(data.player_requests||[]);renderCaptainRequests(data.captain_requests||[])}
+
+    function renderApplications(items){
+      if(!applicationsEl)return;
+      applicationsEl.replaceChildren();
+      if(!items.length){applicationsEl.append(empty('No team applications yet.'));return}
+      for(const item of items){
+        const row=document.createElement('div');
+        row.className='card';
+        const name=item.proposedTeamName||item.proposed_team_name||item.teamName||'Team application';
+        const status=item.status||'applied';
+        const season=item.seasonName||item.season_name||'';
+        row.append(node('strong',name),node('div',(season?season+' · ':'')+status,'muted'));
+        const id=item.applicationId||item.application_id||item.id;
+        if(id&&String(status).toLowerCase()==='applied'){
+          row.append(actionButton('Withdraw','ghost',{withdrawApplication:id}));
+        }
+        applicationsEl.append(row);
+      }
+    }
+    function renderReturningSlots(items){
+      if(!returningSlotsEl)return;
+      returningSlotsEl.replaceChildren();
+      if(!items.length){returningSlotsEl.append(empty('No returning-team reservations need a response.'));return}
+      for(const item of items){
+        const row=document.createElement('div');
+        row.className='card';
+        const team=item.sourceTeamName||item.source_team_name||'Returning team';
+        row.append(node('strong',team),node('div',item.status||'reserved','muted'));
+        const slotId=item.slotId||item.slot_id||item.id;
+        if(slotId){
+          const actions=document.createElement('div');
+          actions.className='actions';
+          actions.append(actionButton('Confirm slot','primary',{respondSlot:slotId,slotAction:'confirm'}));
+          actions.append(actionButton('Release','ghost',{respondSlot:slotId,slotAction:'release'}));
+          row.append(actions);
+        }
+        returningSlotsEl.append(row);
+      }
+    }
+function renderManagement(data,scorable){renderLeagueNightHub(data,scorable);renderInvitations(data.invitations||[]);renderCaptainTeams(data.captain_teams||[]);renderApplications(data.applications||[]);renderReturningSlots(data.returning_slots||data.returningSlots||[]);renderMembershipPractice(data.membership_practice||data.captain_teams||[])}function renderMembershipRequests(data){renderJoinTeams(data.joinable_teams||[]);renderPlayerRequests(data.player_requests||[]);renderCaptainRequests(data.captain_requests||[])}
     async function loadTeams(opts={}){const quiet=Boolean(opts&&opts.quiet);const token=sessionStorage.getItem('fd.accessToken')||'';const scorablePromise=token?fetch('/api/me/scorable-matches',{headers:{authorization:'Bearer '+token}}).then(async(r)=>{try{const b=await r.json();return r.ok?(b.matches||[]):[]}catch{return[]}}).catch(()=>[]):Promise.resolve([]);const [teamsBody,requestsBody,seasonsBody,scorable]=await Promise.all([api('/api/me/teams',{method:'GET'}),api('/api/me/team-membership-requests',{method:'GET'}),api('/api/seasons',{method:'GET'}),scorablePromise]);if(teamsBody&&teamsBody.__notModified){if(!quiet)setStatus('Teams up to date','ok');return teamsBody}const data=teamsBody.teamManagement||{captain_teams:[],invitations:[],open_seasons:[],players:[]};playerDirectory=data.players||[];publicSeasons=(seasonsBody.seasons||[]).filter((season)=>season.status==='registration');renderSeasonOptions(publicSeasons);renderManagement(data,scorable);renderMembershipRequests(requestsBody.requests||{});await loadRegistration();return data}
     async function loadInitialTeams(){showPageState('loading');try{await loadTeams();showTeamContent();setStatus('Teams loaded','ok')}catch(error){if(error.name==='SessionExpiredError')showPageState('expired');else showPageState('failure')}}
     async function applyForTeam(){const seasonId=seasonSelect.value;const teamName=teamNameInput.value.trim();if(!seasonId)throw new Error('No registration season is open.');if(!teamName)throw new Error('Team name is required');localStorage.setItem('fd.teamsSeasonId',seasonId);setStatus('Submitting application...');await api('/api/seasons/'+encodeURIComponent(seasonId)+'/team-applications',{method:'POST',body:JSON.stringify({teamName})});teamNameInput.value='';await loadTeams();setStatus('Application submitted for admin review','ok')}
