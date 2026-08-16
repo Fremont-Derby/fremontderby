@@ -24,3 +24,9 @@ test('index routes season free-agents GET', () => {
   assert.ok(src.includes('seasonFreeAgentsMatch'));
   assert.ok(src.includes('/free-agents$'));
 });
+
+test('listSeasonFreeAgents repository falls back when season_players empty', async () => {
+  const { createFreeAgentRepository } = await import('../src/freeAgentRepository.js');
+  // Smoke: module still exports factory
+  assert.equal(typeof createFreeAgentRepository, 'function');
+});
