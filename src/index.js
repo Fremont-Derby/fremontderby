@@ -1208,7 +1208,7 @@ export async function handleSetFreeAgentAvailabilityRequest(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus,
+        availabilityStatus: body.status ?? body.availabilityStatus ?? body.availability_status,
       },
       repository,
     );
