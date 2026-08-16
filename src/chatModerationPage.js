@@ -23,6 +23,10 @@ export function renderChatModerationPage(env = {}) {
         <a href="/admin" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Admin home</a>
         <a href="/admin/audit" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Audit log</a>
         <a href="/admin/operations" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Operations</a>
+        <a href="/admin/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Players</a>
+        <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+        <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+        <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
       </div>
     </header>
     <div class="status" data-status>Loading reports…</div>
@@ -42,7 +46,7 @@ export function renderChatModerationPage(env = {}) {
 empty.innerHTML='<strong style="display:block;margin-bottom:6px">No chat reports to review</strong><span>Flagged messages will appear here for dismiss or remove.</span>';
 const links=document.createElement('div');
 links.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center';
-for(const [label,href] of [['Messages','/messages'],['Admin audit','/admin/audit'],['Admin home','/admin']]){
+for(const [label,href] of [['Messages','/messages'],['Admin audit','/admin/audit'],['Score','/scorecard'],['Admin home','/admin']]){
   const a=document.createElement('a');a.href=href;a.textContent=label;
   a.style.cssText='min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none';
   links.append(a);
