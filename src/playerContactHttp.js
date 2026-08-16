@@ -1,32 +1,46 @@
+import { jsonNoStore } from './httpJson.js';
+import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   getAdminPlayerContactCommand,
   getOwnPlayerContactCommand,
   setOwnPlayerContactCommand,
 } from './playerContactCommands.js';
 import { createPlayerContactRepository } from './playerContactRepository.js';
-import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
-function json(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+const json = (body, status = 200) => jsonNoStore(body, status, { pragma: 'no-cache', vary: 'Authorization' });
+
+export function playerContactErrorStatus(error) {
+  return rpcErrorStatus(error);
 }
 
-function errorStatus(error) {
-  if (error instanceof AuthError) return error.status;
-  if (/Actor is not a league admin/i.test(error.message)) return 403;
-  if (/Player profile is required|Player not found/i.test(error.message)) return 404;
-  if (/Active captains must keep/i.test(error.message)) return 409;
-  if (/required|phone number|phone must/i.test(error.message)) return 400;
-  if (error.message.startsWith('Supabase request failed with 401')) return 401;
-  if (error.message.startsWith('Supabase request failed with 403')) return 403;
-  return 502;
+/** Mask to last 4 digits only — never echo full phone unless explicitly revealed. */
+export function maskPhone(phone) {
+  if (!phone || typeof phone !== 'string') return null;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  const last = digits.slice(-4);
+  return `••••${last}`;
 }
 
-function normalizeContact(contact) {
-  if (!contact) return { phone: null, hasPhone: false };
-  return {
-    phone: contact.phone ?? null,
-    hasPhone: Boolean(contact.has_phone ?? contact.hasPhone),
-  };
+/**
+ * @param {object|null} contact
+ * @param {{ reveal?: boolean }} [options]
+ */
+export function normalizeContact(contact, options = {}) {
+  if (!contact) {
+    return { phone: null, phoneMasked: null, hasPhone: false };
+  }
+  const raw = contact.phone ?? null;
+  const hasPhone = Boolean(contact.has_phone ?? contact.hasPhone ?? raw);
+  const phoneMasked = hasPhone ? maskPhone(raw) || '••••' : null;
+  if (options.reveal) {
+    return { phone: raw, phoneMasked, hasPhone };
+  }
+  // WHY: default responses omit the full number so shoulder-surfing and casual
+  // network inspection do not expose contact details on profile load.
+  return { phone: null, phoneMasked, hasPhone };
 }
 
 export async function routePlayerContact(
@@ -40,6 +54,8 @@ export async function routePlayerContact(
   if (!own && !adminMatch) return null;
   if (own && !['GET', 'PUT'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
   if (adminMatch && request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+
+  const reveal = url.searchParams.get('reveal') === '1' || url.searchParams.get('reveal') === 'true';
 
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
@@ -55,14 +71,14 @@ export async function routePlayerContact(
         contact: {
           playerId: contact.player_id ?? contact.playerId,
           displayName: contact.display_name ?? contact.displayName,
-          ...normalizeContact(contact),
+          ...normalizeContact(contact, { reveal }),
         },
       });
     }
 
     if (request.method === 'GET') {
       const contact = await getOwnPlayerContactCommand({ actorUserId: actor.id }, repository);
-      return json({ contact: normalizeContact(contact) });
+      return json({ contact: normalizeContact(contact, { reveal }) });
     }
 
     const body = await request.json().catch(() => ({}));
@@ -70,8 +86,9 @@ export async function routePlayerContact(
       actorUserId: actor.id,
       phone: body.phone ?? null,
     }, repository);
-    return json({ contact: normalizeContact(contact) });
+    // After save, still default to masked in the response body.
+    return json({ contact: normalizeContact(contact, { reveal: false }) });
   } catch (error) {
-    return json({ error: error.message }, errorStatus(error));
+    return json({ error: safeClientErrorMessage(error) }, playerContactErrorStatus(error));
   }
 }

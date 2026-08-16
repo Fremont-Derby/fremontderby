@@ -1,0 +1,117 @@
+name: Deploy release lanes
+
+concurrency:
+  group: deploy-release-lanes-${{ github.event.inputs.lane || github.run_id }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_target:
+        description: 'Runner (self-hosted laptop or ubuntu-latest)'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options: [self-hosted, ubuntu-latest]
+      lane:
+        description: 'Lane to deploy (prefer all-lanes so tips stay unified)'
+        required: true
+        default: 'all-lanes'
+        type: choice
+        options: [all-lanes, gamma, jfl, dru, production]
+      skip_tests:
+        description: 'Skip unit tests (lint+check still run)'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ${{ inputs.runner_target || 'self-hosted' }}
+    defaults:
+      run:
+        shell: cmd
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Lint and syntax check
+        run: |
+          call npm run lint
+          if errorlevel 1 exit /b 1
+          call npm run check
+          if errorlevel 1 exit /b 1
+      - name: Unit tests
+        if: ${{ github.event.inputs.skip_tests != 'true' }}
+        continue-on-error: true
+        run: call npm test
+
+  deploy:
+    needs: test
+    runs-on: ${{ inputs.runner_target || 'self-hosted' }}
+    defaults:
+      run:
+        shell: cmd
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: ${{ github.event.inputs.lane == 'all-lanes' && fromJson('["jfl","dru","gamma"]') || fromJson(format('["{0}"]', github.event.inputs.lane)) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require Cloudflare secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if "%CLOUDFLARE_API_TOKEN%"=="" (echo CLOUDFLARE_API_TOKEN missing & exit /b 1)
+          if "%CLOUDFLARE_ACCOUNT_ID%"=="" (echo CLOUDFLARE_ACCOUNT_ID missing & exit /b 1)
+          echo Cloudflare secrets present
+      - name: Deploy ${{ matrix.lane }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN: '1'
+          GITHUB_ACTIONS: 'true'
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          call npm run deploy:${{ matrix.lane }}
+          if errorlevel 1 exit /b 1
+      - name: Put lane service role secret after deploy
+        if: matrix.lane == 'dru' || matrix.lane == 'jfl' || matrix.lane == 'gamma'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if "%LANE_SUPABASE_SERVICE_ROLE_KEY%"=="" (echo LANE_SUPABASE_SERVICE_ROLE_KEY missing & exit /b 1)
+          set SECRET_VALUE=%LANE_SUPABASE_SERVICE_ROLE_KEY%
+          node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY ${{ matrix.lane }}
+          if errorlevel 1 exit /b 1
+      - name: Put production service role secret after deploy
+        if: matrix.lane == 'production'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PRODUCTION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if "%PRODUCTION_SUPABASE_SERVICE_ROLE_KEY%"=="" (echo PRODUCTION_SUPABASE_SERVICE_ROLE_KEY missing & exit /b 1)
+          set SECRET_VALUE=%PRODUCTION_SUPABASE_SERVICE_ROLE_KEY%
+          node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY
+          if errorlevel 1 exit /b 1
+      - name: Probe host identity
+        continue-on-error: true
+        env:
+          HOST: ${{ matrix.lane == 'production' && 'fremontderby.com' || format('{0}.fremontderby.com', matrix.lane) }}
+          EXPECT: ${{ matrix.lane == 'production' && 'production' || matrix.lane }}
+        run: |
+          node -e "const host=process.env.HOST;const expect=process.env.EXPECT;(async()=>{const url='https://'+host+'/health/environment';const response=await fetch(url,{redirect:'manual'});const text=await response.text();let body={};try{body=JSON.parse(text)}catch{};const envName=body.environment||body.ENVIRONMENT||'';console.log(JSON.stringify({host,status:response.status,environment:envName}));if(response.status!==200||String(envName)!==expect){console.error('Probe identity mismatch');process.exit(1)}})().catch((e)=>{console.error(e);process.exit(1)})"

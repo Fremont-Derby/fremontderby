@@ -1,3 +1,4 @@
+import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
@@ -93,9 +94,33 @@ async function finalizeBrowserResponse(response, pathname) {
 }
 
 export default {
+  async scheduled(event, env, ctx) {
+    const summary = await runHourlyProbes(env);
+    const notify = await maybeCommentProbeFailures(env, summary);
+    console.log(JSON.stringify({ type: 'hourly_probe', ok: summary.ok, failures: summary.failures.length, notify }));
+    return summary;
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (isRetiredTradePath(url.pathname)) return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
+      const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
+      const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
+      const envName = String(env?.ENVIRONMENT || 'production').toLowerCase();
+      // Production always requires a configured key; other lanes require key when set.
+      if (envName === 'production' || expected) {
+        if (!expected || key !== expected) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+      }
+      const summary = await runHourlyProbes(env);
+      if (url.searchParams.get('notify') === '1') {
+        summary.notify = await maybeCommentProbeFailures(env, summary);
+      }
+      return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
+    }
+
+    // Trades restored — paths served by legacy router / index handlers.
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);

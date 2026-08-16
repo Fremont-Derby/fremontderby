@@ -70,3 +70,10 @@ export async function listEligibleFreeAgentsCommand(
     roundId,
   });
 }
+
+export async function listSeasonFreeAgentsCommand({ seasonId }, repository) {
+  assertRepository(repository, 'listSeasonFreeAgents');
+  if (!seasonId) throw Object.assign(new Error('seasonId is required'), { status: 400 });
+  return repository.listSeasonFreeAgents({ seasonId });
+}
+

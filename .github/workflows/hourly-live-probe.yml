@@ -1,0 +1,39 @@
+# Backup probe when GitHub-hosted is down; CF cron remains primary.
+name: Hourly live probe
+
+on:
+  schedule:
+    - cron: '5 * * * *'
+  workflow_dispatch:
+    inputs:
+      runner_target:
+        description: 'Runner'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options: [self-hosted, ubuntu-latest]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hourly-live-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ${{ github.event.inputs.runner_target || 'self-hosted' }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Probe public routes
+        env:
+          PROBE_HOST: https://fremontderby.com
+          PROBE_DRU: https://dru.fremontderby.com
+          PROBE_JFL: https://jfl.fremontderby.com
+          PROBE_GAMMA: https://gamma.fremontderby.com
+        run: |
+          node -e "const hosts=[process.env.PROBE_HOST,process.env.PROBE_DRU,process.env.PROBE_JFL,process.env.PROBE_GAMMA].filter(Boolean);const paths=['/','/schedule','/teams','/scorecard','/standings','/health/environment'];(async()=>{let fail=0;for(const host of hosts){for(const path of paths){const url=host.replace(/\/$/,'')+path;try{const r=await fetch(url,{redirect:'manual'});const ok=r.status>=200&&r.status<400;console.log((ok?'OK':'FAIL'),r.status,url);if(!ok)fail++}catch(e){console.log('FAIL',url,e.message);fail++}}}if(fail){console.error('failures',fail);process.exit(1)}})()"

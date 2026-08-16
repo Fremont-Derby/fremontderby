@@ -1,0 +1,27 @@
+name: Diagnose worker domains
+on:
+  workflow_dispatch:
+    inputs:
+      runner_target:
+        description: 'Runner (ubuntu-latest or self-hosted for laptop INFRA)'
+        required: false
+        default: 'ubuntu-latest'
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+
+concurrency:
+  group: diagnose-worker-domains
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/diagnose-worker-domains.mjs
