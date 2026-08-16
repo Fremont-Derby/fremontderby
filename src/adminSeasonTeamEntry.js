@@ -66,11 +66,17 @@ export function deriveAdminSeasonTeamEntry(row, registration) {
   }
 
   if (slotsOpen <= 0) {
+    const position = candidate?.waitlistPosition ?? candidate?.waitlist_position ?? candidate?.position;
+    const qualifiedAt = candidate?.firstQualifiedAt ?? candidate?.first_qualified_at;
+    const positionBit = position ? ` · #${position} on waitlist` : '';
+    const whenBit = qualifiedAt ? ` · qualified ${String(qualifiedAt).slice(0, 10)}` : '';
     return {
       entryStatus: 'waitlisted',
       qualified: true,
       canTakeSlot: false,
-      reason: 'Waitlisted · qualified but season is full',
+      reason: `Waitlisted · qualified but season is full${positionBit}${whenBit}`,
+      waitlistPosition: position ?? null,
+      firstQualifiedAt: qualifiedAt ?? null,
     };
   }
 
