@@ -29,11 +29,14 @@ jobs:
       run:
         shell: cmd
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Probe public routes
         env:
           PROBE_HOST: https://fremontderby.com
           PROBE_DRU: https://dru.fremontderby.com
           PROBE_JFL: https://jfl.fremontderby.com
           PROBE_GAMMA: https://gamma.fremontderby.com
-        run: |
-          node -e "const hosts=[process.env.PROBE_HOST,process.env.PROBE_DRU,process.env.PROBE_JFL,process.env.PROBE_GAMMA].filter(Boolean);const paths=['/','/schedule','/teams','/scorecard','/standings','/health/environment'];(async()=>{let fail=0;for(const host of hosts){for(const path of paths){const url=host.replace(/\/$/,'')+path;try{const r=await fetch(url,{redirect:'manual'});const ok=r.status>=200&&r.status<400;console.log((ok?'OK':'FAIL'),r.status,url);if(!ok)fail++}catch(e){console.log('FAIL',url,e.message);fail++}}}if(fail){console.error('failures',fail);process.exit(1)}})()"
+        run: node scripts/hourly-live-probe.mjs
