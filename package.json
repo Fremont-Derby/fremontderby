@@ -22,6 +22,8 @@
     "a11y": "node scripts/pa11y-rendered.mjs",
     "lint:templates": "node scripts/lint-template-regex.mjs",
     "lint:inner-html": "node scripts/lint-inner-html.mjs",
-    "validate:gamma-rc": "node scripts/validate-gamma-rc.mjs"
+    "validate:gamma-rc": "node scripts/validate-gamma-rc.mjs",
+    "gamma:refresh:dry": "node scripts/gamma-prod-refresh.mjs",
+    "gamma:refresh": "GAMMA_REFRESH_EXECUTE=1 node scripts/gamma-prod-refresh.mjs"
   }
 }
