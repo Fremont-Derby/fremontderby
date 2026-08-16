@@ -39,10 +39,12 @@ export function productionDeployArgs(env = process.env) {
 }
 
 export function runProductionDeploy({ env = process.env, spawn = spawnSync } = {}) {
-  const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  const result = spawn(command, productionDeployArgs(env), {
+  // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell (same as deploy-lane.mjs).
+  const isWin = process.platform === 'win32';
+  const result = spawn(isWin ? 'npx' : 'npx', productionDeployArgs(env), {
     env,
     stdio: 'inherit',
+    shell: isWin,
   });
 
   if (result.error) throw result.error;
