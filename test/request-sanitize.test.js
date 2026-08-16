@@ -4,6 +4,8 @@ import {
   readSanitizedJsonBody,
   safeClientErrorMessage,
   sanitizeText,
+  isUuid,
+  isRfc4122Uuid,
   requireUuid,
   MAX_JSON_BODY_BYTES,
 } from '../src/requestSanitize.js';
@@ -59,4 +61,16 @@ test('requireUuid and safe errors', () => {
     /could not complete that action/i,
   );
   assert.match(safeClientErrorMessage({ message: 'Request body is too large', status: 413 }), /too large/i);
+});
+
+test('isUuid accepts hex-shape including non-RFC variant seed ids', () => {
+  // RFC 4122
+  assert.equal(isUuid('a61b38f6-881f-2b96-8b4b-7db22dbc8764'), true);
+  assert.equal(isRfc4122Uuid('a61b38f6-881f-2b96-8b4b-7db22dbc8764'), true);
+  // JFL Registration Lab style (variant nibble d) — valid path id, not RFC variant
+  assert.equal(isUuid('207abd00-3899-1ef2-d251-2a15efe5edc2'), true);
+  assert.equal(isRfc4122Uuid('207abd00-3899-1ef2-d251-2a15efe5edc2'), false);
+  assert.equal(isUuid('not-a-uuid'), false);
+  assert.equal(isUuid(''), false);
+  assert.equal(requireUuid('207abd00-3899-1ef2-d251-2a15efe5edc2'), '207abd00-3899-1ef2-d251-2a15efe5edc2');
 });
