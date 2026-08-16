@@ -4,8 +4,10 @@ name: Deploy release lanes
 # still paused while hosted runners/billing recover (#723).
 # Avoid stacking deploys when hosted runners are slow (#723).
 concurrency:
-  group: deploy-release-lanes-${{ github.event.inputs.lane || 'all' }}
-  cancel-in-progress: true
+  # Per-lane group. Do NOT cancel-in-progress: rapid re-dispatch was killing
+  # in-flight deploys and leaving Workers stuck on old tips (practice GET 405, etc.).
+  group: deploy-release-lanes-${{ github.event.inputs.lane || github.run_id }}
+  cancel-in-progress: false
 
 on:
   workflow_dispatch:
