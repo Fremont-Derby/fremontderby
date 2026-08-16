@@ -165,6 +165,16 @@ async function readJsonBody(request) {
   return readSanitizedJsonBody(request);
 }
 
+function normalizeApproveDecline(body) {
+  const raw =
+    body?.response
+    ?? body?.decision
+    ?? body?.action
+    ?? (body?.accept === true || body?.accepted === true ? 'approved' : null)
+    ?? (body?.decline === true || body?.declined === true ? 'declined' : null);
+  return raw == null ? raw : String(raw).toLowerCase();
+}
+
 function clientErrorMessage(error) {
   // Prefer safe mapping first, then preserve a few product-specific uuid phrases.
   const safe = safeClientErrorMessage(error);
@@ -1095,7 +1105,7 @@ export async function handleRespondToTeamTradePlayerRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: body.response,
+        response: normalizeApproveDecline(body) ?? body.response,
       },
       repository,
     );
@@ -1120,7 +1130,7 @@ export async function handleApproveTeamTradeCaptainRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: body.response,
+        response: normalizeApproveDecline(body) ?? body.response,
       },
       repository,
     );
@@ -1263,7 +1273,7 @@ export async function handleSetRosterAvailabilityRequest(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus,
+        availabilityStatus: body.status ?? body.availabilityStatus ?? body.availability_status,
       },
       repository,
     );
