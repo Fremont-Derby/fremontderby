@@ -36,6 +36,7 @@ import {
   matchApiTeamMatchesPath,
   matchApiSeasonMessagesPath,
 } from './pathMatch.js';
+import { normalizeApiPathname } from './pathAliases.js';
 
 function htmlResponse(html, pathname, status = 200) {
   const nonce = createRequestNonce();
@@ -93,6 +94,8 @@ function isDelegatedNonPagePath(pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // #950 — collapse path aliases before matchers
+    url.pathname = normalizeApiPathname(url.pathname);
     const adminStartPlayoffsMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/start-playoffs$/,
     );

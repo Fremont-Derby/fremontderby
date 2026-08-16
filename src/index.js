@@ -110,6 +110,7 @@ import {
 import { createTeamRegistrationRepository } from './teamRegistrationRepository.js';
 import { renderTeamsPage } from './teamsPage.js';
 import { renderTradesPage } from './tradesPage.js';
+import { normalizeApiPathname } from './pathAliases.js';
 
 const serviceName = "fremontderby";
 
@@ -808,6 +809,7 @@ export async function handleListAdminAuditEventsRequest(request, env, { fetch: f
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const url = new URL(request.url);
+    url.pathname = normalizeApiPathname(url.pathname);
     const repository = createAdminAuditRepository(env, { fetch: fetchImpl });
     const events = await repository.listAuditEvents({
       actorUserId: actor.id,
@@ -1730,6 +1732,7 @@ export async function handleCorrectPlayerMatchRequest(
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    url.pathname = normalizeApiPathname(url.pathname);
     const version = versionMetadata(env);
     const publishScheduleMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
