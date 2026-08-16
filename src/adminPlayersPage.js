@@ -18,6 +18,10 @@ export function renderAdminPlayersPage() {
         <a class="back" href="/admin">Admin home</a>
         <a class="back" href="/admin/operations">Operations</a>
         <a class="back" href="/admin/season-teams">Season teams</a>
+        <a class="back" href="/admin/seasons">Seasons</a>
+        <a class="back" href="/admin/audit">Audit</a>
+        <a class="back" href="/scorecard">Score</a>
+        <a class="back" href="/schedule">Schedule</a>
         <a class="back" href="/players">Public directory</a>
       </div>
     </header>
