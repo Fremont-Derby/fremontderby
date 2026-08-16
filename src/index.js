@@ -1324,7 +1324,7 @@ export async function handleSubmitTeamLineupRequest(
         actorUserId: actor.id,
         teamId,
         roundId,
-        slots: body.slots ?? body.lineupSlots,
+        slots: body.slots ?? body.lineupSlots ?? body.lineup_slots,
       },
       repository,
     );
