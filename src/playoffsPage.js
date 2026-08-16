@@ -112,7 +112,7 @@ export function renderPlayoffsPage() {
       const post=rounds.filter((r)=>['semifinal','championship','tiebreaker'].includes(String(r.stage||'')));
       bracketEl.replaceChildren();
       if(!post.length){
-        bracketEl.innerHTML='<div class="empty">No postseason rounds yet for this season. When an admin starts playoffs, semifinals appear here.</div>';
+        bracketEl.innerHTML='<div class="empty"><strong style="display:block;margin-bottom:8px">No postseason rounds yet</strong>When an admin starts playoffs, semifinals appear here.<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px"><a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a><a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a><a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a></div></div>';
         return;
       }
       for(const round of post){
@@ -212,7 +212,7 @@ export function renderPlayoffsPage() {
       seasonEl.replaceChildren();
       if(!seasons.length){
         seasonEl.disabled=true;
-        bracketEl.innerHTML='<div class="empty">No public seasons yet.</div>';
+        bracketEl.innerHTML='<div class="empty"><strong style="display:block;margin-bottom:8px">No public seasons yet</strong><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px"><a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a><a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a></div></div>';
         setStatus('No seasons');
         return;
       }
