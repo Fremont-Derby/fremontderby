@@ -37,7 +37,7 @@ returns table(
   application_id uuid,
   proposed_team_name text,
   status text,
-  position integer,
+  waitlist_position integer,
   first_qualified_at timestamptz,
   submitted_at timestamptz,
   waitlist_rank_override integer,
@@ -66,7 +66,7 @@ begin
         ta.first_qualified_at asc nulls last,
         ta.submitted_at asc,
         ta.id asc
-    ))::integer as position,
+    ))::integer as waitlist_position,
     ta.first_qualified_at,
     ta.submitted_at,
     ta.waitlist_rank_override,
@@ -91,7 +91,7 @@ returns table(
   application_id uuid,
   proposed_team_name text,
   status text,
-  position integer,
+  waitlist_position integer,
   first_qualified_at timestamptz
 )
 language plpgsql
@@ -124,12 +124,12 @@ begin
           ta.first_qualified_at asc nulls last,
           ta.submitted_at asc,
           ta.id asc
-      )::integer as position
+      )::integer as waitlist_position
     from private.team_applications ta
     where ta.season_id = target_season_id
       and ta.status = 'waitlisted'
   )
-  select o.id, o.proposed_team_name, o.status, o.position, o.first_qualified_at
+  select o.id, o.proposed_team_name, o.status, o.waitlist_position, o.first_qualified_at
   from ordered o
   where o.applicant_player_id = player_id;
 end;
@@ -144,7 +144,7 @@ create or replace function public.admin_override_waitlist_order(
 returns table(
   application_id uuid,
   waitlist_rank_override integer,
-  position integer
+  waitlist_position integer
 )
 language plpgsql
 security definer
@@ -197,7 +197,7 @@ begin
   );
 
   return query
-  select q.application_id, q.waitlist_rank_override, q.position
+  select q.application_id, q.waitlist_rank_override, q.waitlist_position
   from public.list_season_waitlist(actor_user_id, application_row.season_id) q
   where q.application_id = target_application_id;
 end;
