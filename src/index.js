@@ -1847,7 +1847,7 @@ export default {
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/availability$/,
     );
     const teamLineupMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineups?$/,
     );
     const seasonScheduleMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/(?:schedule|rounds)$/,
