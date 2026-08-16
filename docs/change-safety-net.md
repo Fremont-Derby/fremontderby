@@ -39,3 +39,7 @@ node scripts/diagnose-worker-domains.mjs   # needs CLOUDFLARE_*
 2. Keep string path references in `src/index.js` / `src/routerEntry.js` so contract tests stay green.
 3. After deploy, run public surface canary (or wait for schedule).
 4. Do not close a “UI ship” until production canary is green (DNS + shells).
+
+## Do work!
+
+Human/agent cue **Do work!** means follow [do-work-protocol.md](./do-work-protocol.md): safety net first, then the next verified increment.

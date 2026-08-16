@@ -1,3 +1,7 @@
+## Do work!
+
+When directed to **Do work!**, follow `docs/do-work-protocol.md` (canaries first, verified ships only).
+
 # Fremont Derby Agent Operating Contract
 
 This file is the durable operating contract for autonomous and assisted development agents working on Fremont Derby.

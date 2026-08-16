@@ -5,12 +5,12 @@ import { PUBLIC_HTML_PATHS, PUBLIC_JSON_PATHS } from '../scripts/public-surface-
 import { htmlShellOk } from '../scripts/assert-public-surface.mjs';
 
 test('htmlShellOk requires doctype + brand marker', () => {
-  assert.equal(htmlShellOk('<!doctype html><title>Fremont Derby</title>'), true);
+  assert.equal(htmlShellOk('<!doctype html><meta name="viewport" content="width=device-width"><title>Fremont Derby</title>'), true);
   assert.equal(htmlShellOk('<html>nope</html>'), false);
 });
 
 test('critical public paths still appear in worker entry sources', () => {
-  const blob = ['src/index.js', 'src/routerEntry.js']
+  const blob = ['src/index.js', 'src/routerEntry.js', 'src/appShell.js', 'src/pathAliases.js', 'src/publicPages.js']
     .map((p) => readFileSync(p, 'utf8'))
     .join('\n');
   for (const path of [...PUBLIC_HTML_PATHS, ...PUBLIC_JSON_PATHS]) {

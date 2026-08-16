@@ -16,6 +16,8 @@ export const PUBLIC_HTML_PATHS = Object.freeze([
   '/trades',
   '/admin',
   '/season-setup',
+  '/playoffs',
+  '/demo',
 ]);
 
 export const PUBLIC_JSON_PATHS = Object.freeze([
@@ -27,6 +29,7 @@ export const PUBLIC_JSON_PATHS = Object.freeze([
 export const HTML_SHELL_MARKERS = Object.freeze([
   '<!doctype html',
   'fremont',
+  'viewport',
 ]);
 
 export const CANARY_HOSTS = Object.freeze([
