@@ -184,9 +184,9 @@ export function renderProfilePage(env = {}) {
           <div class="panel-head"><span>League admin</span><span class="badge">Admin tools</span></div>
           <div class="hint" style="padding:12px 12px 0">Manage players, league health, season setup, and reported messages.</div>
           <nav class="admin-actions" aria-label="League admin tools">
+            <a href="/admin">Admin home</a>
             <a href="/admin/players">Players</a>
             <a href="/admin/operations">Operations</a>
-            <a href="/season-setup">Season setup</a>
             <a href="/messages/moderation">Moderation</a>
           </nav>
         </article>

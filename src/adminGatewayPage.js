@@ -50,6 +50,13 @@ export function renderAdminGatewayPage() {
         <a class="card" data-accent="rose" href="/messages/moderation">
           <strong>Moderation</strong><span>Review reported messages that need an admin decision.</span><b>Review reports →</b>
         </a>
+        <a class="card" data-accent="blue" href="/admin/support">
+          <strong>Admin Support</strong><span>Shared player-help queue with replied/handled state.</span><b>Open queue →</b>
+        </a>
+        <a class="card" href="/admin/player-contact">
+          <strong>Player contact</strong><span>Look up one captain phone number at a time (never in directories).</span><b>Look up →</b>
+        </a>
+
         <a class="card" data-accent="gold" href="/prizes">
           <strong>Prizes</strong><span>Review prize summary and finalize season payouts when ready.</span><b>Open prizes →</b>
         </a>
