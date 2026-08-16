@@ -39,7 +39,7 @@ export function renderAdminGatewayPage() {
           <strong>Seasons</strong><span>Search seasons by name, letter, or status — then open setup or teams.</span><b>Browse seasons →</b>
         </a>
         <a class="card" href="/admin/season-teams">
-          <strong>Season teams</strong><span>Jump team names A–Z and manage roster slots for a season.</span><b>Manage teams →</b>
+          <strong>Admin Teams</strong><span>Find a team, message the captain, change captain, and fix roster depth without database edits.</span><b>Manage teams →</b>
         </a>
         <a class="card" data-accent="gold" href="/season-setup" data-admin-surface="season-setup">
           <strong>League setup</strong><span>Create and publish seasons, capacity, and schedule.</span><b>Open setup →</b>
