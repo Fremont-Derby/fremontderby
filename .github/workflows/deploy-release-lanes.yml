@@ -80,6 +80,17 @@ jobs:
           test -n "${LANE_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "LANE_SUPABASE_SERVICE_ROLE_KEY missing in repo secrets"; exit 1; }
           printf '%s' "$LANE_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY --env "$LANE"
 
+      - name: Ensure production service role secret
+        if: matrix.lane == 'production'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PRODUCTION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${PRODUCTION_SUPABASE_SERVICE_ROLE_KEY:-}" || { echo "PRODUCTION_SUPABASE_SERVICE_ROLE_KEY missing"; exit 1; }
+          printf '%s' "$PRODUCTION_SUPABASE_SERVICE_ROLE_KEY" | npx --yes wrangler@4 secret put SUPABASE_SERVICE_ROLE_KEY
+
       - name: Deploy ${{ matrix.lane }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
