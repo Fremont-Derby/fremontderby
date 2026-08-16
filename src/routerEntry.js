@@ -1,3 +1,5 @@
+import { renderAdminSupportPage } from './adminSupportPage.js';
+import { routeAdminSupport } from './adminSupportHttp.js';
 import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
@@ -126,7 +128,14 @@ export default {
     }
 
     // Trades restored — paths served by legacy router / index handlers.
-    if (url.pathname === '/admin/player-contact') {
+    
+    if (url.pathname === '/admin/support') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+if (url.pathname === '/admin/player-contact') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
@@ -135,6 +144,8 @@ export default {
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
+    const adminSupportResponse = await routeAdminSupport(request, env);
+    if (adminSupportResponse) return finalizeBrowserResponse(adminSupportResponse, url.pathname);
     const playerContactResponse = await routePlayerContact(request, env);
     if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
