@@ -947,7 +947,7 @@ export async function handleProposeTeamMatchMakeupRequest(
       {
         actorUserId: actor.id,
         teamMatchId,
-        makeupOn: body.makeupOn ?? body.makeup_on,
+        makeupOn: body.makeupOn ?? body.makeup_on ?? body.date,
         makeupLocation: body.makeupLocation ?? body.makeup_location ?? null,
         makeupNote: body.makeupNote ?? body.makeup_note ?? null,
       },
