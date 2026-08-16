@@ -1106,7 +1106,7 @@ export async function handleRespondToTeamTradePlayerRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: body.response,
+        response: normalizeApproveDecline(body) ?? body.response,
       },
       repository,
     );
@@ -1131,7 +1131,7 @@ export async function handleApproveTeamTradeCaptainRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: body.response,
+        response: normalizeApproveDecline(body) ?? body.response,
       },
       repository,
     );
@@ -1274,7 +1274,7 @@ export async function handleSetRosterAvailabilityRequest(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: body.status ?? body.availabilityStatus,
+        availabilityStatus: body.status ?? body.availabilityStatus ?? body.availability_status,
       },
       repository,
     );
