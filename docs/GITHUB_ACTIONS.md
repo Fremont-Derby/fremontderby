@@ -78,3 +78,11 @@ Lane Workers still need Wrangler secrets (`SUPABASE_*`, `BETA_ACTOR_USER_ID`); A
 ## Concurrency
 
 Workflows use `concurrency` groups with `cancel-in-progress: true` so repeated pushes/dispatches do not stack on slow hosted runners (#723). Deploy lanes group by lane input; CI/CodeQL group by PR number or ref.
+
+## Public PR safety (#872 / #873)
+
+- **CI** and **PR card contract** run on `pull_request` with `contents: read` (and issues/PR read for card contract only).
+- Neither workflow mounts Cloudflare, Supabase, or deploy secrets on PR jobs.
+- **Deploy release lanes** is `workflow_dispatch` only and refuses refs other than `main` / `fremontderby-{jfl,dru,gamma}`.
+- No workflow uses `untrusted-base-ref PR event`.
+- Required check names for branch protection: `test`, `accessibility`, `pr-card-contract`, `validate` (release-source-policy).
