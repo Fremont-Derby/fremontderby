@@ -21,6 +21,15 @@ export function renderLineupPage() {
 <body>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">L</span><span>Fremont Derby Lineup</span></div><div class="status" data-status role="status" aria-live="polite"><span data-status-copy>Loading…</span><button class="status-close" data-status-close type="button" aria-label="Dismiss message" hidden>Close</button></div></header>
+    <nav aria-label="League night" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px">
+      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
+      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+      <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Check in</a>
+      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+      <a href="/trades" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Trades</a>
+      <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
+      <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
+    </nav>
     <section class="gate" data-gate aria-live="polite">
       <strong data-gate-title>Loading lineup…</strong>
       <p data-gate-detail>Preparing your lineup workspace.</p>
