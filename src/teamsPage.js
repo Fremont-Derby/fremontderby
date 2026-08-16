@@ -295,14 +295,26 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
               playerId:pid,
               isDuplicateName:false,
             });
-            li.textContent=label;
+            const forUs=Number(member.matchesForTeam??member.matches_for_team??0);
+            const elsewhere=Number(member.matchesElsewhere??member.matches_elsewhere??0);
+            const eligible=Boolean(member.postseasonEligible||member.postseason_eligible);
+            const approach=Boolean(member.approachingEligible||member.approaching_eligible);
+            const counts=document.createElement('div');
+            counts.className='muted';
+            counts.style.fontSize='.82rem';
+            counts.textContent=forUs+' for us · '+elsewhere+' elsewhere';
+            const elig=document.createElement('div');
+            elig.style.fontSize='.82rem';
+            elig.textContent=eligible?'✓ Playoff eligible':(approach?'3+ team matches · path to eligible':'Needs more team matches');
+            elig.style.color=eligible?'#9ee5bd':(approach?'#d8ad3f':'#aab3bb');
+            li.append(document.createElement('br'), counts, elig);
             if(pid){
               const msg=document.createElement('a');
               msg.href='/messages?player='+encodeURIComponent(pid);
               msg.textContent='Message';
-              msg.style.cssText='margin-left:8px;font-size:.82rem;color:#9ee5bd;text-decoration:none';
+              msg.style.cssText='margin-left:0;font-size:.82rem;color:#9ee5bd;text-decoration:none;display:inline-flex;min-height:44px;align-items:center';
               msg.setAttribute('aria-label','Message '+label);
-              li.append(document.createTextNode(' '),msg);
+              li.append(document.createElement('br'), msg);
             }
             list.append(li);
           }
@@ -389,7 +401,12 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
           team.practiceLocation||team.practice_location||'',
           team.practiceSchedule||team.practice_schedule||'',
           team.practiceRecurrence||team.practice_recurrence||'',
-          members.map((m)=>m.playerId||m.player_id||m.id||'').join(','),
+          members.map((m)=>[
+            m.playerId||m.player_id||m.id||'',
+            m.matchesForTeam??m.matches_for_team??'',
+            m.matchesElsewhere??m.matches_elsewhere??'',
+            m.postseasonEligible??m.postseason_eligible??'',
+          ].join(':')).join(','),
           members.length,
         ].join('|');
       }
