@@ -302,5 +302,7 @@ Normal product promotion is fail-closed:
 
 Enforcement is the required check `Release source policy / validate` plus repository rulesets (#889). Agents must not bypass this topology with force-pushes, alternate production publishers, or “temporary” direct-to-main feature merges.
 
+Until Gamma promotion is fully required in rulesets, same-repo implementation PRs to `main` may still merge (forks remain blocked). Set `STRICT_RELEASE_SOURCE_POLICY=1` on the workflow when `main` must accept only `fremontderby-gamma`.
+
 
 Every implementation PR must link exactly which card(s) it implements.
