@@ -554,6 +554,28 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       };
     },
 
+    async getTeamPractice({ teamId }) {
+      const rows = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/teams?select=id,name,practice_location,practice_schedule,practice_recurrence,practice_on&id=eq.${encodeURIComponent(teamId)}`,
+        { method: 'GET', headers },
+      );
+      const row = Array.isArray(rows) ? rows[0] : rows;
+      if (!row) {
+        const error = new Error('Team not found');
+        error.status = 404;
+        throw error;
+      }
+      return {
+        teamId: row.id ?? teamId,
+        teamName: row.name ?? null,
+        practiceLocation: row.practice_location ?? null,
+        practiceSchedule: row.practice_schedule ?? null,
+        practiceRecurrence: row.practice_recurrence ?? null,
+        practiceOn: row.practice_on ?? null,
+      };
+    },
+
 
     async proposeTeamMatchMakeup({ actorUserId, teamMatchId, makeupOn, makeupLocation, makeupNote }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/propose_team_match_makeup`, {
