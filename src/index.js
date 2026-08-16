@@ -421,7 +421,7 @@ export async function handleCreateTeamRequest(
       {
         actorUserId: actor.id,
         seasonId,
-        teamName: body.teamName ?? body.name,
+        teamName: body.teamName ?? body.team_name ?? body.name,
       },
       repository,
     );
