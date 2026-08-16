@@ -43,6 +43,16 @@ export function renderAdminAuditPage() {
       <button type="button" class="primary" data-refresh>Refresh</button>
       <button type="button" data-flush-webhooks title="Deliver pending audit webhooks">Flush webhooks</button>
     </div>
+    <div class="filters" data-prefix-chips aria-label="Quick action filters">
+      <button type="button" data-prefix-chip value="">All</button>
+      <button type="button" data-prefix-chip value="player.">player.</button>
+      <button type="button" data-prefix-chip value="team.">team.</button>
+      <button type="button" data-prefix-chip value="team_match.">team_match.</button>
+      <button type="button" data-prefix-chip value="team_invitation.">invitation.</button>
+      <button type="button" data-prefix-chip value="team_trade.">trade.</button>
+      <button type="button" data-prefix-chip value="season.">season.</button>
+      <button type="button" data-prefix-chip value="player_match.">player_match.</button>
+    </div>
     <section class="list" data-list></section>
   </main>
   ${livePageRefreshScript}
@@ -132,6 +142,12 @@ export function renderAdminAuditPage() {
       }catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
     prefixEl.addEventListener('change',()=>load().catch((e)=>setStatus(e.message,'error')));
+    document.querySelectorAll('[data-prefix-chip]').forEach((btn)=>{
+      btn.addEventListener('click',()=>{
+        prefixEl.value=btn.getAttribute('value')||'';
+        load().catch((e)=>setStatus(e.message,'error'));
+      });
+    });
     load().catch((e)=>setStatus(e.message,'error'));
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:15000,immediate:false});
   </script>

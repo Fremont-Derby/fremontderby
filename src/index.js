@@ -2,6 +2,7 @@ import { createNotificationRepository } from './notificationRepository.js';
 import {
   createAdminAuditRepository,
   deliverAuditWebhooks,
+  writeAuditBestEffort,
 } from './adminAuditRepository.js';
 import { createChatRepository } from './chatRepository.js';
 import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
@@ -953,6 +954,13 @@ export async function handleTeamMatchDisputeRequest(
     } catch {
       // optional
     }
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_match.dispute',
+      entityType: 'team_match',
+      entityId: teamMatchId,
+      reason: note || null,
+      afterState: { href: '/scorecard?match=' + teamMatchId },
+    }, { fetch: fetchImpl });
     return jsonResponse({ ok: true }, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -980,6 +988,13 @@ export async function handleProposeTeamMatchMakeupRequest(
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_match.makeup_propose',
+      entityType: 'team_match',
+      entityId: teamMatchId,
+      afterState: makeup ?? null,
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ makeup }, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1005,6 +1020,13 @@ export async function handleRespondTeamMatchMakeupRequest(
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_match.makeup_respond',
+      entityType: 'team_match',
+      entityId: teamMatchId,
+      afterState: { response: body.response ?? body.status, makeup },
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ makeup });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1076,6 +1098,16 @@ export async function handleInvitePlayerToTeamRequest(
       repository,
     );
 
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_invitation.create',
+      entityType: 'team_invitation',
+      entityId: invitation?.id ?? invitation?.invitationId ?? null,
+      afterState: {
+        teamId,
+        playerId: body.playerId ?? body.player_id ?? body.invitedPlayerId ?? body.invited_player_id,
+      },
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ invitation }, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1102,6 +1134,18 @@ export async function handleProposeTeamTradeRequest(
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_trade.propose',
+      entityType: 'team_trade',
+      entityId: trade?.id ?? trade?.tradeId ?? null,
+      afterState: {
+        teamId,
+        offeredPlayerId: body.offeredPlayerId ?? body.offered_player_id,
+        requestedTeamId: body.requestedTeamId ?? body.requested_team_id,
+        requestedPlayerId: body.requestedPlayerId ?? body.requested_player_id,
+      },
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ trade }, 201);
   } catch (error) {
@@ -1155,6 +1199,15 @@ export async function handleRespondToTeamInvitationRequest(
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: (response === 'accepted' || response === 'approved')
+        ? 'team_invitation.accept'
+        : 'team_invitation.decline',
+      entityType: 'team_invitation',
+      entityId: invitationId,
+      afterState: { response },
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ invitation });
   } catch (error) {
@@ -1228,6 +1281,12 @@ export async function handleCancelTeamInvitationRequest(
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_invitation.cancel',
+      entityType: 'team_invitation',
+      entityId: invitationId,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ invitation });
   } catch (error) {
