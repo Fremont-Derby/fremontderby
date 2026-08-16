@@ -204,6 +204,13 @@ function statusForError(error) {
   if (error.message.includes("Trade is no longer pending")) return 409;
   if (error.message.includes("active membership changed")) return 409;
   if (error.message.includes("active non-captain roster member")) return 409;
+  if (error.message.includes("Player already has an active team membership")) return 409;
+  if (error.message.includes("You already captain a team in this season")) return 409;
+  if (error.message.includes("already have a team application in this season")) return 409;
+  if (error.message.includes("Season is not open for team applications")) return 409;
+  if (error.message.includes("That team name is already reserved")) return 409;
+  if (error.message.includes("That team name is already used in this season")) return 409;
+  if (error.message.includes("Trade blocked: player still has an active team membership")) return 409;
   if (error.message === "Player match not found") return 404;
   return 400;
 }
