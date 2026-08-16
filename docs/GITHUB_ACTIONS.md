@@ -48,6 +48,7 @@ Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl
 | `deploy-release-lanes.yml` | Deploy release lanes | `workflow_dispatch` | **`needs: test` gate restored** (#725); probe still `continue-on-error` until #713 |
 | `diagnose-worker-domains.yml` | Diagnose worker domains | `workflow_dispatch` | Cloudflare domain diagnostics |
 | `lane-health-monitor.yml` | Lane health monitor | `workflow_dispatch` | Probe `/health/environment` |
+| `release-source-policy.yml` | Release source policy | `pull_request` to main/gamma | Fail-closed source branch topology (#889) |
 | `pr-card-contract.yml` | PR card contract | verify on branch | Implementation-card shape |
 | `staging-readiness.yml` | Staging readiness | `workflow_dispatch` | Hosted staging smoke |
 | `sync-collaboration-labels.yml` | Sync collaboration labels | `workflow_dispatch` | Labels |
