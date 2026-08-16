@@ -230,6 +230,10 @@ export function renderProfilePage(env = {}) {
     function token() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
+    function isOpenAuthLane() {
+      const host = String(location.hostname || '');
+      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
+    }
 
     function refreshToken() {
       return sessionStorage.getItem('fd.refreshToken') || '';
@@ -305,13 +309,12 @@ export function renderProfilePage(env = {}) {
 
     async function api(path, options, retry = true) {
       const accessToken = token();
-      if (!accessToken) throw new Error('Sign in is required');
+      if (!accessToken && !isOpenAuthLane()) throw new Error('Sign in is required');
+      const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
+      if (accessToken) headers.authorization = 'Bearer ' + accessToken;
       const response = await fetch(path, {
         ...options,
-        headers: {
-          authorization: 'Bearer ' + accessToken,
-          'content-type': 'application/json',
-        },
+        headers,
       });
       if (response.status === 401 && retry && await refreshSession()) {
         return api(path, options, false);
@@ -545,7 +548,7 @@ export function renderProfilePage(env = {}) {
           return;
         }
       }
-      if (returnedFromGoogle || token()) {
+      if (returnedFromGoogle || token() || isOpenAuthLane()) {
         await loadProfile();
         if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch(() => {}), { intervalMs: 45000, immediate: false });
         await refreshAdminAccess();
