@@ -569,44 +569,59 @@ export function renderChatPage(env = {}) {
         }
       }
     }
+    function buildMessageArticle(message) {
+      const article = document.createElement('article');
+      article.className = 'message' + (message.is_own ? ' mine' : '');
+      article.dataset.messageId = message.message_id;
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      const author = document.createElement('span');
+      author.textContent = message.author_display_name
+        + (message.author_team_name ? ' · ' + message.author_team_name : '');
+      const time = document.createElement('time');
+      time.dateTime = message.created_at;
+      time.textContent = formatTime(message.created_at);
+      meta.append(author, time);
+      const body = document.createElement('div');
+      body.className = 'message-body';
+      body.textContent = message.body;
+      article.append(meta, body);
+      if (!message.is_own) {
+        const actions = document.createElement('div');
+        actions.className = 'message-actions';
+        const report = document.createElement('button');
+        report.type = 'button';
+        report.className = 'report';
+        report.dataset.reportMessage = message.message_id;
+        report.textContent = 'Report';
+        actions.append(report);
+        article.append(actions);
+      }
+      return article;
+    }
     function renderMessages(messages, { keepPosition = false } = {}) {
       const nearBottom = messageListEl.scrollHeight - messageListEl.scrollTop - messageListEl.clientHeight < 100;
-      messageListEl.replaceChildren();
       loadOlderButtonEl.hidden = !canLoadOlder;
-      messageListEl.append(loadOlderButtonEl);
       if (!messages.length) {
+        messageListEl.replaceChildren(loadOlderButtonEl);
         messageListEl.append(emptyState('No messages yet', 'Send the first message when you are ready.'));
         return;
       }
-      for (const message of messages) {
-        const article = document.createElement('article');
-        article.className = 'message' + (message.is_own ? ' mine' : '');
-        article.dataset.messageId = message.message_id;
-        const meta = document.createElement('div');
-        meta.className = 'message-meta';
-        const author = document.createElement('span');
-        author.textContent = message.author_display_name
-          + (message.author_team_name ? ' · ' + message.author_team_name : '');
-        const time = document.createElement('time');
-        time.dateTime = message.created_at;
-        time.textContent = formatTime(message.created_at);
-        meta.append(author, time);
-        const body = document.createElement('div');
-        body.className = 'message-body';
-        body.textContent = message.body;
-        article.append(meta, body);
-        if (!message.is_own) {
-          const actions = document.createElement('div');
-          actions.className = 'message-actions';
-          const report = document.createElement('button');
-          report.type = 'button';
-          report.className = 'report';
-          report.dataset.reportMessage = message.message_id;
-          report.textContent = 'Report';
-          actions.append(report);
-          article.append(actions);
+      if (window.fdStableList) {
+        window.fdStableList(messageListEl, messages, {
+          key: (m) => String(m.message_id || ''),
+          signature: (m) => [m.body, m.created_at, m.is_own, m.author_display_name, m.author_team_name].join('|'),
+          render: (m) => buildMessageArticle(m),
+        });
+        // Keep "load older" as a non-keyed chrome node at the top.
+        if (loadOlderButtonEl.parentNode !== messageListEl) {
+          messageListEl.prepend(loadOlderButtonEl);
+        } else if (messageListEl.firstChild !== loadOlderButtonEl) {
+          messageListEl.prepend(loadOlderButtonEl);
         }
-        messageListEl.append(article);
+      } else {
+        messageListEl.replaceChildren(loadOlderButtonEl);
+        for (const message of messages) messageListEl.append(buildMessageArticle(message));
       }
       if (!keepPosition && (nearBottom || messageListEl.dataset.initial !== 'done')) {
         messageListEl.scrollTop = messageListEl.scrollHeight;
