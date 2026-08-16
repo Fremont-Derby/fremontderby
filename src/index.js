@@ -972,7 +972,7 @@ export async function handleRespondTeamMatchMakeupRequest(
       {
         actorUserId: actor.id,
         teamMatchId,
-        response: body.response ?? body.status,
+        response: normalizeApproveDecline(body) ?? body.response ?? body.status,
       },
       repository,
     );
@@ -1071,12 +1071,7 @@ export async function handleRespondToTeamInvitationRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const response =
-      body.response
-      ?? body.decision
-      ?? body.action
-      ?? (body.accept === true || body.accepted === true ? 'approved' : null)
-      ?? (body.decline === true || body.declined === true ? 'declined' : null);
+    const response = normalizeApproveDecline(body);
     const invitation = await respondToTeamInvitationCommand(
       {
         actorUserId: actor.id,
