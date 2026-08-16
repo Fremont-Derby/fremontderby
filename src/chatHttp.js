@@ -188,7 +188,7 @@ export async function handleSendTeamMessageRequest(
       actorUserId: actor.id,
       teamId,
       body: body.body,
-      clientMessageId: body.clientMessageId,
+      clientMessageId: body.clientMessageId ?? body.client_message_id,
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
@@ -312,7 +312,7 @@ export async function handleSendDirectMessageRequest(
       actorUserId: actor.id,
       conversationId,
       body: body.body,
-      clientMessageId: body.clientMessageId,
+      clientMessageId: body.clientMessageId ?? body.client_message_id,
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
@@ -444,7 +444,7 @@ export async function handleSendLeagueMessageRequest(
     const body = await readJsonBody(request);
     const message = await sendLeagueMessageCommand({
       actorUserId: actor.id, seasonId, body: body.body,
-      clientMessageId: body.clientMessageId,
+      clientMessageId: body.clientMessageId ?? body.client_message_id,
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
@@ -586,7 +586,7 @@ export async function handleSendMatchupMessageRequest(
     const body = await readJsonBody(request);
     const message = await sendMatchupMessageCommand({
       actorUserId: actor.id, teamMatchId, body: body.body,
-      clientMessageId: body.clientMessageId,
+      clientMessageId: body.clientMessageId ?? body.client_message_id,
     }, repository);
     return jsonResponse({ message }, 201);
   } catch (error) {
