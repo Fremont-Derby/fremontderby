@@ -1,3 +1,4 @@
+import { withSupabaseSchema } from './supabaseSchema.js';
 import { deriveAdminSeasonTeamEntry } from './adminSeasonTeamEntry.js';
 
 import { withSupabaseSchema } from './supabaseSchema.js';
