@@ -27,6 +27,11 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/player': '/api/me/profile',
   '/api/me/notifications/mark-as-read-all': '/api/me/notifications/read-all',
   '/api/me/notifications/clear': '/api/me/notifications/read-all',
+  '/api/me/lineups': '/api/me/teams',
+  '/api/me/captain-teams': '/api/me/teams',
+  '/api/me/scorecard': '/api/me/scorable-matches',
+  '/api/me/races': '/api/me/scorable-matches',
+  '/api/score/matches': '/api/me/scorable-matches',
 };
 
 /**
