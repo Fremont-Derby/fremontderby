@@ -884,7 +884,9 @@ export async function handleListMyNotificationsRequest(request, env, { fetch: fe
 
 export async function handleMarkNotificationReadRequest(request, env, notificationId, { fetch: fetchImpl = globalThis.fetch } = {}) {
   try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createNotificationRepository(env, { fetch: fetchImpl });
     const result = await markNotificationReadCommand(
@@ -899,7 +901,9 @@ export async function handleMarkNotificationReadRequest(request, env, notificati
 
 export async function handleMarkAllNotificationsReadRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createNotificationRepository(env, { fetch: fetchImpl });
     const result = await markAllNotificationsReadCommand({ actorUserId: actor.id }, repository);
@@ -1369,6 +1373,12 @@ export async function handleRegisterFreeAgentRequest(
       },
       repository,
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'free_agent.register',
+      entityType: 'season',
+      entityId: seasonId,
+      afterState: freeAgent ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ freeAgent }, 201);
   } catch (error) {
@@ -1996,6 +2006,9 @@ export default {
     }
     const notificationReadMatch = url.pathname.match(/^\/api\/me\/notifications\/([^/]+)\/read$/);
     if (notificationReadMatch) {
+      if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+        return jsonResponse({ error: 'Method not allowed' }, 405);
+      }
       return handleMarkNotificationReadRequest(
         request,
         env,
