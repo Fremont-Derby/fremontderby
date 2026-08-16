@@ -20,6 +20,7 @@ import { renderAvailabilityPage } from './availabilityPage.js';
 import { createAvailabilityRepository } from './availabilityRepository.js';
 import {
   listEligibleFreeAgentsCommand,
+  listSeasonFreeAgentsCommand,
   registerFreeAgentCommand,
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
@@ -1252,6 +1253,23 @@ export async function handleSetFreeAgentAvailabilityRequest(
   }
 }
 
+
+export async function handleListSeasonFreeAgentsRequest(
+  request,
+  env,
+  seasonId,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  try {
+    await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+    const freeAgents = await listSeasonFreeAgentsCommand({ seasonId }, repository);
+    return jsonResponse({ freeAgents });
+  } catch (error) {
+    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+  }
+}
+
 export async function handleListEligibleFreeAgentsRequest(
   request,
   env,
@@ -1856,6 +1874,9 @@ export default {
     );
     const freeAgentAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/free-agent-availability\/me$/,
+    );
+    const seasonFreeAgentsMatch = url.pathname.match(
+      /^\/api\/seasons\/([^/]+)\/free-agents$/,
     );
     const rosterAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/availability\/me$/,
@@ -2511,6 +2532,17 @@ if (url.pathname === "/standings") {
         request,
         env,
         decodeURIComponent(teamMemberRemoveMatch[1]),
+      );
+    }
+
+    if (seasonFreeAgentsMatch) {
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+      return handleListSeasonFreeAgentsRequest(
+        request,
+        env,
+        decodeURIComponent(seasonFreeAgentsMatch[1]),
       );
     }
 
