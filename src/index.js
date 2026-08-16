@@ -654,6 +654,13 @@ export async function handleRequestTeamMembershipRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.requestJoin({ actorUserId: actor.id, teamId });
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_membership_request.create',
+      entityType: 'team',
+      entityId: teamId,
+      afterState: { membershipRequestId: membershipRequest?.id ?? membershipRequest?.requestId ?? null },
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membershipRequest }, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -679,6 +686,15 @@ export async function handleRespondToTeamMembershipRequest(
       requestId,
       response,
     });
+    await writeAuditBestEffort(env, actor.id, {
+      action: response === 'approved'
+        ? 'team_membership_request.approve'
+        : 'team_membership_request.decline',
+      entityType: 'team_membership_request',
+      entityId: requestId,
+      afterState: { response },
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -695,6 +711,12 @@ export async function handleCancelTeamMembershipRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.cancel({ actorUserId: actor.id, requestId });
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_membership_request.cancel',
+      entityType: 'team_membership_request',
+      entityId: requestId,
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -805,6 +827,13 @@ export async function handleUpdateTeamPracticeRequest(
       repository,
       { chatRepository },
     );
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team.practice_update',
+      entityType: 'team',
+      entityId: teamId,
+      afterState: practice ?? null,
+    }, { fetch: fetchImpl });
+
     return jsonResponse({ practice });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1310,6 +1339,13 @@ export async function handleRemoveTeamMemberRequest(
       },
       repository,
     );
+
+    await writeAuditBestEffort(env, actor.id, {
+      action: 'team_membership.remove',
+      entityType: 'team_membership',
+      entityId: membershipId,
+      afterState: membership ?? null,
+    }, { fetch: fetchImpl });
 
     return jsonResponse({ membership });
   } catch (error) {
