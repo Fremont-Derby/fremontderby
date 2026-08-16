@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { domainsForEnv } from './lane-custom-domains.mjs';
 
 export const laneDeployments = Object.freeze({
   jfl: Object.freeze({ branch: 'fremontderby-jfl', environment: 'jfl' }),
@@ -81,4 +82,11 @@ if (isDirectRun) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   }
+}
+
+
+export function expectedHostnamesForLane(lane) {
+  const envName = laneDeployments[lane]?.environment;
+  if (!envName) return [];
+  return domainsForEnv(envName).map((row) => row.hostname);
 }

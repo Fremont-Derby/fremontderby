@@ -3,15 +3,15 @@
  * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
  *
  * CRITICAL: production apex must stay on fremontderby-prod — never on a lane Worker.
+ *
+ * #639: Prefer durable `wrangler deploy --env <lane>` (custom_domain routes in wrangler.jsonc)
+ * over relying on this script as the steady-state source of truth. This remains an emergency tool.
  */
 import { fileURLToPath } from 'node:url';
+import { LANE_CUSTOM_DOMAINS } from './lane-custom-domains.mjs';
 
-export const WORKER_DOMAIN_BINDINGS = Object.freeze([
-  { hostname: 'fremontderby.com', service: 'fremontderby-prod' },
-  { hostname: 'dru.fremontderby.com', service: 'fremontderby-dru' },
-  { hostname: 'jfl.fremontderby.com', service: 'fremontderby-jfl' },
-  { hostname: 'gamma.fremontderby.com', service: 'fremontderby-gamma' },
-]);
+/** @deprecated Prefer LANE_CUSTOM_DOMAINS; kept for existing tests. */
+export const WORKER_DOMAIN_BINDINGS = LANE_CUSTOM_DOMAINS;
 
 function requireEnv(name) {
   const value = String(process.env[name] || '').trim();
@@ -95,7 +95,6 @@ async function main() {
     results.push({ ...lane, status: current ? 'rebound' : 'attached' });
   }
 
-  // Safety: refuse silent success if apex still on a lane worker after attempts
   const after = await listWorkerDomains().catch(() => []);
   const apex = after.find((row) => row.hostname === 'fremontderby.com');
   if (apex && apex.service !== 'fremontderby-prod') {
