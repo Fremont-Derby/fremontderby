@@ -1841,7 +1841,7 @@ export default {
       /^\/api\/rounds\/([^/]+)\/availability\/me$/,
     );
     const eligibleFreeAgentsMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/eligible-free-agents$/,
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/(?:eligible-free-agents|free-agents)$/,
     );
     const teamRoundAvailabilityMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/availability$/,
