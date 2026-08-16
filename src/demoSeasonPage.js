@@ -111,7 +111,7 @@ export function renderDemoSeasonPage() {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <title>Try a League Night · Fremont Derby</title>
+  <title>Test Drive the App · Fremont Derby</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#07150f; color:#f4f7f5; --gold:#e9bd45; --green:#2fa972; }
     * { box-sizing:border-box; }
@@ -170,7 +170,7 @@ export function renderDemoSeasonPage() {
     <div class="demo-banner">TRY A LEAGUE NIGHT · FICTIONAL PLAYERS AND RESULTS · CANNOT AFFECT THE REAL SEASON</div>
     <section class="hero">
       <div class="kicker">War Games practice</div>
-      <h1>Try a League Night</h1>
+      <h1>Test Drive the App</h1>
       <p>See how Fremont Derby feels before joining a real match. Build a fictional team, submit a three-player lineup, score one 8/9 race, then explore a completed seven-round season and playoffs. No Google sign-in is required.</p>
       <div class="actions"><a class="button primary" href="/sandbox/captain">Start as captain →</a><a class="button secondary" href="/sandbox/player">Jump to scoring</a></div>
       <div class="chips"><span class="chip">8 fictional teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 dual scoring</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>

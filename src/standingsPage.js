@@ -14,7 +14,7 @@ export function renderStandingsPage() {
 </head>
 <body>
   <main class="app">
-    <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Standings</span></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
+    <header class="topbar"><div class="brand"><span class="mark">9</span><h1 style="margin:0;font-size:1.05rem;font-weight:950">Standings</h1></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
     <nav data-standings-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
       <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>

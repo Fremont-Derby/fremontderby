@@ -29,6 +29,7 @@ import { enhanceSeasonLifecycle } from './seasonLifecycleEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
+import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
 
@@ -92,7 +93,8 @@ async function finalizeBrowserResponse(response, pathname) {
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
   const accessible = await injectAccessibilityLayer(adminThemed);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
-  return injectPersistentAuthSession(mobileMenuAccessible);
+  const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
+  return injectPublicSeo(withAuth, pathname);
 }
 
 export default {
