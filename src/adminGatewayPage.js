@@ -56,6 +56,9 @@ export function renderAdminGatewayPage() {
         <a class="card" href="/admin/player-contact">
           <strong>Player contact</strong><span>Look up one captain phone number at a time (never in directories).</span><b>Look up →</b>
         </a>
+        <a class="card" data-accent="gold" href="/admin/rating-health">
+          <strong>Rating health</strong><span>Seed sources, missing ratings, estimate vs official mix.</span><b>Open →</b>
+        </a>
 
         <a class="card" data-accent="gold" href="/prizes">
           <strong>Prizes</strong><span>Review prize summary and finalize season payouts when ready.</span><b>Open prizes →</b>
