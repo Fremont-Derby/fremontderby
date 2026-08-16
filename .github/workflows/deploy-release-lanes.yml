@@ -100,6 +100,16 @@ jobs:
         run: |
           call npm run deploy:${{ matrix.lane }}
           if errorlevel 1 exit /b 1
+      - name: Production DNS + domain binding guard
+        if: matrix.lane == 'production'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node scripts/assert-production-dns.mjs
+          if errorlevel 1 exit /b 1
+          node scripts/diagnose-worker-domains.mjs
+          if errorlevel 1 exit /b 1
       - name: Put lane service role secret after deploy
         if: matrix.lane == 'dru' || matrix.lane == 'jfl' || matrix.lane == 'gamma'
         continue-on-error: true
