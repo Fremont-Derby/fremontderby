@@ -54,6 +54,9 @@ export function friendlyErrorMessage(value) {
   if (/Player already has an active team membership/i.test(message)) {
     return 'You already belong to a team in this season.';
   }
+  if (/Trade blocked: player still has an active team membership/i.test(message)) {
+    return 'That trade cannot complete because a player still has an active team membership.';
+  }
   if (/already have a team application in this season/i.test(message)) {
     return 'You already have a team application in this season.';
   }
