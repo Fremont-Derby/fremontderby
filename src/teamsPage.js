@@ -237,7 +237,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
     function renderInvitations(items){
       if(!invitationsEl)return;
       invitationsEl.replaceChildren();
-      if(!items.length){invitationsEl.append(empty('No open invitations.'));return}
+      if(!items.length){const box=empty('No open invitations.');const tip=document.createElement('div');tip.className='muted';tip.style.marginTop='8px';tip.textContent='When a captain invites you, Accept and Decline show up here.';box.append(tip);invitationsEl.append(box);return}
       for(const item of items){
         const row=document.createElement('div');
         row.className='card';
