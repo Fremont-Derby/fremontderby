@@ -1,3 +1,4 @@
+import { withSupabaseSchema } from './supabaseSchema.js';
 function requireEnv(env, key) {
   const value = env?.[key];
   if (!value) throw new Error(`${key} is required`);
@@ -25,6 +26,7 @@ async function requestJson(fetchImpl, url, options = {}) {
 }
 
 export function createAdminAuditRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  fetchImpl = withSupabaseSchema(fetchImpl, env);
   const supabaseUrl = requireEnv(env, 'SUPABASE_URL').replace(/\/$/, '');
   const serviceRoleKey = requireEnv(env, 'SUPABASE_SERVICE_ROLE_KEY');
   const headers = {
