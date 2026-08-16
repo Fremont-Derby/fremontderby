@@ -20,11 +20,11 @@ on:
         options: [ubuntu-latest, self-hosted]
 
       lane:
-        description: 'Lane to deploy (jfl, dru, gamma, production, or all-lanes)'
+        description: 'Lane to deploy (prefer all-lanes so tips stay unified)'
         required: true
-        default: 'gamma'
+        default: 'all-lanes'
         type: choice
-        options: [gamma, jfl, dru, production, all-lanes]
+        options: [all-lanes, gamma, jfl, dru, production]
 
       skip_tests:
         description: 'Skip unit tests (lint+check still run) to clear deploy queue faster'
