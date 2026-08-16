@@ -10,6 +10,10 @@ on:
         type: choice
         options: [ubuntu-latest, self-hosted]
 
+concurrency:
+  group: lane-health-monitor
+  cancel-in-progress: true
+
 jobs:
   probe:
     runs-on: ${{ inputs.runner_target || 'ubuntu-latest' }}

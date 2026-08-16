@@ -8,6 +8,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: sync-collaboration-labels
+  cancel-in-progress: true
+
 jobs:
   sync:
     runs-on: ubuntu-latest
