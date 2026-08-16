@@ -109,6 +109,12 @@ export function rpcErrorStatus(error, options = {}) {
     || /Teams can only be added before season publication/i.test(message)
     || /No team slots are currently available/i.test(message)
     || /conversation with this player already exists/i.test(message)
+    || /team_applications_active_captain_unique/i.test(message)
+    || /team_applications_active_name_unique/i.test(message)
+    || /one_active_team_membership_per_player_season/i.test(message)
+    || /one_active_captain_team_per_season/i.test(message)
+    || /teams_season_id_name_key/i.test(message)
+    || /direct_conversations_season_id_player_low_id_player_high_id_key/i.test(message)
   ) {
     return 409;
   }
