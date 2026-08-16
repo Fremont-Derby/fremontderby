@@ -17,6 +17,11 @@ const paths = [
   '/teams',
   '/scorecard',
   '/standings',
+  '/prizes',
+  '/lineup',
+  '/profile',
+  '/admin',
+  '/health',
   '/health/environment',
 ];
 
