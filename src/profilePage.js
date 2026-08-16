@@ -516,6 +516,23 @@ export function renderProfilePage(env = {}) {
       event.preventDefault();
       run(saveProfile);
     });
+    const standingForm = document.querySelector('[data-standing-form]');
+    if (standingForm) {
+      standingForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        run(async () => {
+          setStatus('Saving standing availability…');
+          const standingStatus = document.querySelector('[data-standing-status]')?.value || '';
+          const standingNote = document.querySelector('[data-standing-note]')?.value || '';
+          await api('/api/me/profile/standing-availability', {
+            method: 'PUT',
+            body: JSON.stringify({ standingStatus, standingNote }),
+          });
+          setStatus('Standing availability saved', 'ok');
+          await loadProfile({ quiet: true });
+        });
+      });
+    }
 
     const existingAccessToken = token();
     setSession(existingAccessToken, refreshToken());
@@ -539,23 +556,3 @@ ${safeAutocompleteClientScript}
 </body>
 </html>`;
 }
-    const standingForm = document.querySelector('[data-standing-form]');
-    if (standingForm) {
-      standingForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        try {
-          setStatus('Saving standing availability…');
-          const standingStatus = document.querySelector('[data-standing-status]')?.value || '';
-          const standingNote = document.querySelector('[data-standing-note]')?.value || '';
-          await api('/api/me/profile/standing-availability', {
-            method: 'PUT',
-            body: JSON.stringify({ standingStatus, standingNote }),
-          });
-          setStatus('Standing availability saved', 'ok');
-          await load({ quiet: true });
-        } catch (error) {
-          setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
-        }
-      });
-    }
-
