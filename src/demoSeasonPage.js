@@ -223,7 +223,7 @@ export function renderDemoSeasonPage() {
     <h2>Ready for the real league?</h2>
     <section class="card">
       <p>When you are done practicing, look at current teams or read the rules. The practice state stays separate from competitive records.</p>
-      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/players">Player directory</a><a class="button secondary" href="/schedule">Schedule</a><a class="button secondary" href="/rules">Read the rules</a></div>
+      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/players">Player directory</a><a class="button secondary" href="/schedule">Schedule</a><a class="button secondary" href="/scorecard">Score</a><a class="button secondary" href="/availability">Check in</a><a class="button secondary" href="/lineup">Lineup</a><a class="button secondary" href="/rules">Read the rules</a></div>
     </section>
 
     <details>
