@@ -61,7 +61,15 @@ export function renderTradesPage() {
         <span data-trade-count>0</span>
       </div>
       <div data-trades-list></div>
-      <div class="note" data-trades-empty>No trades yet.</div>
+      <div class="note" data-trades-empty>
+        <strong style="display:block;margin-bottom:6px">No trades yet</strong>
+        Propose a roster move when both captains agree, or message the other captain first.
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+          <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
+          <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
+          <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
+        </div>
+      </div>
     </section>
   </main>
   ${livePageRefreshScript}
