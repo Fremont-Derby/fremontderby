@@ -58,7 +58,10 @@ export async function saveOwnStandingAvailabilityCommand(
 ) {
   assertActor(actorUserId);
   assertRepository(repository);
-  const status = standingStatus == null ? '' : String(standingStatus).trim().toLowerCase();
+  let status = standingStatus == null ? '' : String(standingStatus).trim().toLowerCase();
+  // Common shorthand clients send
+  if (status === 'available' || status === 'open' || status === 'yes') status = 'available_for_subs';
+  if (status === 'no' || status === 'out') status = 'unavailable';
   if (!standingStatuses.has(status)) {
     throw new Error('standingStatus must be available_for_subs, limited, unavailable, prefer_not_to_say, or empty');
   }
