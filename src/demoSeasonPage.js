@@ -1,3 +1,5 @@
+import { escapeHtml } from './textEscape.js';
+
 const teams = [
   'Break Room Bandits',
   'Corner Pocket Club',
@@ -52,15 +54,6 @@ const postseason = {
     winner: 'Break Room Bandits',
   },
 };
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
 
 function buildRoundRobin(teamNames) {
   const rotation = [...teamNames];

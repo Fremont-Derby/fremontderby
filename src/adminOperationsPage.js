@@ -1,8 +1,5 @@
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
-function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
-}
-
+import { safeJson } from './textEscape.js';
 export function renderAdminOperationsPage(env = {}) {
   const config = safeJson({
     supabaseUrl: env.SUPABASE_URL || '',

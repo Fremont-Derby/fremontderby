@@ -1,6 +1,4 @@
-function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
-}
+import { safeJson } from './textEscape.js';
 
 export function renderChatModerationPage(env = {}) {
   const config = safeJson({
