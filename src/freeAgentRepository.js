@@ -94,5 +94,21 @@ export function createFreeAgentRepository(env, { fetch: fetchImpl = globalThis.f
 
       return Array.isArray(result) ? result : [];
     },
+    async listSeasonFreeAgents({ seasonId }) {
+      const result = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/season_players?select=player_id,status,players(id,display_name)&season_id=eq.${encodeURIComponent(seasonId)}&participation_type=eq.free_agent&status=eq.active&order=player_id`,
+        {
+          method: 'GET',
+          headers,
+        },
+      );
+      return (Array.isArray(result) ? result : []).map((row) => ({
+        playerId: row.player_id ?? row.players?.id,
+        displayName: row.players?.display_name ?? null,
+        status: row.status,
+      }));
+    },
+
   };
 }
