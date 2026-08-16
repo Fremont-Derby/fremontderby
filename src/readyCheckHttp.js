@@ -42,8 +42,8 @@ export function createReadyCheckHttpHandlers({
         const readyCheck = await startTeamReadyCheckCommand(
           {
             actorUserId: actor.id,
-            teamId: body.teamId,
-            roundId: body.roundId,
+            teamId: body.teamId ?? body.team_id,
+            roundId: body.roundId ?? body.round_id,
           },
           repository,
         );
@@ -62,7 +62,9 @@ export function createReadyCheckHttpHandlers({
           {
             actorUserId: actor.id,
             readyCheckId,
-            response: body.response ?? body.status,
+            response: body.response ?? body.status ?? body.decision ?? body.action
+              ?? (body.ready === true ? 'ready' : null)
+              ?? (body.notReady === true || body.not_ready === true ? 'not_ready' : null),
           },
           repository,
         );
