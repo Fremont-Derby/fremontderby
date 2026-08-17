@@ -117,6 +117,21 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    // HEAD = same as GET without a body (CDN/monitors). Avoid recursive this.fetch.
+    if (request.method === 'HEAD') {
+      const getRequest = new Request(request.url, {
+        method: 'GET',
+        headers: request.headers,
+        redirect: request.redirect,
+      });
+      const response = await this.fetch(getRequest, env, ctx);
+      return new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
     const url = new URL(request.url);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
