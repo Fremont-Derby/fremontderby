@@ -73,21 +73,30 @@ export async function probeJson(base, path, expectEnv, fetchImpl = fetch) {
 
 export async function probeHtml(base, path, fetchImpl = fetch) {
   const url = base.replace(/\/+$/, '') + path;
-  const response = await fetchImpl(url, {
-    headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
-    redirect: 'follow',
-  });
-  const text = await response.text();
-  const statusOk = response.status >= 200 && response.status < 400;
-  const shellOk = htmlShellOk(text);
-  const ok = statusOk && shellOk;
-  return {
-    ok,
-    url,
-    status: response.status,
-    bytes: text.length,
-    error: ok ? null : !statusOk ? `HTTP ${response.status}` : 'html shell markers missing',
+  const attempt = async () => {
+    const response = await fetchImpl(url, {
+      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
+      redirect: 'follow',
+    });
+    const text = await response.text();
+    const statusOk = response.status >= 200 && response.status < 400;
+    const shellOk = htmlShellOk(text);
+    const ok = statusOk && shellOk;
+    return {
+      ok,
+      url,
+      status: response.status,
+      bytes: text.length,
+      error: ok ? null : !statusOk ? `HTTP ${response.status}` : 'html shell markers missing',
+    };
   };
+  let result = await attempt();
+  // One retry: lane deploys can briefly 404 while versions swap
+  if (!result.ok && result.status >= 400) {
+    await new Promise((r) => setTimeout(r, 1500));
+    result = await attempt();
+  }
+  return result;
 }
 
 export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetch } = {}) {
