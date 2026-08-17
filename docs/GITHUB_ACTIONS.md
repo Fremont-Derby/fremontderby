@@ -20,7 +20,9 @@
 - Actions production deploy remains **manual** (`workflow_dispatch`) for controlled republish.
 - Repository guards refuse production Workers Builds from non-`main` branches (`scripts/guard-cloudflare-build.mjs`, `scripts/deploy-production.mjs`).
 
-## Workers Builds branch containment (#727 / #732)
+## Workers Builds branch containment (#727 / #732 / #873)
+
+Operator baby-steps: **`docs/cloudflare-builds-isolation.md`**.
 
 Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl + dru**. Dashboard branch filters are required; repo guards are the backstop.
 
