@@ -28,7 +28,9 @@ export function assertProductionDeployContext(env = process.env) {
 
 export function productionDeployArgs(env = process.env) {
   assertProductionDeployContext(env);
-  const args = ['wrangler', 'deploy'];
+  // Explicit empty env = top-level wrangler.jsonc Worker (production apex routes).
+  // Without this, wrangler warns when env.jfl/dru/gamma are also defined.
+  const args = ['wrangler', 'deploy', '--env', ''];
 
   const commitSha = String(
     env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
