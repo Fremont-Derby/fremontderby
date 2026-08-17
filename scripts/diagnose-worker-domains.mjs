@@ -18,8 +18,8 @@ async function cf(path) {
 }
 
 export const EXPECTED_WORKER_DOMAIN_BINDINGS = new Map([
-  ['fremontderby.com', 'fremontderby-prod'],
-  ['www.fremontderby.com', 'fremontderby-prod'],
+  ['fremontderby.com', 'fremontderby'],
+  ['www.fremontderby.com', 'fremontderby'],
   ['dru.fremontderby.com', 'fremontderby-dru'],
   ['jfl.fremontderby.com', 'fremontderby-jfl'],
   ['gamma.fremontderby.com', 'fremontderby-gamma'],
