@@ -30,8 +30,10 @@ export function productionDeployArgs(env = process.env) {
   assertProductionDeployContext(env);
   const args = ['wrangler', 'deploy'];
 
-  if (env.WORKERS_CI === '1') {
-    const commitSha = env.WORKERS_CI_COMMIT_SHA.trim();
+  const commitSha = String(
+    env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
+  ).trim();
+  if (commitSha && /^[0-9a-f]{7,40}$/i.test(commitSha)) {
     args.push('--tag', commitSha, '--message', `git:${commitSha}`);
   }
 

@@ -119,9 +119,14 @@ const serviceName = "fremontderby";
 
 function versionMetadata(env = {}) {
   const metadata = env.CF_VERSION_METADATA || {};
+  const tag =
+    metadata.tag ||
+    (typeof env.DEPLOY_GIT_SHA === "string" && env.DEPLOY_GIT_SHA.trim()) ||
+    (typeof env.GITHUB_SHA === "string" && env.GITHUB_SHA.trim()) ||
+    null;
   return {
     id: metadata.id || "local",
-    tag: metadata.tag || null,
+    tag,
     timestamp: metadata.timestamp || null,
   };
 }
