@@ -52,6 +52,16 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
       error: `${host}: environment="${environment}" expected="${expect}"`,
     };
   }
+  if (body.hostMatchesEnvironment === false) {
+    return {
+      ok: false,
+      host,
+      expect,
+      environment,
+      readinessOk,
+      error: `${host}: hostMatchesEnvironment=false (host/env mismatch)`,
+    };
+  }
   return {
     ok: true,
     host,
