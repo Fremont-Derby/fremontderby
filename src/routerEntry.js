@@ -39,6 +39,7 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { DEPLOY_IDENTITY } from './deployIdentity.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -117,10 +118,14 @@ export default {
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
-      const tag =
-        (typeof meta.tag === 'string' && meta.tag.trim()) ||
-        (typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim()) ||
-        null;
+      const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
+      const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
+      const fromStamp = typeof DEPLOY_IDENTITY?.gitSha === 'string' && DEPLOY_IDENTITY.gitSha.trim() ? DEPLOY_IDENTITY.gitSha.trim() : null;
+      const tag = fromMeta || fromEnv || fromStamp || null;
+      let versionTagSource = null;
+      if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
+      else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
+      else if (tag && fromStamp === tag) versionTagSource = 'deploy_identity';
       if (url.pathname === '/health') {
         return Response.json(
           {
@@ -128,10 +133,8 @@ export default {
             service: 'fremontderby',
             version: meta.id || 'local',
             versionTag: tag,
-            deployedAt: meta.timestamp || null,
-            versionTagSource: tag
-              ? (meta.tag && String(meta.tag).trim() === tag ? 'cf_metadata' : 'DEPLOY_GIT_SHA')
-              : null,
+            deployedAt: meta.timestamp || DEPLOY_IDENTITY?.stampedAt || null,
+            versionTagSource,
           },
           { headers: { 'cache-control': 'no-store' } },
         );
