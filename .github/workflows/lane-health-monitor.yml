@@ -29,6 +29,9 @@ jobs:
   probe:
     runs-on: ${{ github.event.inputs.runner_target || 'self-hosted' }}
     timeout-minutes: 10
+    defaults:
+      run:
+        shell: cmd
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
