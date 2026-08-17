@@ -10,6 +10,7 @@ export const LANE_HEALTH_CHECKS = Object.freeze([
   { host: 'jfl.fremontderby.com', expect: 'jfl' },
   { host: 'gamma.fremontderby.com', expect: 'gamma' },
   { host: 'fremontderby.com', expect: 'production' },
+  { host: 'www.fremontderby.com', expect: 'production' },
 ]);
 
 export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
