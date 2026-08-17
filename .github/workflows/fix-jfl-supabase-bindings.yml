@@ -28,41 +28,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Require Cloudflare + lane service role
+      - name: Bind JFL Worker to staging Supabase
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          if "%CLOUDFLARE_API_TOKEN%"=="" (echo missing CLOUDFLARE_API_TOKEN & exit /b 1)
-          if "%CLOUDFLARE_ACCOUNT_ID%"=="" (echo missing CLOUDFLARE_ACCOUNT_ID & exit /b 1)
-          if "%LANE_SUPABASE_SERVICE_ROLE_KEY%"=="" (echo missing LANE_SUPABASE_SERVICE_ROLE_KEY & exit /b 1)
-          echo secrets present
-      - name: Put JFL staging SUPABASE_URL
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SECRET_VALUE: https://oqkkvqkerusepyokzbmt.supabase.co
-        run: node scripts/put-wrangler-secret.mjs SUPABASE_URL jfl
-      - name: Put JFL EXPECTED_SUPABASE_PROJECT_REF
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SECRET_VALUE: oqkkvqkerusepyokzbmt
-        run: node scripts/put-wrangler-secret.mjs EXPECTED_SUPABASE_PROJECT_REF jfl
-      - name: Put JFL staging publishable key
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          for /f "usebackq delims=" %%A in (`node -e "const fs=require('fs');const t=fs.readFileSync('wrangler.jsonc','utf8');const m=t.match(/\"SUPABASE_PUBLISHABLE_KEY\":\\s*\"(sb_publishable_[^\"]+)\"/);if(!m)process.exit(2);process.stdout.write(m[1])"`) do set SECRET_VALUE=%%A
-          if "%SECRET_VALUE%"=="" (echo could not parse publishable key & exit /b 1)
-          node scripts/put-wrangler-secret.mjs SUPABASE_PUBLISHABLE_KEY jfl
-      - name: Put JFL staging service role
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SECRET_VALUE: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY jfl
-      - name: Verify JFL readiness
-        run: node -e "const sleep=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let i=1;i<=8;i++){try{const r=await fetch('https://jfl.fremontderby.com/health/environment');const b=await r.json();console.log(JSON.stringify({ok:b.ok,ref:b.supabase&&b.supabase.projectRef}));if(b.ok===true){console.log('JFL readiness OK');process.exit(0)}}catch(e){console.error(e)}await sleep(8000)}console.error('JFL still not ok');process.exit(1)})();"
+        run: node scripts/bind-jfl-staging-supabase.mjs
