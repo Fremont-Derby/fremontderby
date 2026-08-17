@@ -124,11 +124,13 @@ export default {
       const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
       const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
       const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
-      const tag = fromMeta || fromEnv || fromStamp || null;
+      const fromId = typeof meta.id === 'string' && meta.id.trim() && meta.id !== 'local' ? meta.id.trim() : null;
+      const tag = fromMeta || fromEnv || fromStamp || fromId || null;
       let versionTagSource = null;
       if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
       else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
       else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
+      else if (tag && fromId === tag) versionTagSource = 'cf_version_id';
       if (url.pathname === '/health') {
         return Response.json(
           {
