@@ -52,9 +52,15 @@ for (const [name, value] of secrets) {
   }
 }
 
-// Ensure latest code+secrets path is live (lane deploy is idempotent enough).
-console.log('Deploying jfl lane so bindings are on the live version…');
-const deployCode = await run(['--yes', 'wrangler@4', 'deploy', '--env', 'jfl']);
+// Promote the secret-bearing Worker version to live traffic.
+console.log('Deploying secret versions to live traffic…');
+let deployCode = await run([
+  '--yes', 'wrangler@4', 'versions', 'deploy', '--env', 'jfl', '--yes',
+]);
+if (deployCode !== 0) {
+  console.warn('versions deploy exited', deployCode, '— trying full deploy --env jfl');
+  deployCode = await run(['--yes', 'wrangler@4', 'deploy', '--env', 'jfl']);
+}
 if (deployCode !== 0) {
   console.warn('wrangler deploy --env jfl exited', deployCode, '— verifying readiness anyway');
 }
