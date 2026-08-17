@@ -3,8 +3,8 @@
  * Deploy must use wrangler --env so these routes stay attached; do not rely on ad-hoc API restore.
  */
 export const LANE_CUSTOM_DOMAINS = Object.freeze([
-  Object.freeze({ hostname: 'fremontderby.com', service: 'fremontderby-prod', env: 'production' }),
-  Object.freeze({ hostname: 'www.fremontderby.com', service: 'fremontderby-prod', env: 'production' }),
+  Object.freeze({ hostname: 'fremontderby.com', service: 'fremontderby', env: 'production' }),
+  Object.freeze({ hostname: 'www.fremontderby.com', service: 'fremontderby', env: 'production' }),
   Object.freeze({ hostname: 'dru.fremontderby.com', service: 'fremontderby-dru', env: 'dru' }),
   Object.freeze({ hostname: 'jfl.fremontderby.com', service: 'fremontderby-jfl', env: 'jfl' }),
   Object.freeze({ hostname: 'gamma.fremontderby.com', service: 'fremontderby-gamma', env: 'gamma' }),
