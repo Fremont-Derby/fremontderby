@@ -1,4 +1,4 @@
-# Fremont Derby Agent Operating Contract 
+# Fremont Derby Agent Operating Contract
 
 This file is the durable operating contract for autonomous and assisted development agents working on Fremont Derby.
 
