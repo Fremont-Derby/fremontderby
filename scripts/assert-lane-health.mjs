@@ -27,12 +27,20 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
   const environment = body?.environment;
   const readinessOk = body?.ok === true;
   if (responseStatus < 200 || responseStatus >= 300) {
+    const failedChecks = Array.isArray(body?.checks)
+      ? body.checks.filter((c) => !c.ok).map((c) => c.name).join(',')
+      : '';
+    const project = body?.supabase?.projectRef || '';
+    const detail = [failedChecks && `failed=${failedChecks}`, project && `projectRef=${project}`]
+      .filter(Boolean)
+      .join(' ');
     return {
       ok: false,
       host,
       expect,
       environment,
-      error: `${host}: HTTP ${responseStatus}`,
+      readinessOk,
+      error: `${host}: HTTP ${responseStatus}${detail ? ` (${detail})` : ''}`,
     };
   }
   if (environment !== expect) {
