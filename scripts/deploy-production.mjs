@@ -43,6 +43,13 @@ export function productionDeployArgs(env = process.env) {
 }
 
 export function runProductionDeploy({ env = process.env, spawn = spawnSync } = {}) {
+  // Embed git SHA into the Worker bundle so /health versionTag cannot be dropped by var binding.
+  const stamp = spawn(process.execPath, ['scripts/stamp-deploy-identity.mjs'], {
+    env,
+    stdio: 'inherit',
+    shell: false,
+  });
+  if (stamp.error) throw stamp.error;
   // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell (same as deploy-lane.mjs).
   const isWin = process.platform === 'win32';
   const result = spawn(isWin ? 'npx' : 'npx', productionDeployArgs(env), {
