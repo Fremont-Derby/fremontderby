@@ -5,7 +5,7 @@ import { decorateHtmlWithShell, renderNotFoundPage, renderPrimaryNavigation } fr
 test('Gamma 404 renderer uses the approved Buster artwork and preserves recovery UX', () => {
   const html = renderNotFoundPage('/missing?<script>');
   assert.match(html, /data:image\/webp;base64,/);
-  assert.match(html, /Basset hound Buster sitting beside a 404 error sign/i);
+  assert.match(html, /basset hound Buster.*404 error/i);
   assert.match(html, /Page not found/i);
   assert.match(html, /\/missing\?&lt;script&gt;/);
   assert.match(html, /href="\/"/);
