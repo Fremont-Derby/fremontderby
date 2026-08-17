@@ -139,7 +139,7 @@ jobs:
       - name: Production versionTag must be present
         if: matrix.lane == 'production'
         run: |
-          node -e "const sleep=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let i=1;i<=8;i++){const r=await fetch('https://fremontderby.com/health');const b=await r.json();console.log(JSON.stringify(b));if(b.versionTag){console.log('versionTag ok');process.exit(0)}await sleep(3000)}console.error('versionTag still null after deploy');process.exit(1)})()"
+          node -e "const sleep=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let i=1;i<=10;i++){const r=await fetch('https://fremontderby.com/health');const b=await r.json();console.log(JSON.stringify(b));if(b.versionTag){console.log('versionTag ok via',b.versionTagSource||'unknown');process.exit(0)}await sleep(3000)}console.error('versionTag still null after deploy');process.exit(1)})()"
       - name: Probe host identity
         continue-on-error: true
         env:
