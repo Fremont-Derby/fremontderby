@@ -137,6 +137,43 @@ export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetc
       }
     }
   }
+  // Baseline browser security headers on production HTML shell.
+  try {
+    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
+    const homeUrl = prod.base.replace(/\/+$/, '') + '/';
+    const response = await fetch(homeUrl, {
+      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
+    });
+    const required = [
+      ['content-security-policy', /default-src/i],
+      ['x-content-type-options', /nosniff/i],
+      ['x-frame-options', /DENY|SAMEORIGIN/i],
+      ['referrer-policy', /.+/],
+    ];
+    const missing = [];
+    for (const [name, re] of required) {
+      const value = response.headers.get(name) || '';
+      if (!re.test(value)) missing.push(name);
+    }
+    const ok = response.ok && missing.length === 0;
+    results.push({
+      ok,
+      host: 'production',
+      kind: 'securityHeaders',
+      status: response.status,
+      url: homeUrl,
+      error: ok ? null : `missing/weak headers: ${missing.join(',') || 'response not ok'}`,
+    });
+  } catch (error) {
+    results.push({
+      ok: false,
+      host: 'production',
+      kind: 'securityHeaders',
+      url: 'https://fremontderby.com/',
+      error: String(error.message || error),
+    });
+  }
+
   // Production deploy identity — versionTag must be present (git stamp, env, or CF version id).
   try {
     const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
