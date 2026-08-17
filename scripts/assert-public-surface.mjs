@@ -137,6 +137,33 @@ export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetc
       }
     }
   }
+  // HEAD must match GET status for CDN/monitor probes (empty body).
+  try {
+    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
+    const homeUrl = prod.base.replace(/\/+$/, '') + '/';
+    const response = await fetch(homeUrl, {
+      method: 'HEAD',
+      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
+    });
+    const ok = response.status === 200;
+    results.push({
+      ok,
+      host: 'production',
+      kind: 'head',
+      status: response.status,
+      url: homeUrl,
+      error: ok ? null : `HEAD / expected 200 got ${response.status}`,
+    });
+  } catch (error) {
+    results.push({
+      ok: false,
+      host: 'production',
+      kind: 'head',
+      url: 'https://fremontderby.com/',
+      error: String(error.message || error),
+    });
+  }
+
   // Baseline browser security headers on production HTML shell.
   try {
     const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
