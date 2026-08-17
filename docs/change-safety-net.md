@@ -30,7 +30,7 @@ node scripts/assert-production-dns.mjs
 node scripts/assert-lane-health.mjs
 node scripts/assert-public-surface.mjs
 CANARY_ONLY=production,www node scripts/assert-public-surface.mjs
-node scripts/diagnose-worker-domains.mjs   # needs CLOUDFLARE_* 
+node scripts/diagnose-worker-domains.mjs   # needs CLOUDFLARE_*
 ```
 
 ## When you move UI
@@ -96,8 +96,8 @@ Exit code **0** means green.
 
 ### GitHub Actions equivalent
 
-**Actions → Public surface canary → Run workflow**  
-- `runner_target`: `self-hosted`  
+**Actions → Public surface canary → Run workflow**
+- `runner_target`: `self-hosted`
 - `canary_only`: `production,www` (or leave empty for all lanes)
 
 Same scripts run in CI; scheduled runs also open/update a **canary** issue when red.

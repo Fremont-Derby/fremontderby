@@ -4,11 +4,11 @@ When a collaborator says **Do work!** (or the hourly Grok loop runs), that is **
 
 ## Priority order (always)
 
-1. **Production name & DNS** — `npm run canary:dns`  
+1. **Production name & DNS** — `npm run canary:dns`
    If red: **Restore lane custom domains** first. Do not “fix” DNS with app code.
-2. **Lane identity** — `npm run canary:lanes`  
+2. **Lane identity** — `npm run canary:lanes`
    Wrong `environment` on a host is a deploy/bind problem, not a UI tweak.
-3. **Public surface** — `npm run canary:surface`  
+3. **Public surface** — `npm run canary:surface`
    Broken shells/routes after UI moves fail here; update `public-surface-contract.mjs` only when the product intentionally changes paths.
 4. **CI / tests** — `npm test` for the slice you touched; do not delete tests to go green.
 5. **Small ship** — focused PR, production/lane canary green, comment on blockers instead of silent half-fixes.
@@ -100,8 +100,8 @@ Exit code **0** means green.
 
 ### GitHub Actions equivalent
 
-**Actions → Public surface canary → Run workflow**  
-- `runner_target`: `self-hosted`  
+**Actions → Public surface canary → Run workflow**
+- `runner_target`: `self-hosted`
 - `canary_only`: `production,www` (or leave empty for all lanes)
 
 Same scripts run in CI; scheduled runs also open/update a **canary** issue when red.
