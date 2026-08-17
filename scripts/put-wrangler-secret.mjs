@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Put a Worker secret without failing the lane deploy when Cloudflare
- * requires versioned secret APIs (latest version not yet "deployed").
+ * Put a Worker secret via classic secret put only.
+ * Do not use `versions secret put` — it can create a live Worker version
+ * that steals traffic from a subsequent wrangler deploy (versionTag loss).
  */
 import { spawn } from 'node:child_process';
 
@@ -22,14 +23,9 @@ function run(args) {
 }
 
 const envArgs = envName ? ['--env', envName] : [];
-// Prefer classic secret put so we do not create a non-stamped Worker version that can become live.
-let code = await run(['--yes', 'wrangler@4', 'secret', 'put', name, ...envArgs]);
+const code = await run(['--yes', 'wrangler@4', 'secret', 'put', name, ...envArgs]);
 if (code !== 0) {
-  console.warn('classic secret put failed; trying versions secret put…');
-  code = await run(['--yes', 'wrangler@4', 'versions', 'secret', 'put', name, ...envArgs]);
-}
-if (code !== 0) {
-  console.warn('Secret put did not complete; deploy already published code. Continuing.');
+  console.warn('classic secret put failed; not falling back to versions secret put');
   process.exit(0);
 }
 process.exit(0);
