@@ -8,6 +8,8 @@ test('production deploy tags from GITHUB_SHA outside Workers CI', () => {
   });
   assert.ok(args.includes('--tag'));
   assert.ok(args.includes('c26d155c45c4b6376bd277903bc5ad395ec20f60'));
+  assert.ok(args.includes('--var'));
+  assert.ok(args.some((a) => String(a).startsWith('DEPLOY_GIT_SHA:')));
 });
 
 test('production deploy omits tag when no sha present', () => {

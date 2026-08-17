@@ -35,6 +35,8 @@ export function productionDeployArgs(env = process.env) {
   ).trim();
   if (commitSha && /^[0-9a-f]{7,40}$/i.test(commitSha)) {
     args.push('--tag', commitSha, '--message', `git:${commitSha}`);
+    // CF_VERSION_METADATA.tag is often empty even with --tag; expose SHA to /health via var.
+    args.push('--var', `DEPLOY_GIT_SHA:${commitSha}`);
   }
 
   return args;
