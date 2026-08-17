@@ -137,6 +137,34 @@ export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetc
       }
     }
   }
+  // Production deploy identity — versionTag must be present (git stamp, env, or CF version id).
+  try {
+    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
+    const healthUrl = prod.base.replace(/\/+$/, '') + '/health';
+    const response = await fetch(healthUrl, {
+      headers: { Accept: 'application/json', 'User-Agent': 'fremontderby-public-surface' },
+    });
+    const body = await response.json().catch(() => ({}));
+    const tag = body && body.versionTag;
+    const ok = response.ok && Boolean(tag);
+    results.push({
+      ok,
+      host: 'production',
+      kind: 'versionTag',
+      status: response.status,
+      url: healthUrl,
+      error: ok ? null : `missing versionTag (got ${JSON.stringify(tag)})`,
+    });
+  } catch (error) {
+    results.push({
+      ok: false,
+      host: 'production',
+      kind: 'versionTag',
+      url: 'https://fremontderby.com/health',
+      error: String(error.message || error),
+    });
+  }
+
   const failed = results.filter((r) => !r.ok);
   return { ok: failed.length === 0, results, failed };
 }
