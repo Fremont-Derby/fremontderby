@@ -114,6 +114,30 @@ export default {
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
+    if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
+      const meta = env.CF_VERSION_METADATA || {};
+      const tag =
+        (typeof meta.tag === 'string' && meta.tag.trim()) ||
+        (typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim()) ||
+        null;
+      if (url.pathname === '/health') {
+        return Response.json(
+          {
+            ok: true,
+            service: 'fremontderby',
+            version: meta.id || 'local',
+            versionTag: tag,
+            deployedAt: meta.timestamp || null,
+            versionTagSource: tag
+              ? (meta.tag && String(meta.tag).trim() === tag ? 'cf_metadata' : 'DEPLOY_GIT_SHA')
+              : null,
+          },
+          { headers: { 'cache-control': 'no-store' } },
+        );
+      }
+      // environment: still use legacy readiness via fallthrough
+    }
     if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
       const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
       const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
