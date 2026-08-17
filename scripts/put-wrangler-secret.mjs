@@ -22,11 +22,11 @@ function run(args) {
 }
 
 const envArgs = envName ? ['--env', envName] : [];
-// Prefer versions secret put (updates secret without requiring a concurrent deploy).
-let code = await run(['--yes', 'wrangler@4', 'versions', 'secret', 'put', name, ...envArgs]);
+// Prefer classic secret put so we do not create a non-stamped Worker version that can become live.
+let code = await run(['--yes', 'wrangler@4', 'secret', 'put', name, ...envArgs]);
 if (code !== 0) {
-  console.warn('versions secret put failed; trying classic secret put…');
-  code = await run(['--yes', 'wrangler@4', 'secret', 'put', name, ...envArgs]);
+  console.warn('classic secret put failed; trying versions secret put…');
+  code = await run(['--yes', 'wrangler@4', 'versions', 'secret', 'put', name, ...envArgs]);
 }
 if (code !== 0) {
   console.warn('Secret put did not complete; deploy already published code. Continuing.');
