@@ -88,3 +88,7 @@ Workflows use `concurrency` groups with `cancel-in-progress: true` so repeated p
 - **Deploy release lanes** is `workflow_dispatch` only and refuses refs other than `main` / `fremontderby-{jfl,dru,gamma}`.
 - No workflow uses `untrusted-base-ref PR event`.
 - Required check names for branch protection: `test`, `accessibility`, `pr-card-contract`, `validate` (release-source-policy).
+
+## Org + lane identities (#1173)
+
+See **`docs/github-org-lane-identities.md`** for the GitHub Organization transfer and separate JFL/DRU actor checklist.
