@@ -39,7 +39,6 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
-import { DEPLOY_IDENTITY } from './deployIdentity.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -105,6 +104,10 @@ async function finalizeBrowserResponse(response, pathname) {
   return injectPublicSeo(withAuth, pathname);
 }
 
+// Replaced at deploy time by scripts/stamp-deploy-identity.mjs
+const STAMPED_DEPLOY_GIT_SHA = null;
+const STAMPED_DEPLOY_AT = null;
+
 export default {
   async scheduled(event, env, ctx) {
     const summary = await runHourlyProbes(env);
@@ -120,12 +123,12 @@ export default {
       const meta = env.CF_VERSION_METADATA || {};
       const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
       const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
-      const fromStamp = typeof DEPLOY_IDENTITY?.gitSha === 'string' && DEPLOY_IDENTITY.gitSha.trim() ? DEPLOY_IDENTITY.gitSha.trim() : null;
+      const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
       const tag = fromMeta || fromEnv || fromStamp || null;
       let versionTagSource = null;
       if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
       else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
-      else if (tag && fromStamp === tag) versionTagSource = 'deploy_identity';
+      else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
       if (url.pathname === '/health') {
         return Response.json(
           {
@@ -133,7 +136,7 @@ export default {
             service: 'fremontderby',
             version: meta.id || 'local',
             versionTag: tag,
-            deployedAt: meta.timestamp || DEPLOY_IDENTITY?.stampedAt || null,
+            deployedAt: meta.timestamp || STAMPED_DEPLOY_AT || null,
             versionTagSource,
           },
           { headers: { 'cache-control': 'no-store' } },
