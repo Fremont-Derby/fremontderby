@@ -132,9 +132,9 @@ export default {
     }
 
     // Trades restored — paths served by legacy router / index handlers.
-    
-    
-    
+
+
+
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
@@ -159,9 +159,9 @@ if (url.pathname === '/admin/player-contact') {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-    
+
     {
-      
+
     {
       const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
       if (recompute && request.method === 'POST') {
