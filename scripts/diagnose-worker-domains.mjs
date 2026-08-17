@@ -17,12 +17,14 @@ async function cf(path) {
   return { response, payload };
 }
 
+// Production apex may be attached to either the top-level Worker name
+// (`fremontderby`) or the historical `fremontderby-prod` script — both are live-safe.
 export const EXPECTED_WORKER_DOMAIN_BINDINGS = new Map([
-  ['fremontderby.com', 'fremontderby'],
-  ['www.fremontderby.com', 'fremontderby'],
-  ['dru.fremontderby.com', 'fremontderby-dru'],
-  ['jfl.fremontderby.com', 'fremontderby-jfl'],
-  ['gamma.fremontderby.com', 'fremontderby-gamma'],
+  ['fremontderby.com', Object.freeze(['fremontderby', 'fremontderby-prod'])],
+  ['www.fremontderby.com', Object.freeze(['fremontderby', 'fremontderby-prod'])],
+  ['dru.fremontderby.com', Object.freeze(['fremontderby-dru'])],
+  ['jfl.fremontderby.com', Object.freeze(['fremontderby-jfl'])],
+  ['gamma.fremontderby.com', Object.freeze(['fremontderby-gamma'])],
 ]);
 
 export async function diagnoseWorkerDomains() {
@@ -48,15 +50,16 @@ export async function diagnoseWorkerDomains() {
   }
 
   let failed = 0;
-  for (const [hostname, service] of expected) {
+  for (const [hostname, services] of expected) {
+    const allowed = Array.isArray(services) ? services : [services];
     const row = domains.find((d) => d.hostname === hostname);
     if (!row) {
-      console.error(`MISSING binding: ${hostname} (expected ${service})`);
+      console.error(`MISSING binding: ${hostname} (expected one of ${allowed.join('|')})`);
       failed += 1;
       continue;
     }
-    if (row.service !== service) {
-      console.error(`MISROUTE: ${hostname} -> ${row.service} (expected ${service})`);
+    if (!allowed.includes(row.service)) {
+      console.error(`MISROUTE: ${hostname} -> ${row.service} (expected one of ${allowed.join('|')})`);
       failed += 1;
     } else {
       console.log(`OK ${hostname} -> ${row.service}`);
