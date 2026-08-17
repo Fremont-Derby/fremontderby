@@ -1,7 +1,6 @@
 name: Fix JFL Supabase bindings
 
-# Points fremontderby-jfl Worker secrets at staging (oqkkvqkerusepyokzbmt)
-# where schema jfl exists. Uses Actions secrets; no chat tokens.
+# Points fremontderby-jfl Worker secrets at staging (oqkkvqkerusepyokzbmt).
 on:
   workflow_dispatch:
     inputs:
@@ -32,12 +31,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
-        shell: bash
+        shell: pwsh
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo missing CLOUDFLARE_API_TOKEN; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo missing CLOUDFLARE_ACCOUNT_ID; exit 1; }
-          test -n "$LANE_SUPABASE_SERVICE_ROLE_KEY" || { echo missing LANE_SUPABASE_SERVICE_ROLE_KEY; exit 1; }
-          echo secrets present
+          if (-not $env:CLOUDFLARE_API_TOKEN) { throw 'missing CLOUDFLARE_API_TOKEN' }
+          if (-not $env:CLOUDFLARE_ACCOUNT_ID) { throw 'missing CLOUDFLARE_ACCOUNT_ID' }
+          if (-not $env:LANE_SUPABASE_SERVICE_ROLE_KEY) { throw 'missing LANE_SUPABASE_SERVICE_ROLE_KEY' }
+          Write-Host 'secrets present'
       - name: Put JFL staging SUPABASE_URL
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -54,15 +53,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SECRET_VALUE: ${{ secrets.LANE_SUPABASE_PUBLISHABLE_KEY || secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
-        shell: bash
+        shell: pwsh
         run: |
-          if [ -z "$SECRET_VALUE" ]; then
-            # Fallback: staging publishable from wrangler.jsonc (publishable, not service role)
-            SECRET_VALUE=$(node -e "const fs=require('fs');const t=fs.readFileSync('wrangler.jsonc','utf8');const m=t.match(/\"SUPABASE_PUBLISHABLE_KEY\":\\s*\"(sb_publishable_[^\"]+)\"/);if(!m)process.exit(2);process.stdout.write(m[1])")
-            export SECRET_VALUE
-          fi
-          SECRET_VALUE="$SECRET_VALUE" node scripts/put-wrangler-secret.mjs SUPABASE_PUBLISHABLE_KEY jfl
+          $pub = node -e "const fs=require('fs');const t=fs.readFileSync('wrangler.jsonc','utf8');const m=t.match(/\"SUPABASE_PUBLISHABLE_KEY\":\\s*\"(sb_publishable_[^\"]+)\"/);if(!m)process.exit(2);process.stdout.write(m[1])"
+          if (-not $pub) { throw 'could not parse publishable key from wrangler.jsonc' }
+          $env:SECRET_VALUE = $pub
+          node scripts/put-wrangler-secret.mjs SUPABASE_PUBLISHABLE_KEY jfl
       - name: Put JFL staging service role
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -70,16 +66,18 @@ jobs:
           SECRET_VALUE: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY jfl
       - name: Verify JFL readiness
-        shell: bash
+        shell: pwsh
         run: |
-          set -e
-          for i in 1 2 3 4 5 6; do
-            body=$(curl -sS "https://jfl.fremontderby.com/health/environment" || true)
-            echo "$body" | head -c 400
-            echo
-            echo "$body" | grep -q '"ok":true' && echo JFL readiness OK && exit 0
-            echo "wait $i"
-            sleep 8
-          done
-          echo "JFL still not ok:true — secrets may need a new Worker version activation"
-          exit 1
+          $ok = $false
+          for ($i = 1; $i -le 8; $i++) {
+            try {
+              $body = Invoke-RestMethod -Uri 'https://jfl.fremontderby.com/health/environment' -TimeoutSec 20
+              Write-Host ($body | ConvertTo-Json -Compress)
+              if ($body.ok -eq $true) { $ok = $true; break }
+            } catch {
+              Write-Host $_
+            }
+            Start-Sleep -Seconds 8
+          }
+          if (-not $ok) { throw 'JFL still not ok:true' }
+          Write-Host 'JFL readiness OK'
