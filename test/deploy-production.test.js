@@ -23,7 +23,12 @@ test('Workers Builds production deploy tags the Worker version with the exact Gi
       WORKERS_CI_BRANCH: 'main',
       WORKERS_CI_COMMIT_SHA: commitSha,
     }),
-    ['wrangler', 'deploy', '--tag', commitSha, '--message', `git:${commitSha}`],
+    [
+      'wrangler', 'deploy',
+      '--tag', commitSha,
+      '--message', `git:${commitSha}`,
+      '--var', `DEPLOY_GIT_SHA:${commitSha}`,
+    ],
   );
 });
 
@@ -69,4 +74,16 @@ test('Workers Builds production deploy fails closed when commit metadata is miss
 test('local/manual deploys remain allowed and untagged outside Workers Builds', () => {
   assert.doesNotThrow(() => assertProductionDeployContext({}));
   assert.deepEqual(productionDeployArgs({}), ['wrangler', 'deploy']);
+});
+
+test('GitHub Actions SHA is accepted when WORKERS_CI_COMMIT_SHA is absent', () => {
+  const args = productionDeployArgs({
+    GITHUB_SHA: commitSha,
+  });
+  assert.deepEqual(args, [
+    'wrangler', 'deploy',
+    '--tag', commitSha,
+    '--message', `git:${commitSha}`,
+    '--var', `DEPLOY_GIT_SHA:${commitSha}`,
+  ]);
 });
