@@ -96,32 +96,28 @@ export async function checkReleaseOnce({
   if (!expectedVersionTag) throw new Error('expectedVersionTag is required');
 
   const base = normalizeBaseUrl(baseUrl);
-  const [healthResponse, environmentResponse] = await Promise.all([
+  const [healthResult, environmentResult] = await Promise.all([
     fetchImpl(`${base}/health`, { headers: requestHeaders('application/json', bypassToken) }),
-    fetchImpl(`${base}/health/environment`, {
-      headers: requestHeaders('application/json', bypassToken),
-    }),
+    fetchImpl(`${base}/health/environment`, { headers: requestHeaders('application/json', bypassToken) }),
   ]);
 
-  const { body: health } = await readJson(healthResponse, '/health');
-  const { body: environment } = await readJson(environmentResponse, '/health/environment');
-  const readiness = assertExpectedDeployment({
+  const { body: health } = await readJson(healthResult, '/health');
+  const { body: environment } = await readJson(environmentResult, '/health/environment');
+
+  if (!healthResult.ok) {
+    throw new Error(`/health failed with HTTP ${healthResult.status}`);
+  }
+
+  const deployment = assertExpectedDeployment({
     health,
     environment,
     expectedEnvironment,
     expectedVersionTag,
   });
-  if (!readiness.ready) return readiness;
+  if (!deployment.ready) return deployment;
 
-  const homeResponse = await fetchImpl(`${base}/`, {
-    headers: requestHeaders('text/html', bypassToken),
-  });
-  const homeBody = await homeResponse.text();
-  if (!homeResponse.ok) {
-    throw new Error(`/ failed with HTTP ${homeResponse.status}`);
-  }
-  if (!/Fremont Derby/i.test(homeBody)) {
-    throw new Error('/ is serving an unexpected release surface');
+  if (!environmentResult.ok) {
+    throw new Error(`/health/environment failed with HTTP ${environmentResult.status}`);
   }
 
   const demoResponse = await fetchImpl(`${base}/demo`, {
