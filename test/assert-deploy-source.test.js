@@ -18,6 +18,7 @@ test('cross-lane deploys fail closed', () => {
   assert.throws(() => assertDeploySource('fremontderby-jfl', 'dru'), /may deploy only "jfl"/);
   assert.throws(() => assertDeploySource('fremontderby-dru', 'jfl'), /may deploy only "dru"/);
   assert.throws(() => assertDeploySource('fremontderby-gamma', 'production'), /may deploy only "gamma"/);
+  assert.throws(() => assertDeploySource('fremontderby-jfl', 'all-lanes'), /may deploy only "jfl"/);
 });
 
 test('untrusted refs and missing inputs fail closed', () => {
