@@ -108,22 +108,108 @@ export async function probeHtml(base, path, fetchImpl = fetch) {
 }
 
 export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetch } = {}) {
-  const failures = [];
   const results = [];
-
   for (const host of hosts) {
     for (const path of PUBLIC_JSON_PATHS) {
-      const result = await probeJson(host.base, path, host.expectEnv, fetchImpl);
-      results.push({ host: host.name, path, ...result });
-      if (!result.ok) failures.push({ host: host.name, path, ...result });
+      try {
+        results.push({
+          host: host.name,
+          kind: 'json',
+          ...(await probeJson(host.base, path, host.expectEnv, fetchImpl)),
+        });
+      } catch (error) {
+        results.push({
+          host: host.name,
+          kind: 'json',
+          ok: false,
+          url: host.base + path,
+          error: String(error.message || error),
+        });
+      }
     }
     for (const path of PUBLIC_HTML_PATHS) {
-      const result = await probeHtml(host.base, path, fetchImpl);
-      results.push({ host: host.name, path, ...result });
-      if (!result.ok) failures.push({ host: host.name, path, ...result });
+      try {
+        results.push({
+          host: host.name,
+          kind: 'html',
+          ...(await probeHtml(host.base, path, fetchImpl)),
+        });
+      } catch (error) {
+        results.push({
+          host: host.name,
+          kind: 'html',
+          ok: false,
+          url: host.base + path,
+          error: String(error.message || error),
+        });
+      }
     }
   }
+  // HEAD must match GET status for CDN/monitor probes (empty body).
+  try {
+    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
+    const homeUrl = prod.base.replace(/\/+$/, '') + '/';
+    const response = await fetchImpl(homeUrl, {
+      method: 'HEAD',
+      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
+    });
+    const ok = response.status === 200;
+    results.push({
+      ok,
+      host: 'production',
+      kind: 'head',
+      status: response.status,
+      url: homeUrl,
+      error: ok ? null : `HEAD / expected 200 got ${response.status}`,
+    });
+  } catch (error) {
+    results.push({
+      ok: false,
+      host: 'production',
+      kind: 'head',
+      url: 'https://fremontderby.com/',
+      error: String(error.message || error),
+    });
+  }
 
+  // Baseline browser security headers on production HTML shell.
+  try {
+    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
+    const homeUrl = prod.base.replace(/\/+$/, '') + '/';
+    const response = await fetchImpl(homeUrl, {
+      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
+    });
+    const required = [
+      ['content-security-policy', /default-src/i],
+      ['x-content-type-options', /nosniff/i],
+      ['x-frame-options', /DENY|SAMEORIGIN/i],
+      ['referrer-policy', /.+/],
+    ];
+    const missing = [];
+    for (const [name, re] of required) {
+      const value = response.headers.get(name) || '';
+      if (!re.test(value)) missing.push(name);
+    }
+    const ok = response.ok && missing.length === 0;
+    results.push({
+      ok,
+      host: 'production',
+      kind: 'securityHeaders',
+      status: response.status,
+      url: homeUrl,
+      error: ok ? null : `missing/weak headers: ${missing.join(',') || 'response not ok'}`,
+    });
+  } catch (error) {
+    results.push({
+      ok: false,
+      host: 'production',
+      kind: 'securityHeaders',
+      url: 'https://fremontderby.com/',
+      error: String(error.message || error),
+    });
+  }
+
+  const failures = results.filter((r) => !r.ok);
   return {
     ok: failures.length === 0,
     failures,
@@ -138,7 +224,7 @@ if (isDirect) {
     const result = await assertPublicSurface();
     for (const row of result.results || []) {
       const mark = row.ok ? 'OK' : 'FAIL';
-      console.log(`${mark} ${row.host} ${row.path} ${row.status ?? ''} ${row.error || ''}`.trim());
+      console.log(`${mark} ${row.host} ${row.path || row.kind} ${row.status ?? ''} ${row.error || ''}`.trim());
     }
     if (!result.ok) {
       console.error(JSON.stringify(result.failures, null, 2));
