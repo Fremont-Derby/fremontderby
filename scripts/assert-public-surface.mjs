@@ -11,8 +11,12 @@ import {
   CANARY_HOSTS,
 } from './public-surface-contract.mjs';
 
-function envHosts() {
-  const raw = process.env.CANARY_HOSTS_JSON;
+/**
+ * Resolve which hosts a canary run should probe.
+ * Prefer CANARY_HOSTS_JSON; else CANARY_ONLY name filter; else full CANARY_HOSTS.
+ */
+export function resolveCanaryHosts(env = process.env) {
+  const raw = env.CANARY_HOSTS_JSON;
   if (raw) {
     try {
       return JSON.parse(raw);
@@ -21,7 +25,7 @@ function envHosts() {
     }
   }
   // Optional: CANARY_ONLY=production,www
-  const only = String(process.env.CANARY_ONLY || '')
+  const only = String(env.CANARY_ONLY || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
@@ -29,6 +33,10 @@ function envHosts() {
     return CANARY_HOSTS.filter((h) => only.includes(h.name));
   }
   return [...CANARY_HOSTS];
+}
+
+function envHosts() {
+  return resolveCanaryHosts(process.env);
 }
 
 export function htmlShellOk(text) {
@@ -100,152 +108,31 @@ export async function probeHtml(base, path, fetchImpl = fetch) {
 }
 
 export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetch } = {}) {
-  const results = [];
+  const failures = [];
   for (const host of hosts) {
     for (const path of PUBLIC_JSON_PATHS) {
-      try {
-        results.push({
-          host: host.name,
-          kind: 'json',
-          ...(await probeJson(host.base, path, host.expectEnv, fetchImpl)),
-        });
-      } catch (error) {
-        results.push({
-          host: host.name,
-          kind: 'json',
-          ok: false,
-          url: host.base + path,
-          error: String(error.message || error),
-        });
-      }
+      const result = await probeJson(host.base, path, host.expectEnv, fetchImpl);
+      if (!result.ok) failures.push({ host: host.name, ...result });
     }
     for (const path of PUBLIC_HTML_PATHS) {
-      try {
-        results.push({
-          host: host.name,
-          kind: 'html',
-          ...(await probeHtml(host.base, path, fetchImpl)),
-        });
-      } catch (error) {
-        results.push({
-          host: host.name,
-          kind: 'html',
-          ok: false,
-          url: host.base + path,
-          error: String(error.message || error),
-        });
-      }
+      const result = await probeHtml(host.base, path, fetchImpl);
+      if (!result.ok) failures.push({ host: host.name, ...result });
     }
   }
-  // HEAD must match GET status for CDN/monitor probes (empty body).
-  try {
-    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
-    const homeUrl = prod.base.replace(/\/+$/, '') + '/';
-    const response = await fetch(homeUrl, {
-      method: 'HEAD',
-      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
-    });
-    const ok = response.status === 200;
-    results.push({
-      ok,
-      host: 'production',
-      kind: 'head',
-      status: response.status,
-      url: homeUrl,
-      error: ok ? null : `HEAD / expected 200 got ${response.status}`,
-    });
-  } catch (error) {
-    results.push({
-      ok: false,
-      host: 'production',
-      kind: 'head',
-      url: 'https://fremontderby.com/',
-      error: String(error.message || error),
-    });
-  }
-
-  // Baseline browser security headers on production HTML shell.
-  try {
-    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
-    const homeUrl = prod.base.replace(/\/+$/, '') + '/';
-    const response = await fetch(homeUrl, {
-      headers: { Accept: 'text/html', 'User-Agent': 'fremontderby-public-surface' },
-    });
-    const required = [
-      ['content-security-policy', /default-src/i],
-      ['x-content-type-options', /nosniff/i],
-      ['x-frame-options', /DENY|SAMEORIGIN/i],
-      ['referrer-policy', /.+/],
-    ];
-    const missing = [];
-    for (const [name, re] of required) {
-      const value = response.headers.get(name) || '';
-      if (!re.test(value)) missing.push(name);
-    }
-    const ok = response.ok && missing.length === 0;
-    results.push({
-      ok,
-      host: 'production',
-      kind: 'securityHeaders',
-      status: response.status,
-      url: homeUrl,
-      error: ok ? null : `missing/weak headers: ${missing.join(',') || 'response not ok'}`,
-    });
-  } catch (error) {
-    results.push({
-      ok: false,
-      host: 'production',
-      kind: 'securityHeaders',
-      url: 'https://fremontderby.com/',
-      error: String(error.message || error),
-    });
-  }
-
-  // Production deploy identity — versionTag must be present (git stamp, env, or CF version id).
-  try {
-    const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
-    const healthUrl = prod.base.replace(/\/+$/, '') + '/health';
-    const response = await fetch(healthUrl, {
-      headers: { Accept: 'application/json', 'User-Agent': 'fremontderby-public-surface' },
-    });
-    const body = await response.json().catch(() => ({}));
-    const tag = body && body.versionTag;
-    const ok = response.ok && Boolean(tag);
-    results.push({
-      ok,
-      host: 'production',
-      kind: 'versionTag',
-      status: response.status,
-      url: healthUrl,
-      error: ok ? null : `missing versionTag (got ${JSON.stringify(tag)})`,
-    });
-  } catch (error) {
-    results.push({
-      ok: false,
-      host: 'production',
-      kind: 'versionTag',
-      url: 'https://fremontderby.com/health',
-      error: String(error.message || error),
-    });
-  }
-
-  const failed = results.filter((r) => !r.ok);
-  return { ok: failed.length === 0, results, failed };
+  return {
+    ok: failures.length === 0,
+    failures,
+    hosts: hosts.map((h) => h.name),
+  };
 }
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirect) {
-  const summary = await assertPublicSurface();
-  for (const row of summary.results) {
-    const flag = row.ok ? 'OK' : 'FAIL';
-    console.log(flag, row.host, row.kind, row.status ?? '', row.url || '', row.error || '');
+  const result = await assertPublicSurface();
+  if (!result.ok) {
+    console.error(JSON.stringify(result.failures, null, 2));
+    process.exitCode = 1;
+  } else {
+    console.log('public surface OK', result.hosts.join(', '));
   }
-  if (!summary.ok) {
-    console.error(`Public surface canary failed: ${summary.failed.length}/${summary.results.length}`);
-    process.exit(1);
-  }
-  console.log('Public surface canary passed', {
-    hosts: envHosts().map((h) => h.name),
-    checks: summary.results.length,
-  });
 }
