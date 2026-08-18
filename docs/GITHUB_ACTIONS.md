@@ -6,7 +6,7 @@
 |------|----------------|---------------------------|
 | **Cloudflare Workers Builds** (`fremontderby-prod`) | Builds and deploys the production Worker from Git | **Default production publisher** when the project is connected and green |
 | **GitHub Actions** `deploy-release-lanes.yml` | Manual `workflow_dispatch` deploy via Wrangler | Operator-driven lane or production deploy when Actions runners are healthy |
-| **Local / agent Wrangler** | `npm run deploy` / `deploy:*` | Emergency or laptop only; same guards apply |
+| **Local / agent Wrangler** | `npm run deploy:*` | Emergency or laptop only; same guards apply |
 
 **How to read a red Actions deploy**
 
@@ -20,27 +20,28 @@
 - Actions production deploy remains **manual** (`workflow_dispatch`) for controlled republish.
 - Repository guards refuse production Workers Builds from non-`main` branches (`scripts/guard-cloudflare-build.mjs`, `scripts/deploy-production.mjs`).
 
-## Workers Builds branch containment (#727 / #732 / #873)
+## Workers Builds branch containment (#727 / #732 / #873 / #1192)
 
-Operator baby-steps: **`docs/cloudflare-builds-isolation.md`**.
+Operator point-and-click steps: **`docs/cloudflare-builds-isolation.md`**.
 
 Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl + dru**. Dashboard branch filters are required; repo guards are the backstop.
 
-| CF Workers Builds project | Required `FREMONT_BUILD_LANE` | Branch allowlist (code + CF filter) |
-|---------------------------|-------------------------------|-------------------------------------|
-| `fremontderby-prod` | `production` | `main` only |
-| `fremontderby-jfl` | `jfl` | `fremontderby-jfl`, `jfl/**` |
-| `fremontderby-dru` | `dru` | `fremontderby-dru`, `dru/**` |
-| `fremontderby-gamma` | `gamma` | `fremontderby-gamma`, `gamma/**` |
+| CF Workers Builds project | Required `FREMONT_BUILD_LANE` | Branch allowlist (code + CF filter) | Required build command |
+|---------------------------|-------------------------------|-------------------------------------|------------------------|
+| `fremontderby-prod` | `production` | `main` only | `npm ci && npm run prebuild && npm run deploy:production` |
+| `fremontderby-jfl` | `jfl` | `fremontderby-jfl`, `jfl/**` | `npm ci && npm run prebuild && npm run deploy:jfl` |
+| `fremontderby-dru` | `dru` | `fremontderby-dru`, `dru/**` | `npm ci && npm run prebuild && npm run deploy:dru` |
+| `fremontderby-gamma` | `gamma` | `fremontderby-gamma`, `gamma/**` | `npm ci && npm run prebuild && npm run deploy:gamma` |
 
 **Operator setup (Cloudflare dashboard, per project)**
 
 1. Open Workers Builds → project → Settings → Build.
 2. Set env var `FREMONT_BUILD_LANE` to the lane in the table.
 3. Restrict **Branch control** / production branch so only the allowlisted refs start a build (fail-closed: no “all branches”).
-4. Build command must run `npm run prebuild` (calls the guard) before deploy.
+4. Set the **build command** exactly as in the table above (lane-specific `deploy:*` so `deploy-lane.mjs` stamps `versionTag`; never plain `npx wrangler deploy`).
 5. Proof: open a no-op PR on `jfl/issue-…` and confirm **only** the JFL project builds; zero prod/DRU/gamma starts.
 6. Guard also refuses `pull/N/head` style refs and `WORKERS_CI_EVENT=pull_request` when set (#873).
+7. After a permanent-branch publish, `/health/environment` on that lane should show a non-null `versionTag` matching the published SHA (#1222).
 
 ## Workflow inventory (`main`)
 
