@@ -9,9 +9,9 @@ test('lint-template-regex targets errorPopupScript in appShell', () => {
   assert.ok(source.includes('appShell.js'));
 });
 
-test('lint-template-regex requires double-escaped whitespace class in source', () => {
-  // Source must contain the pattern that checks for \\s inside templates
-  assert.ok(source.includes('replace(\\/'));
+test('lint-template-regex keeps the \\s footgun pattern check', () => {
+  // Actual source contains: /replace\(\/\\\\s\+\//
+  assert.ok(source.includes('replace\\(\\/'));
   assert.ok(source.includes('browser gets'));
   assert.ok(source.includes('errorPopupScript must use'));
 });
