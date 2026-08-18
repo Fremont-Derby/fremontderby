@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "description": "Authoritative Fremont Derby deployment matrix. CI must fail when wrangler.jsonc drifts from this contract.",
+  "lanes": {
+    "production": {
+      "domain": "fremontderby.com",
+      "extraDomains": ["www.fremontderby.com"],
+      "worker": "fremontderby",
+      "environment": "production",
+      "supabaseProjectRef": "cpiucsxlkicmlbvdvhww",
+      "schema": null,
+      "workersDev": false,
+      "previewUrls": false,
+      "wranglerEnvKey": null
+    },
+    "gamma": {
+      "domain": "gamma.fremontderby.com",
+      "extraDomains": [],
+      "worker": "fremontderby-gamma",
+      "environment": "gamma",
+      "supabaseProjectRef": "oqkkvqkerusepyokzbmt",
+      "schema": "gamma",
+      "workersDev": false,
+      "previewUrls": false,
+      "wranglerEnvKey": "gamma"
+    },
+    "jfl": {
+      "domain": "jfl.fremontderby.com",
+      "extraDomains": [],
+      "worker": "fremontderby-jfl",
+      "environment": "jfl",
+      "supabaseProjectRef": "oqkkvqkerusepyokzbmt",
+      "schema": "jfl",
+      "workersDev": false,
+      "previewUrls": false,
+      "wranglerEnvKey": "jfl"
+    },
+    "dru": {
+      "domain": "dru.fremontderby.com",
+      "extraDomains": [],
+      "worker": "fremontderby-dru",
+      "environment": "dru",
+      "supabaseProjectRef": "oqkkvqkerusepyokzbmt",
+      "schema": "dru",
+      "workersDev": false,
+      "previewUrls": false,
+      "wranglerEnvKey": "dru"
+    }
+  },
+  "invariants": {
+    "nonProdMustNotUseProductionProject": true,
+    "productionMustNotUseNonProdProject": true,
+    "workersDevAlwaysFalse": true,
+    "previewUrlsAlwaysFalse": true
+  }
+}
