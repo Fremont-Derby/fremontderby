@@ -1,3 +1,4 @@
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -6,29 +7,51 @@ export class AuthError extends Error {
   }
 }
 
-function bearerToken(request) {
-  const header = request.headers.get('authorization') || request.headers.get('Authorization') || '';
-  const match = String(header).match(/^Bearer\s+(.+)$/i);
-  return match ? match[1].trim() : '';
+function requireEnvValue(env, name) {
+  const value = env?.[name];
+  if (!value) {
+    throw new Error(`${name} is required`);
+  }
+  return value;
 }
 
-const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
-  jfl: Object.freeze({
-    id: '00000000-0000-4000-8000-000000000001',
-    email: 'jfl-actor@fremontderby.com',
-  }),
-  dru: Object.freeze({
-    id: '00000000-0000-4000-8000-000000000002',
+function normalizeSupabaseUrl(value) {
+  return stripTrailingSlashes(value);
+}
+
+function bearerToken(request) {
+  const authorization = request.headers.get('authorization') ?? '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? null;
+}
+
+async function parseJson(response) {
+  const text = await response.text();
+  if (!text) return null;
+  return JSON.parse(text);
+}
+
+const testAuthEnvironments = new Set(['jfl', 'dru']); // gamma is RC — real auth only
+
+/** Known staging auth.users ids for isolated lane open-auth (see docs/dru-jfl-noauth-operator.md). */
+export const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
+  dru: {
+    id: '05d025ff-1c97-4070-a691-46a896fb9b83',
     email: 'dru-actor@fremontderby.com',
-  }),
+  },
+  jfl: {
+    id: 'b22805b6-92ba-44bd-a92e-0c82f0be6613',
+    email: 'jfl-actor@fremontderby.com',
+  },
+  // Shares staging actor until a dedicated gamma auth.users row exists.
+  gamma: {
+    id: '05d025ff-1c97-4070-a691-46a896fb9b83',
+    email: 'gamma-actor@fremontderby.com',
+  },
 });
 
-// Gamma is a release-candidate lane: real auth only. JFL/DRU remain automation lanes.
-const testAuthEnvironments = new Set(['jfl', 'dru']);
-
-export { TEST_LANE_DEFAULT_ACTORS };
-
 /**
+ * Open-auth is allowed on isolated test lanes (jfl/dru).
  * Production always uses normal authentication.
  *
  * For jfl/dru, bypass defaults ON unless explicitly disabled (BETA_AUTH_BYPASS=0).
@@ -75,41 +98,37 @@ export async function authenticateSupabaseUser(
 
   // Test-lane bypass is only for deliberately unauthenticated automation.
   // Once a caller supplies a bearer token, validate it normally rather than
-  // silently substituting the shared lane actor.
+  // escalating to the shared test actor.
   if (!token && betaAuthBypassEnabled(env)) {
     return resolveBetaBypassActor(env);
   }
 
   if (!token) {
-    throw new AuthError('Missing Authorization bearer token', 401);
+    throw new AuthError('Missing bearer token');
   }
 
-  const supabaseUrl = String(env.SUPABASE_URL || '').replace(/\/$/, '');
-  const anonKey = String(env.SUPABASE_PUBLISHABLE_KEY || '').trim();
-  if (!supabaseUrl || !anonKey) {
-    throw new AuthError('Supabase auth is not configured', 500);
-  }
-
+  const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
+  const publishableKey = requireEnvValue(env, 'SUPABASE_PUBLISHABLE_KEY');
   const response = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {
+    method: 'GET',
     headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: anonKey,
+      apikey: publishableKey,
+      authorization: `Bearer ${token}`,
+      accept: 'application/json',
     },
   });
 
   if (!response.ok) {
-    throw new AuthError('Invalid or expired session', 401);
+    throw new AuthError('Invalid bearer token');
   }
 
-  const payload = await response.json().catch(() => ({}));
-  const id = String(payload?.id || '').trim();
-  if (!id) {
-    throw new AuthError('Invalid or expired session', 401);
+  const user = await parseJson(response);
+  if (!user?.id) {
+    throw new AuthError('Authenticated user is missing an id');
   }
 
   return {
-    id,
-    email: String(payload?.email || '').trim() || null,
-    betaBypass: false,
+    id: user.id,
+    email: user.email ?? null,
   };
 }
