@@ -45,23 +45,14 @@ test('Wrangler owns every public release hostname as a custom domain', () => {
 test('workers.dev and preview URLs stay disabled for every Wrangler environment', () => {
   assert.equal(config.workers_dev, false);
   assert.equal(config.preview_urls, false);
-
-  for (const [environment, target] of Object.entries(config.env)) {
-    assert.equal(
-      target.workers_dev ?? config.workers_dev,
-      false,
-      `${environment} must not expose a workers.dev route`,
-    );
-    assert.equal(
-      target.preview_urls ?? config.preview_urls,
-      false,
-      `${environment} must not expose Worker preview URLs`,
-    );
+  for (const environment of Object.keys(config.env)) {
+    assert.equal(config.env[environment].workers_dev, false);
+    assert.equal(config.env[environment].preview_urls, false);
   }
 });
 
 test('each deployable Derby lane binds version metadata for exact SHA verification', () => {
-  assert.equal(config.version_metadata.binding, 'CF_VERSION_METADATA');
+  assert.equal(config.version_metadata?.binding, 'CF_VERSION_METADATA');
   for (const lane of ['jfl', 'dru', 'gamma']) {
     assert.equal(config.env[lane].version_metadata?.binding, 'CF_VERSION_METADATA');
   }
@@ -80,15 +71,13 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
 });
 
 test('non-production lane credentials are declared as required secrets, not placeholders', () => {
-  const common = [
-    'SUPABASE_URL',
-    'SUPABASE_PUBLISHABLE_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'EXPECTED_SUPABASE_PROJECT_REF',
-  ];
+  // Public browser config lives in vars; only privileged keys are secrets.
   for (const lane of ['jfl', 'dru', 'gamma']) {
     const target = config.env[lane];
-    for (const name of common) assert.ok(target.secrets.required.includes(name));
+    assert.ok(target.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+    assert.ok(target.vars.SUPABASE_URL);
+    assert.ok(target.vars.SUPABASE_PUBLISHABLE_KEY);
+    assert.ok(target.vars.EXPECTED_SUPABASE_PROJECT_REF);
     assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
   }
   assert.ok(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'));
