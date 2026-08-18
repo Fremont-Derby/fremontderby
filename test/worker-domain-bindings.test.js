@@ -21,7 +21,7 @@ test('lane hostnames map to dedicated Workers never to production script', () =>
     assert.equal(row.service, service);
   }
   for (const row of WORKER_DOMAIN_BINDINGS) {
-    if (row.hostname.endsWith('.fremontderby.com') && row.hostname !== 'www.fremontderby.com') {
+    if (row.hostname.endsWith('.fremontderby.com') && row.hostname !== 'fremontderby.com') {
       assert.notEqual(row.service, 'fremontderby-prod');
     }
   }
