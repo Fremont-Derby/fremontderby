@@ -4,22 +4,11 @@
  * always carries versionTag regardless of CF var binding / build cache quirks.
  */
 import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { resolveStampSha } from './resolveStampSha.mjs';
 
-const sha = String(
-  process.env.GITHUB_SHA ||
-    process.env.WORKERS_CI_COMMIT_SHA ||
-    process.env.DEPLOY_GIT_SHA ||
-    '',
-).trim();
+const resolved = resolveStampSha(process.env);
 
-let resolved = sha;
-if (!resolved || !/^[0-9a-f]{7,40}$/i.test(resolved)) {
-  const git = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
-  if (git.status === 0) resolved = String(git.stdout || '').trim();
-}
-
-if (!resolved || !/^[0-9a-f]{7,40}$/i.test(resolved)) {
+if (!resolved) {
   console.warn('stamp-deploy-identity: no git sha available');
   process.exit(0);
 }
