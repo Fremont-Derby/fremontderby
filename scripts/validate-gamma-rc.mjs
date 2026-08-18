@@ -13,12 +13,34 @@ function normalizeBaseUrl(value) {
   return stripTrailingSlashes(String(value || defaultBaseUrl).trim());
 }
 
-async function readJson(url) {
-  const response = await fetch(url, {
+export function isCloudflareChallengeBody(text, status) {
+  const sample = String(text || '').slice(0, 400).toLowerCase();
+  if (status === 403 || status === 503) {
+    if (
+      sample.includes('just a moment')
+      || sample.includes('cf-browser-verification')
+      || sample.includes('cdn-cgi/challenge')
+      || sample.includes('attention required')
+      || sample.includes('_cf_chl')
+    ) {
+      return true;
+    }
+  }
+  return sample.includes('just a moment') && sample.includes('<title>');
+}
+
+async function readJson(url, fetchImpl) {
+  const response = await fetchImpl(url, {
     headers: { accept: 'application/json', 'user-agent': 'fremont-gamma-rc-validation' },
     redirect: 'manual',
   });
   const text = await response.text();
+  if (isCloudflareChallengeBody(text, response.status)) {
+    throw new Error(
+      `${url} blocked by Cloudflare challenge (HTTP ${response.status}). ` +
+        'Bypass bot fight mode for /health* or run validation from an allowlisted network.',
+    );
+  }
   let body;
   try {
     body = JSON.parse(text);
@@ -28,12 +50,18 @@ async function readJson(url) {
   return { response, body };
 }
 
-async function readText(url) {
-  const response = await fetch(url, {
+async function readText(url, fetchImpl) {
+  const response = await fetchImpl(url, {
     headers: { accept: 'text/html', 'user-agent': 'fremont-gamma-rc-validation' },
     redirect: 'manual',
   });
   const text = await response.text();
+  if (isCloudflareChallengeBody(text, response.status)) {
+    throw new Error(
+      `${url} blocked by Cloudflare challenge (HTTP ${response.status}). ` +
+        'Bypass bot fight mode for public smoke paths or run validation from an allowlisted network.',
+    );
+  }
   return { response, text };
 }
 
@@ -49,7 +77,20 @@ export async function validateGammaRc({
 
   // 1) Environment identity
   const envUrl = `${base}/health/environment`;
-  const { response: envRes, body: env } = await readJson(envUrl);
+  let envRes;
+  let env;
+  try {
+    ({ response: envRes, body: env } = await readJson(envUrl, fetchImpl));
+  } catch (error) {
+    return {
+      ok: false,
+      errors: [String(error.message || error)],
+      notes,
+      environment: null,
+      versionTag: null,
+      baseUrl: base,
+    };
+  }
   if (envRes.status !== 200) errors.push(`/health/environment HTTP ${envRes.status}`);
   if (env.environment !== 'gamma') {
     errors.push(`environment is "${env.environment ?? 'unknown'}", expected "gamma"`);
@@ -76,24 +117,32 @@ export async function validateGammaRc({
   }
 
   // 2) Public home
-  const { response: homeRes, text: home } = await readText(`${base}/`);
-  if (homeRes.status !== 200) errors.push(`GET / HTTP ${homeRes.status}`);
-  if (!/fremont|derby|league/i.test(home)) {
-    errors.push('home page did not look like Fremont Derby HTML');
+  try {
+    const { response: homeRes, text: home } = await readText(`${base}/`, fetchImpl);
+    if (homeRes.status !== 200) errors.push(`GET / HTTP ${homeRes.status}`);
+    if (!/fremont|derby|league/i.test(home)) {
+      errors.push('home page did not look like Fremont Derby HTML');
+    }
+  } catch (error) {
+    errors.push(String(error.message || error));
   }
 
   // 3) Public seasons API (read-only)
-  const { response: seasonsRes, body: seasonsBody } = await readJson(`${base}/api/seasons`);
-  if (seasonsRes.status !== 200) {
-    errors.push(`/api/seasons HTTP ${seasonsRes.status}`);
-  } else {
-    notes.push(`seasons=${Array.isArray(seasonsBody.seasons) ? seasonsBody.seasons.length : 0}`);
+  try {
+    const { response: seasonsRes, body: seasonsBody } = await readJson(`${base}/api/seasons`, fetchImpl);
+    if (seasonsRes.status !== 200) {
+      errors.push(`/api/seasons HTTP ${seasonsRes.status}`);
+    } else {
+      notes.push(`seasons=${Array.isArray(seasonsBody.seasons) ? seasonsBody.seasons.length : 0}`);
+    }
+  } catch (error) {
+    errors.push(String(error.message || error));
   }
 
   // 4) Auth isolation: unauthenticated profile should not be a production-style failure only —
   // gamma may be open-auth in current ops; record outcome, do not fail solely on 200.
   try {
-    const { response: meRes, body: me } = await readJson(`${base}/api/me/profile`);
+    const { response: meRes, body: me } = await readJson(`${base}/api/me/profile`, fetchImpl);
     notes.push(`/api/me/profile → HTTP ${meRes.status}${me?.profile?.display_name ? ` (${me.profile.display_name})` : ''}`);
   } catch (e) {
     notes.push(`/api/me/profile probe: ${e.message}`);
