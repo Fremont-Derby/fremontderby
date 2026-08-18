@@ -16,6 +16,17 @@ test('GitHub Actions cannot bypass a JFL branch/lane mismatch with the legacy ov
   );
 });
 
+test('Workers Builds cannot bypass a lane mismatch with the legacy local override', () => {
+  assert.throws(
+    () => assertLaneDeployContext('jfl', {
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'fremontderby-dru',
+      FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN: '1',
+    }),
+    /Refusing jfl deploy from branch "fremontderby-dru"; expected "fremontderby-jfl"/,
+  );
+});
+
 test('GitHub Actions production deploy is allowed only from main', () => {
   assert.doesNotThrow(() => assertProductionDeployContext({
     GITHUB_ACTIONS: 'true',
