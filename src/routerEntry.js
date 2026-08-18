@@ -4,6 +4,7 @@ import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
 import { renderAdminSupportPage } from './adminSupportPage.js';
 import { routeAdminSupport } from './adminSupportHttp.js';
 import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
+import { resolveVersionTag } from './resolveVersionTag.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
@@ -136,25 +137,21 @@ export default {
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
-      const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
-      const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
-      const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
-      const fromId = typeof meta.id === 'string' && meta.id.trim() && meta.id !== 'local' ? meta.id.trim() : null;
-      const tag = fromMeta || fromEnv || fromStamp || fromId || null;
-      let versionTagSource = null;
-      if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
-      else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
-      else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
-      else if (tag && fromId === tag) versionTagSource = 'cf_version_id';
+      const identity = resolveVersionTag({
+        meta,
+        deployGitSha: env.DEPLOY_GIT_SHA,
+        stampedSha: STAMPED_DEPLOY_GIT_SHA,
+        stampedAt: STAMPED_DEPLOY_AT,
+      });
       if (url.pathname === '/health') {
         return Response.json(
           {
             ok: true,
             service: 'fremontderby',
-            version: meta.id || 'local',
-            versionTag: tag,
-            deployedAt: meta.timestamp || STAMPED_DEPLOY_AT || null,
-            versionTagSource,
+            version: identity.version,
+            versionTag: identity.versionTag,
+            deployedAt: identity.deployedAt,
+            versionTagSource: identity.versionTagSource,
           },
           { headers: { 'cache-control': 'no-store' } },
         );
@@ -242,7 +239,7 @@ if (url.pathname === '/api/admin/players' && request.method === 'POST') return f
     const playerContactResponse = await routePlayerContact(request, env);
     if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
+    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(await playerSeasonRegistrationResponse, url.pathname);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
     if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
     const seasonCloseResponse = await routeSeasonClose(request, env);
