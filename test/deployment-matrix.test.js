@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateDeploymentMatrix } from '../scripts/validate-deployment-matrix.mjs';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
+import { LANE_CUSTOM_DOMAINS } from '../scripts/lane-custom-domains.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -73,6 +75,35 @@ describe('deployment-matrix guardrail (#1194)', () => {
     assert.equal(matrix.lanes.gamma.authBypassAllowed, false);
     assert.equal(matrix.lanes.jfl.authBypassAllowed, true);
     assert.equal(matrix.lanes.dru.authBypassAllowed, true);
+  });
+
+  it('stays aligned with HOST_ENVIRONMENT_EXPECTATIONS', () => {
+    for (const lane of Object.values(matrix.lanes)) {
+      assert.equal(
+        HOST_ENVIRONMENT_EXPECTATIONS[lane.domain],
+        lane.environment,
+        `${lane.domain} host/env mismatch`,
+      );
+      for (const extra of lane.extraDomains || []) {
+        assert.equal(
+          HOST_ENVIRONMENT_EXPECTATIONS[extra],
+          lane.environment,
+          `${extra} host/env mismatch`,
+        );
+      }
+    }
+  });
+
+  it('stays aligned with LANE_CUSTOM_DOMAINS worker + env', () => {
+    for (const lane of Object.values(matrix.lanes)) {
+      const hosts = [lane.domain, ...(lane.extraDomains || [])];
+      for (const host of hosts) {
+        const row = LANE_CUSTOM_DOMAINS.find((item) => item.hostname === host);
+        assert.ok(row, `missing LANE_CUSTOM_DOMAINS row for ${host}`);
+        assert.equal(row.env, lane.environment);
+        assert.equal(row.service, lane.worker);
+      }
+    }
   });
 
   it('accepts a correct wrangler profile', () => {
