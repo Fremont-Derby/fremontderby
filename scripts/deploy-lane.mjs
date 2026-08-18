@@ -70,11 +70,21 @@ export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
   const sha = resolveDeploySha(env);
   if (sha) {
     args.push('--tag', sha, '--message', `git:${sha}`);
+    // Same pattern as deploy-production.mjs: expose SHA via var when CF_VERSION_METADATA.tag is empty.
+    args.push('--var', `DEPLOY_GIT_SHA:${sha}`);
   }
   return args;
 }
 
 export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
+  // Embed git SHA into the Worker bundle so /health versionTag cannot be dropped by var binding.
+  const stamp = spawn(process.execPath, ['scripts/stamp-deploy-identity.mjs'], {
+    env,
+    stdio: 'inherit',
+    shell: false,
+  });
+  if (stamp.error) throw stamp.error;
+
   // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell.
   const isWin = process.platform === 'win32';
   const args = laneDeployArgs(lane, env, spawn);

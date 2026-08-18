@@ -35,7 +35,7 @@ test('lane deploy refuses unknown environments', () => {
   );
 });
 
-test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
+test('GitHub deploys tag the Worker version with the exact commit SHA and DEPLOY_GIT_SHA var', () => {
   const sha = 'a'.repeat(40);
   const args = laneDeployArgs('gamma', {
     GITHUB_ACTIONS: 'true',
@@ -46,6 +46,7 @@ test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
     'wrangler', 'deploy', '--env', 'gamma',
     '--tag', sha,
     '--message', `git:${sha}`,
+    '--var', `DEPLOY_GIT_SHA:${sha}`,
   ]);
 });
 
@@ -60,6 +61,7 @@ test('Workers Builds tags from WORKERS_CI_COMMIT_SHA when GITHUB_SHA is absent',
     'wrangler', 'deploy', '--env', 'dru',
     '--tag', sha,
     '--message', `git:${sha}`,
+    '--var', `DEPLOY_GIT_SHA:${sha}`,
   ]);
 });
 
