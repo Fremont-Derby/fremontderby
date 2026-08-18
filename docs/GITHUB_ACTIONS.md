@@ -57,7 +57,7 @@ Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl
 | `sync-collaboration-labels.yml` | Sync collaboration labels | `workflow_dispatch` | Labels |
 | `enforce-workers-dev-disabled.yml` | Enforce workers.dev disabled | `workflow_dispatch` | Preview URL policy |
 
-All use `runs-on: ubuntu-latest` and need healthy hosted runners (#723).
+All use `runs-on: ubuntu-latest` (GitHub-hosted `runner_id: 0`) and need healthy hosted runners (#723).
 
 ## Branch lag warning
 
