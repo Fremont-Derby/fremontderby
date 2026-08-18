@@ -4,6 +4,7 @@ import {
   assertLaneDeployContext,
   laneDeployArgs,
   laneDeployments,
+  resolveDeploySha,
 } from '../scripts/deploy-lane.mjs';
 
 for (const lane of ['jfl', 'dru', 'gamma']) {
@@ -46,4 +47,32 @@ test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
     '--tag', sha,
     '--message', `git:${sha}`,
   ]);
+});
+
+test('Workers Builds deploys tag the Worker version from WORKERS_CI_COMMIT_SHA', () => {
+  const sha = 'b'.repeat(40);
+  const args = laneDeployArgs('dru', {
+    WORKERS_CI: '1',
+    WORKERS_CI_BRANCH: 'fremontderby-dru',
+    WORKERS_CI_COMMIT_SHA: sha,
+  });
+  assert.deepEqual(args, [
+    'wrangler', 'deploy', '--env', 'dru',
+    '--tag', sha,
+    '--message', `git:${sha}`,
+  ]);
+});
+
+test('resolveDeploySha prefers GITHUB_SHA over WORKERS_CI_COMMIT_SHA', () => {
+  const github = 'c'.repeat(40);
+  const workers = 'd'.repeat(40);
+  assert.equal(
+    resolveDeploySha({ GITHUB_SHA: github, WORKERS_CI_COMMIT_SHA: workers }),
+    github,
+  );
+});
+
+test('resolveDeploySha ignores non-40-hex values', () => {
+  assert.equal(resolveDeploySha({ GITHUB_SHA: 'short', WORKERS_CI_COMMIT_SHA: 'also-short' }), '');
+  assert.equal(resolveDeploySha({}), '');
 });
