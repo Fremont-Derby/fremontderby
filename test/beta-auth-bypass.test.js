@@ -21,8 +21,8 @@ function testLaneEnv(environment = 'jfl', overrides = {}) {
 test('test auth bypass is limited to JFL and DRU', () => {
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'jfl', BETA_AUTH_BYPASS: '1' }), true);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'dru', BETA_AUTH_BYPASS: '1' }), true);
-  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'gamma', BETA_AUTH_BYPASS: '1' }), true);
-  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'gamma' }), true);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'gamma', BETA_AUTH_BYPASS: '1' }), false);
+  assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'gamma' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'production', BETA_AUTH_BYPASS: '1' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'staging', BETA_AUTH_BYPASS: '1' }), false);
   assert.equal(betaAuthBypassEnabled({ ENVIRONMENT: 'jfl', BETA_AUTH_BYPASS: '0' }), false);
@@ -75,6 +75,16 @@ test('production still requires bearer even if a bypass flag is present', async 
       (error) => error.name === 'AuthError' && /Missing bearer token/.test(error.message),
     );
   }
+});
+
+test('gamma still requires bearer even if a bypass flag is present', async () => {
+  await assert.rejects(
+    () => authenticateSupabaseUser(
+      new Request('https://gamma.example/api/test'),
+      testLaneEnv('gamma'),
+    ),
+    (error) => error.name === 'AuthError' && /Missing bearer token/.test(error.message),
+  );
 });
 
 test('resolveBetaBypassActor uses lane default actor when secret unset', () => {
