@@ -3,5 +3,6 @@ paths-ignore:
   - test/**
   - scripts/**
   - node_modules/**
+# Default CodeQL JS security suite (do not use bare pack name "security" — it is not a valid pack).
 queries:
-  - uses: security
+  - uses: codeql/javascript-queries@codeql-suites/javascript-security.qls
