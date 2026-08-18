@@ -1,4 +1,7 @@
+import { accumulateMatchCounts, evaluateRosterEligibility } from './rosterMatchCounts.js';
+import { formatPlayerPickerLabel, markDuplicateNames } from './playerPickerLabel.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -8,7 +11,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return value.replace(/\/+$/, '');
+  return stripTrailingSlashes(value);
 }
 
 function jsonHeaders(serviceRoleKey) {
@@ -264,22 +267,42 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
           `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date&status=eq.registration&order=created_at.desc`,
           { method: 'GET', headers },
         );
-        const players = await requestJson(
+        const playersRaw = await requestJson(
           fetchImpl,
-          `${supabaseUrl}/rest/v1/players?select=id,display_name&order=display_name.asc`,
+          `${supabaseUrl}/rest/v1/players?select=id,display_name,user_id,created_at&order=display_name.asc`,
           { method: 'GET', headers },
         );
+        const normalized = Array.isArray(playersRaw)
+          ? playersRaw.map((row) => ({
+              playerId: row.id,
+              id: row.id,
+              displayName: row.display_name,
+              display_name: row.display_name,
+              hasLogin: Boolean(row.user_id),
+              user_id: row.user_id,
+              createdAt: row.created_at,
+              created_at: row.created_at,
+            }))
+          : [];
+        const players = markDuplicateNames(normalized).map((player) => ({
+          ...player,
+          label: formatPlayerPickerLabel(player),
+        }));
 
         enrichedManagement = {
           ...management,
           open_seasons: Array.isArray(openSeasons) ? openSeasons : [],
-          players: Array.isArray(players) ? players : [],
+          players,
         };
       } catch {
         // Team management remains useful even if optional picker data is unavailable.
       }
 
-      const captainTeams = enrichedManagement.captain_teams ?? [];
+      const captainTeams = (enrichedManagement.captain_teams ?? []).map((team) => ({
+        ...team,
+        teamId: team.teamId || team.team_id || team.id || null,
+        teamName: team.teamName || team.team_name || team.name || null,
+      }));
       let scheduleEnriched = false;
       const teamsWithRounds = [];
       for (const team of captainTeams) {
@@ -316,7 +339,212 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         // Availability selection is optional enrichment of the base management view.
       }
 
+      try {
+        let seasonsForRegistration = Array.isArray(finalManagement.open_seasons)
+          ? finalManagement.open_seasons
+          : [];
+        try {
+          const moreSeasons = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/seasons?select=id,name,status,first_round_date&status=in.(registration,draft,active)&order=created_at.desc&limit=12`,
+            { method: 'GET', headers },
+          );
+          if (Array.isArray(moreSeasons) && moreSeasons.length) {
+            const byId = new Map(seasonsForRegistration.map((s) => [s.id || s.seasonId, s]));
+            for (const season of moreSeasons) {
+              const id = season.id || season.seasonId;
+              if (id && !byId.has(id)) byId.set(id, season);
+            }
+            seasonsForRegistration = Array.from(byId.values());
+          }
+        } catch {
+          // Fall back to open registration seasons only.
+        }
+        const applications = [];
+        const returningSlots = [];
+        for (const season of seasonsForRegistration) {
+          const seasonId = season.id || season.seasonId;
+          if (!seasonId) continue;
+          try {
+            const response = await requestJson(
+              fetchImpl,
+              `${supabaseUrl}/rest/v1/rpc/get_own_team_registration`,
+              {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                  actor_user_id: actorUserId,
+                  target_season_id: seasonId,
+                }),
+              },
+            );
+            const registration = Array.isArray(response)
+              ? (response[0]?.registration ?? response[0])
+              : (response?.registration ?? response);
+            const seasonApplications = registration?.applications || [];
+            for (const app of seasonApplications) {
+              applications.push({
+                ...app,
+                seasonId: app.seasonId || seasonId,
+                seasonName: app.seasonName || season.name || registration?.seasonName || null,
+              });
+            }
+            for (const slot of registration?.returningSlots || []) {
+              returningSlots.push({
+                ...slot,
+                seasonId: slot.seasonId || seasonId,
+                seasonName: slot.seasonName || season.name || registration?.seasonName || null,
+              });
+            }
+          } catch {
+            // Per-season registration is optional for management list.
+          }
+        }
+        finalManagement = {
+          ...finalManagement,
+          applications,
+          returning_slots: returningSlots,
+        };
+      } catch {
+        // Applications panel is optional enrichment.
+      }
+
+
+      // Practice location/schedule for captained teams (and any membership teams).
+      try {
+        const captainIds = (finalManagement.captain_teams || [])
+          .map((team) => team.teamId || team.team_id)
+          .filter(Boolean);
+        if (captainIds.length) {
+          const inList = captainIds.map(encodeURIComponent).join(',');
+          const practiceRows = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule,practice_recurrence,practice_on&id=in.(${inList})`,
+            { method: 'GET', headers },
+          );
+          const byId = new Map(
+            (Array.isArray(practiceRows) ? practiceRows : []).map((row) => [row.id, row]),
+          );
+          finalManagement = {
+            ...finalManagement,
+            captain_teams: (finalManagement.captain_teams || []).map((team) => {
+              const row = byId.get(team.teamId || team.team_id);
+              if (!row) return team;
+              return {
+                ...team,
+                practiceLocation: row.practice_location ?? null,
+                practiceSchedule: row.practice_schedule ?? null,
+                practiceRecurrence: row.practice_recurrence ?? null,
+                practiceOn: row.practice_on ?? null,
+              };
+            }),
+          };
+        }
+      } catch {
+        // Practice enrichment is optional.
+      }
+
+
+      try {
+        const playerId = finalManagement.player_id;
+        if (playerId) {
+          const memberships = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/team_memberships?select=team_id,teams(id,name,season_id,practice_location,practice_schedule,practice_recurrence,practice_on)&player_id=eq.${encodeURIComponent(playerId)}&ends_at=is.null`,
+            { method: 'GET', headers },
+          );
+          const membershipPractice = (Array.isArray(memberships) ? memberships : [])
+            .map((row) => {
+              const team = row.teams || row.team || {};
+              return {
+                teamId: team.id || row.team_id,
+                teamName: team.name || null,
+                seasonId: team.season_id || null,
+                practiceLocation: team.practice_location ?? null,
+                practiceSchedule: team.practice_schedule ?? null,
+                practiceRecurrence: team.practice_recurrence ?? null,
+                practiceOn: team.practice_on ?? null,
+              };
+            })
+            .filter((row) => row.teamId);
+          finalManagement = { ...finalManagement, membership_practice: membershipPractice };
+        }
+      } catch {
+        // membership practice is optional enrichment
+      }
+
+      // #354 roster match counts: team-specific vs elsewhere (finalized regular matches)
+      try {
+        const teams = finalManagement.captain_teams || [];
+        const seasonIds = [...new Set(teams.map((t) => t.seasonId || t.season_id).filter(Boolean))];
+        const matchBySeason = new Map();
+        for (const seasonId of seasonIds) {
+          const rows = await requestJson(
+            fetchImpl,
+            `${supabaseUrl}/rest/v1/player_matches?select=player_a_id,player_b_id,team_a_id,team_b_id,status,season_id&season_id=eq.${encodeURIComponent(seasonId)}&status=in.(finalized,corrected)`,
+            { method: 'GET', headers },
+          );
+          matchBySeason.set(seasonId, Array.isArray(rows) ? rows : []);
+        }
+        finalManagement = {
+          ...finalManagement,
+          captain_teams: teams.map((team) => {
+            const teamId = team.teamId || team.team_id;
+            const seasonId = team.seasonId || team.season_id;
+            const rows = matchBySeason.get(seasonId) || [];
+            const counts = accumulateMatchCounts(rows, teamId);
+            const rosterBase = (team.roster || team.members || []).map((member) => {
+              const pid = member.playerId || member.player_id || member.id;
+              const c = counts.get(pid) || { forUs: 0, elsewhere: 0, elsewhereByTeam: new Map() };
+              return {
+                ...member,
+                matchesForTeam: c.forUs,
+                matchesElsewhere: c.elsewhere,
+                elsewhereByTeam: c.elsewhereByTeam
+                  ? Object.fromEntries(c.elsewhereByTeam.entries())
+                  : {},
+              };
+            });
+            const evaluated = evaluateRosterEligibility(
+              rosterBase.map((m) => ({
+                forUs: m.matchesForTeam,
+                elsewhere: m.matchesElsewhere,
+              })),
+            );
+            const roster = rosterBase.map((member, i) => ({
+              ...member,
+              postseasonEligible: evaluated[i].postseasonEligible,
+              approachingEligible: evaluated[i].approachingEligible,
+              matchesNeed: evaluated[i].need,
+            }));
+            return { ...team, roster, members: roster };
+          }),
+        };
+      } catch {
+        // Match counts are optional enrichment for captain UX.
+      }
+
       return finalManagement;
+    },
+
+    async listTradeCounterpartyOptions({ actorUserId, seasonId }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_trade_counterparty_options`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_season_id: seasonId,
+        }),
+      });
+      return (Array.isArray(result) ? result : []).map((row) => ({
+        teamId: row.team_id,
+        teamName: row.team_name,
+        players: Array.isArray(row.players) ? row.players.map((p) => ({
+          playerId: p.playerId || p.player_id,
+          displayName: p.displayName || p.display_name,
+          role: p.role,
+        })) : [],
+      }));
     },
 
     async listOwnTeamTrades({ actorUserId }) {
@@ -345,6 +573,105 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
       });
 
       return Array.isArray(result) ? result[0] : result;
+    },
+
+
+    async updateTeamPractice({
+      actorUserId,
+      teamId,
+      practiceLocation,
+      practiceSchedule,
+      practiceRecurrence,
+      practiceOn,
+    }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/set_team_practice`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_id: teamId,
+          arg_practice_location: practiceLocation,
+          arg_practice_schedule: practiceSchedule,
+          arg_practice_recurrence: practiceRecurrence,
+          arg_practice_on: practiceOn,
+        }),
+      });
+      const row = Array.isArray(result) ? result[0] : result;
+      return {
+        teamId: row?.team_id ?? teamId,
+        teamName: row?.team_name ?? null,
+        practiceLocation: row?.practice_location ?? null,
+        practiceSchedule: row?.practice_schedule ?? null,
+        practiceRecurrence: row?.practice_recurrence ?? null,
+        practiceOn: row?.practice_on ?? null,
+      };
+    },
+
+    async getTeamPractice({ teamId }) {
+      const rows = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/teams?select=id,name,practice_location,practice_schedule,practice_recurrence,practice_on&id=eq.${encodeURIComponent(teamId)}`,
+        { method: 'GET', headers },
+      );
+      const row = Array.isArray(rows) ? rows[0] : rows;
+      if (!row) {
+        const error = new Error('Team not found');
+        error.status = 404;
+        throw error;
+      }
+      return {
+        teamId: row.id ?? teamId,
+        teamName: row.name ?? null,
+        practiceLocation: row.practice_location ?? null,
+        practiceSchedule: row.practice_schedule ?? null,
+        practiceRecurrence: row.practice_recurrence ?? null,
+        practiceOn: row.practice_on ?? null,
+      };
+    },
+
+
+    async proposeTeamMatchMakeup({ actorUserId, teamMatchId, makeupOn, makeupLocation, makeupNote }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/propose_team_match_makeup`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_match_id: teamMatchId,
+          arg_makeup_on: makeupOn,
+          arg_makeup_location: makeupLocation,
+          arg_makeup_note: makeupNote,
+        }),
+      });
+      const row = Array.isArray(result) ? result[0] : result;
+      return {
+        teamMatchId: row?.team_match_id ?? teamMatchId,
+        makeupOn: row?.makeup_on ?? null,
+        makeupLocation: row?.makeup_location ?? null,
+        makeupStatus: row?.makeup_status ?? null,
+        makeupNote: row?.makeup_note ?? null,
+        makeupProposedByTeamId: row?.makeup_proposed_by_team_id ?? null,
+      };
+    },
+
+    async respondTeamMatchMakeup({ actorUserId, teamMatchId, response }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/respond_team_match_makeup`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          target_team_match_id: teamMatchId,
+          arg_response: response,
+        }),
+      });
+      const row = Array.isArray(result) ? result[0] : result;
+      return {
+        teamMatchId: row?.team_match_id ?? teamMatchId,
+        makeupOn: row?.makeup_on ?? null,
+        makeupLocation: row?.makeup_location ?? null,
+        makeupStatus: row?.makeup_status ?? null,
+        makeupNote: row?.makeup_note ?? null,
+        makeupProposedByTeamId: row?.makeup_proposed_by_team_id ?? null,
+      };
     },
 
     async invitePlayerToTeam({ actorUserId, teamId, playerId }) {

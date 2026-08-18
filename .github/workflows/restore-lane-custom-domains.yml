@@ -1,30 +1,36 @@
 name: Restore lane custom domains
+
 on:
   workflow_dispatch:
-  schedule:
-    # Domains have been observed dropping; keep lanes attached.
-    - cron: '17 * * * *'
+    inputs:
+      runner_target:
+        description: 'Runner'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options: [self-hosted, ubuntu-latest]
+
+concurrency:
+  group: restore-lane-custom-domains
+  cancel-in-progress: true
+
 jobs:
   restore:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    runs-on: ${{ inputs.runner_target || 'self-hosted' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Attach dru/jfl/gamma hostnames to Workers
+      - name: Attach Worker custom domains (apex + lanes)
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/restore-lane-custom-domains.mjs
-      - name: Probe public DNS and health
-        run: |
-          set +e
-          for host in dru.fremontderby.com jfl.fremontderby.com gamma.fremontderby.com; do
-            echo "=== $host ==="
-            getent hosts "$host" || echo "NO DNS yet for $host"
-            curl -sS -m 15 "https://$host/health/environment" || echo "health failed for $host"
-            echo
-          done
+      - name: Re-diagnose bindings
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/diagnose-worker-domains.mjs
+      - name: Production DNS + /health guard (apex + www)
+        run: node scripts/assert-production-dns.mjs

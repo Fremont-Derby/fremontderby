@@ -1,15 +1,26 @@
 name: CI
 
+# Safe public-repo CI (#872 / #701): run validation on PRs and pushes without
+# any deploy or Cloudflare secret access. Deploy remains workflow_dispatch-only
+# in deploy-release-lanes.yml. Workers Builds isolation is #873 (dashboard + guard).
+# Inventory: docs/GITHUB_ACTIONS.md
 on:
+  workflow_dispatch:
   pull_request:
+    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
   push:
-    branches: [main, fremontderby-jfl, fremontderby-dru, fremontderby-gamma]
+    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,10 +46,48 @@ jobs:
           path: test-output.txt
           retention-days: 1
       - run: npm run build
+      - name: Enforce test-file floor
+        run: node scripts/count-tests.mjs
+
+  accessibility:
+    name: accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run rendered WCAG2AA gate
+        id: accessibility
+        shell: bash
+        run: |
+          set +e
+          npm run a11y 2>&1 | tee accessibility-output.txt
+          status=${PIPESTATUS[0]}
+          exit "$status"
+      - name: Upload failing accessibility output
+        if: failure() && steps.accessibility.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-output
+          path: accessibility-output.txt
+          retention-days: 1
+
+  test-season1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run test:season1
+      - run: npm run test:floor
 
   deploy-nonproduction:
+    # #872/#873: never on pull_request (fork or same-repo). Secrets only on trusted push refs.
     if: >-
       github.event_name == 'push' &&
+      github.event.pull_request == null &&
       (github.ref == 'refs/heads/fremontderby-jfl' ||
        github.ref == 'refs/heads/fremontderby-dru' ||
        github.ref == 'refs/heads/fremontderby-gamma')
@@ -71,7 +120,8 @@ jobs:
             "$GITHUB_SHA"
 
   production-smoke:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # #872/#873: production smoke only after push to main — never PR events.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pull_request == null
     needs: test
     runs-on: ubuntu-latest
     concurrency:

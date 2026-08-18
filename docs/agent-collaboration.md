@@ -253,3 +253,7 @@ When a cycle discovers a durable lesson:
 - keep transient priorities and one-off blockers in issues.
 
 Do not expand the external scheduler prompt with current roadmap detail. `docs/agent-bootstrap.md` should remain a tiny pointer into the repository-owned instruction system.
+
+## Parent epic status (#395)
+
+Foundation epics #1–#4 are historical. Current pilot readiness is **#247**. Convention and drift check: [parent-epic-status-convention.md](./parent-epic-status-convention.md).

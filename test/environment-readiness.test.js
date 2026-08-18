@@ -73,10 +73,10 @@ for (const environment of ['jfl', 'dru', 'gamma']) {
   });
 }
 
-test('gamma rejects a stray test auth bypass flag', () => {
+test('gamma allows test auth bypass like dru/jfl', () => {
   const readiness = environmentReadiness(laneEnv('gamma', { BETA_AUTH_BYPASS: '1' }));
-  assert.equal(readiness.ok, false);
-  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, false);
+  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, true);
+  assert.equal(readiness.checks.find((c) => c.name === 'testAuthBypassFlag')?.ok, true);
 });
 
 test('readiness never exposes secret values', () => {
@@ -88,4 +88,18 @@ test('readiness never exposes secret values', () => {
   });
   assert.equal(readiness.ok, false);
   assert.doesNotMatch(JSON.stringify(readiness), /server-only-secret/);
+});
+
+test('lane readiness reports private PostgREST profile name', () => {
+  const result = environmentReadiness({
+    ENVIRONMENT: 'dru',
+    SUPABASE_URL: 'https://oqkkvqkerusepyokzbmt.supabase.co',
+    SUPABASE_SCHEMA: 'dru',
+    SUPABASE_PUBLISHABLE_KEY: 'pub',
+    SUPABASE_SERVICE_ROLE_KEY: 'role',
+    BETA_AUTH_BYPASS: '1',
+    BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001',
+  });
+  assert.equal(result.expectedSupabaseSchema, 'dru');
+  assert.equal(result.expectedPrivateSupabaseSchema, 'dru_private');
 });

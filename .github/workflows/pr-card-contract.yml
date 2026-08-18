@@ -1,16 +1,24 @@
 name: PR card contract
 
+# #872 — automatic, fork-safe validation. Uses pull_request (not untrusted-base-ref PR event).
+# Permissions are read-only. No Cloudflare/Supabase/deploy secrets.
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
+  workflow_dispatch:
 
 permissions:
   contents: read
   issues: read
   pull-requests: read
 
+concurrency:
+  group: pr-card-contract-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    name: pr-card-contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

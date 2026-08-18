@@ -1,6 +1,10 @@
+import { createRequestNonce, htmlSecurityHeaders, apiSecurityHeaders } from './securityHeaders.js';
 import app from './index.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
+import { renderDesignSystemCatalogPage } from './designSystemCatalogPage.js';
 import { adminOperationsHttpHandlers } from './adminOperationsHttp.js';
 import { renderAdminOperationsPage } from './adminOperationsPage.js';
+import { renderAdminAuditPage } from './adminAuditPage.js';
 import { adminPlayersHttpHandlers } from './adminPlayersHttp.js';
 import { renderAdminPlayersPage } from './adminPlayersPage.js';
 import { renderAdminSeasonsPage } from './adminSeasonsPage.js';
@@ -12,6 +16,7 @@ import {
 import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { chatHttpHandlers } from './chatHttp.js';
 import { renderChatModerationPage } from './chatModerationPage.js';
+import { renderNotificationsPage } from './notificationsPage.js';
 import { renderChatPage } from './chatPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
@@ -19,18 +24,25 @@ import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 import { renderSchedulePage } from './schedulePage.js';
+import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderTradesPage } from './tradesPage.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
+import { readyCheckHttpHandlers } from './readyCheckHttp.js';
 import { renderScorePickerPage } from './scorePickerPage.js';
 import { teamMatchChoiceHttpHandlers } from './teamMatchChoiceHttp.js';
 import { teamMembershipRequestHttpHandlers } from './teamMembershipRequestHttp.js';
+import {
+  matchApiTeamsPath,
+  matchApiTeamMatchesPath,
+  matchApiSeasonMessagesPath,
+} from './pathMatch.js';
+import { normalizeApiPathname } from './pathAliases.js';
 
 function htmlResponse(html, pathname, status = 200) {
-  return new Response(decorateHtmlWithShell(html, pathname), {
+  const nonce = createRequestNonce();
+  return new Response(decorateHtmlWithShell(html, pathname, { nonce }), {
     status,
-    headers: {
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'no-store',
-    },
+    headers: htmlSecurityHeaders(nonce),
   });
 }
 
@@ -45,12 +57,14 @@ async function decorateAppResponse(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
+  const nonce = createRequestNonce();
   const headers = new Headers(response.headers);
-  headers.set('content-type', 'text/html; charset=utf-8');
-  headers.set('cache-control', 'no-store');
+  for (const [key, value] of Object.entries(htmlSecurityHeaders(nonce))) {
+    headers.set(key, value);
+  }
 
   return new Response(
-    decorateHtmlWithShell(await response.text(), pathname),
+    decorateHtmlWithShell(await response.text(), pathname, { nonce }),
     {
       status: response.status,
       statusText: response.statusText,
@@ -80,14 +94,13 @@ function isDelegatedNonPagePath(pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // #950 — collapse path aliases before matchers
+    url.pathname = normalizeApiPathname(url.pathname);
     const adminStartPlayoffsMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/start-playoffs$/,
     );
     const adminAdvanceChampionshipMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/advance-championship$/,
-    );
-    const postseasonLineupMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/postseason-lineup$/,
     );
     const adminDualScoreOverrideMatch = url.pathname.match(
       /^\/api\/admin\/player-matches\/([^/]+)\/finalize-override$/,
@@ -110,12 +123,9 @@ export default {
     const dualScoreFinalizeMatch = url.pathname.match(
       /^\/api\/player-matches\/([^/]+)\/finalize-reconciled$/,
     );
-    const teamChatMessagesMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/messages$/,
-    );
-    const teamChatReadMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/messages\/read$/,
-    );
+    const teamPath = matchApiTeamsPath(url.pathname);
+    const teamMatchPath = matchApiTeamMatchesPath(url.pathname);
+    const seasonMessagesPath = matchApiSeasonMessagesPath(url.pathname);
     const directMessagesMatch = url.pathname.match(
       /^\/api\/direct-conversations\/([^/]+)\/messages$/,
     );
@@ -125,26 +135,8 @@ export default {
     const playerBlockMatch = url.pathname.match(
       /^\/api\/players\/([^/]+)\/block$/,
     );
-    const leagueMessagesMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/messages$/,
-    );
-    const leagueReadMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/messages\/read$/,
-    );
     const moderateChatReportMatch = url.pathname.match(
       /^\/api\/admin\/chat-reports\/([^/]+)\/resolve$/,
-    );
-    const matchupMessagesMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/messages$/,
-    );
-    const matchupReadMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/messages\/read$/,
-    );
-    const teamChoiceMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/team-choice\/me$/,
-    );
-    const teamMembershipRequestMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/membership-request$/,
     );
     const membershipRequestResponseMatch = url.pathname.match(
       /^\/api\/team-membership-requests\/([^/]+)\/respond$/,
@@ -163,6 +155,21 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/rules') {
       return htmlResponse(stripLegacyPublicNav(renderRulesPage()), url.pathname);
+    }
+    if (request.method === 'GET' && url.pathname === '/design-system') {
+      return htmlResponse(renderDesignSystemCatalogPage(), url.pathname);
+    }
+
+
+    if (url.pathname === '/playoffs') {
+      return htmlResponse(renderPlayoffsPage(), url.pathname);
+    }
+    if (url.pathname === '/trades') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderTradesPage(), url.pathname);
+    }
+    if (url.pathname === '/players') {
+      return htmlResponse(renderPlayersDirectoryPage(), url.pathname);
     }
 
     if (url.pathname === '/schedule') {
@@ -185,6 +192,9 @@ export default {
       return htmlResponse(renderCaptainSandboxPage(), url.pathname);
     }
 
+    if (url.pathname === '/notifications') {
+      return htmlResponse(renderNotificationsPage());
+    }
     if (url.pathname === '/messages') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatPage(env), url.pathname);
@@ -195,6 +205,9 @@ export default {
       return htmlResponse(renderChatModerationPage(env), url.pathname);
     }
 
+    if (url.pathname === '/admin/audit') {
+      return htmlResponse(renderAdminAuditPage(), url.pathname);
+    }
     if (url.pathname === '/admin/operations') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderAdminOperationsPage(env), url.pathname);
@@ -224,9 +237,46 @@ export default {
       return decorateAppResponse(response, '/scorecard');
     }
 
-    if (url.pathname === '/api/me/scorable-matches') {
+    if (url.pathname === '/api/me/scorable-matches' || url.pathname === '/api/me/matches') {
       if (request.method !== 'GET') return methodNotAllowed();
       return scorableMatchesHttpHandlers.list(request, env);
+    }
+
+    if (
+      url.pathname === '/api/me/ready-checks'
+      || url.pathname === '/api/me/ready-check'
+      || url.pathname === '/api/ready-checks/pending'
+    ) {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return readyCheckHttpHandlers.listPending(request, env);
+    }
+
+    if (
+      (url.pathname === '/api/teams/ready-checks' || url.pathname === '/api/ready-checks')
+      && request.method === 'POST'
+    ) {
+      return readyCheckHttpHandlers.start(request, env);
+    }
+
+    const teamReadyCheckStartMatch = url.pathname.match(
+      /^\/api\/teams\/([^/]+)\/ready-checks?$/,
+    );
+    if (teamReadyCheckStartMatch && request.method === 'POST') {
+      return readyCheckHttpHandlers.startForTeam(
+        request,
+        env,
+        decodeURIComponent(teamReadyCheckStartMatch[1]),
+      );
+    }
+
+    const readyCheckRespondMatch = url.pathname.match(/^\/api\/ready-checks\/([^/]+)\/respond$/);
+    if (readyCheckRespondMatch) {
+      if (request.method !== 'POST') return methodNotAllowed();
+      return readyCheckHttpHandlers.respond(
+        request,
+        env,
+        decodeURIComponent(readyCheckRespondMatch[1]),
+      );
     }
 
     if (url.pathname === '/api/me/team-match-choices') {
@@ -234,26 +284,26 @@ export default {
       return teamMatchChoiceHttpHandlers.list(request, env);
     }
 
-    if (teamChoiceMatch) {
+    if (teamMatchPath?.kind === 'team-choice') {
       if (request.method !== 'PUT') return methodNotAllowed();
       return teamMatchChoiceHttpHandlers.choose(
         request,
         env,
-        decodeURIComponent(teamChoiceMatch[1]),
+        teamMatchPath.teamMatchId,
       );
     }
 
-    if (url.pathname === '/api/me/team-membership-requests') {
+    if (url.pathname === '/api/me/team-membership-requests' || url.pathname === '/api/me/membership-requests') {
       if (request.method !== 'GET') return methodNotAllowed();
       return teamMembershipRequestHttpHandlers.list(request, env);
     }
 
-    if (teamMembershipRequestMatch) {
+    if (teamPath?.kind === 'membership-request') {
       if (request.method !== 'POST') return methodNotAllowed();
       return teamMembershipRequestHttpHandlers.requestJoin(
         request,
         env,
-        decodeURIComponent(teamMembershipRequestMatch[1]),
+        teamPath.teamId,
       );
     }
 
@@ -295,15 +345,15 @@ export default {
       return chatHttpHandlers.listMatchupThreads(request, env);
     }
 
-    if (matchupReadMatch) {
+    if (teamMatchPath?.kind === 'messages-read') {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.markMatchupChatRead(
-        request, env, decodeURIComponent(matchupReadMatch[1]),
+        request, env, teamMatchPath.teamMatchId,
       );
     }
 
-    if (matchupMessagesMatch) {
-      const teamMatchId = decodeURIComponent(matchupMessagesMatch[1]);
+    if (teamMatchPath?.kind === 'messages') {
+      const teamMatchId = teamMatchPath.teamMatchId;
       if (request.method === 'GET') {
         return chatHttpHandlers.listMatchupMessages(request, env, teamMatchId);
       }
@@ -349,15 +399,15 @@ export default {
       );
     }
 
-    if (leagueReadMatch) {
+    if (seasonMessagesPath?.kind === 'messages-read') {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.markLeagueChatRead(
-        request, env, decodeURIComponent(leagueReadMatch[1]),
+        request, env, seasonMessagesPath.seasonId,
       );
     }
 
-    if (leagueMessagesMatch) {
-      const seasonId = decodeURIComponent(leagueMessagesMatch[1]);
+    if (seasonMessagesPath?.kind === 'messages') {
+      const seasonId = seasonMessagesPath.seasonId;
       if (request.method === 'GET') {
         return chatHttpHandlers.listLeagueMessages(request, env, seasonId);
       }
@@ -367,7 +417,12 @@ export default {
       return methodNotAllowed();
     }
 
-    if (url.pathname === '/api/me/direct-message-inbox') {
+    if (
+      url.pathname === '/api/me/direct-message-inbox'
+      || url.pathname === '/api/me/direct-conversations'
+      || url.pathname === '/api/me/direct-messages'
+      || url.pathname === '/api/me/dms'
+    ) {
       if (request.method !== 'GET') return methodNotAllowed();
       return chatHttpHandlers.listDirectInbox(request, env);
     }
@@ -418,22 +473,21 @@ export default {
       return methodNotAllowed();
     }
 
-    if (teamChatReadMatch) {
+    if (teamPath?.kind === 'messages-read') {
       if (request.method !== 'POST') return methodNotAllowed();
       return chatHttpHandlers.markTeamChatRead(
         request,
         env,
-        decodeURIComponent(teamChatReadMatch[1]),
+        teamPath.teamId,
       );
     }
 
-    if (teamChatMessagesMatch) {
-      const teamId = decodeURIComponent(teamChatMessagesMatch[1]);
+    if (teamPath?.kind === 'messages') {
       if (request.method === 'GET') {
-        return chatHttpHandlers.listTeamMessages(request, env, teamId);
+        return chatHttpHandlers.listTeamMessages(request, env, teamPath.teamId);
       }
       if (request.method === 'POST') {
-        return chatHttpHandlers.sendTeamMessage(request, env, teamId);
+        return chatHttpHandlers.sendTeamMessage(request, env, teamPath.teamId);
       }
       return methodNotAllowed();
     }
@@ -456,12 +510,12 @@ export default {
       );
     }
 
-    if (postseasonLineupMatch) {
+    if (teamMatchPath?.kind === 'postseason-lineup') {
       if (request.method !== 'POST') return methodNotAllowed();
       return playoffHttpHandlers.submitLineup(
         request,
         env,
-        decodeURIComponent(postseasonLineupMatch[1]),
+        teamMatchPath.teamMatchId,
       );
     }
 

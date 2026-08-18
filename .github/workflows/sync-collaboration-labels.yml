@@ -1,17 +1,16 @@
 name: Sync collaboration labels
 
+# POC mode (#679): manual only while GitHub-hosted runners are unavailable.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - .github/collaboration-labels.json
-      - .github/workflows/sync-collaboration-labels.yml
-      - scripts/collaboration-labels.mjs
 
 permissions:
   contents: read
   issues: write
+
+concurrency:
+  group: sync-collaboration-labels
+  cancel-in-progress: true
 
 jobs:
   sync:

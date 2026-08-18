@@ -1,4 +1,5 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -8,7 +9,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return value.replace(/\/+$/, '');
+  return stripTrailingSlashes(value);
 }
 
 function jsonHeaders(serviceRoleKey) {
@@ -66,13 +67,28 @@ export function createPlayerProfileRepository(env, { fetch: fetchImpl = globalTh
       return Array.isArray(result) ? (result[0] ?? null) : result;
     },
 
-    async saveProfile({ actorUserId, displayName }) {
+    async saveProfile({ actorUserId, displayName, fargoExternalId }) {
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/upsert_player_profile`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           actor_user_id: actorUserId,
           profile_display_name: displayName,
+          profile_fargo_external_id: fargoExternalId ?? null,
+        }),
+      });
+
+      return Array.isArray(result) ? result[0] : result;
+    },
+
+    async saveStandingAvailability({ actorUserId, standingStatus, standingNote }) {
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/set_own_standing_availability`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          actor_user_id: actorUserId,
+          standing_status: standingStatus,
+          standing_note: standingNote,
         }),
       });
 

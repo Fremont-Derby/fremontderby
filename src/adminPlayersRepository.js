@@ -1,4 +1,5 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);
@@ -6,7 +7,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return value.replace(/\/+$/, '');
+  return stripTrailingSlashes(value);
 }
 
 async function parseResponse(response) {
@@ -168,6 +169,37 @@ export function createAdminPlayersRepository(
         role: row?.role ?? 'player',
         endsAt: row?.ends_at ?? null,
       };
+    },
+
+    /** #92 Record immutable rating observation (admin provisional / official / estimate). */
+    async recomputeDerbyEstimate({ actorUserId, playerId }) {
+      const rows = await rpc('recompute_derby_estimate_for_player', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+      });
+      return Array.isArray(rows) ? rows[0] : rows;
+    },
+
+    async recordRatingObservation({
+      actorUserId,
+      playerId,
+      sourceKind = 'admin_provisional',
+      ratingValue,
+      robustness = null,
+      confidence = null,
+      note = null,
+    }) {
+      const rows = await rpc('record_rating_observation', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+        observation_source_kind: sourceKind,
+        observation_rating_value: Number(ratingValue),
+        observation_robustness: robustness,
+        observation_games_count: null,
+        observation_confidence: confidence,
+        observation_provenance: note ? { note: String(note) } : {},
+      });
+      return Array.isArray(rows) ? rows[0] : rows;
     },
   };
 }
