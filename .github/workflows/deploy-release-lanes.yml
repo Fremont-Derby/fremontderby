@@ -14,11 +14,10 @@ on:
         type: choice
         options: [self-hosted, ubuntu-latest]
       lane:
-        description: 'Lane to deploy (prefer all-lanes so tips stay unified)'
+        description: 'Lane to deploy; source branch must match the lane'
         required: true
-        default: 'all-lanes'
         type: choice
-        options: [all-lanes, gamma, jfl, dru, production]
+        options: [jfl, dru, gamma, production]
       skip_tests:
         description: 'Skip unit tests (lint+check still run)'
         required: false
@@ -35,25 +34,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
-      - name: Trusted ref gate (#873)
-        shell: bash
-        run: |
-          ref="${GITHUB_REF_NAME}"
-          case "$ref" in
-            main|fremontderby-gamma|fremontderby-jfl|fremontderby-dru) echo "Trusted deploy ref: $ref" ;;
-            *)
-              echo "Ref '$ref' is not a trusted deploy source. Deploy only from main or lane integration branches."
-              exit 1
-              ;;
-          esac
-          if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
-            echo "Deploy release lanes only accepts workflow_dispatch (got ${GITHUB_EVENT_NAME})."
-            exit 1
-          fi
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Exact deploy source gate (#1193)
+        env:
+          DEPLOY_LANE: ${{ github.event.inputs.lane }}
+        run: |
+          node scripts/assert-deploy-source.mjs
+          if errorlevel 1 exit /b 1
       - name: Lint and syntax check
         run: |
           call npm run lint
@@ -76,12 +65,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ github.event.inputs.lane == 'all-lanes' && fromJson('["jfl","dru","gamma"]') || fromJson(format('["{0}"]', github.event.inputs.lane)) }}
+        lane: ${{ fromJson(format('["{0}"]', github.event.inputs.lane)) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Re-check exact deploy source before mutation
+        env:
+          DEPLOY_LANE: ${{ matrix.lane }}
+        run: |
+          node scripts/assert-deploy-source.mjs
+          if errorlevel 1 exit /b 1
       - name: Require Cloudflare secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -90,19 +85,8 @@ jobs:
           if "%CLOUDFLARE_API_TOKEN%"=="" (echo CLOUDFLARE_API_TOKEN missing & exit /b 1)
           if "%CLOUDFLARE_ACCOUNT_ID%"=="" (echo CLOUDFLARE_ACCOUNT_ID missing & exit /b 1)
           echo Cloudflare secrets present
-      - name: Deploy ${{ matrix.lane }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN: '1'
-          GITHUB_ACTIONS: 'true'
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          call npm run deploy:${{ matrix.lane }}
-          if errorlevel 1 exit /b 1
-      - name: Put lane service role secret after deploy
+      - name: Put lane service role secret before deploy
         if: matrix.lane == 'dru' || matrix.lane == 'jfl' || matrix.lane == 'gamma'
-        continue-on-error: true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -112,9 +96,8 @@ jobs:
           set SECRET_VALUE=%LANE_SUPABASE_SERVICE_ROLE_KEY%
           node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY ${{ matrix.lane }}
           if errorlevel 1 exit /b 1
-      - name: Put production service role secret after deploy
-        if: matrix.lane == 'production'
-        continue-on-error: true
+      - name: Put production service role secret before deploy
+        if: matrix.lane == 'production' && vars.FORCE_SECRET_PUT == '1'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -124,8 +107,16 @@ jobs:
           set SECRET_VALUE=%PRODUCTION_SUPABASE_SERVICE_ROLE_KEY%
           node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY
           if errorlevel 1 exit /b 1
+      - name: Deploy ${{ matrix.lane }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_ACTIONS: 'true'
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          call npm run deploy:${{ matrix.lane }}
+          if errorlevel 1 exit /b 1
       - name: Probe host identity
-        continue-on-error: true
         env:
           HOST: ${{ matrix.lane == 'production' && 'fremontderby.com' || format('{0}.fremontderby.com', matrix.lane) }}
           EXPECT: ${{ matrix.lane == 'production' && 'production' || matrix.lane }}
