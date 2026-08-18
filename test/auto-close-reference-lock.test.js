@@ -5,15 +5,12 @@ import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('../scripts/check-pr-card-contract.mjs', import.meta.url), 'utf8');
 
 test('pr-card-contract defines AUTO_CLOSE_REFERENCE', () => {
-  assert.match(source, /AUTO_CLOSE_REFERENCE\s*=/);
-  assert.match(source, /close\[sd\]\?/);
-  assert.match(source, /fix\(?:e\[sd\]\)\?/);
-  assert.match(source, /resolve\[sd\]\?/);
+  assert.ok(source.includes('AUTO_CLOSE_REFERENCE'));
+  assert.ok(source.includes('close[sd]?'));
+  assert.ok(source.includes('resolve[sd]?'));
+  assert.ok(source.includes('fix(?:e[sd])?'));
 });
 
 test('pr-card-contract keeps cards open through post-merge verification', () => {
-  assert.match(
-    source,
-    /keep the card open through post-merge verification/i,
-  );
+  assert.ok(source.includes('keep the card open through post-merge verification'));
 });
