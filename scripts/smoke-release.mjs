@@ -83,3 +83,126 @@ export function assertExpectedDeployment({ health, environment, expectedEnvironm
   }
   return { ready: true };
 }
+
+export async function checkReleaseOnce({
+  baseUrl,
+  expectedEnvironment,
+  expectedVersionTag,
+  bypassToken = '',
+  fetchImpl = globalThis.fetch,
+}) {
+  if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
+  if (!expectedEnvironment) throw new Error('expectedEnvironment is required');
+  if (!expectedVersionTag) throw new Error('expectedVersionTag is required');
+
+  const base = normalizeBaseUrl(baseUrl);
+  const [healthResponse, environmentResponse] = await Promise.all([
+    fetchImpl(`${base}/health`, { headers: requestHeaders('application/json', bypassToken) }),
+    fetchImpl(`${base}/health/environment`, {
+      headers: requestHeaders('application/json', bypassToken),
+    }),
+  ]);
+
+  const { body: health } = await readJson(healthResponse, '/health');
+  const { body: environment } = await readJson(environmentResponse, '/health/environment');
+  const readiness = assertExpectedDeployment({
+    health,
+    environment,
+    expectedEnvironment,
+    expectedVersionTag,
+  });
+  if (!readiness.ready) return readiness;
+
+  const homeResponse = await fetchImpl(`${base}/`, {
+    headers: requestHeaders('text/html', bypassToken),
+  });
+  const homeBody = await homeResponse.text();
+  if (!homeResponse.ok) {
+    throw new Error(`/ failed with HTTP ${homeResponse.status}`);
+  }
+  if (!/Fremont Derby/i.test(homeBody)) {
+    throw new Error('/ is serving an unexpected release surface');
+  }
+
+  const demoResponse = await fetchImpl(`${base}/demo`, {
+    headers: requestHeaders('text/html', bypassToken),
+  });
+  const demoBody = await demoResponse.text();
+  if (!demoResponse.ok) {
+    throw new Error(`/demo failed with HTTP ${demoResponse.status}`);
+  }
+  if (!/Try a League Night/i.test(demoBody)) {
+    throw new Error('/demo is serving an unexpected release surface');
+  }
+
+  return {
+    ready: true,
+    version: health.version,
+    versionTag: health.versionTag,
+    deployedAt: health.deployedAt,
+    environment: environment.environment,
+  };
+}
+
+export async function smokeRelease({
+  baseUrl,
+  expectedEnvironment,
+  expectedVersionTag,
+  bypassToken = '',
+  attempts = defaultAttempts,
+  delayMs = defaultDelayMs,
+  fetchImpl = globalThis.fetch,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  log = console.log,
+}) {
+  let lastReason = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const result = await checkReleaseOnce({
+        baseUrl,
+        expectedEnvironment,
+        expectedVersionTag,
+        bypassToken,
+        fetchImpl,
+      });
+      if (result.ready) return result;
+      lastReason = result.reason;
+    } catch (error) {
+      lastReason = error instanceof Error ? error.message : String(error);
+      if (isUnbypassedCloudflareChallenge(lastReason, bypassToken)) {
+        throw new Error(
+          'Cloudflare challenged the release smoke before the Worker and RELEASE_SMOKE_BYPASS_TOKEN is not configured. Configure the matching GitHub Actions secret and narrow Cloudflare x-fremont-release-smoke skip rule, then rerun.',
+        );
+      }
+      if (/environment mismatch|readiness failed|wrong service|unexpected release surface/i.test(lastReason)) {
+        throw error;
+      }
+    }
+
+    if (attempt < attempts) {
+      log(`Release smoke ${attempt}/${attempts}: ${lastReason}`);
+      await sleep(delayMs);
+    }
+  }
+
+  throw new Error(`Release did not become healthy: ${lastReason ?? 'unknown state'}`);
+}
+
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirectRun) {
+  const [baseUrl, expectedEnvironment, expectedVersionTag] = process.argv.slice(2);
+  smokeRelease({
+    baseUrl,
+    expectedEnvironment,
+    expectedVersionTag,
+    bypassToken: process.env.RELEASE_SMOKE_BYPASS_TOKEN || '',
+  })
+    .then((result) => {
+      console.log(`Release smoke passed: ${JSON.stringify(result)}`);
+    })
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : error);
+      process.exitCode = 1;
+    });
+}
