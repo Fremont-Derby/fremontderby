@@ -1,22 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-  "name": "fremontderby",
+  "name": "fremontderby-jfl",
   "main": "src/routerEntry.js",
   "compatibility_date": "2026-08-09",
-  "triggers": {
-    "crons": [
-      "0 * * * *"
-    ]
-  },
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
     {
-      "pattern": "fremontderby.com",
-      "custom_domain": true
-    },
-    {
-      "pattern": "www.fremontderby.com",
+      "pattern": "jfl.fremontderby.com",
       "custom_domain": true
     }
   ],
@@ -24,13 +15,19 @@
     "binding": "CF_VERSION_METADATA"
   },
   "vars": {
-    "ENVIRONMENT": "production",
-    "SUPABASE_URL": "https://cpiucsxlkicmlbvdvhww.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_7WQihuB4HVf-xFKMBeYIng_bUP--oUz",
-    "EXPECTED_SUPABASE_PROJECT_REF": "cpiucsxlkicmlbvdvhww"
+    "ENVIRONMENT": "jfl",
+    "BETA_AUTH_BYPASS": "1",
+    "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
+    "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
+    "SUPABASE_SCHEMA": "jfl"
   },
   "secrets": {
-    "required": ["SUPABASE_SERVICE_ROLE_KEY"]
+    "required": [
+      "SUPABASE_URL",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "EXPECTED_SUPABASE_PROJECT_REF"
+    ]
   },
   "env": {
     "staging": {
@@ -60,14 +57,15 @@
         "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
-        "SUPABASE_SCHEMA": "jfl",
-        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
-        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
+        "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
+        "SUPABASE_SCHEMA": "jfl"
       },
       "secrets": {
         "required": [
-          "SUPABASE_SERVICE_ROLE_KEY"
+          "SUPABASE_URL",
+          "SUPABASE_PUBLISHABLE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "EXPECTED_SUPABASE_PROJECT_REF"
         ]
       }
     },
@@ -88,14 +86,15 @@
         "ENVIRONMENT": "dru",
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "dru-actor@fremontderby.com",
-        "SUPABASE_SCHEMA": "dru",
-        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
-        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
+        "SUPABASE_SCHEMA": "dru"
       },
       "secrets": {
         "required": [
-          "SUPABASE_SERVICE_ROLE_KEY"
+          "SUPABASE_URL",
+          "SUPABASE_PUBLISHABLE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "EXPECTED_SUPABASE_PROJECT_REF",
+          "BETA_ACTOR_USER_ID"
         ]
       }
     },
@@ -114,16 +113,15 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
-        "BETA_AUTH_BYPASS": "1",
-        "BETA_ACTOR_EMAIL": "gamma-actor@fremontderby.com",
-        "SUPABASE_SCHEMA": "gamma",
-        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
-        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
+        "BETA_AUTH_BYPASS": "0",
+        "SUPABASE_SCHEMA": "gamma"
       },
       "secrets": {
         "required": [
-          "SUPABASE_SERVICE_ROLE_KEY"
+          "SUPABASE_URL",
+          "SUPABASE_PUBLISHABLE_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "EXPECTED_SUPABASE_PROJECT_REF"
         ]
       }
     }
