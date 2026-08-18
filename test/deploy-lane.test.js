@@ -14,6 +14,14 @@ for (const lane of ['jfl', 'dru', 'gamma']) {
   });
 }
 
+for (const lane of ['jfl', 'dru', 'gamma']) {
+  test(`${lane} Workers CI deploy maps WORKERS_CI_BRANCH to the lane environment`, () => {
+    const env = { WORKERS_CI: '1', WORKERS_CI_BRANCH: `fremontderby-${lane}` };
+    assert.deepEqual(assertLaneDeployContext(lane, env), laneDeployments[lane]);
+    assert.deepEqual(laneDeployArgs(lane, env), ['wrangler', 'deploy', '--env', lane]);
+  });
+}
+
 test('lane deploy refuses branch/environment mismatches', () => {
   assert.throws(
     () => assertLaneDeployContext('gamma', {
@@ -21,6 +29,23 @@ test('lane deploy refuses branch/environment mismatches', () => {
       GITHUB_REF_NAME: 'fremontderby-jfl',
     }),
     /Refusing gamma deploy from branch "fremontderby-jfl"; expected "fremontderby-gamma"/,
+  );
+});
+
+test('Workers CI refuses branch/environment mismatches', () => {
+  assert.throws(
+    () => assertLaneDeployContext('dru', {
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'fremontderby-jfl',
+    }),
+    /Refusing dru deploy from branch "fremontderby-jfl"; expected "fremontderby-dru"/,
+  );
+});
+
+test('Workers CI refuses missing WORKERS_CI_BRANCH', () => {
+  assert.throws(
+    () => assertLaneDeployContext('dru', { WORKERS_CI: '1' }),
+    /WORKERS_CI_BRANCH/,
   );
 });
 
