@@ -1,6 +1,11 @@
 import { fileURLToPath } from 'node:url';
 
-const JFL_DEPLOYMENT_BRANCH = 'fremontderby-jfl';
+export const CLOUDFLARE_BUILD_BRANCHES = Object.freeze([
+  'main',
+  'fremontderby-jfl',
+  'fremontderby-dru',
+  'fremontderby-gamma',
+]);
 
 function requireWorkersBuildValue(env, name) {
   const value = env[name]?.trim();
@@ -14,9 +19,10 @@ export function assertCloudflareBuildContext(env = process.env) {
   if (env.WORKERS_CI !== '1') return;
 
   const branch = requireWorkersBuildValue(env, 'WORKERS_CI_BRANCH');
-  if (branch !== JFL_DEPLOYMENT_BRANCH) {
+  if (!CLOUDFLARE_BUILD_BRANCHES.includes(branch)) {
     throw new Error(
-      `Refusing JFL Cloudflare build from branch "${branch}"; expected "${JFL_DEPLOYMENT_BRANCH}".`,
+      `Refusing Cloudflare build from unrecognized branch "${branch}". ` +
+      'Workers Builds are allowed only from main or a permanent release-lane branch.',
     );
   }
 }

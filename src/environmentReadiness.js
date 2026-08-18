@@ -44,6 +44,10 @@ function check(name, ok, details = {}) {
   return { name, ok: Boolean(ok), ...details };
 }
 
+function publicChecks(checks) {
+  return checks.map(({ name, ok }) => ({ name, ok }));
+}
+
 export function environmentReadiness(env = {}) {
   const environment = String(env.ENVIRONMENT || 'production').trim() || 'production';
   const supabaseUrl = normalizeSupabaseUrl(env.SUPABASE_URL);
@@ -95,8 +99,20 @@ export function environmentReadiness(env = {}) {
     );
   }
 
+  const ok = checks.every((item) => item.ok);
+  const isBoundWorkerRuntime = Boolean(env.CF_VERSION_METADATA);
+
+  if (isBoundWorkerRuntime) {
+    return {
+      ok,
+      environment,
+      expectedSupabaseSchema: expectedSchema,
+      checks: publicChecks(checks),
+    };
+  }
+
   return {
-    ok: checks.every((item) => item.ok),
+    ok,
     environment,
     expectedSupabaseProjectRef: expectedProjectRef,
     expectedSupabaseSchema: expectedSchema,
