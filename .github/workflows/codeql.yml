@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      # Query suite comes from .github/codeql/codeql-config.yml (valid JS security suite).
+      # Query suite from .github/codeql/codeql-config.yml (security-extended).
       # Pure JS Worker: no autobuild needed.
       - uses: github/codeql-action/init@v3
         with:
