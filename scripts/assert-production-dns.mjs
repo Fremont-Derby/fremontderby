@@ -3,13 +3,17 @@
  * Fail closed if production hostnames do not resolve or /health is down.
  * Uses DNS-over-HTTPS (no local dig required) — post-incident guard after
  * missing Workers custom-domain binding left apex with no A/AAAA.
+ *
+ * Host list is derived from HOST_ENVIRONMENT_EXPECTATIONS so it cannot drift.
  */
 import { fileURLToPath } from 'node:url';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
 
-export const PRODUCTION_DNS_HOSTS = Object.freeze([
-  'fremontderby.com',
-  'www.fremontderby.com',
-]);
+export const PRODUCTION_DNS_HOSTS = Object.freeze(
+  Object.entries(HOST_ENVIRONMENT_EXPECTATIONS)
+    .filter(([, env]) => env === 'production')
+    .map(([host]) => host),
+);
 
 const DOH = 'https://cloudflare-dns.com/dns-query';
 
@@ -125,7 +129,7 @@ if (isDirect) {
   console.log(JSON.stringify(summary, null, 2));
   if (!summary.ok) {
     console.error(
-      'Production DNS/health guard failed. Check Workers custom domain binding for fremontderby.com → fremontderby-prod (workflow: Restore lane custom domains). Negative DNS cache may still affect clients for ~30m after repair.',
+      'Production DNS/health guard failed. Check Workers custom domain binding for production hosts → fremontderby (workflow: Restore lane custom domains). Negative DNS cache may still affect clients for ~30m after repair.',
     );
     process.exit(1);
   }
