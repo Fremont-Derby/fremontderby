@@ -1,10 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  PRODUCTION_DNS_HOSTS,
   resolveViaDoh,
   assertHostnameResolves,
   assertProductionDnsAndHealth,
 } from '../scripts/assert-production-dns.mjs';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
+
+test('PRODUCTION_DNS_HOSTS matches hostEnvironment production hosts', () => {
+  const expected = Object.entries(HOST_ENVIRONMENT_EXPECTATIONS)
+    .filter(([, env]) => env === 'production')
+    .map(([host]) => host)
+    .sort();
+  assert.deepEqual([...PRODUCTION_DNS_HOSTS].sort(), expected);
+});
 
 test('resolveViaDoh maps Answer data', async () => {
   const fetchImpl = async () => ({
