@@ -51,6 +51,21 @@ test('dru and gamma allowlists are namespaced', () => {
   assert.equal(resolveBuildLane({ FREMONT_BUILD_LANE: 'DRU' }), 'dru');
 });
 
+test('unknown FREMONT_BUILD_LANE is refused', () => {
+  assert.throws(
+    () => resolveBuildLane({ FREMONT_BUILD_LANE: 'staging' }),
+    /unknown FREMONT_BUILD_LANE "staging"/,
+  );
+  assert.throws(
+    () => assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'main',
+      FREMONT_BUILD_LANE: 'beta',
+    }),
+    /unknown FREMONT_BUILD_LANE "beta"/,
+  );
+});
+
 test('Cloudflare Workers Builds fail closed when branch metadata is absent', () => {
   assert.throws(
     () => assertCloudflareBuildContext({
@@ -76,6 +91,21 @@ test('refuses pull-request style branches for every lane', () => {
       FREMONT_BUILD_LANE: 'jfl',
     }),
     /Refusing Cloudflare jfl build/,
+  );
+});
+
+test('refuses dependabot and renovate branches for every lane', () => {
+  for (const lane of ['production', 'jfl', 'dru', 'gamma']) {
+    assert.equal(branchAllowedForLane('dependabot/npm_and_yarn/foo', lane), false);
+    assert.equal(branchAllowedForLane('renovate/major-foo', lane), false);
+  }
+  assert.throws(
+    () => assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'dependabot/npm_and_yarn/lodash-1.0.0',
+      FREMONT_BUILD_LANE: 'production',
+    }),
+    /Refusing Cloudflare production build/,
   );
 });
 
