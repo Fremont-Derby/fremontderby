@@ -66,6 +66,10 @@ function allowedServicesFor(lane) {
   return [lane.service];
 }
 
+export function isAllowedApexService(service) {
+  return ['fremontderby', 'fremontderby-prod'].includes(String(service || ''));
+}
+
 async function main() {
   console.log('Listing existing worker domains…');
   let existing = [];
@@ -106,7 +110,7 @@ async function main() {
 
   const after = await listWorkerDomains().catch(() => []);
   const apex = after.find((row) => row.hostname === 'fremontderby.com');
-  if (apex && apex.service !== 'fremontderby-prod') {
+  if (apex && !isAllowedApexService(apex.service)) {
     console.error(`CRITICAL: fremontderby.com still bound to ${apex.service}`);
     process.exitCode = 1;
   }
