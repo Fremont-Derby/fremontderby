@@ -30,6 +30,7 @@ jobs:
       - run: npm run lint
       - run: npm run check
       - run: npm run labels:check
+      - run: npm run validate:deployment-matrix
       - name: Run tests
         id: tests
         shell: bash
