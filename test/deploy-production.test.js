@@ -23,7 +23,16 @@ test('Workers Builds production deploy tags the Worker version with the exact Gi
       WORKERS_CI_BRANCH: 'main',
       WORKERS_CI_COMMIT_SHA: commitSha,
     }),
-    ['wrangler', 'deploy', '--tag', commitSha, '--message', `git:${commitSha}`],
+    [
+      'wrangler',
+      'deploy',
+      '--tag',
+      commitSha,
+      '--message',
+      `git:${commitSha}`,
+      '--var',
+      `DEPLOY_GIT_SHA:${commitSha}`,
+    ],
   );
 });
 
@@ -60,9 +69,9 @@ test('Workers Builds production deploy fails closed when commit metadata is miss
     () => assertProductionDeployContext({
       WORKERS_CI: '1',
       WORKERS_CI_BRANCH: 'main',
-      WORKERS_CI_COMMIT_SHA: 'short-sha',
+      WORKERS_CI_COMMIT_SHA: 'not-a-sha',
     }),
-    /not a full Git SHA/,
+    /WORKERS_CI_COMMIT_SHA/,
   );
 });
 
