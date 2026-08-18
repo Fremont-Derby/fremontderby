@@ -109,30 +109,45 @@ export async function probeHtml(base, path, fetchImpl = fetch) {
 
 export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetch } = {}) {
   const failures = [];
+  const results = [];
+
   for (const host of hosts) {
     for (const path of PUBLIC_JSON_PATHS) {
       const result = await probeJson(host.base, path, host.expectEnv, fetchImpl);
-      if (!result.ok) failures.push({ host: host.name, ...result });
+      results.push({ host: host.name, path, ...result });
+      if (!result.ok) failures.push({ host: host.name, path, ...result });
     }
     for (const path of PUBLIC_HTML_PATHS) {
       const result = await probeHtml(host.base, path, fetchImpl);
-      if (!result.ok) failures.push({ host: host.name, ...result });
+      results.push({ host: host.name, path, ...result });
+      if (!result.ok) failures.push({ host: host.name, path, ...result });
     }
   }
+
   return {
     ok: failures.length === 0,
     failures,
+    results,
     hosts: hosts.map((h) => h.name),
   };
 }
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirect) {
-  const result = await assertPublicSurface();
-  if (!result.ok) {
-    console.error(JSON.stringify(result.failures, null, 2));
+  try {
+    const result = await assertPublicSurface();
+    for (const row of result.results || []) {
+      const mark = row.ok ? 'OK' : 'FAIL';
+      console.log(`${mark} ${row.host} ${row.path} ${row.status ?? ''} ${row.error || ''}`.trim());
+    }
+    if (!result.ok) {
+      console.error(JSON.stringify(result.failures, null, 2));
+      process.exitCode = 1;
+    } else {
+      console.log('public surface OK', result.hosts.join(', '));
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
-  } else {
-    console.log('public surface OK', result.hosts.join(', '));
   }
 }
