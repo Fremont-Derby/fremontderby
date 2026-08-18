@@ -30,8 +30,10 @@ test('api security headers are strict about caching and framing', () => {
 
 test('beta bypass refuses non-test environments', () => {
   assert.throws(() => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'production' }));
-  assert.throws(() => betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'gamma' }));
+  assert.throws(() => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'gamma' }));
+  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'gamma' }), false);
   assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'jfl' }), true);
+  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'dru' }), true);
   assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '0', ENVIRONMENT: 'production' }), false);
 });
 

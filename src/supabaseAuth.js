@@ -31,7 +31,8 @@ async function parseJson(response) {
   return JSON.parse(text);
 }
 
-const testAuthEnvironments = new Set(['jfl', 'dru', 'gamma']);
+/** Open-auth test lanes only. Gamma is production-like and must not bypass. */
+const testAuthEnvironments = new Set(['jfl', 'dru']);
 
 /** Known staging auth.users ids for isolated lane open-auth (see docs/dru-jfl-noauth-operator.md). */
 export const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
@@ -43,16 +44,11 @@ export const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
     id: 'b22805b6-92ba-44bd-a92e-0c82f0be6613',
     email: 'jfl-actor@fremontderby.com',
   },
-  // Shares staging actor until a dedicated gamma auth.users row exists.
-  gamma: {
-    id: '05d025ff-1c97-4070-a691-46a896fb9b83',
-    email: 'gamma-actor@fremontderby.com',
-  },
 });
 
 /**
- * Open-auth is allowed on isolated test lanes (jfl/dru/gamma).
- * Production always uses normal authentication.
+ * Open-auth is allowed only on isolated test lanes (jfl/dru).
+ * Gamma is production-like; production always uses normal authentication.
  *
  * For jfl/dru, bypass defaults ON unless explicitly disabled (BETA_AUTH_BYPASS=0).
  * That matches wrangler.jsonc and keeps automation working when dashboard vars lag.
@@ -78,57 +74,6 @@ export function resolveBetaBypassActor(env = {}) {
   }
   return {
     id,
-    email:
-      String(env.BETA_ACTOR_EMAIL || defaults?.email || 'test-actor@localhost').trim() ||
-      'test-actor@localhost',
-    betaBypass: true,
-  };
-}
-
-export async function authenticateSupabaseUser(
-  request,
-  env,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  if (typeof fetchImpl !== 'function') {
-    throw new Error('fetch implementation is required');
-  }
-
-  const token = bearerToken(request);
-
-  // Test-lane bypass is only for deliberately unauthenticated automation.
-  // Once a caller supplies a bearer token, validate it normally rather than
-  // escalating to the shared test actor.
-  if (!token && betaAuthBypassEnabled(env)) {
-    return resolveBetaBypassActor(env);
-  }
-
-  if (!token) {
-    throw new AuthError('Missing bearer token');
-  }
-
-  const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
-  const publishableKey = requireEnvValue(env, 'SUPABASE_PUBLISHABLE_KEY');
-  const response = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {
-    method: 'GET',
-    headers: {
-      apikey: publishableKey,
-      authorization: `Bearer ${token}`,
-      accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new AuthError('Invalid bearer token');
-  }
-
-  const user = await parseJson(response);
-  if (!user?.id) {
-    throw new AuthError('Authenticated user is missing an id');
-  }
-
-  return {
-    id: user.id,
-    email: user.email ?? null,
+    email: String(env.BETA_ACTOR_EMAIL || defaults?.email || `${environment}-actor@fremontderby.com`).trim(),
   };
 }
