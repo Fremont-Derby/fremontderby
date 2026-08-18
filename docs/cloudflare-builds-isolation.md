@@ -15,11 +15,17 @@ Do this for **each** Workers Builds project: production, JFL, DRU, Gamma.
    - Gamma project: only **`fremontderby-gamma`** and **`gamma/*`**.
 4. Set environment variable **`FREMONT_BUILD_LANE`** to `production` | `jfl` | `dru` | `gamma` to match the project.
 5. **Build command** (required for tagging + lane routing):
-   - Permanent-lane and production projects **must** use the repo entrypoint so `deploy-lane.mjs` / `deploy-cloudflare.mjs` can stamp `versionTag` and select the correct `--env`:
-     ```
-     npm ci && npm run prebuild && npm run deploy
-     ```
-   - Do **not** use plain `npx wrangler deploy`. That path skips `WORKERS_CI_COMMIT_SHA` tagging (#1222) and can ignore lane-safe root profiles.
+
+   | Project | Required build command |
+   |---------|------------------------|
+   | Production | `npm ci && npm run prebuild && npm run deploy:production` |
+   | JFL | `npm ci && npm run prebuild && npm run deploy:jfl` |
+   | DRU | `npm ci && npm run prebuild && npm run deploy:dru` |
+   | Gamma | `npm ci && npm run prebuild && npm run deploy:gamma` |
+
+   - These entrypoints go through `scripts/deploy-lane.mjs` (or production deploy) so `versionTag` can be stamped from `GITHUB_SHA` / `WORKERS_CI_COMMIT_SHA`.
+   - Do **not** use plain `npx wrangler deploy`. That path skips tagging (#1222) and can ignore lane-safe root profiles.
+   - Do **not** use generic `npm run deploy` on lane projects: on `main` that script is production-only.
 6. Save.
 7. **Proof**
    - Open a no-op PR from a `jfl/…` branch.
@@ -36,8 +42,8 @@ Do this for **each** Workers Builds project: production, JFL, DRU, Gamma.
 | Lane namespaces `jfl/*`, `dru/*`, `gamma/*` | same |
 | Refuse `pull/N/head` and PR events | same |
 | Deploy Actions = `workflow_dispatch` only | `.github/workflows/deploy-release-lanes.yml` |
-| SHA tagging from `GITHUB_SHA` or `WORKERS_CI_COMMIT_SHA` | `scripts/deploy-lane.mjs` |
-| Tests for the above | `test/cloudflare-build-guard.test.js`, `test/deploy-workflows-ci-only.test.js`, `test/deploy-lane.test.js` |
+| SHA tagging from `GITHUB_SHA` or `WORKERS_CI_COMMIT_SHA` | `scripts/deploy-lane.mjs` (after #1227) |
+| Tests for the above | `test/cloudflare-build-guard.test.js`, `test/deploy-lane.test.js` |
 
 ## Shared-infra note
 
