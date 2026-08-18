@@ -3,7 +3,7 @@
  * Static deployment-matrix guardrail (#1194).
  * Parses wrangler.jsonc and fails if any lane drifts from
  * config/deployment-matrix.json (project ref, schema, routes,
- * workers_dev, preview_urls, environment name).
+ * workers_dev, preview_urls, environment name, auth bypass policy).
  *
  * No network, no secrets. Safe for every PR.
  */
@@ -59,6 +59,11 @@ function loadJsonc(path) {
   return JSON.parse(out);
 }
 
+function isBypassEnabled(raw) {
+  const v = String(raw ?? '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'on';
+}
+
 export function validateDeploymentMatrix({
   wranglerPath = resolve(root, 'wrangler.jsonc'),
   matrixPath = resolve(root, 'config/deployment-matrix.json'),
@@ -94,14 +99,14 @@ export function validateDeploymentMatrix({
   if (w.preview_urls !== false) {
     errors.push(`production preview_urls must be false (got ${w.preview_urls})`);
   }
+  if (prodLane.authBypassAllowed === false && isBypassEnabled(w.vars?.BETA_AUTH_BYPASS)) {
+    errors.push('production must not enable BETA_AUTH_BYPASS');
+  }
   const rootRoutes = (w.routes || []).map((r) => r.pattern);
   for (const d of [prodLane.domain, ...(prodLane.extraDomains || [])]) {
     if (!rootRoutes.includes(d)) {
       errors.push(`production missing route for ${d}`);
     }
-  }
-  if (nonProdRefs.has(w.vars?.EXPECTED_SUPABASE_PROJECT_REF) && w.vars?.ENVIRONMENT === 'production') {
-    // already covered by exact ref check; keep explicit for clarity
   }
   if (w.vars?.EXPECTED_SUPABASE_PROJECT_REF && nonProdRefs.has(w.vars.EXPECTED_SUPABASE_PROJECT_REF) && prodLane.supabaseProjectRef !== w.vars.EXPECTED_SUPABASE_PROJECT_REF) {
     errors.push(`production must not use a non-prod Supabase project ref`);
@@ -142,6 +147,10 @@ export function validateDeploymentMatrix({
     // Non-prod must never point at production project
     if (env.vars?.EXPECTED_SUPABASE_PROJECT_REF === prodLane.supabaseProjectRef) {
       errors.push(`${laneKey} must not use the production Supabase project ref "${prodLane.supabaseProjectRef}"`);
+    }
+    // Auth bypass policy (gamma/production forbidden; jfl/dru allowed)
+    if (lane.authBypassAllowed === false && isBypassEnabled(env.vars?.BETA_AUTH_BYPASS)) {
+      errors.push(`${laneKey} must not enable BETA_AUTH_BYPASS (auth bypass forbidden on this lane)`);
     }
   }
 

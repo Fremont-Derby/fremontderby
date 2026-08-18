@@ -11,6 +11,7 @@
       "schema": null,
       "workersDev": false,
       "previewUrls": false,
+      "authBypassAllowed": false,
       "wranglerEnvKey": null
     },
     "gamma": {
@@ -22,6 +23,7 @@
       "schema": "gamma",
       "workersDev": false,
       "previewUrls": false,
+      "authBypassAllowed": false,
       "wranglerEnvKey": "gamma"
     },
     "jfl": {
@@ -33,6 +35,7 @@
       "schema": "jfl",
       "workersDev": false,
       "previewUrls": false,
+      "authBypassAllowed": true,
       "wranglerEnvKey": "jfl"
     },
     "dru": {
@@ -44,6 +47,7 @@
       "schema": "dru",
       "workersDev": false,
       "previewUrls": false,
+      "authBypassAllowed": true,
       "wranglerEnvKey": "dru"
     }
   },
@@ -51,6 +55,7 @@
     "nonProdMustNotUseProductionProject": true,
     "productionMustNotUseNonProdProject": true,
     "workersDevAlwaysFalse": true,
-    "previewUrlsAlwaysFalse": true
+    "previewUrlsAlwaysFalse": true,
+    "authBypassOnlyOnTestLanes": true
   }
 }
