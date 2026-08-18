@@ -1,5 +1,12 @@
 import { fileURLToPath } from 'node:url';
 
+export const CLOUDFLARE_BUILD_BRANCHES = Object.freeze([
+  'main',
+  'fremontderby-jfl',
+  'fremontderby-dru',
+  'fremontderby-gamma',
+]);
+
 function requireWorkersBuildValue(env, name) {
   const value = env[name]?.trim();
   if (!value) {
@@ -12,16 +19,16 @@ export function assertCloudflareBuildContext(env = process.env) {
   if (env.WORKERS_CI !== '1') return;
 
   const branch = requireWorkersBuildValue(env, 'WORKERS_CI_BRANCH');
-  if (branch !== 'main') {
+  if (!CLOUDFLARE_BUILD_BRANCHES.includes(branch)) {
     throw new Error(
-      `Refusing Cloudflare build from non-main branch "${branch}". ` +
-      'Non-main Workers Builds are temporarily disabled until Cloudflare Branch control routes them to preview-only deployment.',
+      `Refusing Cloudflare build from unrecognized branch "${branch}". ` +
+      'Workers Builds are allowed only from main or a permanent release-lane branch.',
     );
   }
 }
 
-const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (isDirectRun) {
+const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
   try {
     assertCloudflareBuildContext();
   } catch (error) {

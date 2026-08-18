@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   validate:
+    name: PR card contract / validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
