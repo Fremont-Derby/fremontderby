@@ -239,7 +239,7 @@ if (url.pathname === '/api/admin/players' && request.method === 'POST') return f
     const playerContactResponse = await routePlayerContact(request, env);
     if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(await playerSeasonRegistrationResponse, url.pathname);
+    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
     if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
     const seasonCloseResponse = await routeSeasonClose(request, env);
