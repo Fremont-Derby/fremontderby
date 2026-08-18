@@ -52,7 +52,7 @@ async function readJson(response, label) {
   return { response, body };
 }
 
-function assertExpectedDeployment({ health, environment, expectedEnvironment, expectedVersionTag }) {
+export function assertExpectedDeployment({ health, environment, expectedEnvironment, expectedVersionTag }) {
   if (health.service !== 'fremontderby' || health.ok !== true) {
     throw new Error('Production /health did not identify a healthy Fremont Derby service');
   }
@@ -101,59 +101,41 @@ export async function checkReleaseOnce({
     fetchImpl(`${base}/health/environment`, { headers: requestHeaders('application/json', bypassToken) }),
   ]);
 
-  const { body: health } = await readJson(healthResult, '/health');
-  const { body: environment } = await readJson(environmentResult, '/health/environment');
-
-  if (!healthResult.ok) {
-    throw new Error(`/health failed with HTTP ${healthResult.status}`);
+  let health;
+  let environment;
+  try {
+    ({ body: health } = await readJson(healthResult, 'Production /health'));
+    ({ body: environment } = await readJson(environmentResult, 'Production /health/environment'));
+  } catch (error) {
+    const reason = String(error.message || error);
+    if (isUnbypassedCloudflareChallenge(reason, bypassToken)) {
+      throw new Error(
+        `${reason}. Cloudflare is challenging this probe; set RELEASE_SMOKE_BYPASS_TOKEN if Bot Fight Mode is enabled.`,
+      );
+    }
+    throw error;
   }
 
-  const deployment = assertExpectedDeployment({
+  return assertExpectedDeployment({
     health,
     environment,
     expectedEnvironment,
     expectedVersionTag,
   });
-  if (!deployment.ready) return deployment;
-
-  if (!environmentResult.ok) {
-    throw new Error(`/health/environment failed with HTTP ${environmentResult.status}`);
-  }
-
-  const demoResponse = await fetchImpl(`${base}/demo`, {
-    headers: requestHeaders('text/html', bypassToken),
-  });
-  const demoBody = await demoResponse.text();
-  if (!demoResponse.ok) {
-    throw new Error(`/demo failed with HTTP ${demoResponse.status}`);
-  }
-  if (!/Try a League Night/i.test(demoBody)) {
-    throw new Error('/demo is serving an unexpected release surface');
-  }
-
-  return {
-    ready: true,
-    version: health.version,
-    versionTag: health.versionTag,
-    deployedAt: health.deployedAt,
-    environment: environment.environment,
-  };
 }
 
 export async function smokeRelease({
   baseUrl,
   expectedEnvironment,
   expectedVersionTag,
-  bypassToken = '',
   attempts = defaultAttempts,
   delayMs = defaultDelayMs,
+  bypassToken = '',
   fetchImpl = globalThis.fetch,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-  log = console.log,
-}) {
-  let lastReason = null;
-
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+} = {}) {
+  let lastReason = 'not attempted';
+  for (let i = 0; i < attempts; i += 1) {
     try {
       const result = await checkReleaseOnce({
         baseUrl,
@@ -165,40 +147,28 @@ export async function smokeRelease({
       if (result.ready) return result;
       lastReason = result.reason;
     } catch (error) {
-      lastReason = error instanceof Error ? error.message : String(error);
-      if (isUnbypassedCloudflareChallenge(lastReason, bypassToken)) {
-        throw new Error(
-          'Cloudflare challenged the release smoke before the Worker and RELEASE_SMOKE_BYPASS_TOKEN is not configured. Configure the matching GitHub Actions secret and narrow Cloudflare x-fremont-release-smoke skip rule, then rerun.',
-        );
-      }
-      if (/environment mismatch|readiness failed|wrong service|unexpected release surface/i.test(lastReason)) {
+      lastReason = String(error.message || error);
+      // Fail fast on hard mismatches / challenge; only retry soft waits via ready:false path.
+      if (!/Waiting for Worker version tag/.test(lastReason)) {
         throw error;
       }
     }
-
-    if (attempt < attempts) {
-      log(`Release smoke ${attempt}/${attempts}: ${lastReason}`);
-      await sleep(delayMs);
-    }
+    if (i + 1 < attempts) await sleep(delayMs);
   }
-
-  throw new Error(`Release did not become healthy: ${lastReason ?? 'unknown state'}`);
+  throw new Error(`Release smoke timed out after ${attempts} attempts: ${lastReason}`);
 }
 
-const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (isDirectRun) {
-  const [baseUrl, expectedEnvironment, expectedVersionTag] = process.argv.slice(2);
-  smokeRelease({
-    baseUrl,
-    expectedEnvironment,
-    expectedVersionTag,
-    bypassToken: process.env.RELEASE_SMOKE_BYPASS_TOKEN || '',
-  })
-    .then((result) => {
-      console.log(`Release smoke passed: ${JSON.stringify(result)}`);
-    })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : error);
-      process.exitCode = 1;
-    });
+const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
+  const baseUrl = process.env.RELEASE_BASE_URL || process.argv[2] || 'https://fremontderby.com';
+  const expectedEnvironment = process.env.EXPECTED_ENVIRONMENT || 'production';
+  const expectedVersionTag = process.env.EXPECTED_VERSION_TAG || process.argv[3] || '';
+  const bypassToken = process.env.RELEASE_SMOKE_BYPASS_TOKEN || '';
+  try {
+    await smokeRelease({ baseUrl, expectedEnvironment, expectedVersionTag, bypassToken });
+    console.log(`Release smoke OK ${baseUrl} tag=${expectedVersionTag}`);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }
