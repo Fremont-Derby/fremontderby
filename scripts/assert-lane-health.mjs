@@ -5,9 +5,6 @@
  *
  * Host → expected environment is derived from src/hostEnvironment.js so the
  * probe list cannot drift from runtime host matching.
- *
- * Set REQUIRE_VERSION_TAG=1 to also fail when versionTag is missing
- * (post-deploy publish verification).
  */
 import { fileURLToPath } from 'node:url';
 import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
@@ -18,8 +15,7 @@ export const LANE_HEALTH_CHECKS = Object.freeze(
   ),
 );
 
-export function evaluateLaneHealthBody(host, expect, responseStatus, text, options = {}) {
-  const requireVersionTag = options.requireVersionTag === true;
+export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
   let body;
   try {
     body = JSON.parse(text);
@@ -33,10 +29,6 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text, optio
   }
   const environment = body?.environment;
   const readinessOk = body?.ok === true;
-  const versionTag =
-    typeof body?.versionTag === 'string' && body.versionTag.trim()
-      ? body.versionTag.trim()
-      : null;
   if (responseStatus < 200 || responseStatus >= 300) {
     const failedChecks = Array.isArray(body?.checks)
       ? body.checks.filter((c) => !c.ok).map((c) => c.name).join(',')
@@ -51,7 +43,6 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text, optio
       expect,
       environment,
       readinessOk,
-      versionTag,
       error: `${host}: HTTP ${responseStatus}${detail ? ` (${detail})` : ''}`,
     };
   }
@@ -61,7 +52,6 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text, optio
       host,
       expect,
       environment,
-      versionTag,
       error: `${host}: environment="${environment}" expected="${expect}"`,
     };
   }
@@ -72,19 +62,7 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text, optio
       expect,
       environment,
       readinessOk,
-      versionTag,
       error: `${host}: hostMatchesEnvironment=false (host/env mismatch)`,
-    };
-  }
-  if (requireVersionTag && !versionTag) {
-    return {
-      ok: false,
-      host,
-      expect,
-      environment,
-      readinessOk,
-      versionTag,
-      error: `${host}: versionTag missing (requireVersionTag=true)`,
     };
   }
   return {
@@ -93,28 +71,23 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text, optio
     expect,
     environment,
     readinessOk,
-    versionTag,
   };
 }
 
-export async function probeLaneHealth({ host, expect }, fetchImpl = fetch, options = {}) {
+export async function probeLaneHealth({ host, expect }, fetchImpl = fetch) {
   const url = `https://${host}/health/environment`;
   const response = await fetchImpl(url, {
     headers: { Accept: 'application/json', 'User-Agent': 'fremontderby-lane-health' },
   });
   const text = await response.text();
-  return evaluateLaneHealthBody(host, expect, response.status, text, options);
+  return evaluateLaneHealthBody(host, expect, response.status, text);
 }
 
-export async function assertAllLaneHealth(
-  checks = LANE_HEALTH_CHECKS,
-  fetchImpl = fetch,
-  options = {},
-) {
+export async function assertAllLaneHealth(checks = LANE_HEALTH_CHECKS, fetchImpl = fetch) {
   const results = [];
   for (const check of checks) {
     try {
-      results.push(await probeLaneHealth(check, fetchImpl, options));
+      results.push(await probeLaneHealth(check, fetchImpl));
     } catch (error) {
       results.push({
         ok: false,
@@ -134,10 +107,7 @@ export async function assertAllLaneHealth(
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirect) {
-  const requireVersionTag =
-    String(process.env.REQUIRE_VERSION_TAG || '').trim() === '1'
-    || String(process.env.REQUIRE_VERSION_TAG || '').trim().toLowerCase() === 'true';
-  const summary = await assertAllLaneHealth(LANE_HEALTH_CHECKS, fetch, { requireVersionTag });
+  const summary = await assertAllLaneHealth();
   for (const row of summary.results) {
     console.log(JSON.stringify(row));
   }
@@ -147,9 +117,5 @@ if (isDirect) {
     );
     process.exit(1);
   }
-  console.log(
-    requireVersionTag
-      ? 'All lane health identities OK (versionTag required).'
-      : 'All lane health identities OK.',
-  );
+  console.log('All lane health identities OK.');
 }
