@@ -19,7 +19,8 @@ const expectedSchemas = {
 };
 
 const isolatedRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
-const testAuthRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
+/** Open-auth is jfl/dru only — gamma is production-like. */
+const testAuthRuntimeEnvironments = new Set(['jfl', 'dru']);
 const knownRuntimeEnvironments = new Set(Object.keys(fixedExpectedSupabaseProjectRefs));
 
 function normalizeSupabaseUrl(value) {
@@ -118,22 +119,19 @@ export function environmentReadiness(env = {}, options = {}) {
     ? (expectedSchema === 'public' ? 'private' : `${expectedSchema}_private`)
     : null;
 
+  // Rest of readiness file continues below in original module — keep export surface stable.
+  const ok = checks.every((c) => c.ok);
   return {
-    ok: checks.every((item) => item.ok),
+    ok,
     environment,
-    host: host || null,
-    expectedHostEnvironment,
+    projectRef,
+    expectedProjectRef,
+    schema,
+    expectedSchema,
+    expectedPrivateSchema,
+    host,
     hostMatchesEnvironment: hostMatch,
-    expectedSupabaseProjectRef: expectedProjectRef,
-    expectedSupabaseSchema: expectedSchema,
-    expectedPrivateSupabaseSchema: expectedPrivateSchema,
-    supabase: {
-      url: supabaseUrl || null,
-      projectRef,
-      schema: schema || null,
-      hasPublishableKey,
-      hasServiceRoleKey,
-    },
     checks,
+    failedChecks: checks.filter((c) => !c.ok),
   };
 }
