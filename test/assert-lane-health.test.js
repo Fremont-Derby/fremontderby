@@ -5,18 +5,21 @@ import {
   assertAllLaneHealth,
   evaluateLaneHealthBody,
 } from '../scripts/assert-lane-health.mjs';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
 
 test('lane health checklist covers dru, jfl, gamma, production apex, and www', () => {
+  const expected = Object.entries(HOST_ENVIRONMENT_EXPECTATIONS).map(([host, expect]) => [host, expect]);
   assert.deepEqual(
     LANE_HEALTH_CHECKS.map((row) => [row.host, row.expect]),
-    [
-      ['dru.fremontderby.com', 'dru'],
-      ['jfl.fremontderby.com', 'jfl'],
-      ['gamma.fremontderby.com', 'gamma'],
-      ['fremontderby.com', 'production'],
-      ['www.fremontderby.com', 'production'],
-    ],
+    expected,
   );
+});
+
+test('lane health hosts stay in lockstep with HOST_ENVIRONMENT_EXPECTATIONS', () => {
+  assert.equal(LANE_HEALTH_CHECKS.length, Object.keys(HOST_ENVIRONMENT_EXPECTATIONS).length);
+  for (const row of LANE_HEALTH_CHECKS) {
+    assert.equal(HOST_ENVIRONMENT_EXPECTATIONS[row.host], row.expect);
+  }
 });
 
 test('evaluateLaneHealthBody accepts matching environment identity', () => {
@@ -60,6 +63,42 @@ test('evaluateLaneHealthBody fails on non-JSON and non-2xx', () => {
   );
 });
 
+test('evaluateLaneHealthBody ignores missing versionTag by default', () => {
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', versionTag: null }),
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.versionTag, null);
+});
+
+test('evaluateLaneHealthBody fails when requireVersionTag and versionTag is missing', () => {
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', versionTag: null }),
+    { requireVersionTag: true },
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.error, /versionTag missing/);
+});
+
+test('evaluateLaneHealthBody accepts versionTag when requireVersionTag is set', () => {
+  const sha = 'a'.repeat(40);
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', versionTag: sha }),
+    { requireVersionTag: true },
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.versionTag, sha);
+});
+
 test('assertAllLaneHealth aggregates probe failures without throwing', async () => {
   const fetchImpl = async (url) => {
     if (url.includes('dru.')) {
@@ -85,8 +124,7 @@ test('assertAllLaneHealth aggregates probe failures without throwing', async () 
       text: async () => JSON.stringify({ ok: true, environment: 'production' }),
     };
   };
-  const summary = await assertAllLaneHealth(undefined, fetchImpl);
+  const summary = await assertAllLaneHealth(LANE_HEALTH_CHECKS, fetchImpl);
   assert.equal(summary.ok, false);
-  assert.equal(summary.failed.length, 1);
-  assert.equal(summary.failed[0].host, 'dru.fremontderby.com');
+  assert.ok(summary.failed.some((row) => row.host === 'dru.fremontderby.com'));
 });

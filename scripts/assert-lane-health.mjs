@@ -2,18 +2,24 @@
  * Assert public lane hosts report the expected ENVIRONMENT identity.
  * Usage: node scripts/assert-lane-health.mjs
  * Exit 1 on any mismatch or transport failure.
+ *
+ * Host → expected environment is derived from src/hostEnvironment.js so the
+ * probe list cannot drift from runtime host matching.
+ *
+ * Set REQUIRE_VERSION_TAG=1 to also fail when versionTag is missing
+ * (post-deploy publish verification).
  */
 import { fileURLToPath } from 'node:url';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
 
-export const LANE_HEALTH_CHECKS = Object.freeze([
-  { host: 'dru.fremontderby.com', expect: 'dru' },
-  { host: 'jfl.fremontderby.com', expect: 'jfl' },
-  { host: 'gamma.fremontderby.com', expect: 'gamma' },
-  { host: 'fremontderby.com', expect: 'production' },
-  { host: 'www.fremontderby.com', expect: 'production' },
-]);
+export const LANE_HEALTH_CHECKS = Object.freeze(
+  Object.entries(HOST_ENVIRONMENT_EXPECTATIONS).map(([host, expect]) =>
+    Object.freeze({ host, expect }),
+  ),
+);
 
-export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
+export function evaluateLaneHealthBody(host, expect, responseStatus, text, options = {}) {
+  const requireVersionTag = options.requireVersionTag === true;
   let body;
   try {
     body = JSON.parse(text);
@@ -27,6 +33,10 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
   }
   const environment = body?.environment;
   const readinessOk = body?.ok === true;
+  const versionTag =
+    typeof body?.versionTag === 'string' && body.versionTag.trim()
+      ? body.versionTag.trim()
+      : null;
   if (responseStatus < 200 || responseStatus >= 300) {
     const failedChecks = Array.isArray(body?.checks)
       ? body.checks.filter((c) => !c.ok).map((c) => c.name).join(',')
@@ -41,6 +51,7 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
       expect,
       environment,
       readinessOk,
+      versionTag,
       error: `${host}: HTTP ${responseStatus}${detail ? ` (${detail})` : ''}`,
     };
   }
@@ -50,6 +61,7 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
       host,
       expect,
       environment,
+      versionTag,
       error: `${host}: environment="${environment}" expected="${expect}"`,
     };
   }
@@ -60,7 +72,19 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
       expect,
       environment,
       readinessOk,
+      versionTag,
       error: `${host}: hostMatchesEnvironment=false (host/env mismatch)`,
+    };
+  }
+  if (requireVersionTag && !versionTag) {
+    return {
+      ok: false,
+      host,
+      expect,
+      environment,
+      readinessOk,
+      versionTag,
+      error: `${host}: versionTag missing (requireVersionTag=true)`,
     };
   }
   return {
@@ -69,23 +93,28 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
     expect,
     environment,
     readinessOk,
+    versionTag,
   };
 }
 
-export async function probeLaneHealth({ host, expect }, fetchImpl = fetch) {
+export async function probeLaneHealth({ host, expect }, fetchImpl = fetch, options = {}) {
   const url = `https://${host}/health/environment`;
   const response = await fetchImpl(url, {
     headers: { Accept: 'application/json', 'User-Agent': 'fremontderby-lane-health' },
   });
   const text = await response.text();
-  return evaluateLaneHealthBody(host, expect, response.status, text);
+  return evaluateLaneHealthBody(host, expect, response.status, text, options);
 }
 
-export async function assertAllLaneHealth(checks = LANE_HEALTH_CHECKS, fetchImpl = fetch) {
+export async function assertAllLaneHealth(
+  checks = LANE_HEALTH_CHECKS,
+  fetchImpl = fetch,
+  options = {},
+) {
   const results = [];
   for (const check of checks) {
     try {
-      results.push(await probeLaneHealth(check, fetchImpl));
+      results.push(await probeLaneHealth(check, fetchImpl, options));
     } catch (error) {
       results.push({
         ok: false,
@@ -105,7 +134,10 @@ export async function assertAllLaneHealth(checks = LANE_HEALTH_CHECKS, fetchImpl
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirect) {
-  const summary = await assertAllLaneHealth();
+  const requireVersionTag =
+    String(process.env.REQUIRE_VERSION_TAG || '').trim() === '1'
+    || String(process.env.REQUIRE_VERSION_TAG || '').trim().toLowerCase() === 'true';
+  const summary = await assertAllLaneHealth(LANE_HEALTH_CHECKS, fetch, { requireVersionTag });
   for (const row of summary.results) {
     console.log(JSON.stringify(row));
   }
@@ -115,5 +147,9 @@ if (isDirect) {
     );
     process.exit(1);
   }
-  console.log('All lane health identities OK.');
+  console.log(
+    requireVersionTag
+      ? 'All lane health identities OK (versionTag required).'
+      : 'All lane health identities OK.',
+  );
 }
