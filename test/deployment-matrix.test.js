@@ -32,6 +32,7 @@ function baseWrangler() {
           ENVIRONMENT: 'jfl',
           SUPABASE_SCHEMA: 'jfl',
           EXPECTED_SUPABASE_PROJECT_REF: 'oqkkvqkerusepyokzbmt',
+          BETA_AUTH_BYPASS: '1',
         },
       },
       dru: {
@@ -43,6 +44,7 @@ function baseWrangler() {
           ENVIRONMENT: 'dru',
           SUPABASE_SCHEMA: 'dru',
           EXPECTED_SUPABASE_PROJECT_REF: 'oqkkvqkerusepyokzbmt',
+          BETA_AUTH_BYPASS: '1',
         },
       },
       gamma: {
@@ -54,6 +56,7 @@ function baseWrangler() {
           ENVIRONMENT: 'gamma',
           SUPABASE_SCHEMA: 'gamma',
           EXPECTED_SUPABASE_PROJECT_REF: 'oqkkvqkerusepyokzbmt',
+          BETA_AUTH_BYPASS: '0',
         },
       },
     },
@@ -67,6 +70,9 @@ describe('deployment-matrix guardrail (#1194)', () => {
     assert.ok(matrix.lanes.jfl);
     assert.ok(matrix.lanes.dru);
     assert.ok(matrix.lanes.gamma);
+    assert.equal(matrix.lanes.gamma.authBypassAllowed, false);
+    assert.equal(matrix.lanes.jfl.authBypassAllowed, true);
+    assert.equal(matrix.lanes.dru.authBypassAllowed, true);
   });
 
   it('accepts a correct wrangler profile', () => {
@@ -122,5 +128,16 @@ describe('deployment-matrix guardrail (#1194)', () => {
     const result = validateDeploymentMatrix({ wrangler: w, matrix });
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.includes('jfl') && e.includes('ENVIRONMENT')));
+  });
+
+  it('fails when gamma enables BETA_AUTH_BYPASS', () => {
+    const w = baseWrangler();
+    w.env.gamma.vars.BETA_AUTH_BYPASS = '1';
+    const result = validateDeploymentMatrix({ wrangler: w, matrix });
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.errors.some((e) => e.includes('gamma') && e.includes('BETA_AUTH_BYPASS')),
+      result.errors.join('; '),
+    );
   });
 });
