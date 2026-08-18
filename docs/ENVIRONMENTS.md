@@ -141,6 +141,7 @@ Emergency bypass, if GitHub account capabilities require one to exist, must be e
 - configured Supabase URL/derived project ref;
 - booleans for publishable/service-role key presence;
 - pass/fail checks for environment/project matching and key separation.
+- `versionTag` / deployed git SHA when the publish path stamped identity (#1222).
 
 The endpoint must not return credential values. It should return HTTP 200 only when all readiness checks pass and HTTP 503 otherwise.
 
@@ -207,7 +208,14 @@ A 200 with `"environment":"production"` on `dru.fremontderby.com` is a **failed*
 
 ## Publish paths (summary)
 
-See **`docs/GITHUB_ACTIONS.md`** for the production source-of-truth table (Workers Builds vs Actions), lane branch allowlists, and Cloudflare dashboard containment steps for #727 / #732.
+See **`docs/GITHUB_ACTIONS.md`** and **`docs/cloudflare-builds-isolation.md`** for:
+
+- production source-of-truth (Workers Builds vs Actions);
+- **lane-specific** Workers Builds build commands (`deploy:production` / `deploy:jfl` / `deploy:dru` / `deploy:gamma`);
+- branch allowlists and Cloudflare dashboard containment (#727 / #732 / #1192);
+- `versionTag` stamping via `deploy-lane.mjs` + `WORKERS_CI_COMMIT_SHA` (#1222).
+
+Do not use plain `npx wrangler deploy` or generic `npm run deploy` on lane Workers Builds projects.
 
 ## Lane tip lockstep
 
