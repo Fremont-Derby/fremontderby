@@ -16,14 +16,38 @@ test('Workers Builds production deploy is allowed from main with full Git metada
   }));
 });
 
-test('Workers Builds production deploy tags the Worker version with the exact Git SHA', () => {
+test('Workers Builds production deploy tags the Worker version with the exact Git SHA + DEPLOY_GIT_SHA var', () => {
   assert.deepEqual(
     productionDeployArgs({
       WORKERS_CI: '1',
       WORKERS_CI_BRANCH: 'main',
       WORKERS_CI_COMMIT_SHA: commitSha,
     }),
-    ['wrangler', 'deploy', '--tag', commitSha, '--message', `git:${commitSha}`],
+    [
+      'wrangler', 'deploy',
+      '--tag', commitSha,
+      '--message', `git:${commitSha}`,
+      '--var', `DEPLOY_GIT_SHA:${commitSha}`,
+    ],
+  );
+});
+
+test('short SHAs are not tagged (full 40-char only)', () => {
+  assert.deepEqual(
+    productionDeployArgs({ GITHUB_SHA: 'abc1234' }),
+    ['wrangler', 'deploy'],
+  );
+});
+
+test('GITHUB_SHA full length tags outside Workers CI', () => {
+  assert.deepEqual(
+    productionDeployArgs({ GITHUB_SHA: commitSha }),
+    [
+      'wrangler', 'deploy',
+      '--tag', commitSha,
+      '--message', `git:${commitSha}`,
+      '--var', `DEPLOY_GIT_SHA:${commitSha}`,
+    ],
   );
 });
 

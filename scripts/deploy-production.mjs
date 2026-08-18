@@ -35,7 +35,8 @@ export function productionDeployArgs(env = process.env) {
   const commitSha = String(
     env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
   ).trim();
-  if (commitSha && /^[0-9a-f]{7,40}$/i.test(commitSha)) {
+  // Full 40-char SHA only — matches Workers CI gate and lane deploy policy.
+  if (commitSha && /^[0-9a-f]{40}$/i.test(commitSha)) {
     args.push('--tag', commitSha, '--message', `git:${commitSha}`);
     // CF_VERSION_METADATA.tag is often empty even with --tag; expose SHA to /health via var.
     args.push('--var', `DEPLOY_GIT_SHA:${commitSha}`);
