@@ -74,6 +74,57 @@ export function resolveBetaBypassActor(env = {}) {
   }
   return {
     id,
-    email: String(env.BETA_ACTOR_EMAIL || defaults?.email || `${environment}-actor@fremontderby.com`).trim(),
+    email:
+      String(env.BETA_ACTOR_EMAIL || defaults?.email || 'test-actor@localhost').trim() ||
+      'test-actor@localhost',
+    betaBypass: true,
+  };
+}
+
+export async function authenticateSupabaseUser(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('fetch implementation is required');
+  }
+
+  const token = bearerToken(request);
+
+  // Test-lane bypass is only for deliberately unauthenticated automation.
+  // Once a caller supplies a bearer token, validate it normally rather than
+  // escalating to the shared test actor.
+  if (!token && betaAuthBypassEnabled(env)) {
+    return resolveBetaBypassActor(env);
+  }
+
+  if (!token) {
+    throw new AuthError('Missing bearer token');
+  }
+
+  const supabaseUrl = normalizeSupabaseUrl(requireEnvValue(env, 'SUPABASE_URL'));
+  const publishableKey = requireEnvValue(env, 'SUPABASE_PUBLISHABLE_KEY');
+  const response = await fetchImpl(`${supabaseUrl}/auth/v1/user`, {
+    method: 'GET',
+    headers: {
+      apikey: publishableKey,
+      authorization: `Bearer ${token}`,
+      accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new AuthError('Invalid bearer token');
+  }
+
+  const user = await parseJson(response);
+  if (!user?.id) {
+    throw new AuthError('Authenticated user is missing an id');
+  }
+
+  return {
+    id: user.id,
+    email: user.email ?? null,
   };
 }
