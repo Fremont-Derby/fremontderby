@@ -12,8 +12,10 @@ test('scrubSqlStatements is non-empty and gamma-scoped', () => {
   }
 });
 
-test('describeScrubPolicy returns a summary string', () => {
+test('describeScrubPolicy returns versioned actions summary', () => {
   const summary = describeScrubPolicy();
-  assert.equal(typeof summary, 'string');
-  assert.ok(summary.length > 0);
+  assert.equal(typeof summary, 'object');
+  assert.ok(summary.version >= 1);
+  assert.ok(Array.isArray(summary.actions));
+  assert.ok(summary.actions.length > 0);
 });
