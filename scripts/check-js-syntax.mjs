@@ -1,12 +1,13 @@
 import { readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const DEFAULT_ROOTS = ['src', 'domain', 'scripts'];
-const EXCLUDED_DIRECTORIES = new Set(['.git', 'dist', 'node_modules', 'coverage', '.wrangler']);
-const INCLUDED_EXTENSIONS = new Set(['.js', '.mjs']);
+export const DEFAULT_ROOTS = ['src', 'domain', 'scripts'];
+export const EXCLUDED_DIRECTORIES = new Set(['.git', 'dist', 'node_modules', 'coverage', '.wrangler']);
+export const INCLUDED_EXTENSIONS = new Set(['.js', '.mjs']);
 
-async function discoverJavaScriptFiles(cwd = process.cwd(), roots = DEFAULT_ROOTS) {
+export async function discoverJavaScriptFiles(cwd = process.cwd(), roots = DEFAULT_ROOTS) {
   const files = [];
   async function walk(relativeDirectory) {
     let entries;
@@ -30,9 +31,9 @@ async function discoverJavaScriptFiles(cwd = process.cwd(), roots = DEFAULT_ROOT
   return files.sort((left, right) => left.localeCompare(right));
 }
 
-function checkJavaScriptSyntax(cwd, files) {
+export function checkJavaScriptSyntax(cwd, files, spawn = spawnSync) {
   for (const file of files) {
-    const result = spawnSync(process.execPath, ['--check', file], { cwd, encoding: 'utf8' });
+    const result = spawn(process.execPath, ['--check', file], { cwd, encoding: 'utf8' });
     if (result.status !== 0) {
       return { ok: false, file, output: [result.stdout, result.stderr].filter(Boolean).join('\n').trim() };
     }
@@ -53,4 +54,7 @@ async function main() {
   return 0;
 }
 
-process.exitCode = await main();
+const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
+  process.exitCode = await main();
+}
