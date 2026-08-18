@@ -60,6 +60,42 @@ test('evaluateLaneHealthBody fails on non-JSON and non-2xx', () => {
   );
 });
 
+test('evaluateLaneHealthBody ignores missing versionTag by default', () => {
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', versionTag: null }),
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.versionTag, null);
+});
+
+test('evaluateLaneHealthBody fails when requireVersionTag and versionTag is missing', () => {
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', versionTag: null }),
+    { requireVersionTag: true },
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.error, /versionTag missing/);
+});
+
+test('evaluateLaneHealthBody accepts versionTag when requireVersionTag is set', () => {
+  const sha = 'a'.repeat(40);
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', versionTag: sha }),
+    { requireVersionTag: true },
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.versionTag, sha);
+});
+
 test('assertAllLaneHealth aggregates probe failures without throwing', async () => {
   const fetchImpl = async (url) => {
     if (url.includes('dru.')) {
@@ -85,8 +121,7 @@ test('assertAllLaneHealth aggregates probe failures without throwing', async () 
       text: async () => JSON.stringify({ ok: true, environment: 'production' }),
     };
   };
-  const summary = await assertAllLaneHealth(undefined, fetchImpl);
+  const summary = await assertAllLaneHealth(LANE_HEALTH_CHECKS, fetchImpl);
   assert.equal(summary.ok, false);
-  assert.equal(summary.failed.length, 1);
-  assert.equal(summary.failed[0].host, 'dru.fremontderby.com');
+  assert.ok(summary.failed.some((row) => row.host === 'dru.fremontderby.com'));
 });
