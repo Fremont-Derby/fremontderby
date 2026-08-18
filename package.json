@@ -1,8 +1,7 @@
 {
-  "name": "fremontderby",
-  "version": "0.0.1",
+  "name": "fremont-derby",
+  "version": "0.1.0",
   "private": true,
-  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "lint": "node scripts/lint.mjs",
@@ -30,7 +29,15 @@
     "canary:surface": "node scripts/assert-public-surface.mjs",
     "canary:lanes": "node scripts/assert-lane-health.mjs",
     "canary": "node scripts/assert-production-dns.mjs && node scripts/assert-lane-health.mjs && node scripts/assert-public-surface.mjs",
-    "canary:contract": "node --test test/public-surface-contract.test.js test/assert-production-dns.test.js",
+    "canary:contract": "node --test test/public-surface-contract.test.js test/assert-production-dns.test.js test/assert-lane-health.test.js test/host-environment.test.js",
     "do-work:check": "npm run canary:contract && npm run canary"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250812.0",
+    "pa11y": "^9.0.0",
+    "wrangler": "^4.28.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
