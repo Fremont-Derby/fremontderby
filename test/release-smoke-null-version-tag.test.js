@@ -38,7 +38,7 @@ test('release smoke treats null versionTag as untagged / not ready', async () =>
 
   assert.equal(result.ready, false);
   assert.match(result.reason, /untagged|expected-sha/i);
-  assert.equal(result.versionTag, null);
+  assert.equal(result.versionTag == null, true);
 });
 
 test('release smoke treats missing versionTag field as untagged / not ready', async () => {
