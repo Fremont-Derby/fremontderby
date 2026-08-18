@@ -4,6 +4,7 @@ import {
   assertLaneDeployContext,
   laneDeployArgs,
   laneDeployments,
+  resolveDeploySha,
 } from '../scripts/deploy-lane.mjs';
 
 for (const lane of ['jfl', 'dru', 'gamma']) {
@@ -46,6 +47,35 @@ test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
     '--tag', sha,
     '--message', `git:${sha}`,
   ]);
+});
+
+test('Workers Builds tags from WORKERS_CI_COMMIT_SHA when GITHUB_SHA is absent', () => {
+  const sha = 'b'.repeat(40);
+  const args = laneDeployArgs('dru', {
+    WORKERS_CI: '1',
+    WORKERS_CI_BRANCH: 'fremontderby-dru',
+    WORKERS_CI_COMMIT_SHA: sha,
+  });
+  assert.deepEqual(args, [
+    'wrangler', 'deploy', '--env', 'dru',
+    '--tag', sha,
+    '--message', `git:${sha}`,
+  ]);
+});
+
+test('GITHUB_SHA is preferred when both SHA sources are present', () => {
+  const github = 'c'.repeat(40);
+  const workers = 'd'.repeat(40);
+  assert.equal(resolveDeploySha({
+    GITHUB_SHA: github,
+    WORKERS_CI_COMMIT_SHA: workers,
+  }), github);
+});
+
+test('non-hex or short values are rejected by resolveDeploySha', () => {
+  assert.equal(resolveDeploySha({ GITHUB_SHA: 'not-a-sha' }), '');
+  assert.equal(resolveDeploySha({ WORKERS_CI_COMMIT_SHA: 'abc' }), '');
+  assert.equal(resolveDeploySha({}), '');
 });
 
 test('Actions may deploy a lane from main only with explicit allow flag', () => {
