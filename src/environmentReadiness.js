@@ -119,19 +119,22 @@ export function environmentReadiness(env = {}, options = {}) {
     ? (expectedSchema === 'public' ? 'private' : `${expectedSchema}_private`)
     : null;
 
-  // Rest of readiness file continues below in original module — keep export surface stable.
-  const ok = checks.every((c) => c.ok);
   return {
-    ok,
+    ok: checks.every((item) => item.ok),
     environment,
-    projectRef,
-    expectedProjectRef,
-    schema,
-    expectedSchema,
-    expectedPrivateSchema,
-    host,
+    host: host || null,
+    expectedHostEnvironment,
     hostMatchesEnvironment: hostMatch,
+    expectedSupabaseProjectRef: expectedProjectRef,
+    expectedSupabaseSchema: expectedSchema,
+    expectedPrivateSupabaseSchema: expectedPrivateSchema,
+    supabase: {
+      url: supabaseUrl || null,
+      projectRef,
+      schema: schema || null,
+      hasPublishableKey,
+      hasServiceRoleKey,
+    },
     checks,
-    failedChecks: checks.filter((c) => !c.ok),
   };
 }
