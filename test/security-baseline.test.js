@@ -28,11 +28,29 @@ test('api security headers are strict about caching and framing', () => {
   assert.equal(h['x-frame-options'], 'DENY');
 });
 
-test('beta bypass refuses non-test environments', () => {
-  assert.throws(() => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'production' }));
-  assert.throws(() => betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'gamma' }));
+test('assertBetaBypassLane only allows jfl and dru', () => {
+  assert.doesNotThrow(() => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'jfl' }));
+  assert.doesNotThrow(() => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'dru' }));
+  assert.throws(
+    () => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'production' }),
+    /not a test lane/,
+  );
+  assert.throws(
+    () => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'gamma' }),
+    /not a test lane/,
+  );
+  assert.throws(
+    () => assertBetaBypassLane({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'staging' }),
+    /not a test lane/,
+  );
+  assert.doesNotThrow(() => assertBetaBypassLane({ BETA_AUTH_BYPASS: '0', ENVIRONMENT: 'production' }));
+});
+
+test('betaAuthBypassEnabled allows jfl/dru and refuses production', () => {
   assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'jfl' }), true);
-  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '0', ENVIRONMENT: 'production' }), false);
+  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'dru' }), true);
+  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '1', ENVIRONMENT: 'production' }), false);
+  assert.equal(betaAuthBypassEnabled({ BETA_AUTH_BYPASS: '0', ENVIRONMENT: 'jfl' }), false);
 });
 
 test('decorateHtmlWithShell stamps shell scripts with nonce', () => {
