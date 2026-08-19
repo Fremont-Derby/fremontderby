@@ -1,0 +1,142 @@
+{
+  "pageId": "ses_fe4bd43d0ffefd5wVULc1BPfaA",
+  "name": "Page 1",
+  "frames": [
+    {
+      "id": "frame",
+      "name": "Dashboard"
+    },
+    {
+      "id": "frame-standings",
+      "name": "Standings",
+      "x": 543,
+      "y": 80
+    },
+    {
+      "id": "frame-schedule",
+      "name": "Schedule",
+      "x": 986,
+      "y": 80
+    },
+    {
+      "id": "frame-player",
+      "name": "Player Profile",
+      "x": 1429,
+      "y": 80
+    },
+    {
+      "id": "frame-checkin",
+      "name": "Check-in",
+      "x": 1872,
+      "y": 80
+    },
+    {
+      "id": "frame-lineup",
+      "name": "Lineup",
+      "x": 2315,
+      "y": 80
+    },
+    {
+      "id": "frame-scorecard",
+      "name": "Scorecard",
+      "x": 2758,
+      "y": 80
+    },
+    {
+      "id": "frame-trades",
+      "name": "Trades (retired)",
+      "x": 3201,
+      "y": 80
+    },
+    {
+      "id": "frame-playoffs",
+      "name": "Playoffs",
+      "x": 3644,
+      "y": 80
+    },
+    {
+      "id": "frame-prizes",
+      "name": "Prizes",
+      "x": 4087,
+      "y": 80
+    },
+    {
+      "id": "frame-profile",
+      "name": "Profile",
+      "x": 4530,
+      "y": 80
+    },
+    {
+      "id": "frame-teams",
+      "name": "Teams Directory",
+      "x": 4973,
+      "y": 80
+    },
+    {
+      "id": "frame-team-join",
+      "name": "Team Join",
+      "x": 5416,
+      "y": 80
+    },
+    {
+      "id": "frame-messages",
+      "name": "Messages",
+      "x": 5859,
+      "y": 80
+    },
+    {
+      "id": "frame-notifications",
+      "name": "Notifications",
+      "x": 6302,
+      "y": 80
+    },
+    {
+      "id": "frame-admin",
+      "name": "Admin",
+      "x": 6745,
+      "y": 80
+    },
+    {
+      "id": "frame-admin-season-teams",
+      "name": "Admin: Season Teams",
+      "x": 7188,
+      "y": 80
+    },
+    {
+      "id": "frame-scorecard-live",
+      "name": "Scorecard Live",
+      "x": 7631,
+      "y": 80
+    },
+    {
+      "id": "frame-season-setup",
+      "name": "Season Setup",
+      "x": 8074,
+      "y": 80
+    },
+    {
+      "id": "frame-admin-players",
+      "name": "Admin: Players",
+      "x": 8517,
+      "y": 80
+    },
+    {
+      "id": "frame-moderation",
+      "name": "Messages: Moderation",
+      "x": 8960,
+      "y": 80
+    },
+    {
+      "id": "frame-rules",
+      "name": "Rules",
+      "x": 9403,
+      "y": 80
+    },
+    {
+      "id": "frame-player-directory",
+      "name": "Player Directory",
+      "x": 9846,
+      "y": 80
+    }
+  ]
+}
