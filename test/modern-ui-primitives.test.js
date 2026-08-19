@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import router from '../src/router.js';
+import router from '../src/routerEntry.js';
 import { designSystemStyles } from '../src/designSystem.js';
 import { renderModernUiCatalog } from '../src/modernUiCatalog.js';
+import { modernUiPrimitiveStyles } from '../src/modernUiPrimitives.js';
+import { siteStyles } from '../src/siteStyles.js';
 
 const REQUIRED_PRIMITIVES = [
   'page-header',
@@ -59,10 +61,10 @@ test('modern UI catalog exposes every Onion 1 primitive with semantic markup', (
   assert.match(html, /aria-pressed="true"/i);
 });
 
-test('shared Fremont design system defines the modern primitives and accessibility contracts', () => {
+test('shared Fremont site design system defines the modern primitives and accessibility contracts', () => {
   for (const className of REQUIRED_CLASSES) {
     assert.match(
-      designSystemStyles,
+      siteStyles,
       new RegExp(className.replace('.', '\\.') + '(?:[\\s,{:]|$)'),
       `missing shared style ${className}`,
     );
@@ -71,12 +73,13 @@ test('shared Fremont design system defines the modern primitives and accessibili
   assert.match(designSystemStyles, /--fd-control-min:\s*(?:4[4-9]|[5-9]\d)px/);
   assert.match(designSystemStyles, /:focus-visible/);
   assert.match(designSystemStyles, /@media\s*\(forced-colors:\s*active\)/);
-  assert.match(designSystemStyles, /\.fd-action[\s\S]*min-height:\s*var\(--fd-control-min\)/);
-  assert.match(designSystemStyles, /\.fd-segmented[\s\S]*min-height:\s*var\(--fd-control-min\)/);
+  assert.match(modernUiPrimitiveStyles, /\.fd-action[\s\S]*min-height:\s*var\(--fd-control-min\)/);
+  assert.match(modernUiPrimitiveStyles, /\.fd-segmented[\s\S]*min-height:\s*var\(--fd-control-min\)/);
+  assert.match(modernUiPrimitiveStyles, /@media\s*\(forced-colors:\s*active\)/);
 });
 
 test('modern catalog remains Fremont-native with no Amazon or Rio runtime/assets', () => {
-  const combined = `${renderModernUiCatalog()}\n${designSystemStyles}`;
+  const combined = `${renderModernUiCatalog()}\n${siteStyles}`;
   assert.doesNotMatch(combined, /@amzn|amazon ember|sds-core|rio[-_ ](?:token|design|component)/i);
   assert.match(combined, /var\(--fd-/);
 });
@@ -88,13 +91,15 @@ test('JFL serves the modern catalog while other environments fail closed', async
     {},
   );
   assert.equal(jflResponse.status, 200);
+  assert.equal(jflResponse.headers.get('x-fremont-ui-catalog'), 'modern-v1');
   const jflHtml = await jflResponse.text();
   assert.match(jflHtml, /data-fd-ui-catalog="modern-v1"/);
   assert.match(jflHtml, /data-fd-shell/);
+  assert.match(jflHtml, /data-fd-design-system/);
 
   for (const environment of ['production', 'gamma', 'dru']) {
     const response = await router.fetch(
-      new Request(`https://example.test/design-system`),
+      new Request('https://example.test/design-system'),
       { ENVIRONMENT: environment },
       {},
     );
