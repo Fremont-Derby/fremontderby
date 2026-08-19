@@ -20,7 +20,7 @@ function requestHeaders(accept, bypassToken) {
   return headers;
 }
 
-function isUnbypassedCloudflareChallenge(reason, bypassToken) {
+export function isUnbypassedCloudflareChallenge(reason, bypassToken) {
   if (bypassToken) return false;
   return /did not return JSON \(HTTP 403,[^)]*server cloudflare/i.test(reason)
     && /Just a moment/i.test(reason);
@@ -52,7 +52,7 @@ async function readJson(response, label) {
   return { response, body };
 }
 
-function assertExpectedDeployment({ health, environment, expectedEnvironment, expectedVersionTag }) {
+export function assertExpectedDeployment({ health, environment, expectedEnvironment, expectedVersionTag }) {
   if (health.service !== 'fremontderby' || health.ok !== true) {
     throw new Error('Production /health did not identify a healthy Fremont Derby service');
   }
