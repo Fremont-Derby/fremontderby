@@ -1,18 +1,28 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-function requireWorkersBuildValue(env, name) {
-  const value = env[name]?.trim();
+function requireValue(env, name, source) {
+  const value = String(env[name] || '').trim();
   if (!value) {
-    throw new Error(`Refusing production deploy: Workers Builds did not provide ${name}.`);
+    throw new Error(`Refusing production deploy: ${source} did not provide ${name}.`);
   }
   return value;
 }
 
 export function assertProductionDeployContext(env = process.env) {
+  if (env.GITHUB_ACTIONS === 'true') {
+    const branch = requireValue(env, 'GITHUB_REF_NAME', 'GitHub Actions');
+    if (branch !== 'main') {
+      throw new Error(
+        `Refusing production deploy from non-production branch "${branch}"; expected "main".`,
+      );
+    }
+    return;
+  }
+
   if (env.WORKERS_CI !== '1') return;
 
-  const branch = requireWorkersBuildValue(env, 'WORKERS_CI_BRANCH');
+  const branch = requireValue(env, 'WORKERS_CI_BRANCH', 'Workers Builds');
   if (branch !== 'main') {
     throw new Error(
       `Refusing production deploy from non-production branch "${branch}". ` +
@@ -20,7 +30,7 @@ export function assertProductionDeployContext(env = process.env) {
     );
   }
 
-  const commitSha = requireWorkersBuildValue(env, 'WORKERS_CI_COMMIT_SHA');
+  const commitSha = requireValue(env, 'WORKERS_CI_COMMIT_SHA', 'Workers Builds');
   if (!/^[0-9a-f]{40}$/i.test(commitSha)) {
     throw new Error('Refusing production deploy: WORKERS_CI_COMMIT_SHA is not a full Git SHA.');
   }
@@ -30,16 +40,19 @@ export function productionDeployArgs(env = process.env) {
   assertProductionDeployContext(env);
   const args = ['wrangler', 'deploy'];
 
-  if (env.WORKERS_CI === '1') {
-    const commitSha = env.WORKERS_CI_COMMIT_SHA.trim();
+  const commitSha = String(
+    env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
+  ).trim();
+  if (/^[0-9a-f]{7,40}$/i.test(commitSha)) {
     args.push('--tag', commitSha, '--message', `git:${commitSha}`);
+    // CF_VERSION_METADATA.tag can be empty even with --tag; expose SHA to /health explicitly.
+    args.push('--var', `DEPLOY_GIT_SHA:${commitSha}`);
   }
 
   return args;
 }
 
 export function runProductionDeploy({ env = process.env, spawn = spawnSync } = {}) {
-  // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell (same as deploy-lane.mjs).
   const isWin = process.platform === 'win32';
   const result = spawn(isWin ? 'npx' : 'npx', productionDeployArgs(env), {
     env,
