@@ -73,10 +73,22 @@ for (const environment of ['jfl', 'dru', 'gamma']) {
   });
 }
 
-test('gamma allows test auth bypass like dru/jfl', () => {
+test('gamma forbids test auth bypass (RC lane)', () => {
   const readiness = environmentReadiness(laneEnv('gamma', { BETA_AUTH_BYPASS: '1' }));
-  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, true);
-  assert.equal(readiness.checks.find((c) => c.name === 'testAuthBypassFlag')?.ok, true);
+  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, false);
+  assert.equal(readiness.ok, false);
+  // Without an explicit bypass flag, gamma readiness can still be green on project/schema alone.
+  const clean = environmentReadiness(laneEnv('gamma'));
+  assert.equal(clean.ok, true);
+  assert.equal(clean.checks.find((c) => c.name === 'testAuthBypassFlag'), undefined);
+});
+
+test('jfl/dru still require test auth bypass flag when on test-auth runtime', () => {
+  for (const environment of ['jfl', 'dru']) {
+    const readiness = environmentReadiness(laneEnv(environment));
+    assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, true);
+    assert.equal(readiness.checks.find((c) => c.name === 'testAuthBypassFlag')?.ok, true);
+  }
 });
 
 test('readiness never exposes secret values', () => {
