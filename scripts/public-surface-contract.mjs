@@ -3,6 +3,8 @@
  * Contract for public HTML/API surfaces that must survive UI moves and deploys.
  * Used by canary workflows + unit tests that the router still references these paths.
  */
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
+
 export const PUBLIC_HTML_PATHS = Object.freeze([
   '/',
   '/standings',
@@ -32,10 +34,19 @@ export const HTML_SHELL_MARKERS = Object.freeze([
   'viewport',
 ]);
 
-export const CANARY_HOSTS = Object.freeze([
-  { name: 'production', base: 'https://fremontderby.com', expectEnv: 'production' },
-  { name: 'www', base: 'https://www.fremontderby.com', expectEnv: 'production' },
-  { name: 'gamma', base: 'https://gamma.fremontderby.com', expectEnv: 'gamma' },
-  { name: 'dru', base: 'https://dru.fremontderby.com', expectEnv: 'dru' },
-  { name: 'jfl', base: 'https://jfl.fremontderby.com', expectEnv: 'jfl' },
-]);
+function canaryNameForHost(hostname, expectEnv) {
+  if (hostname === 'fremontderby.com') return 'production';
+  if (hostname === 'www.fremontderby.com') return 'www';
+  return expectEnv;
+}
+
+/** Derived from HOST_ENVIRONMENT_EXPECTATIONS so host/env identity cannot drift. */
+export const CANARY_HOSTS = Object.freeze(
+  Object.entries(HOST_ENVIRONMENT_EXPECTATIONS).map(([hostname, expectEnv]) =>
+    Object.freeze({
+      name: canaryNameForHost(hostname, expectEnv),
+      base: `https://${hostname}`,
+      expectEnv,
+    }),
+  ),
+);
