@@ -12,7 +12,6 @@ import { PRODUCTION_DNS_HOSTS } from './assert-production-dns.mjs';
 import {
   LANE_CUSTOM_DOMAINS,
   assertWranglerRoutesCoverDomains,
-  workerServiceForEnvironment,
 } from './lane-custom-domains.mjs';
 import { EXPECTED_WORKER_DOMAIN_BINDINGS } from './diagnose-worker-domains.mjs';
 
@@ -21,6 +20,12 @@ function parseJsonc(text) {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\/\/.*$/gm, '');
   return JSON.parse(stripped);
+}
+
+function expectedServiceForEnv(envName) {
+  const environment = String(envName || '').trim();
+  if (environment === 'production' || !environment) return 'fremontderby';
+  return `fremontderby-${environment}`;
 }
 
 export function collectDomainEnvDrift({ wranglerConfig } = {}) {
@@ -64,7 +69,7 @@ export function collectDomainEnvDrift({ wranglerConfig } = {}) {
     if (hostMap[row.hostname] !== row.env) {
       errors.push(`LANE_CUSTOM_DOMAINS ${row.hostname} env=${row.env} host-map=${hostMap[row.hostname]}`);
     }
-    const expectedService = workerServiceForEnvironment(row.env);
+    const expectedService = expectedServiceForEnv(row.env);
     if (row.service !== expectedService) {
       errors.push(`LANE_CUSTOM_DOMAINS ${row.hostname} service=${row.service} expected=${expectedService}`);
     }
