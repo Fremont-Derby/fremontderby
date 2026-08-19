@@ -1,13 +1,23 @@
 import { fileURLToPath } from 'node:url';
+import { LANE_CUSTOM_DOMAINS } from './lane-custom-domains.mjs';
 
-export const workerScriptNames = Object.freeze([
-  'fremontderby',
-  'fremontderby-prod',
-  'fremontderby-staging',
-  'fremontderby-jfl',
-  'fremontderby-dru',
-  'fremontderby-gamma',
-]);
+/**
+ * Worker scripts that must have workers.dev / preview URLs disabled.
+ * Derived from LANE_CUSTOM_DOMAINS services, plus legacy apex name and staging.
+ */
+function buildWorkerScriptNames() {
+  const names = new Set();
+  for (const row of LANE_CUSTOM_DOMAINS) {
+    names.add(row.service);
+  }
+  // Legacy production script still seen in the wild for apex bindings.
+  names.add('fremontderby-prod');
+  // Staging Worker is not a public custom domain but must stay workers.dev-off.
+  names.add('fremontderby-staging');
+  return Object.freeze([...names]);
+}
+
+export const workerScriptNames = buildWorkerScriptNames();
 
 function requireValue(value, name) {
   const normalized = String(value || '').trim();
