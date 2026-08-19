@@ -27,7 +27,7 @@ test('Workers Builds cannot bypass a lane mismatch with the legacy local overrid
   );
 });
 
-test('GitHub Actions production deploy is allowed only from main', () => {
+test('GitHub Actions production deploy is allowed only from main and preserves health SHA', () => {
   assert.doesNotThrow(() => assertProductionDeployContext({
     GITHUB_ACTIONS: 'true',
     GITHUB_REF_NAME: 'main',
@@ -37,7 +37,7 @@ test('GitHub Actions production deploy is allowed only from main', () => {
     GITHUB_ACTIONS: 'true',
     GITHUB_REF_NAME: 'main',
     GITHUB_SHA: sha,
-  }), ['wrangler', 'deploy', '--tag', sha, '--message', `git:${sha}`]);
+  }), ['wrangler', 'deploy', '--tag', sha, '--message', `git:${sha}`, '--var', `DEPLOY_GIT_SHA:${sha}`]);
 
   for (const branch of ['fremontderby-jfl', 'fremontderby-dru', 'fremontderby-gamma']) {
     assert.throws(
