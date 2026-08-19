@@ -46,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,6 +59,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           lane="${GITHUB_REF_NAME#fremontderby-}"
+          if [[ "$lane" == "jfl" ]]; then
+            node scripts/cleanup-cloudflare-lane-secrets.mjs jfl
+          fi
           npm run "deploy:${lane}"
       - name: Verify deployed lane and exact commit
         shell: bash
@@ -69,6 +73,56 @@ jobs:
             "https://${lane}.fremontderby.com" \
             "$lane" \
             "$GITHUB_SHA"
+      - name: Verify JFL modern UI proof route
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          legacy_body="$(mktemp)"
+          trap 'rm -f "$headers" "$body" "$legacy_body"' EXIT
+
+          curl --fail --silent --show-error \
+            --dump-header "$headers" \
+            --output "$body" \
+            https://jfl.fremontderby.com/rules
+
+          grep -Fq 'data-fd-modern-ui-slice="true"' "$body"
+          grep -Fq 'Modern UI preview' "$body"
+          grep -Eiq '^x-fremont-ui-mode:[[:space:]]*modern' "$headers"
+
+          curl --fail --silent --show-error \
+            --output "$legacy_body" \
+            'https://jfl.fremontderby.com/rules?ui=legacy'
+
+          if grep -Fq 'data-fd-modern-ui-slice="true"' "$legacy_body"; then
+            echo 'Legacy fallback unexpectedly contains the modern UI marker.' >&2
+            exit 1
+          fi
+      - name: Record JFL deployment proof
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `JFL deploy and smoke passed for permanent-branch commit \`${context.sha}\`.`,
+              '',
+              `Workflow: ${runUrl}`,
+              '',
+              'Verified automatically:',
+              '- obsolete JFL Supabase binding secrets were cleared if present before deploy;',
+              '- the JFL Worker deployed from `fremontderby-jfl` and passed the exact-SHA environment smoke;',
+              '- `/rules` returned the modern UI marker and `x-fremont-ui-mode: modern`;',
+              '- `/rules?ui=legacy` returned without the modern UI marker.'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 1809,
+              body,
+            });
 
   production-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -170,7 +224,7 @@ jobs:
               issueNumber = created.number;
             }
 
-            const comments = await github.paginate(github.rest.issues.listComments, {
+            const comments = await github.paginate(github.rest.issues.listCommentsForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
