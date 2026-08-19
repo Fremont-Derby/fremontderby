@@ -100,6 +100,12 @@ Merge **only** after Actions are healthy. Prefer this order.
 | **#1672** | UI/privacy pure locks |
 | **#1676** | CodeQL `security-extended` + hourly probe org default |
 
+### Docs (merge anytime Actions allow)
+
+| PR | Purpose |
+|----|---------|
+| **#1677** | This runbook (`docs/isolation-recovery-runbook.md`) |
+
 ### Lane-owned (independent)
 
 | PR | Base | Notes |
@@ -185,7 +191,7 @@ Close #1193 only when **all** are true:
 3. If Actions still dark → document only; do not invent merges.
 4. If PRs need rebase/conflict fix → do that on existing branches.
 5. Post short evidence on #1193 when state changes.
-6. Do **not** open thin pure-lock PRs that undo the 8-PR freeze unless the runbook is amended.
+6. Do **not** open thin pure-lock PRs that undo the prepared freeze unless the runbook is amended.
 
 ---
 
@@ -197,6 +203,7 @@ Close #1193 only when **all** are true:
 | B | #1674 |
 | C | #1675 |
 | D | #1673, #1672, #1676 |
+| Docs | #1677 (this runbook) |
 | Lane | #1188 |
 
 Numbers may change after merge; prefer titles and wave letters over stale IDs.
