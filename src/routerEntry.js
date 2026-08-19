@@ -177,52 +177,45 @@ export default {
 
     // Trades restored — paths served by legacy router / index handlers.
 
-
-
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/rating-health') {
+    if (url.pathname === '/admin/rating-health') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/support') {
+    if (url.pathname === '/admin/support') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/player-contact') {
+    if (url.pathname === '/admin/player-contact') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
 
-    {
-
-    {
-      const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
-      if (recompute && request.method === 'POST') {
-        return finalizeBrowserResponse(
-          await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
-          url.pathname,
-        );
-      }
+    const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
+    if (recompute && request.method === 'POST') {
+      return finalizeBrowserResponse(
+        await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
+        url.pathname,
+      );
     }
 
-      const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
-      if (ratingObs && request.method === 'POST') {
-        return finalizeBrowserResponse(
-          await handleRecordRatingObservationRequest(request, env, decodeURIComponent(ratingObs[1])),
-          url.pathname,
-        );
-      }
+    const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
+    if (ratingObs && request.method === 'POST') {
+      return finalizeBrowserResponse(
+        await handleRecordRatingObservationRequest(request, env, decodeURIComponent(ratingObs[1])),
+        url.pathname,
+      );
     }
 
     if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
@@ -231,7 +224,9 @@ if (url.pathname === '/admin/player-contact') {
         url.pathname,
       );
     }
-if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') {
+      return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    }
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const adminSupportResponse = await routeAdminSupport(request, env);
