@@ -14,6 +14,10 @@
     {
       "pattern": "fremontderby.com",
       "custom_domain": true
+    },
+    {
+      "pattern": "www.fremontderby.com",
+      "custom_domain": true
     }
   ],
   "version_metadata": {
