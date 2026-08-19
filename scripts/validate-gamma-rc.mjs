@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 /**
  * Gamma release-candidate validation (#581).
  * Probes the live gamma host: environment identity, optional commit tag, public smoke.
  * Does not mutate production. No secrets required for public checks.
  */
+import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 import { fileURLToPath } from 'node:url';
 
-const defaultBaseUrl = 'https://gamma.fremontderby.com';
+export const DEFAULT_GAMMA_BASE_URL = 'https://gamma.fremontderby.com';
 
-function normalizeBaseUrl(value) {
-  return stripTrailingSlashes(String(value || defaultBaseUrl).trim());
+export function normalizeBaseUrl(value, fallback = DEFAULT_GAMMA_BASE_URL) {
+  return stripTrailingSlashes(String(value || fallback).trim());
 }
 
-async function readJson(url) {
-  const response = await fetch(url, {
+export async function readJson(url, fetchImpl = fetch) {
+  const response = await fetchImpl(url, {
     headers: { accept: 'application/json', 'user-agent': 'fremont-gamma-rc-validation' },
     redirect: 'manual',
   });
@@ -28,8 +28,8 @@ async function readJson(url) {
   return { response, body };
 }
 
-async function readText(url) {
-  const response = await fetch(url, {
+export async function readText(url, fetchImpl = fetch) {
+  const response = await fetchImpl(url, {
     headers: { accept: 'text/html', 'user-agent': 'fremont-gamma-rc-validation' },
     redirect: 'manual',
   });
@@ -37,8 +37,19 @@ async function readText(url) {
   return { response, text };
 }
 
+export function versionTagMatches(actual, expected) {
+  const a = String(actual || '').trim();
+  const e = String(expected || '').trim();
+  if (!e) return true;
+  if (!a) return false;
+  if (a === e) return true;
+  if (a.startsWith(e.slice(0, 7))) return true;
+  if (e.startsWith(a) || a.startsWith(e)) return true;
+  return false;
+}
+
 export async function validateGammaRc({
-  baseUrl = defaultBaseUrl,
+  baseUrl = DEFAULT_GAMMA_BASE_URL,
   expectedVersionTag = '',
   fetchImpl = fetch,
 } = {}) {
@@ -47,9 +58,8 @@ export async function validateGammaRc({
   const errors = [];
   const notes = [];
 
-  // 1) Environment identity
   const envUrl = `${base}/health/environment`;
-  const { response: envRes, body: env } = await readJson(envUrl);
+  const { response: envRes, body: env } = await readJson(envUrl, fetchImpl);
   if (envRes.status !== 200) errors.push(`/health/environment HTTP ${envRes.status}`);
   if (env.environment !== 'gamma') {
     errors.push(`environment is "${env.environment ?? 'unknown'}", expected "gamma"`);
@@ -63,38 +73,33 @@ export async function validateGammaRc({
   }
   notes.push(`gamma env ok=${env.ok} versionTag=${env.versionTag || env.version || 'untagged'}`);
 
-  if (expectedTag) {
+  if (expectedTag && !versionTagMatches(env.versionTag || env.version, expectedTag)) {
     const actual = String(env.versionTag || env.version || '').trim();
     if (!actual) {
       errors.push(`expected version tag ${expectedTag} but gamma reported no versionTag`);
-    } else if (actual !== expectedTag && !actual.startsWith(expectedTag.slice(0, 7))) {
-      // allow full sha or short
-      if (!expectedTag.startsWith(actual) && !actual.startsWith(expectedTag)) {
-        errors.push(`version tag mismatch: gamma has "${actual}", expected "${expectedTag}"`);
-      }
+    } else {
+      errors.push(`version tag mismatch: gamma has "${actual}", expected "${expectedTag}"`);
     }
   }
 
-  // 2) Public home
-  const { response: homeRes, text: home } = await readText(`${base}/`);
+  const { response: homeRes, text: home } = await readText(`${base}/`, fetchImpl);
   if (homeRes.status !== 200) errors.push(`GET / HTTP ${homeRes.status}`);
   if (!/fremont|derby|league/i.test(home)) {
     errors.push('home page did not look like Fremont Derby HTML');
   }
 
-  // 3) Public seasons API (read-only)
-  const { response: seasonsRes, body: seasonsBody } = await readJson(`${base}/api/seasons`);
+  const { response: seasonsRes, body: seasonsBody } = await readJson(`${base}/api/seasons`, fetchImpl);
   if (seasonsRes.status !== 200) {
     errors.push(`/api/seasons HTTP ${seasonsRes.status}`);
   } else {
     notes.push(`seasons=${Array.isArray(seasonsBody.seasons) ? seasonsBody.seasons.length : 0}`);
   }
 
-  // 4) Auth isolation: unauthenticated profile should not be a production-style failure only —
-  // gamma may be open-auth in current ops; record outcome, do not fail solely on 200.
   try {
-    const { response: meRes, body: me } = await readJson(`${base}/api/me/profile`);
-    notes.push(`/api/me/profile → HTTP ${meRes.status}${me?.profile?.display_name ? ` (${me.profile.display_name})` : ''}`);
+    const { response: meRes, body: me } = await readJson(`${base}/api/me/profile`, fetchImpl);
+    notes.push(
+      `/api/me/profile → HTTP ${meRes.status}${me?.profile?.display_name ? ` (${me.profile.display_name})` : ''}`,
+    );
   } catch (e) {
     notes.push(`/api/me/profile probe: ${e.message}`);
   }
@@ -110,7 +115,7 @@ export async function validateGammaRc({
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const baseUrl = process.env.GAMMA_BASE_URL || process.argv[2] || defaultBaseUrl;
+  const baseUrl = process.env.GAMMA_BASE_URL || process.argv[2] || DEFAULT_GAMMA_BASE_URL;
   const expectedVersionTag = process.env.EXPECTED_VERSION_TAG || process.argv[3] || '';
   const result = await validateGammaRc({ baseUrl, expectedVersionTag });
   for (const n of result.notes) console.log(n);
