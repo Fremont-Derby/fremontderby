@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 const DEPLOY_SOURCE = Object.freeze({
   main: 'production',
   'fremontderby-gamma': 'gamma',
@@ -23,7 +25,9 @@ export function assertDeploySource(refName, lane) {
   return { ref, lane: requestedLane };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isDirect =
+  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
   try {
     const result = assertDeploySource(process.env.GITHUB_REF_NAME, process.env.DEPLOY_LANE);
     console.log(`Deploy source verified: ${result.ref} -> ${result.lane}`);

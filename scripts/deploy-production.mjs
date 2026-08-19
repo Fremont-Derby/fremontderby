@@ -59,18 +59,9 @@ export function productionDeployArgs(env = process.env) {
 }
 
 export function runProductionDeploy({ env = process.env, spawn = spawnSync } = {}) {
-  // Embed git SHA into the Worker bundle so /health versionTag cannot be dropped by var binding alone.
-  const stamp = spawn(process.execPath, ['scripts/stamp-deploy-identity.mjs'], {
-    env,
-    stdio: 'inherit',
-    shell: false,
-  });
-  if (stamp.error) throw stamp.error;
-  if (stamp.status !== 0 && stamp.status != null) {
-    process.exitCode = stamp.status;
-    return;
-  }
-
+  // Note: stamp-deploy-identity + STAMPED_DEPLOY_* markers live on main (#1674 path).
+  // This PR targets the gamma-based #1195 line where those markers are not present yet.
+  // Health identity here relies on --var DEPLOY_GIT_SHA above.
   const isWin = process.platform === 'win32';
   const result = spawn(isWin ? 'npx' : 'npx', productionDeployArgs(env), {
     env,
