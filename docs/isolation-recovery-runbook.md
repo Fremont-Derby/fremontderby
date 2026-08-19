@@ -67,7 +67,10 @@ Merge **only** after Actions are healthy. Prefer this order.
 | PR | Base | Purpose |
 |----|------|---------|
 | **#1635** | `main` | Forbid beta auth bypass on **gamma** (jfl/dru only) |
+| **#1752** | `#1195` head | Keep `--var DEPLOY_GIT_SHA` on prod + lane deploy args (stack into #1195 first) |
 | **#1195** | `fremontderby-gamma` | Exact deploy source matrix; CI cannot bypass lane branch match |
+
+**Before landing #1195 on gamma:** merge **#1752** into `jfl/issue-1193-env-isolation` (or cherry-pick). #1195 alone dropped the health var backstop.
 
 **After #1635 merges to main:**
 
@@ -75,7 +78,7 @@ Merge **only** after Actions are healthy. Prefer this order.
 2. Probe until gamma shows **`authBypassEnabled=false`** (dashboard var `BETA_AUTH_BYPASS` must not stay `1` if still set outside wrangler).
 3. Keep #1193 open through that probe.
 
-**After #1195:**
+**After #1195 (+ #1752):**
 
 1. Land onto the integration path the author uses (gamma → main as per release process).
 2. Confirm cross-lane matrix: `fremontderby-jfl`→jfl only, etc.
@@ -174,7 +177,7 @@ npm run check:domain-env   # after #1675
 Close #1193 only when **all** are true:
 
 1. [ ] Required GitHub Actions checks run on PRs to `main`.
-2. [ ] Wave A merged (#1635 on main; #1195 on agreed integration path).
+2. [ ] Wave A merged (#1635 on main; #1752 into #1195; #1195 on agreed integration path).
 3. [ ] Gamma live: `environment=gamma` and **no** open-auth bypass.
 4. [ ] JFL live: `ok=true`, project isolation checks green.
 5. [ ] DRU live: HTTP 200, `ok=true`, `environment=dru`.
@@ -199,7 +202,7 @@ Close #1193 only when **all** are true:
 
 | Wave | PRs |
 |------|-----|
-| A | #1635, #1195 |
+| A | #1635, **#1752 → #1195**, #1195 |
 | B | #1674 |
 | C | #1675 |
 | D | #1673, #1672, #1676 |
