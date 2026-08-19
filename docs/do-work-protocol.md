@@ -2,6 +2,8 @@
 
 When a collaborator says **Do work!** (or the hourly Grok loop runs), that is **not** permission to thrash the repo. It means: run the **change safety net**, fix what is red, then ship the highest-value **verified** increment.
 
+For behavior changes, implementation uses the inner **RED → GREEN → REFACTOR** loop from `docs/test-driven-development.md`. Before implementation, add or update the narrowest meaningful test/guard and prove it fails for the expected reason. Then make the minimum change to reach GREEN, run adjacent regressions, and refactor only while the proof remains green. Docs-only/copy-only/purely visual work may use the documented justified-exception path instead of fake tests.
+
 ## Priority order (always)
 
 1. **Production name & DNS** — `npm run canary:dns`
@@ -10,8 +12,9 @@ When a collaborator says **Do work!** (or the hourly Grok loop runs), that is **
    Wrong `environment` on a host is a deploy/bind problem, not a UI tweak.
 3. **Public surface** — `npm run canary:surface`
    Broken shells/routes after UI moves fail here; update `public-surface-contract.mjs` only when the product intentionally changes paths.
-4. **CI / tests** — `npm test` for the slice you touched; do not delete tests to go green.
-5. **Small ship** — focused PR, production/lane canary green, comment on blockers instead of silent half-fixes.
+4. **RED proof for the chosen slice** — write/run the focused test or executable guard before changing behavior; confirm the failure is the expected missing behavior rather than an unrelated break.
+5. **GREEN + regression** — implement the smallest fix, run the focused test, then `npm test` or the relevant adjacent suite; do not delete/weaken tests to go green.
+6. **Small ship** — focused PR, production/lane canary green, comment on blockers instead of silent half-fixes.
 
 ## In scope for Do work!
 
@@ -31,6 +34,7 @@ When a collaborator says **Do work!** (or the hourly Grok loop runs), that is **
 
 ## Definition of done for a Do work! session
 
+- [ ] Behavior changes have RED evidence from before implementation, GREEN evidence after the minimum fix, and relevant regression proof; or a justified TDD exception is recorded.
 - [ ] `npm run canary` green (or failures filed with exact command output)
 - [ ] Any merged change has a revert story and does not leave apex/www unbound
 - [ ] Issue/PR notes are professional (cheeky only when the human used “Do work!” as the cue)
@@ -46,7 +50,7 @@ When a collaborator says **Do work!** (or the hourly Grok loop runs), that is **
 | Public surface canary | Route/shell regression after UI/deploy |
 | Restore / diagnose workflows | Break-glass for domain binding |
 
-See also: `docs/change-safety-net.md`, `docs/apex-dns-incident-guard.md`, `docs/hybrid-hourly-automation.md`.
+See also: `docs/change-safety-net.md`, `docs/apex-dns-incident-guard.md`, `docs/hybrid-hourly-automation.md`, `docs/test-driven-development.md`.
 
 ## Concrete example (production + www)
 
