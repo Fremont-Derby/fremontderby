@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertLaneDeployContext } from '../scripts/deploy-lane.mjs';
+import { assertLaneDeployContext, laneDeployArgs } from '../scripts/deploy-lane.mjs';
 import { assertProductionDeployContext, productionDeployArgs } from '../scripts/deploy-production.mjs';
 
 const sha = 'a'.repeat(40);
@@ -84,4 +84,22 @@ test('productionDeployArgs prefers WORKERS_CI then GITHUB_SHA then DEPLOY_GIT_SH
 
   const fromDeploy = productionDeployArgs({ DEPLOY_GIT_SHA: sha });
   assert.ok(fromDeploy.includes(`DEPLOY_GIT_SHA:${sha}`));
+});
+
+test('laneDeployArgs sets DEPLOY_GIT_SHA health var for matching permanent branches', () => {
+  for (const [lane, branch] of [
+    ['jfl', 'fremontderby-jfl'],
+    ['dru', 'fremontderby-dru'],
+    ['gamma', 'fremontderby-gamma'],
+  ]) {
+    const args = laneDeployArgs(lane, {
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REF_NAME: branch,
+      GITHUB_SHA: sha,
+    });
+    assert.ok(args.includes('--env'));
+    assert.ok(args.includes(lane));
+    assert.ok(args.includes('--tag'));
+    assert.ok(args.includes(`DEPLOY_GIT_SHA:${sha}`));
+  }
 });

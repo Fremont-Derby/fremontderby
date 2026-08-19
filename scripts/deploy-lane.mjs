@@ -57,9 +57,16 @@ export function assertLaneDeployContext(lane, env = process.env, spawn = spawnSy
 export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
   const config = assertLaneDeployContext(lane, env, spawn);
   const args = ['wrangler', 'deploy', '--env', config.environment];
-  const sha = String(env.GITHUB_SHA || '').trim();
+  // Prefer CI full SHAs; DEPLOY_GIT_SHA remains a local/canary fallback (same as production).
+  const sha = String(
+    env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
+  ).trim();
   if (/^[0-9a-f]{40}$/i.test(sha)) {
     args.push('--tag', sha, '--message', `git:${sha}`);
+  }
+  if (sha && /^[0-9a-f]{7,40}$/i.test(sha)) {
+    // CF_VERSION_METADATA.tag is often empty even with --tag; expose SHA to /health via var.
+    args.push('--var', `DEPLOY_GIT_SHA:${sha}`);
   }
   return args;
 }
