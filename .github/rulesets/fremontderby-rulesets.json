@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "Authoritative intended repository rulesets for Fremont Derby lane isolation (#1185 / #1173 / #889). Apply via GitHub Settings → Rules → Rulesets (human/org admin).",
+  "requiredStatusChecks": {
+    "main": ["test", "accessibility", "pr-card-contract", "validate"],
+    "fremontderby-gamma": ["test", "accessibility"]
+  },
+  "rulesets": [
+    {
+      "name": "Main block",
+      "target": "branch",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": { "include": ["refs/heads/main"], "exclude": [] }
+      },
+      "rules": [
+        { "type": "pull_request", "parameters": { "required_approving_review_count": 0, "dismiss_stale_reviews_on_push": true, "require_code_owner_review": false } },
+        { "type": "required_status_checks", "parameters": { "strict_required_status_checks_policy": true, "required_status_checks": [{"context": "test"}, {"context": "accessibility"}, {"context": "pr-card-contract"}, {"context": "validate"}] } },
+        { "type": "non_fast_forward" }
+      ],
+      "notes": "Prefer Gamma → main promotion (release-source-policy). CodeQL may be informational only to avoid merge queue stalls."
+    },
+    {
+      "name": "Gamma promotion",
+      "target": "branch",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": { "include": ["refs/heads/fremontderby-gamma"], "exclude": [] }
+      },
+      "rules": [
+        { "type": "pull_request", "parameters": { "required_approving_review_count": 0, "dismiss_stale_reviews_on_push": true } },
+        { "type": "required_status_checks", "parameters": { "strict_required_status_checks_policy": true, "required_status_checks": [{"context": "test"}, {"context": "accessibility"}] } },
+        { "type": "non_fast_forward" }
+      ],
+      "notes": "Heads must be jfl/* or dru/* (or permanent fremontderby-jfl / fremontderby-dru) per release-source-policy."
+    },
+    {
+      "name": "JFL permanent branch",
+      "target": "branch",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": { "include": ["refs/heads/fremontderby-jfl", "refs/heads/jfl/**"], "exclude": [] }
+      },
+      "rules": [
+        { "type": "non_fast_forward" }
+      ],
+      "notes": "Restrict push actors to JFL automation identity + owner break-glass when org actors exist."
+    },
+    {
+      "name": "DRU permanent branch",
+      "target": "branch",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": { "include": ["refs/heads/fremontderby-dru", "refs/heads/dru/**"], "exclude": [] }
+      },
+      "rules": [
+        { "type": "non_fast_forward" }
+      ],
+      "notes": "Restrict push actors to DRU automation identity + owner break-glass when org actors exist."
+    }
+  ]
+}
