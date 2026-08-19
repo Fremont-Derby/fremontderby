@@ -27,6 +27,8 @@
     { "name": "area:rules", "color": "d876e3", "description": "League rules, eligibility, or scoring policy" },
     { "name": "area:data", "color": "0052cc", "description": "Schema, migrations, integrity, or data access" },
     { "name": "area:platform", "color": "006b75", "description": "Cloudflare, Supabase, deployment, or operations" },
+    { "name": "area:infra", "color": "5319e7", "description": "Infrastructure, DNS, Workers bindings, or runtime topology" },
+    { "name": "area:deployment", "color": "1d76db", "description": "Deploy scripts, release lanes, or post-deploy smoke" },
     { "name": "area:qa", "color": "bfd4f2", "description": "Testing, release proof, security, or verification" },
     { "name": "area:process", "color": "f9d0c4", "description": "Agent governance, documentation, or developer workflow" },
 
