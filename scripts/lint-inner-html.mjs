@@ -3,7 +3,7 @@
  * Static string innerHTML (table chrome) is allowed.
  */
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const SKIP_PATH_SUBSTRINGS = Object.freeze(['Sandbox', 'sandbox']);
@@ -59,9 +59,7 @@ export function lintInnerHtmlTree(
 }
 
 const isDirect =
-  process.argv[1] && fileURLToPath(import.meta.url) === join(process.cwd(), process.argv[1].replace(/^\.\//, '')) ||
-  (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]);
-
+  process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 if (isDirect) {
   const offenders = lintInnerHtmlTree('src');
   if (offenders.length) {
