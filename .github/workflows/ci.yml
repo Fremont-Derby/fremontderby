@@ -224,7 +224,7 @@ jobs:
               issueNumber = created.number;
             }
 
-            const comments = await github.paginate(github.rest.issues.listCommentsForRepo, {
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
