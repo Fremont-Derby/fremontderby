@@ -5,11 +5,14 @@
  * missing Workers custom-domain binding left apex with no A/AAAA.
  */
 import { fileURLToPath } from 'node:url';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
 
-export const PRODUCTION_DNS_HOSTS = Object.freeze([
-  'fremontderby.com',
-  'www.fremontderby.com',
-]);
+/** Derived from HOST_ENVIRONMENT_EXPECTATIONS (production hosts only). */
+export const PRODUCTION_DNS_HOSTS = Object.freeze(
+  Object.entries(HOST_ENVIRONMENT_EXPECTATIONS)
+    .filter(([, environment]) => environment === 'production')
+    .map(([hostname]) => hostname),
+);
 
 const DOH = 'https://cloudflare-dns.com/dns-query';
 
@@ -97,7 +100,6 @@ export async function assertProductionDnsAndHealth({
     }
   }
   const dnsFailed = dnsResults.filter((row) => !row.ok);
-  // Only hit HTTP when DNS looks present for that host
   for (const row of dnsResults.filter((r) => r.ok)) {
     try {
       healthResults.push(await assertHostnameHealth(row.hostname, fetchImpl));
