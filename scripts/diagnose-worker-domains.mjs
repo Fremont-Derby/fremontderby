@@ -27,6 +27,51 @@ export const EXPECTED_WORKER_DOMAIN_BINDINGS = new Map([
   ['gamma.fremontderby.com', Object.freeze(['fremontderby-gamma'])],
 ]);
 
+/**
+ * Pure evaluation of live domain rows against the expected binding matrix.
+ * No network. Returns { failed, findings } where findings are ok|missing|misroute.
+ */
+export function evaluateDomainBindings(
+  domains = [],
+  expected = EXPECTED_WORKER_DOMAIN_BINDINGS,
+) {
+  const findings = [];
+  let failed = 0;
+
+  for (const [hostname, services] of expected) {
+    const allowed = Array.isArray(services) ? services : [services];
+    const row = domains.find((d) => d.hostname === hostname);
+    if (!row) {
+      findings.push({
+        status: 'missing',
+        hostname,
+        allowed: [...allowed],
+        service: null,
+      });
+      failed += 1;
+      continue;
+    }
+    if (!allowed.includes(row.service)) {
+      findings.push({
+        status: 'misroute',
+        hostname,
+        allowed: [...allowed],
+        service: row.service,
+      });
+      failed += 1;
+    } else {
+      findings.push({
+        status: 'ok',
+        hostname,
+        allowed: [...allowed],
+        service: row.service,
+      });
+    }
+  }
+
+  return { failed, findings };
+}
+
 export async function diagnoseWorkerDomains() {
   const expected = EXPECTED_WORKER_DOMAIN_BINDINGS;
   const { response, payload } = await cf('/workers/domains');
@@ -49,23 +94,17 @@ export async function diagnoseWorkerDomains() {
     }));
   }
 
-  let failed = 0;
-  for (const [hostname, services] of expected) {
-    const allowed = Array.isArray(services) ? services : [services];
-    const row = domains.find((d) => d.hostname === hostname);
-    if (!row) {
-      console.error(`MISSING binding: ${hostname} (expected one of ${allowed.join('|')})`);
-      failed += 1;
-      continue;
-    }
-    if (!allowed.includes(row.service)) {
-      console.error(`MISROUTE: ${hostname} -> ${row.service} (expected one of ${allowed.join('|')})`);
-      failed += 1;
+  const { failed, findings } = evaluateDomainBindings(domains, expected);
+  for (const finding of findings) {
+    if (finding.status === 'missing') {
+      console.error(`MISSING binding: ${finding.hostname} (expected one of ${finding.allowed.join('|')})`);
+    } else if (finding.status === 'misroute') {
+      console.error(`MISROUTE: ${finding.hostname} -> ${finding.service} (expected one of ${finding.allowed.join('|')})`);
     } else {
-      console.log(`OK ${hostname} -> ${row.service}`);
+      console.log(`OK ${finding.hostname} -> ${finding.service}`);
     }
   }
-  return { failed, domains };
+  return { failed, domains, findings };
 }
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
