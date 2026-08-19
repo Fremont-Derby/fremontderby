@@ -12,6 +12,7 @@ import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
+import { decorateModernUiSliceResponse } from './modernUiSlice.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
@@ -146,6 +147,7 @@ export default {
       const withPlayerClaim = await enhanceProfilePlayerClaim(withContact);
       return finalizeBrowserResponse(await injectJflSimulatedGoogleAuth(withPlayerClaim, env), url.pathname);
     }
-    return finalizeBrowserResponse(reconciled, url.pathname);
+    const finalized = await finalizeBrowserResponse(reconciled, url.pathname);
+    return decorateModernUiSliceResponse(finalized, request, env);
   },
 };
