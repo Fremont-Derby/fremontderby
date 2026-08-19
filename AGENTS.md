@@ -265,6 +265,26 @@ Avoid:
 
 If a business decision is genuinely missing, create/update a decision issue with the consequences and continue with other unblocked work instead of inventing the rule.
 
+## Test-driven development: mandatory inner loop
+
+For behavior-bearing code, configuration, migrations, and automation, use **RED → GREEN → REFACTOR**. The detailed contract lives in `docs/test-driven-development.md` and the card/PR templates enforce its evidence.
+
+Before implementation or before changing production behavior:
+
+1. identify the smallest observable behavior owned by the card;
+2. add or modify the narrowest meaningful automated test or executable guard;
+3. run it and prove it **fails for the expected reason** rather than syntax, fixture, environment, or unrelated failure;
+4. record RED evidence in the card/PR;
+5. make the smallest coherent implementation change that reaches GREEN;
+6. run the focused proof and relevant regression suite;
+7. REFACTOR only while the focused and regression proof remain green.
+
+Use the test boundary that owns the behavior: **domain rules** use domain/unit tests; **authorization** uses positive/negative contract or integration tests; **API/HTTP** uses request/response tests; **database/migration** behavior uses migration/integration proof; **UI/browser** behavior uses rendered/browser/accessibility interaction tests where practical; **config/deployment** behavior uses executable guards, fixtures, dry-runs, lane assertions, or canaries that fail closed.
+
+Do not manufacture meaningless tests. A justified exception may be recorded for **docs-only** or documentation-only edits, copy-only changes with no behavior change, purely visual polish with no stable executable assertion, or urgent live containment where delaying the safety action would increase risk. Use the narrowest meaningful substitute validation, and for emergency behavior changes add regression coverage before the card can become Verified/Closed. “Tests are inconvenient” is not an exception.
+
+Human onion validation is the **outer acceptance loop**, not a replacement for TDD. Automated RED/GREEN/REFACTOR proves the implementation; the relevant onion gate later proves a human can actually understand and use the released behavior.
+
 ## Tests, CI, and evidence
 
 Follow the current README, package scripts, and CI workflow rather than assuming commands never change.
@@ -272,6 +292,7 @@ Follow the current README, package scripts, and CI workflow rather than assuming
 For meaningful changes:
 
 - add or update the smallest useful regression coverage;
+- record RED evidence before implementation, GREEN evidence after the minimum change, and relevant regression evidence, or a justified TDD exception;
 - run/inspect the repository's required validation;
 - test authorization failures as well as happy paths when access boundaries are involved;
 - validate the hosted environment when the change depends on migrations, secrets, auth configuration, Worker bindings, or external platform state;
