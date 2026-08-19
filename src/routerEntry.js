@@ -39,6 +39,7 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { resolveDeployVersionTag } from './deployVersionTag.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -104,6 +105,10 @@ async function finalizeBrowserResponse(response, pathname) {
   return injectPublicSeo(withAuth, pathname);
 }
 
+// Replaced at deploy time by scripts/stamp-deploy-identity.mjs
+const STAMPED_DEPLOY_GIT_SHA = null;
+const STAMPED_DEPLOY_AT = null;
+
 export default {
   async scheduled(event, env, ctx) {
     const summary = await runHourlyProbes(env);
@@ -114,6 +119,32 @@ export default {
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
+    if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
+      const meta = env.CF_VERSION_METADATA || {};
+      const identity = resolveDeployVersionTag({
+        meta,
+        deployGitSha: env.DEPLOY_GIT_SHA,
+        stampedSha: STAMPED_DEPLOY_GIT_SHA,
+        stampedAt: STAMPED_DEPLOY_AT,
+      });
+      if (url.pathname === '/health') {
+        return Response.json(
+          {
+            ok: true,
+            service: 'fremontderby',
+            version: identity.version,
+            versionTag: identity.tag,
+            deployedAt: identity.deployedAt,
+            versionTagSource: identity.versionTagSource,
+          },
+          { headers: { 'cache-control': 'no-store' } },
+        );
+      }
+      // environment: still use legacy readiness via fallthrough
+    }
+
     if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
       const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
       const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
