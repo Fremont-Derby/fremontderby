@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DEPLOY_SOURCE = Object.freeze({
@@ -25,8 +26,10 @@ export function assertDeploySource(refName, lane) {
   return { ref, lane: requestedLane };
 }
 
+// Resolve argv so relative paths from cmd.exe still match this module (self-hosted Windows).
 const isDirect =
-  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+  Boolean(process.argv[1]) &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 if (isDirect) {
   try {
     const result = assertDeploySource(process.env.GITHUB_REF_NAME, process.env.DEPLOY_LANE);
