@@ -32,6 +32,17 @@ Unclaimed — replace `agent:unclaimed` with exactly one implementation owner la
 
 - [ ] Add concrete, independently verifiable acceptance criteria.
 
+## Test-first contract
+
+<!-- Behavior-bearing code/config/migration/automation work follows docs/test-driven-development.md. Write the smallest meaningful test/guard first and prove RED before implementation. Docs-only/copy-only/purely visual work may use a justified exception; do not invent fake tests. -->
+
+- Behavior being changed:
+- RED evidence — test/check + command + expected failure reason before implementation:
+- GREEN evidence — focused test/check after the minimum implementation:
+- Regression evidence — adjacent suite / required CI:
+- Refactor after GREEN: None / describe
+- TDD justified exception: None / explain why RED-first is not meaningful or safe and name substitute validation
+
 ## Scope
 
 <!-- Name the coherent behavior and likely surfaces this card owns. -->
@@ -50,10 +61,10 @@ Not created. After Ready and Claimed, create a focused branch from current `main
 
 ## Work stages
 
-- [ ] **Ready** — `stage:ready`; scope, acceptance criteria, dependencies, and overlap are understood.
+- [ ] **Ready** — `stage:ready`; scope, acceptance criteria, dependencies, overlap, and the planned test-first proof or justified exception are understood.
 - [ ] **Claimed** — `stage:claimed`; one `agent:*` implementation owner is recorded before code changes begin.
-- [ ] **In progress** — `stage:in-progress`; a focused branch exists from current `main`.
-- [ ] **Handoff / review** — `stage:handoff`; structured handoff and target `handoff:*` label are present.
+- [ ] **In progress** — `stage:in-progress`; a focused branch exists from current `main`; RED evidence is recorded before behavior implementation unless a justified exception applies.
+- [ ] **Handoff / review** — `stage:handoff`; structured handoff and target `handoff:*` label are present; GREEN/regression evidence is recorded.
 - [ ] **Merge ready** — `stage:merge-ready`; current `main` and overlap were rechecked; required checks are green.
 - [ ] **Merged** — `stage:merged`; the PR is merged and this card intentionally remains open.
 - [ ] **Verified** — `stage:verified`; the merged result is validated and evidence is recorded.
