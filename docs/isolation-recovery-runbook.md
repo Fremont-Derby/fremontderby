@@ -5,6 +5,7 @@ prepared PR stack. Complements `docs/GITHUB_ACTIONS.md`,
 `docs/cloudflare-builds-isolation.md`, and `docs/ENVIRONMENTS.md`.
 
 **Tracking card:** #1193  
+**DRU/JFL binding recovery:** #1761 (PR #1760 for DRU)  
 **Security companion:** #1231 (gamma must not share jfl/dru open-auth)
 
 ---
@@ -27,11 +28,13 @@ curl -sS -D- https://dru.fremontderby.com/health/environment -o /tmp/dru.json
 | **jfl** | `ok=true`, `environment=jfl`, project isolation checks green (staging project, not production) |
 | **dru** | HTTP 200, `ok=true`, `environment=dru`, isolation green |
 
-**Known live failures (pre-recovery):**
+**Status as of 2026-08-19 (~09:00 UTC):**
 
-- Gamma: env correct but open-auth still on (`authBypassEnabled=true`).
-- JFL: `supabaseProjectMatchesEnvironment` + `actualProjectIsolated` fail (bound URL points at wrong project).
-- DRU: HTTP **503** coarse fail-closed body (`versionTag` often null).
+- **#1195 merged into `fremontderby-gamma`** (author included DEPLOY_GIT_SHA preservation commits). Deploy-source matrix is on the gamma *branch*; Cloudflare Workers Builds for that event still reported failures — live gamma deploy verification still required.
+- **#1752 closed as superseded** (author applied equivalent DEPLOY_GIT_SHA commits onto #1195 before merge).
+- Gamma: author also committed `test: lock gamma auth bypass off` on gamma tip. Runtime forbid-bypass for main remains **#1635** (still open).
+- JFL: still expected to fail project isolation until binding recovery (#1761).
+- DRU: **#1760** open — pins DRU staging Supabase vars in `wrangler.jsonc`. Post-merge: clear stale CF secrets, deploy from `fremontderby-dru`, green `/health/environment`.
 
 ---
 
@@ -52,7 +55,7 @@ Required PR checks (`test`, `accessibility`, `pr-card-contract`, `validate`) mus
 
 1. Confirm hosted runners work: manual **CI** `workflow_dispatch` completes real steps (see `docs/GITHUB_ACTIONS.md` reactivation checklist / #723).
 2. Confirm a sample open PR shows **GitHub Actions** jobs, not only **Workers Builds** failures on non-permanent branches.
-3. Do **not** treat Workers Builds `failure` on `dru/*` PR heads as a product regression — expected isolation when branch filters + guards refuse non-allowlisted refs.
+3. Do **not** treat Workers Builds `failure` on `dru/*` / recovery PR heads as a product regression — expected isolation when branch filters + guards refuse non-allowlisted refs.
 
 **Stop condition:** no required Actions runs → do not merge on greenwashed Workers Builds alone.
 
@@ -60,28 +63,31 @@ Required PR checks (`test`, `accessibility`, `pr-card-contract`, `validate`) mus
 
 ## 3. Merge waves (prepared open stack)
 
-Merge **only** after Actions are healthy. Prefer this order.
+### Wave A — security + deploy isolation (partially complete)
 
-### Wave A — security + deploy isolation
-
-| PR | Base | Purpose |
-|----|------|---------|
-| **#1635** | `main` | Forbid beta auth bypass on **gamma** (jfl/dru only) |
-| **#1752** | `#1195` head | Keep `--var DEPLOY_GIT_SHA` on prod + lane deploy args (stack into #1195 first) |
-| **#1195** | `fremontderby-gamma` | Exact deploy source matrix; CI cannot bypass lane branch match |
-
-**Before landing #1195 on gamma:** merge **#1752** into `jfl/issue-1193-env-isolation` (or cherry-pick). #1195 alone dropped the health var backstop.
+| PR | Base | Status |
+|----|------|--------|
+| **#1195** | `fremontderby-gamma` | **Merged** 2026-08-19 (~08:55 UTC). Author included DEPLOY_GIT_SHA preservation. |
+| **#1752** | was `#1195` head | **Closed superseded** — equivalent commits landed on #1195 before merge. |
+| **#1635** | `main` | **Still open** — runtime forbid beta auth bypass on gamma. Gamma has a related *test* lock only; merge this for main + live policy. |
 
 **After #1635 merges to main:**
 
-1. Promote/deploy **gamma** from the permanent lane path (Workers Builds on `fremontderby-gamma` or `workflow_dispatch` deploy lane=gamma with matching ref).
-2. Probe until gamma shows **`authBypassEnabled=false`** (dashboard var `BETA_AUTH_BYPASS` must not stay `1` if still set outside wrangler).
-3. Keep #1193 open through that probe.
+1. Promote/deploy **gamma** from the permanent lane path.
+2. Probe until gamma shows **`authBypassEnabled=false`** (clear dashboard `BETA_AUTH_BYPASS` if still `1`).
+3. Keep #1193 / #1231 open through that probe.
 
-**After #1195 (+ #1752):**
+**After #1195 (done on branch):**
 
-1. Land onto the integration path the author uses (gamma → main as per release process).
-2. Confirm cross-lane matrix: `fremontderby-jfl`→jfl only, etc.
+1. Confirm live gamma Worker actually runs the new deploy-source matrix (Workers Builds failed on merge event — may need a clean gamma deploy).
+2. Do not promote gamma → main until live isolation evidence is green.
+
+### Active binding recovery (preferred next)
+
+| Item | Target | Purpose |
+|------|--------|---------|
+| **#1760** | `fremontderby-dru` | Pin DRU staging Supabase URL / publishable / expected ref in wrangler vars |
+| **#1761** | tracking | JFL + DRU isolated Supabase bindings; clear stale secrets; live health green |
 
 ### Wave B — deploy identity
 
@@ -103,11 +109,11 @@ Merge **only** after Actions are healthy. Prefer this order.
 | **#1672** | UI/privacy pure locks |
 | **#1676** | CodeQL `security-extended` + hourly probe org default |
 
-### Docs (merge anytime Actions allow)
+### Docs
 
 | PR | Purpose |
 |----|---------|
-| **#1677** | This runbook (`docs/isolation-recovery-runbook.md`) |
+| **#1677** | This runbook |
 
 ### Lane-owned (independent)
 
@@ -115,39 +121,32 @@ Merge **only** after Actions are healthy. Prefer this order.
 |----|------|-------|
 | **#1188** | `fremontderby-jfl` | JFL lint baseline — lane author |
 
-Rebase waves B–D onto `main` after A if GitHub reports conflicts.
+Rebase waves B–D onto `main` after remaining Wave A if GitHub reports conflicts.
 
 ---
 
 ## 4. Live binding repair (human)
 
-Code merges do **not** fix wrong dashboard bindings.
+Code merges do **not** fix wrong dashboard bindings by themselves.
 
-### JFL — project isolation
+### DRU — via #1760 / #1761
 
-Symptom: `supabaseProjectMatchesEnvironment` / `actualProjectIsolated` false while schema checks pass.
+1. After #1760 merges to `fremontderby-dru`: clear stale Cloudflare secrets for `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `EXPECTED_SUPABASE_PROJECT_REF` on Worker **fremontderby-dru**.
+2. Deploy DRU from `fremontderby-dru` only.
+3. Probe until HTTP 200 and `ok=true`, `environment=dru`.
 
-1. Cloudflare Worker **fremontderby-jfl** → Settings / Variables:
-   - `ENVIRONMENT=jfl`
-   - `SUPABASE_URL=https://oqkkvqkerusepyokzbmt.supabase.co` (staging project)
-   - `EXPECTED_SUPABASE_PROJECT_REF=oqkkvqkerusepyokzbmt`
-   - `SUPABASE_SCHEMA=jfl`
-2. Secret `SUPABASE_SERVICE_ROLE_KEY` must be the **staging** service role (not production).
+### JFL — project isolation (#1761)
+
+Symptom: `supabaseProjectMatchesEnvironment` / `actualProjectIsolated` false.
+
+1. Same pattern as DRU: durable config must pin staging project `oqkkvqkerusepyokzbmt` and schema `jfl`.
+2. Clear stale production-pointing secrets if present.
 3. Redeploy jfl from `fremontderby-jfl` only.
-4. Probe until both isolation checks are green.
-
-### DRU — 503 fail-closed
-
-Symptom: HTTP 503, minimal JSON, often `versionTag=null`.
-
-1. Confirm Worker **fremontderby-dru** is the hostname target for `dru.fremontderby.com`.
-2. Align vars/secrets with wrangler `env.dru` (staging URL, schema `dru`, open-auth only if intentional).
-3. Deploy from `fremontderby-dru` only.
-4. Probe until HTTP 200 and `ok=true`.
+4. Probe until isolation checks are green.
 
 ### Gamma — open-auth off
 
-1. After #1635 code is live: remove dashboard `BETA_AUTH_BYPASS=1` if present.
+1. After #1635 code is live on gamma: remove dashboard `BETA_AUTH_BYPASS=1` if present.
 2. Redeploy gamma.
 3. Probe `authBypassEnabled=false`.
 
@@ -156,14 +155,13 @@ Symptom: HTTP 503, minimal JSON, often `versionTag=null`.
 ## 5. Post-merge verification script
 
 ```bash
-# Identity + readiness (expect ok=true on all when recovered)
 for host in fremontderby.com gamma.fremontderby.com jfl.fremontderby.com dru.fremontderby.com; do
   echo "=== $host ==="
   curl -sS -m 15 "https://$host/health/environment" | jq '{ok,environment,versionTag,failed:(.checks//[]|map(select(.ok==false)|.name))}'
 done
 ```
 
-Optional repo canaries (from a laptop with network):
+Optional repo canaries:
 
 ```bash
 npm run canary:lanes
@@ -177,10 +175,10 @@ npm run check:domain-env   # after #1675
 Close #1193 only when **all** are true:
 
 1. [ ] Required GitHub Actions checks run on PRs to `main`.
-2. [ ] Wave A merged (#1635 on main; #1752 into #1195; #1195 on agreed integration path).
-3. [ ] Gamma live: `environment=gamma` and **no** open-auth bypass.
-4. [ ] JFL live: `ok=true`, project isolation checks green.
-5. [ ] DRU live: HTTP 200, `ok=true`, `environment=dru`.
+2. [x] #1195 on gamma branch (DEPLOY_GIT_SHA included). Live gamma deploy still to confirm.
+3. [ ] #1635 on main + gamma live with **no** open-auth bypass.
+4. [ ] JFL live: `ok=true`, project isolation checks green (#1761).
+5. [ ] DRU live: HTTP 200, `ok=true`, `environment=dru` (#1760 → #1761).
 6. [ ] Production still `ok=true`, `environment=production`.
 7. [ ] Waves B–D merged or explicitly deferred with owner note on #1193.
 8. [ ] Final evidence comment on #1193 with probe timestamps.
@@ -191,22 +189,22 @@ Close #1193 only when **all** are true:
 
 1. Probe canaries (section 0).
 2. Diff against definition of done (section 6).
-3. If Actions still dark → document only; do not invent merges.
-4. If PRs need rebase/conflict fix → do that on existing branches.
+3. Prefer supporting **#1760 / #1761** and **#1635** over opening new isolation PRs.
+4. If Actions still dark → document only; do not invent merges.
 5. Post short evidence on #1193 when state changes.
-6. Do **not** open thin pure-lock PRs that undo the prepared freeze unless the runbook is amended.
+6. Do **not** reopen superseded stacks (#1752) or thin pure-lock noise.
 
 ---
 
-## 8. Quick reference — open PRs at freeze
+## 8. Quick reference — current stack
 
-| Wave | PRs |
-|------|-----|
-| A | #1635, **#1752 → #1195**, #1195 |
-| B | #1674 |
-| C | #1675 |
-| D | #1673, #1672, #1676 |
+| Track | Items |
+|-------|-------|
+| Done on gamma branch | #1195 (merged); #1752 superseded |
+| Active binding recovery | **#1760** → `fremontderby-dru`; tracking **#1761** |
+| Still Wave A | **#1635** → `main` |
+| B–D | #1674, #1675, #1673, #1672, #1676 |
 | Docs | #1677 (this runbook) |
 | Lane | #1188 |
 
-Numbers may change after merge; prefer titles and wave letters over stale IDs.
+Prefer titles and track letters over stale IDs after further merges.
