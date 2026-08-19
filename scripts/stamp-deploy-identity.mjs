@@ -5,6 +5,7 @@
  */
 import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const SHA_RE = /^[0-9a-f]{7,40}$/i;
 
@@ -81,27 +82,8 @@ export const DEPLOY_IDENTITY = {
   return { stamped: true, sha: resolved, stampedAt };
 }
 
-const isDirect = process.argv[1] && process.argv[1].endsWith('stamp-deploy-identity.mjs');
-if (isDirect || (process.argv[1] && fileURLToPathSafe(process.argv[1]) === process.argv[1])) {
-  try {
-    // Keep CLI behavior when executed directly
-  } catch {
-    /* ignore */
-  }
-}
-
-function fileURLToPathSafe(path) {
-  try {
-    const { fileURLToPath } = await_import_meta();
-    return fileURLToPath;
-  } catch {
-    return null;
-  }
-}
-
-// Direct-run bootstrap (avoid top-level await import complexity)
-import { fileURLToPath } from 'node:url';
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
   try {
     stampDeployIdentity();
   } catch (error) {
