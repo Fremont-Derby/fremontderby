@@ -40,9 +40,13 @@ export function productionDeployArgs(env = process.env) {
   assertProductionDeployContext(env);
   const args = ['wrangler', 'deploy'];
 
-  const commitSha = String(env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || '').trim();
-  if (/^[0-9a-f]{40}$/i.test(commitSha)) {
+  const commitSha = String(
+    env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
+  ).trim();
+  if (/^[0-9a-f]{7,40}$/i.test(commitSha)) {
     args.push('--tag', commitSha, '--message', `git:${commitSha}`);
+    // CF_VERSION_METADATA.tag can be empty even with --tag; expose SHA to /health explicitly.
+    args.push('--var', `DEPLOY_GIT_SHA:${commitSha}`);
   }
 
   return args;
