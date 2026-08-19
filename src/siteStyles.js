@@ -1,8 +1,10 @@
 import { designSystemStyles } from './designSystem.js';
+import { modernUiPrimitiveStyles } from './modernUiPrimitives.js';
 
 // Final site-wide contract. Page renderers may own layout, but shared shell/navigation
 // and standard surfaces are normalized here after every page-local stylesheet.
 export const siteStyles = `${designSystemStyles}
+${modernUiPrimitiveStyles}
 
   /* #521: one final authority for shared shell/navigation. */
   .fd-shell {

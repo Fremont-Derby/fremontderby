@@ -12,6 +12,7 @@ import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
+import { routeModernUiCatalog } from './modernUiCatalog.js';
 import { decorateModernUiSliceResponse } from './modernUiSlice.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
@@ -109,6 +110,10 @@ async function finalizeBrowserResponse(response, pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const modernUiCatalogResponse = routeModernUiCatalog(request, env);
+    if (modernUiCatalogResponse) {
+      return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
+    }
     if (isRetiredTradePath(url.pathname)) {
       const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
         ? jflNotFoundResponse(url.pathname)
