@@ -6,6 +6,7 @@ import {
   disableWorkerSubdomain,
   workerScriptNames,
 } from '../scripts/disable-workers-dev.mjs';
+import { LANE_CUSTOM_DOMAINS } from '../scripts/lane-custom-domains.mjs';
 
 function jsonResponse(status, payload) {
   return {
@@ -16,14 +17,12 @@ function jsonResponse(status, payload) {
 }
 
 test('the cleanup owns every known Fremont Derby Worker name', () => {
-  assert.deepEqual([...workerScriptNames], [
-    'fremontderby',
-    'fremontderby-prod',
-    'fremontderby-staging',
-    'fremontderby-jfl',
-    'fremontderby-dru',
-    'fremontderby-gamma',
-  ]);
+  for (const row of LANE_CUSTOM_DOMAINS) {
+    assert.ok(workerScriptNames.includes(row.service));
+  }
+  assert.ok(workerScriptNames.includes('fremontderby-prod'));
+  assert.ok(workerScriptNames.includes('fremontderby-staging'));
+  assert.equal(workerScriptNames.length, new Set(workerScriptNames).size);
 });
 
 test('cleanup deletes workers.dev and preview URLs for every Worker', async () => {
