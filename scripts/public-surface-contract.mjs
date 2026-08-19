@@ -15,7 +15,7 @@ export const PUBLIC_HTML_PATHS = Object.freeze([
   '/lineup',
   '/profile',
   '/availability',
-  '/votes',
+  '/trades',
   '/admin',
   '/season-setup',
   '/playoffs',
