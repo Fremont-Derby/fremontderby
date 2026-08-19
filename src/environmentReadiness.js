@@ -19,7 +19,8 @@ const expectedSchemas = {
 };
 
 const isolatedRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
-const testAuthRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
+/** Open-auth automation only — gamma is RC and must not require/enable bypass. */
+const testAuthRuntimeEnvironments = new Set(['jfl', 'dru']);
 const knownRuntimeEnvironments = new Set(Object.keys(fixedExpectedSupabaseProjectRefs));
 
 function normalizeSupabaseUrl(value) {

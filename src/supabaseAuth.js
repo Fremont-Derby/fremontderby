@@ -31,7 +31,8 @@ async function parseJson(response) {
   return JSON.parse(text);
 }
 
-const testAuthEnvironments = new Set(['jfl', 'dru', 'gamma']);
+/** Open-auth automation lanes only. Gamma is a release candidate and must use real auth. */
+const testAuthEnvironments = new Set(['jfl', 'dru']);
 
 /** Known staging auth.users ids for isolated lane open-auth (see docs/dru-jfl-noauth-operator.md). */
 export const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
@@ -43,16 +44,11 @@ export const TEST_LANE_DEFAULT_ACTORS = Object.freeze({
     id: 'b22805b6-92ba-44bd-a92e-0c82f0be6613',
     email: 'jfl-actor@fremontderby.com',
   },
-  // Shares staging actor until a dedicated gamma auth.users row exists.
-  gamma: {
-    id: '05d025ff-1c97-4070-a691-46a896fb9b83',
-    email: 'gamma-actor@fremontderby.com',
-  },
 });
 
 /**
- * Open-auth is allowed on isolated test lanes (jfl/dru/gamma).
- * Production always uses normal authentication.
+ * Open-auth is allowed only on isolated automation lanes (jfl/dru).
+ * Gamma (release candidate) and production always use normal authentication.
  *
  * For jfl/dru, bypass defaults ON unless explicitly disabled (BETA_AUTH_BYPASS=0).
  * That matches wrangler.jsonc and keeps automation working when dashboard vars lag.
