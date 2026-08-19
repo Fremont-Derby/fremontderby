@@ -9,31 +9,12 @@
  *
  * Exit 0 = aligned; exit 1 = drift or API failure; exit 2 = missing token.
  */
-const REPO = process.env.GITHUB_REPOSITORY || 'subiki/fremontderby';
-const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GH_PAT || '';
-const PARENTS = [1, 2, 3, 4];
+import { fileURLToPath } from 'node:url';
 
-if (!TOKEN) {
-  console.error('check-parent-epic-drift: set GITHUB_TOKEN (or GH_TOKEN) to audit live issue state.');
-  process.exit(2);
-}
+export const DEFAULT_REPO = 'Fremont-Derby/fremontderby';
+export const PARENT_EPICS = Object.freeze([1, 2, 3, 4]);
 
-async function gh(path) {
-  const response = await fetch(`https://api.github.com/repos/${REPO}${path}`, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${TOKEN}`,
-      'User-Agent': 'fremontderby-epic-drift',
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`${path} → HTTP ${response.status}: ${text.slice(0, 200)}`);
-  }
-  return response.json();
-}
-
-function parseChecklist(body) {
+export function parseChecklist(body) {
   const lines = String(body || '').split(/\r?\n/);
   const items = [];
   for (const line of lines) {
@@ -49,43 +30,102 @@ function parseChecklist(body) {
   return items;
 }
 
-const drifts = [];
-for (const parentNum of PARENTS) {
-  const parent = await gh(`/issues/${parentNum}`);
-  const items = parseChecklist(parent.body);
-  if (!items.length) {
-    console.log(`#${parentNum} — no #N checklist rows (skip)`);
-    continue;
-  }
-  console.log(`#${parentNum} [${parent.state}] ${parent.title} — ${items.length} checklist rows`);
+export function evaluateChecklistDrift(items, childStates) {
+  const drifts = [];
   for (const item of items) {
-    const child = await gh(`/issues/${item.child}`);
-    const childClosed = child.state === 'closed';
-    const ok = item.checked === childClosed;
-    const mark = ok ? 'ok' : 'DRIFT';
-    console.log(
-      `  [${mark}] parent ${item.checked ? 'x' : ' '} #${item.child} child=${child.state} ${child.title}`,
-    );
-    if (!ok) {
+    const childState = childStates[item.child];
+    if (!childState) continue;
+    const childClosed = childState === 'closed';
+    if (item.checked !== childClosed) {
       drifts.push({
-        parent: parentNum,
         child: item.child,
         parentChecked: item.checked,
-        childState: child.state,
+        childState,
         expectedChecked: childClosed,
       });
     }
   }
+  return drifts;
 }
 
-if (drifts.length) {
-  console.error('\nParent/child checklist drift detected:');
-  for (const d of drifts) {
-    console.error(
-      `  #${d.parent} marks #${d.child} as ${d.parentChecked ? 'done' : 'open'} but child is ${d.childState} (expected checked=${d.expectedChecked})`,
-    );
+async function gh(path, { repo, token, fetchImpl = fetch }) {
+  const response = await fetchImpl(`https://api.github.com/repos/${repo}${path}`, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'fremontderby-epic-drift',
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`${path} → HTTP ${response.status}: ${text.slice(0, 200)}`);
   }
-  process.exit(1);
+  return response.json();
 }
 
-console.log('\nAll audited parent checklists match child issue state.');
+export async function auditParentEpics({
+  token,
+  repo = DEFAULT_REPO,
+  parents = PARENT_EPICS,
+  fetchImpl = fetch,
+  log = console.log,
+} = {}) {
+  if (!token) {
+    const error = new Error('check-parent-epic-drift: set GITHUB_TOKEN (or GH_TOKEN) to audit live issue state.');
+    error.code = 'MISSING_TOKEN';
+    throw error;
+  }
+  const drifts = [];
+  for (const parentNum of parents) {
+    const parent = await gh(`/issues/${parentNum}`, { repo, token, fetchImpl });
+    const items = parseChecklist(parent.body);
+    if (!items.length) {
+      log(`#${parentNum} — no #N checklist rows (skip)`);
+      continue;
+    }
+    log(`#${parentNum} [${parent.state}] ${parent.title} — ${items.length} checklist rows`);
+    const childStates = {};
+    for (const item of items) {
+      const child = await gh(`/issues/${item.child}`, { repo, token, fetchImpl });
+      childStates[item.child] = child.state;
+      const childClosed = child.state === 'closed';
+      const ok = item.checked === childClosed;
+      const mark = ok ? 'ok' : 'DRIFT';
+      log(
+        `  [${mark}] parent ${item.checked ? 'x' : ' '} #${item.child} child=${child.state} ${child.title}`,
+      );
+    }
+    for (const drift of evaluateChecklistDrift(items, childStates)) {
+      drifts.push({ parent: parentNum, ...drift });
+    }
+  }
+  return drifts;
+}
+
+const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirect) {
+  const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GH_PAT || '';
+  const REPO = process.env.GITHUB_REPOSITORY || DEFAULT_REPO;
+  try {
+    const drifts = await auditParentEpics({ token: TOKEN, repo: REPO });
+    if (drifts.length) {
+      console.error('\nParent/child checklist drift detected:');
+      for (const d of drifts) {
+        console.error(
+          `  #${d.parent} marks #${d.child} as ${d.parentChecked ? 'done' : 'open'} but child is ${d.childState} (expected checked=${d.expectedChecked})`,
+        );
+      }
+      process.exitCode = 1;
+    } else {
+      console.log('\nAll audited parent checklists match child issue state.');
+    }
+  } catch (error) {
+    if (error?.code === 'MISSING_TOKEN') {
+      console.error(error.message);
+      process.exitCode = 2;
+    } else {
+      console.error(error instanceof Error ? error.message : error);
+      process.exitCode = 1;
+    }
+  }
+}
