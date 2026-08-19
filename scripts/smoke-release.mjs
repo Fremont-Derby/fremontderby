@@ -1,26 +1,26 @@
 import { fileURLToPath } from 'node:url';
 import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 
-const defaultAttempts = 30;
-const defaultDelayMs = 10_000;
-const smokeHeaderName = 'x-fremont-release-smoke';
+export const DEFAULT_SMOKE_ATTEMPTS = 30;
+export const DEFAULT_SMOKE_DELAY_MS = 10_000;
+export const SMOKE_HEADER_NAME = 'x-fremont-release-smoke';
 
-function normalizeBaseUrl(value) {
+export function normalizeBaseUrl(value) {
   if (!value || typeof value !== 'string') throw new Error('baseUrl is required');
   return stripTrailingSlashes(value.trim());
 }
 
-function compactBodyPreview(text, limit = 180) {
+export function compactBodyPreview(text, limit = 180) {
   return String(text || '').replace(/\s+/g, ' ').trim().slice(0, limit);
 }
 
-function requestHeaders(accept, bypassToken) {
+export function requestHeaders(accept, bypassToken) {
   const headers = { accept };
-  if (bypassToken) headers[smokeHeaderName] = bypassToken;
+  if (bypassToken) headers[SMOKE_HEADER_NAME] = bypassToken;
   return headers;
 }
 
-function isUnbypassedCloudflareChallenge(reason, bypassToken) {
+export function isUnbypassedCloudflareChallenge(reason, bypassToken) {
   if (bypassToken) return false;
   return /did not return JSON \(HTTP 403,[^)]*server cloudflare/i.test(reason)
     && /Just a moment/i.test(reason);
@@ -52,7 +52,12 @@ async function readJson(response, label) {
   return { response, body };
 }
 
-function assertExpectedDeployment({ health, environment, expectedEnvironment, expectedVersionTag }) {
+export function assertExpectedDeployment({
+  health,
+  environment,
+  expectedEnvironment,
+  expectedVersionTag,
+}) {
   if (health.service !== 'fremontderby' || health.ok !== true) {
     throw new Error('Production /health did not identify a healthy Fremont Derby service');
   }
@@ -145,8 +150,8 @@ export async function smokeRelease({
   expectedEnvironment,
   expectedVersionTag,
   bypassToken = '',
-  attempts = defaultAttempts,
-  delayMs = defaultDelayMs,
+  attempts = DEFAULT_SMOKE_ATTEMPTS,
+  delayMs = DEFAULT_SMOKE_DELAY_MS,
   fetchImpl = globalThis.fetch,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   log = console.log,
