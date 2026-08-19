@@ -4,4 +4,5 @@ paths-ignore:
   - scripts/**
   - node_modules/**
 queries:
-  - uses: security
+  # Valid suite name for codeql-action ("security" alone is not a valid pack).
+  - uses: security-extended

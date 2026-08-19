@@ -18,6 +18,9 @@ export const DEFAULT_PROBE_PATHS = [
   '/notifications',
 ];
 
+export const DEFAULT_PROBE_GITHUB_REPO = 'Fremont-Derby/fremontderby';
+export const DEFAULT_PROBE_ISSUE = '806';
+
 /**
  * @param {string} baseUrl
  * @param {string[]} paths
@@ -108,12 +111,13 @@ export function formatProbeMarkdown(summary) {
 export async function maybeCommentProbeFailures(env, summary, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (summary.ok) return { commented: false, reason: 'all_ok' };
   const token = String(env?.HOURLY_PROBE_GITHUB_TOKEN || env?.GITHUB_TOKEN || '').trim();
-  const issue = String(env?.HOURLY_PROBE_ISSUE || '806').trim();
+  const issue = String(env?.HOURLY_PROBE_ISSUE || DEFAULT_PROBE_ISSUE).trim();
+  const repo = String(env?.HOURLY_PROBE_GITHUB_REPO || DEFAULT_PROBE_GITHUB_REPO).trim();
   if (!token) return { commented: false, reason: 'no_token' };
 
   const body = formatProbeMarkdown(summary) + '\n\n_Posted by Cloudflare hourly probe (no LLM)._\n';
   const response = await fetchImpl(
-    `https://api.github.com/repos/subiki/fremontderby/issues/${encodeURIComponent(issue)}/comments`,
+    `https://api.github.com/repos/${repo}/issues/${encodeURIComponent(issue)}/comments`,
     {
       method: 'POST',
       headers: {
@@ -130,5 +134,5 @@ export async function maybeCommentProbeFailures(env, summary, { fetch: fetchImpl
     const text = await response.text().catch(() => '');
     return { commented: false, reason: `github_${response.status}`, detail: text.slice(0, 200) };
   }
-  return { commented: true };
+  return { commented: true, repo, issue };
 }
