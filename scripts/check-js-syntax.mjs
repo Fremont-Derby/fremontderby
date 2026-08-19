@@ -1,17 +1,24 @@
 import { readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const DEFAULT_ROOTS = ['src', 'domain', 'scripts'];
-const EXCLUDED_DIRECTORIES = new Set(['.git', 'dist', 'node_modules', 'coverage', '.wrangler']);
-const INCLUDED_EXTENSIONS = new Set(['.js', '.mjs']);
+export const DEFAULT_ROOTS = Object.freeze(['src', 'domain', 'scripts']);
+export const EXCLUDED_DIRECTORIES = Object.freeze(
+  new Set(['.git', 'dist', 'node_modules', 'coverage', '.wrangler']),
+);
+export const INCLUDED_EXTENSIONS = Object.freeze(new Set(['.js', '.mjs']));
 
-async function discoverJavaScriptFiles(cwd = process.cwd(), roots = DEFAULT_ROOTS) {
+export async function discoverJavaScriptFiles(
+  cwd = process.cwd(),
+  roots = DEFAULT_ROOTS,
+  { readdirImpl = readdir } = {},
+) {
   const files = [];
   async function walk(relativeDirectory) {
     let entries;
     try {
-      entries = await readdir(path.join(cwd, relativeDirectory), { withFileTypes: true });
+      entries = await readdirImpl(path.join(cwd, relativeDirectory), { withFileTypes: true });
     } catch (error) {
       if (error?.code === 'ENOENT') return;
       throw error;
@@ -30,27 +37,40 @@ async function discoverJavaScriptFiles(cwd = process.cwd(), roots = DEFAULT_ROOT
   return files.sort((left, right) => left.localeCompare(right));
 }
 
-function checkJavaScriptSyntax(cwd, files) {
+export function checkJavaScriptSyntax(cwd, files, { spawnImpl = spawnSync, execPath = process.execPath } = {}) {
   for (const file of files) {
-    const result = spawnSync(process.execPath, ['--check', file], { cwd, encoding: 'utf8' });
+    const result = spawnImpl(execPath, ['--check', file], { cwd, encoding: 'utf8' });
     if (result.status !== 0) {
-      return { ok: false, file, output: [result.stdout, result.stderr].filter(Boolean).join('\n').trim() };
+      return {
+        ok: false,
+        file,
+        output: [result.stdout, result.stderr].filter(Boolean).join('\n').trim(),
+      };
     }
   }
   return { ok: true, checked: files.length };
 }
 
-async function main() {
-  const cwd = process.cwd();
-  const files = await discoverJavaScriptFiles(cwd);
-  const result = checkJavaScriptSyntax(cwd, files);
+export async function runCheckJsSyntax({
+  cwd = process.cwd(),
+  roots = DEFAULT_ROOTS,
+  readdirImpl = readdir,
+  spawnImpl = spawnSync,
+  execPath = process.execPath,
+} = {}) {
+  const files = await discoverJavaScriptFiles(cwd, roots, { readdirImpl });
+  return checkJavaScriptSyntax(cwd, files, { spawnImpl, execPath });
+}
+
+const isDirect =
+  process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isDirect) {
+  const result = await runCheckJsSyntax();
   if (!result.ok) {
     console.error(`Syntax check failed: ${result.file}`);
     if (result.output) console.error(result.output);
-    return 1;
+    process.exitCode = 1;
+  } else {
+    console.log(`Syntax checked ${result.checked} JavaScript modules.`);
   }
-  console.log(`Syntax checked ${result.checked} JavaScript modules.`);
-  return 0;
 }
-
-process.exitCode = await main();
