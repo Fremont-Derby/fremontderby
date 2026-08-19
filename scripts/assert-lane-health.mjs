@@ -4,13 +4,14 @@
  * Exit 1 on any mismatch or transport failure.
  */
 import { fileURLToPath } from 'node:url';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
 
-export const LANE_HEALTH_CHECKS = Object.freeze([
-  { host: 'dru.fremontderby.com', expect: 'dru' },
-  { host: 'jfl.fremontderby.com', expect: 'jfl' },
-  { host: 'gamma.fremontderby.com', expect: 'gamma' },
-  { host: 'fremontderby.com', expect: 'production' },
-]);
+/** Derived from HOST_ENVIRONMENT_EXPECTATIONS so host/env identity cannot drift. */
+export const LANE_HEALTH_CHECKS = Object.freeze(
+  Object.entries(HOST_ENVIRONMENT_EXPECTATIONS).map(([host, expect]) =>
+    Object.freeze({ host, expect }),
+  ),
+);
 
 export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
   let body;
@@ -27,12 +28,20 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
   const environment = body?.environment;
   const readinessOk = body?.ok === true;
   if (responseStatus < 200 || responseStatus >= 300) {
+    const failedChecks = Array.isArray(body?.checks)
+      ? body.checks.filter((c) => !c.ok).map((c) => c.name).join(',')
+      : '';
+    const project = body?.supabase?.projectRef || '';
+    const detail = [failedChecks && `failed=${failedChecks}`, project && `projectRef=${project}`]
+      .filter(Boolean)
+      .join(' ');
     return {
       ok: false,
       host,
       expect,
       environment,
-      error: `${host}: HTTP ${responseStatus}`,
+      readinessOk,
+      error: `${host}: HTTP ${responseStatus}${detail ? ` (${detail})` : ''}`,
     };
   }
   if (environment !== expect) {
@@ -42,6 +51,16 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
       expect,
       environment,
       error: `${host}: environment="${environment}" expected="${expect}"`,
+    };
+  }
+  if (body.hostMatchesEnvironment === false) {
+    return {
+      ok: false,
+      host,
+      expect,
+      environment,
+      readinessOk,
+      error: `${host}: hostMatchesEnvironment=false (host/env mismatch)`,
     };
   }
   return {
