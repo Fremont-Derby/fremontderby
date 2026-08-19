@@ -3,15 +3,18 @@
  * Hourly public route probe for production + lane hosts.
  * Used by .github/workflows/hourly-live-probe.yml (self-hosted or ubuntu).
  */
-const hosts = [
-  process.env.PROBE_HOST,
-  process.env.PROBE_WWW,
-  process.env.PROBE_DRU,
-  process.env.PROBE_JFL,
-  process.env.PROBE_GAMMA,
-].filter(Boolean);
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
-const paths = [
+export const ACTION_PROBE_ENV_KEYS = Object.freeze([
+  'PROBE_HOST',
+  'PROBE_WWW',
+  'PROBE_DRU',
+  'PROBE_JFL',
+  'PROBE_GAMMA',
+]);
+
+export const ACTION_PROBE_PATHS = Object.freeze([
   '/',
   '/schedule',
   '/teams',
@@ -23,33 +26,79 @@ const paths = [
   '/admin',
   '/health',
   '/health/environment',
-];
+]);
 
-if (!hosts.length) {
-  console.error('No PROBE_* hosts configured');
-  process.exit(1);
+export function resolveActionProbeHosts(env = process.env) {
+  return ACTION_PROBE_ENV_KEYS.map((key) => env[key]).filter(Boolean).map((host) =>
+    String(host).replace(/\/+$/, ''),
+  );
 }
 
-let failures = 0;
-for (const host of hosts) {
-  const base = String(host).replace(/\/+$/, '');
-  for (const path of paths) {
-    const url = base + path;
-    try {
-      const response = await fetch(url, { redirect: 'manual' });
-      const ok = response.status >= 200 && response.status < 400;
-      console.log(ok ? 'OK' : 'FAIL', response.status, url);
-      if (!ok) failures += 1;
-    } catch (error) {
-      console.log('FAIL', url, error?.message || error);
-      failures += 1;
+export function isProbeHttpOk(status) {
+  return Number(status) >= 200 && Number(status) < 400;
+}
+
+/**
+ * Pure probe runner. Injectable fetch. Returns { failures, results, hosts, paths }.
+ */
+export async function runActionLiveProbes({
+  hosts = resolveActionProbeHosts(),
+  paths = ACTION_PROBE_PATHS,
+  fetchImpl = fetch,
+} = {}) {
+  if (!hosts.length) {
+    return {
+      failures: 1,
+      results: [],
+      hosts,
+      paths,
+      error: 'No PROBE_* hosts configured',
+    };
+  }
+
+  const results = [];
+  let failures = 0;
+  for (const base of hosts) {
+    for (const path of paths) {
+      const url = base + path;
+      try {
+        const response = await fetchImpl(url, { redirect: 'manual' });
+        const ok = isProbeHttpOk(response.status);
+        results.push({ ok, status: response.status, url });
+        if (!ok) failures += 1;
+      } catch (error) {
+        failures += 1;
+        results.push({
+          ok: false,
+          status: 0,
+          url,
+          error: String(error?.message || error),
+        });
+      }
     }
   }
+
+  return { failures, results, hosts, paths };
 }
 
-if (failures) {
-  console.error('failures', failures);
-  process.exit(1);
+const isDirect =
+  process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (isDirect) {
+  const summary = await runActionLiveProbes();
+  if (summary.error) {
+    console.error(summary.error);
+    process.exit(1);
+  }
+  for (const row of summary.results) {
+    if (row.ok) console.log('OK', row.status, row.url);
+    else console.log('FAIL', row.status || row.error, row.url);
+  }
+  if (summary.failures) {
+    console.error('failures', summary.failures);
+    process.exit(1);
+  }
+  console.log('all probes passed', {
+    hosts: summary.hosts.length,
+    paths: summary.paths.length,
+  });
 }
-
-console.log('all probes passed', { hosts: hosts.length, paths: paths.length });
