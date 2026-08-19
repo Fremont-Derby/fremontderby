@@ -16,8 +16,26 @@
 ## Out of scope
 <!-- What related work is intentionally not part of this PR? Create/link follow-up cards instead of silently expanding scope. -->
 
+## Test-driven evidence
+<!-- Behavior-bearing work follows docs/test-driven-development.md. RED must predate the behavior implementation and fail for the expected reason. Use the justified exception only for work where a conventional RED-first test adds no value or would make an emergency less safe. -->
+
+### RED evidence
+<!-- Test/check name, exact command, and the expected failure reason observed before implementation. -->
+
+### GREEN evidence
+<!-- Focused test/check passing after the smallest implementation change. -->
+
+### Regression evidence
+<!-- Adjacent suite + required CI/checks. Distinguish source/test/staging/live proof. -->
+
+### Refactor
+<!-- What was improved after GREEN while tests remained green? Use `None` when no refactor was needed. -->
+
+### TDD justified exception
+<!-- `None`, or explain why RED-first was not meaningful/safe and name the substitute validation. Docs-only/copy-only/purely visual work should not invent fake tests. -->
+
 ## Proof
-<!-- Tests, CI, E2E, staging, production, migration/security evidence. Distinguish each level of proof. -->
+<!-- Additional E2E, staging, production, migration/security, or human acceptance evidence. Distinguish each level of proof. -->
 
 ## Collision check
 - [ ] Started from current `main`.
@@ -31,6 +49,8 @@
 
 ## Merge readiness
 - [ ] Tracking card is at **Handoff / review**.
+- [ ] RED evidence is recorded before behavior implementation, or a justified TDD exception is documented.
+- [ ] GREEN and relevant regression evidence are recorded.
 - [ ] Required tests/CI are green or an explicit approved exception is documented.
 - [ ] Conflicts were resolved with both intended behaviors understood.
 - [ ] Diff still matches the tracking card's acceptance criteria.
