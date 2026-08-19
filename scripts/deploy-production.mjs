@@ -38,11 +38,21 @@ export function assertProductionDeployContext(env = process.env) {
 
 export function productionDeployArgs(env = process.env) {
   assertProductionDeployContext(env);
+  // Top-level wrangler.jsonc Worker (production apex routes).
+  // Do not pass --env "" — wrangler treats that as a missing argument.
   const args = ['wrangler', 'deploy'];
 
-  const commitSha = String(env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || '').trim();
+  // Prefer CI full SHAs; DEPLOY_GIT_SHA remains a local/canary fallback.
+  const commitSha = String(
+    env.WORKERS_CI_COMMIT_SHA || env.GITHUB_SHA || env.DEPLOY_GIT_SHA || '',
+  ).trim();
+  // Tag only full 40-char SHAs (CI contract). Still expose shorter local SHAs via --var when present.
   if (/^[0-9a-f]{40}$/i.test(commitSha)) {
     args.push('--tag', commitSha, '--message', `git:${commitSha}`);
+  }
+  if (commitSha && /^[0-9a-f]{7,40}$/i.test(commitSha)) {
+    // CF_VERSION_METADATA.tag is often empty even with --tag; expose SHA to /health via var.
+    args.push('--var', `DEPLOY_GIT_SHA:${commitSha}`);
   }
 
   return args;

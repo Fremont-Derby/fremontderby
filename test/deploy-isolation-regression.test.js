@@ -37,7 +37,12 @@ test('GitHub Actions production deploy is allowed only from main', () => {
     GITHUB_ACTIONS: 'true',
     GITHUB_REF_NAME: 'main',
     GITHUB_SHA: sha,
-  }), ['wrangler', 'deploy', '--tag', sha, '--message', `git:${sha}`]);
+  }), [
+    'wrangler', 'deploy',
+    '--tag', sha,
+    '--message', `git:${sha}`,
+    '--var', `DEPLOY_GIT_SHA:${sha}`,
+  ]);
 
   for (const branch of ['fremontderby-jfl', 'fremontderby-dru', 'fremontderby-gamma']) {
     assert.throws(
@@ -56,4 +61,27 @@ test('GitHub Actions production deploy fails closed without ref metadata', () =>
     () => assertProductionDeployContext({ GITHUB_ACTIONS: 'true', GITHUB_SHA: sha }),
     /GITHUB_REF_NAME/,
   );
+});
+
+test('productionDeployArgs prefers WORKERS_CI then GITHUB_SHA then DEPLOY_GIT_SHA and always sets health var', () => {
+  const fromWorkers = productionDeployArgs({
+    WORKERS_CI: '1',
+    WORKERS_CI_BRANCH: 'main',
+    WORKERS_CI_COMMIT_SHA: sha,
+    GITHUB_SHA: 'b'.repeat(40),
+  });
+  assert.ok(fromWorkers.includes('--tag'));
+  assert.ok(fromWorkers.includes(sha));
+  assert.ok(fromWorkers.includes(`DEPLOY_GIT_SHA:${sha}`));
+  assert.equal(fromWorkers.includes('b'.repeat(40)), false);
+
+  const fromGithub = productionDeployArgs({
+    GITHUB_ACTIONS: 'true',
+    GITHUB_REF_NAME: 'main',
+    GITHUB_SHA: sha,
+  });
+  assert.ok(fromGithub.includes(`DEPLOY_GIT_SHA:${sha}`));
+
+  const fromDeploy = productionDeployArgs({ DEPLOY_GIT_SHA: sha });
+  assert.ok(fromDeploy.includes(`DEPLOY_GIT_SHA:${sha}`));
 });
