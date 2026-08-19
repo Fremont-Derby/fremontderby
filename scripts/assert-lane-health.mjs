@@ -2,6 +2,8 @@
  * Assert public lane hosts report the expected ENVIRONMENT identity.
  * Usage: node scripts/assert-lane-health.mjs
  * Exit 1 on any mismatch or transport failure.
+ *
+ * Optional: set EXPECTED_VERSION_TAG to also require matching versionTag on each host.
  */
 import { fileURLToPath } from 'node:url';
 
@@ -13,7 +15,8 @@ export const LANE_HEALTH_CHECKS = Object.freeze([
   { host: 'www.fremontderby.com', expect: 'production' },
 ]);
 
-export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
+export function evaluateLaneHealthBody(host, expect, responseStatus, text, options = {}) {
+  const expectedVersionTag = String(options.expectedVersionTag || '').trim();
   let body;
   try {
     body = JSON.parse(text);
@@ -63,29 +66,56 @@ export function evaluateLaneHealthBody(host, expect, responseStatus, text) {
       error: `${host}: hostMatchesEnvironment=false (host/env mismatch)`,
     };
   }
+  if (expectedVersionTag) {
+    const actual = String(body.versionTag || body.version || '').trim();
+    if (!actual) {
+      return {
+        ok: false,
+        host,
+        expect,
+        environment,
+        error: `${host}: expected versionTag "${expectedVersionTag}" but host reported none`,
+      };
+    }
+    const matches =
+      actual === expectedVersionTag
+      || actual.startsWith(expectedVersionTag)
+      || expectedVersionTag.startsWith(actual);
+    if (!matches) {
+      return {
+        ok: false,
+        host,
+        expect,
+        environment,
+        versionTag: actual,
+        error: `${host}: versionTag="${actual}" expected="${expectedVersionTag}"`,
+      };
+    }
+  }
   return {
     ok: true,
     host,
     expect,
     environment,
     readinessOk,
+    versionTag: body.versionTag || body.version || null,
   };
 }
 
-export async function probeLaneHealth({ host, expect }, fetchImpl = fetch) {
+export async function probeLaneHealth({ host, expect }, fetchImpl = fetch, options = {}) {
   const url = `https://${host}/health/environment`;
   const response = await fetchImpl(url, {
     headers: { Accept: 'application/json', 'User-Agent': 'fremontderby-lane-health' },
   });
   const text = await response.text();
-  return evaluateLaneHealthBody(host, expect, response.status, text);
+  return evaluateLaneHealthBody(host, expect, response.status, text, options);
 }
 
-export async function assertAllLaneHealth(checks = LANE_HEALTH_CHECKS, fetchImpl = fetch) {
+export async function assertAllLaneHealth(checks = LANE_HEALTH_CHECKS, fetchImpl = fetch, options = {}) {
   const results = [];
   for (const check of checks) {
     try {
-      results.push(await probeLaneHealth(check, fetchImpl));
+      results.push(await probeLaneHealth(check, fetchImpl, options));
     } catch (error) {
       results.push({
         ok: false,
@@ -105,7 +135,8 @@ export async function assertAllLaneHealth(checks = LANE_HEALTH_CHECKS, fetchImpl
 
 const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isDirect) {
-  const summary = await assertAllLaneHealth();
+  const expectedVersionTag = process.env.EXPECTED_VERSION_TAG || '';
+  const summary = await assertAllLaneHealth(LANE_HEALTH_CHECKS, fetch, { expectedVersionTag });
   for (const row of summary.results) {
     console.log(JSON.stringify(row));
   }
