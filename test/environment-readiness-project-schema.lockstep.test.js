@@ -46,15 +46,19 @@ test('production readiness expects production project + public schema', () => {
 
 test('jfl/dru/gamma expect staging project ref + lane schema and stay isolated from production', () => {
   for (const lane of ['jfl', 'dru', 'gamma']) {
-    const result = environmentReadiness({
+    // jfl/dru may use open-auth automation; gamma must not (Wave A / #1635).
+    const env = {
       ENVIRONMENT: lane,
       SUPABASE_URL: `https://${STAGING_REF}.supabase.co`,
       SUPABASE_SCHEMA: lane,
       SUPABASE_PUBLISHABLE_KEY: 'pub',
       SUPABASE_SERVICE_ROLE_KEY: 'role',
-      BETA_AUTH_BYPASS: '1',
-      BETA_ACTOR_USER_ID: '00000000-0000-4000-8000-000000000001',
-    });
+    };
+    if (lane === 'jfl' || lane === 'dru') {
+      env.BETA_AUTH_BYPASS = '1';
+      env.BETA_ACTOR_USER_ID = '00000000-0000-4000-8000-000000000001';
+    }
+    const result = environmentReadiness(env);
     assert.equal(result.expectedSupabaseProjectRef, STAGING_REF);
     assert.equal(result.expectedSupabaseSchema, lane);
     assert.equal(result.expectedPrivateSupabaseSchema, `${lane}_private`);
