@@ -1,3 +1,5 @@
+import { decorateHtmlWithShell } from './appShell.js';
+
 export function chooseHomeNextAction({
   signedIn = false,
   scorableMatches = [],
@@ -71,6 +73,12 @@ export function chooseHomeNextAction({
 }
 
 export const jflModernHomeStyles = `
+  .fd-home,
+  .fd-home *,
+  .fd-home *::before,
+  .fd-home *::after {
+    box-sizing: border-box;
+  }
   .fd-home {
     width: min(920px, calc(100% - 24px));
     margin: 0 auto;
@@ -194,10 +202,11 @@ export const jflModernHomeStyles = `
   .fd-home__fallback a { min-height: 44px; display: inline-flex; align-items: center; color: inherit; }
 
   @media (max-width: 720px) {
-    .fd-home { width: min(100% - 16px, 920px); }
-    .fd-home-next { grid-template-columns: 1fr; }
+    .fd-home { width: min(100% - 24px, 920px); gap: var(--fd-space-5); padding-top: var(--fd-space-5); }
+    .fd-home-next { grid-template-columns: 1fr; gap: var(--fd-space-5); padding: 22px; }
     .fd-home-next__action { width: 100%; min-width: 0; }
-    .fd-home-grid { grid-template-columns: 1fr; }
+    .fd-home-grid { grid-template-columns: 1fr; gap: var(--fd-space-5); }
+    .fd-home-stack { gap: var(--fd-space-5); }
   }
   @media (max-width: 420px) {
     .fd-home-match__teams { grid-template-columns: 1fr; gap: 4px; }
@@ -559,7 +568,7 @@ export function routeJflModernHome(request, env = {}) {
   const url = new URL(request.url);
   if (url.pathname !== '/' || url.searchParams.get('ui') === 'legacy') return null;
 
-  return new Response(renderJflModernHome(), {
+  return new Response(decorateHtmlWithShell(renderJflModernHome(), url.pathname), {
     status: 200,
     headers: {
       'content-type': 'text/html; charset=utf-8',
