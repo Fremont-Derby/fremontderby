@@ -123,7 +123,7 @@ test('mobile Home keeps cards and actions inside the viewport with breathing roo
   assert.match(jflModernHomeStyles, /box-sizing:\s*border-box/);
   assert.match(
     jflModernHomeStyles,
-    /@media \(max-width: 720px\)[\s\S]*?\.fd-home \{ width: min\(100% - 24px, 920px\); \}/,
+    /@media \(max-width: 720px\)[\s\S]*?\.fd-home \{[^}]*width: min\(100% - 24px, 920px\);/,
   );
 });
 
