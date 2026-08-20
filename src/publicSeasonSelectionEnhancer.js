@@ -20,6 +20,9 @@ export async function enhancePublicSeasonSelection(response, pathname) {
   html = replaceRequired(html, '</head>', `${helper}</head>`, `${pathname} helper`);
 
   if (pathname === '/schedule') {
+    if (html.includes('data-fd-modern-schedule="true"')) {
+      return new Response(html, { status: response.status, statusText: response.statusText, headers });
+    }
     html = replaceRequired(
       html,
       "const query=new URLSearchParams(location.search);const requestedSeason=query.get('season')||localStorage.getItem('fd.scheduleSeasonId')||'';const requestedRound=query.get('round')||localStorage.getItem('fd.scheduleRoundId')||'';let seasons=[];let rounds=[];",
