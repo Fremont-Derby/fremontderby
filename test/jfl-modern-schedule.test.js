@@ -95,7 +95,7 @@ test('modern schedule document keeps the existing read APIs and shared shell', (
   const html = renderJflModernSchedule();
   assert.match(html, /data-fd-modern-schedule="true"/);
   assert.match(html, /\/api\/seasons/);
-  assert.match(html, /\/api\/seasons\/[^'"`]*schedule/);
+  assert.match(html, /get\('\/api\/seasons\/' \+ encodeURIComponent\(seasonSelect\.value\) \+ '\/schedule'\)/);
   assert.match(html, /data-fd-shell/);
   assert.match(html, /data-fd-mobile-dock/);
   assert.match(html, /\?ui=legacy/);
