@@ -101,6 +101,15 @@ ${modernUiPrimitiveStyles}
     box-shadow: var(--fd-shadow-soft) !important;
   }
 
+  /* #1831: Schedule owns this nested disclosure; do not render it as another card. */
+  .fd-schedule-match__details {
+    border: 0 !important;
+    border-top: 1px solid #eceae4 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
   @media (forced-colors: active) {
     .fd-shell .fd-nav a[aria-current="page"],
     .fd-mobile-dock a[aria-current="page"] {
