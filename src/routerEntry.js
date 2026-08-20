@@ -6,6 +6,7 @@ import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import { renderJflNotFoundPage } from './jflNotFoundPage.js';
+import { routeJflModernHome } from './jflModernHome.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
@@ -111,6 +112,10 @@ async function finalizeBrowserResponse(response, pathname) {
 const baseRouterEntry = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const modernHomeResponse = routeJflModernHome(request, env);
+    if (modernHomeResponse) {
+      return finalizeBrowserResponse(modernHomeResponse, url.pathname);
+    }
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
       return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
