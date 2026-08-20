@@ -8,6 +8,7 @@ import {
   renderJflModernSchedule,
   routeJflModernSchedule,
 } from '../src/jflModernSchedule.js';
+import { enhancePublicSeasonSelection } from '../src/publicSeasonSelectionEnhancer.js';
 
 const sampleRounds = [
   {
@@ -99,6 +100,18 @@ test('modern schedule document keeps the existing read APIs and shared shell', (
   assert.match(html, /data-fd-shell/);
   assert.match(html, /data-fd-mobile-dock/);
   assert.match(html, /\?ui=legacy/);
+});
+
+test('modern schedule survives shared public-season selection enhancement', async () => {
+  const original = routeJflModernSchedule(
+    new Request('https://jfl.fremontderby.com/schedule'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  const enhanced = await enhancePublicSeasonSelection(original, '/schedule');
+  assert.equal(enhanced.status, 200);
+  const html = await enhanced.text();
+  assert.match(html, /data-fd-modern-schedule="true"/);
+  assert.match(html, /data-fd-mobile-dock/);
 });
 
 test('route is JFL GET /schedule only and leaves legacy/API/write behavior untouched', async () => {
