@@ -15,8 +15,8 @@ test('modern Home has one clear heading and one dominant next-action region', ()
 
   assert.match(html, /data-fd-modern-home="true"/);
   assert.equal((html.match(/<h1\b/g) || []).length, 1);
-  assert.equal((html.match(/data-fd-next-action\b/g) || []).length, 1);
-  assert.equal((html.match(/data-next-action-link\b/g) || []).length, 1);
+  assert.equal((html.match(/<section\b[^>]*\bdata-fd-next-action\b/g) || []).length, 1);
+  assert.equal((html.match(/<a\b[^>]*\bdata-next-action-link\b/g) || []).length, 1);
   assert.match(html, /class="[^"]*fd-page-header/);
   assert.match(html, /class="[^"]*fd-card/);
 });
