@@ -108,6 +108,25 @@ test('Home slice is JFL GET / only and retains a reversible body fallback', asyn
   );
 });
 
+test('routed Home includes the shared shell and mobile dock', async () => {
+  const response = routeJflModernHome(
+    new Request('https://jfl.fremontderby.com/'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  const html = await response.text();
+
+  assert.match(html, /data-fd-shell/);
+  assert.match(html, /data-fd-mobile-dock/);
+});
+
+test('mobile Home keeps cards and actions inside the viewport with breathing room', () => {
+  assert.match(jflModernHomeStyles, /box-sizing:\s*border-box/);
+  assert.match(
+    jflModernHomeStyles,
+    /@media \(max-width: 720px\)[\s\S]*?\.fd-home \{ width: min\(100% - 24px, 920px\); \}/,
+  );
+});
+
 test('modern Home keeps touch, focus, reduced-motion, and forced-colors contracts', () => {
   assert.match(jflModernHomeStyles, /min-height:\s*44px/);
   assert.match(jflModernHomeStyles, /:focus-visible/);
