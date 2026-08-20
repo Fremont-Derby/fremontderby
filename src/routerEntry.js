@@ -7,6 +7,7 @@ import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import { renderJflNotFoundPage } from './jflNotFoundPage.js';
 import { routeJflModernHome } from './jflModernHome.js';
+import { routeJflModernSchedule } from './jflModernSchedule.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
@@ -115,6 +116,11 @@ const baseRouterEntry = {
     const modernHomeResponse = routeJflModernHome(request, env);
     if (modernHomeResponse) {
       return finalizeBrowserResponse(modernHomeResponse, url.pathname);
+    }
+    const modernScheduleResponse = routeJflModernSchedule(request, env);
+    if (modernScheduleResponse) {
+      const withAvailability = await enhanceScheduleAvailability(modernScheduleResponse);
+      return finalizeBrowserResponse(withAvailability, url.pathname);
     }
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
