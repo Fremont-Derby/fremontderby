@@ -112,6 +112,7 @@ test('modern schedule survives shared public-season selection enhancement', asyn
   const html = await enhanced.text();
   assert.match(html, /data-fd-modern-schedule="true"/);
   assert.match(html, /data-fd-mobile-dock/);
+  assert.match(html, /choosePublicSeason/);
 });
 
 test('route is JFL GET /schedule only and leaves legacy/API/write behavior untouched', async () => {
