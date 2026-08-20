@@ -6,6 +6,7 @@ import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import { renderJflNotFoundPage } from './jflNotFoundPage.js';
+import { decorateJflModernShell } from './jflModernShell.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
@@ -107,7 +108,7 @@ async function finalizeBrowserResponse(response, pathname) {
   return injectPersistentAuthSession(mobileMenuAccessible);
 }
 
-export default {
+const baseRouterEntry = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
@@ -154,5 +155,12 @@ export default {
     }
     const finalized = await finalizeBrowserResponse(reconciled, url.pathname);
     return decorateModernUiSliceResponse(finalized, request, env);
+  },
+};
+
+export default {
+  async fetch(request, env, ctx) {
+    const response = await baseRouterEntry.fetch(request, env, ctx);
+    return decorateJflModernShell(response, request, env);
   },
 };
