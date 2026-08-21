@@ -3,31 +3,18 @@
   "name": "fremontderby",
   "main": "src/routerEntry.js",
   "compatibility_date": "2026-08-09",
-  "triggers": {
-    "crons": [
-      "0 * * * *"
-    ]
-  },
+  "triggers": { "crons": ["0 * * * *"] },
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [
-    {
-      "pattern": "fremontderby.com",
-      "custom_domain": true
-    }
-  ],
-  "version_metadata": {
-    "binding": "CF_VERSION_METADATA"
-  },
+  "routes": [{ "pattern": "fremontderby.com", "custom_domain": true }],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   "vars": {
     "ENVIRONMENT": "production",
     "SUPABASE_URL": "https://cpiucsxlkicmlbvdvhww.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_7WQihuB4HVf-xFKMBeYIng_bUP--oUz",
     "EXPECTED_SUPABASE_PROJECT_REF": "cpiucsxlkicmlbvdvhww"
   },
-  "secrets": {
-    "required": ["SUPABASE_SERVICE_ROLE_KEY"]
-  },
+  "secrets": { "required": ["SUPABASE_SERVICE_ROLE_KEY"] },
   "env": {
     "staging": {
       "workers_dev": false,
@@ -43,15 +30,8 @@
       "name": "fremontderby-jfl",
       "workers_dev": false,
       "preview_urls": false,
-      "routes": [
-        {
-          "pattern": "jfl.fremontderby.com",
-          "custom_domain": true
-        }
-      ],
-      "version_metadata": {
-        "binding": "CF_VERSION_METADATA"
-      },
+      "routes": [{ "pattern": "jfl.fremontderby.com", "custom_domain": true }],
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       "vars": {
         "ENVIRONMENT": "jfl",
         "BETA_AUTH_BYPASS": "1",
@@ -61,25 +41,14 @@
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
         "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       },
-      "secrets": {
-        "required": [
-          "SUPABASE_SERVICE_ROLE_KEY"
-        ]
-      }
+      "secrets": { "required": ["SUPABASE_SERVICE_ROLE_KEY"] }
     },
     "dru": {
       "name": "fremontderby-dru",
       "workers_dev": false,
       "preview_urls": false,
-      "routes": [
-        {
-          "pattern": "dru.fremontderby.com",
-          "custom_domain": true
-        }
-      ],
-      "version_metadata": {
-        "binding": "CF_VERSION_METADATA"
-      },
+      "routes": [{ "pattern": "dru.fremontderby.com", "custom_domain": true }],
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       "vars": {
         "ENVIRONMENT": "dru",
         "BETA_AUTH_BYPASS": "1",
@@ -89,37 +58,24 @@
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
         "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       },
-      "secrets": {
-        "required": [
-          "SUPABASE_SERVICE_ROLE_KEY"
-        ]
-      }
+      "secrets": { "required": ["SUPABASE_SERVICE_ROLE_KEY"] }
     },
     "gamma": {
       "name": "fremontderby-gamma",
+      "main": "src/personaRouterEntry.js",
       "workers_dev": false,
       "preview_urls": false,
-      "routes": [
-        {
-          "pattern": "gamma.fremontderby.com",
-          "custom_domain": true
-        }
-      ],
-      "version_metadata": {
-        "binding": "CF_VERSION_METADATA"
-      },
+      "routes": [{ "pattern": "gamma.fremontderby.com", "custom_domain": true }],
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       "vars": {
         "ENVIRONMENT": "gamma",
+        "TEST_PERSONA_OPERATOR_USER_IDS": "e0b7c076-106b-4160-bfab-6de69a4f5ded",
         "SUPABASE_SCHEMA": "gamma",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
         "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
       },
-      "secrets": {
-        "required": [
-          "SUPABASE_SERVICE_ROLE_KEY"
-        ]
-      }
+      "secrets": { "required": ["SUPABASE_SERVICE_ROLE_KEY"] }
     }
   }
 }
