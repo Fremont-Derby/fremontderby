@@ -21,6 +21,7 @@ function env(environment, extra = {}) {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'publishable-test-key',
     BETA_AUTH_BYPASS: '0',
+    TEST_PERSONA_OPERATOR_USER_IDS: operator.id,
     ...extra,
   };
 }
@@ -85,6 +86,11 @@ test('persona cookie is environment-bound and ignored in production', () => {
 
 test('open-auth beta bypass actor cannot operate persona switching', () => {
   assert.equal(isTestPersonaOperator({ ...operator, betaBypass: true }, env('jfl')), false);
+});
+
+test('missing or empty operator allowlist disables persona switching', () => {
+  assert.equal(isTestPersonaOperator(operator, env('jfl', { TEST_PERSONA_OPERATOR_USER_IDS: '' })), false);
+  assert.equal(isTestPersonaOperator(operator, { ENVIRONMENT: 'jfl' }), false);
 });
 
 test('configured operator allowlist narrows access', () => {
