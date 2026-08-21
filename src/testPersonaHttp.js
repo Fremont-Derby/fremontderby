@@ -62,7 +62,13 @@ export async function routeTestPersona(
   if (!hasBearerToken(request)) return noStore({ error: 'Missing bearer token' }, 401);
 
   try {
-    const operator = await authenticateSupabaseUser(withoutPersonaCookie(request), env, { fetch: fetchImpl });
+    // Authenticate against a clone so POST body parsing below remains intact.
+    // Constructing a Request from the original can transfer/consume its body.
+    const operator = await authenticateSupabaseUser(
+      withoutPersonaCookie(request.clone()),
+      env,
+      { fetch: fetchImpl },
+    );
     if (!isTestPersonaOperator(operator, env)) {
       return noStore({ error: 'Test persona access is not enabled for this account' }, 403);
     }
