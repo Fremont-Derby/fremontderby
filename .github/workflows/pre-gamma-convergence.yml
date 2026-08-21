@@ -18,8 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Validate focused train ownership and exact-SHA proof
         run: node scripts/check-pre-gamma-convergence.mjs
+      - name: Verify candidate descends from the current Gamma baseline
+        env:
+          GAMMA_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git merge-base --is-ancestor "$GAMMA_BASE_SHA" "$CANDIDATE_SHA"
