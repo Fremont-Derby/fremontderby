@@ -1,3 +1,5 @@
+import { resolveTestPersonaActor } from './testPersona.js';
+
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -33,12 +35,6 @@ async function parseJson(response) {
 }
 
 const testAuthEnvironments = new Set(['jfl', 'dru']);
-
-/**
- * Open-auth is allowed only in the two isolated test lanes and only when the
- * explicit bypass flag is enabled. Gamma, staging, and production always use
- * normal authentication even if a stray bypass flag is present.
- */
 
 /** Opaque browser token used only by JFL "Continue with Google" simulation (#655). */
 export const JFL_SIMULATED_GOOGLE_TOKEN = 'fd-jfl-simulated-google-v1';
@@ -97,6 +93,10 @@ export function resolveBetaBypassActor(env = {}) {
   };
 }
 
+function maybeAssumeTestPersona(request, env, user) {
+  return resolveTestPersonaActor(request, env, user) || user;
+}
+
 export async function authenticateSupabaseUser(
   request,
   env,
@@ -114,20 +114,20 @@ export async function authenticateSupabaseUser(
     }
     if (isJflSimulatedGoogleToken(token)) {
       const simulated = resolveJflSimulatedGoogleActor(token, env);
-      if (simulated) return simulated;
+      if (simulated) return maybeAssumeTestPersona(request, env, simulated);
     }
     if (!jflSimulatedOidcEnabled(env)) {
       throw new AuthError('Invalid bearer token');
     }
-    return {
+    const simulatedOidc = {
       ...resolveBetaBypassActor(env),
       simulatedOidc: true,
     };
+    return maybeAssumeTestPersona(request, env, simulatedOidc);
   }
 
-  // Test-lane bypass is only for deliberately unauthenticated automation.
-  // Once a caller supplies a bearer token, validate it normally rather than
-  // escalating to the shared test actor.
+  // Tokenless beta automation remains useful in JFL/DRU, but it can never
+  // activate a test persona. Persona assumption requires an explicit session.
   if (!token && betaAuthBypassEnabled(env)) {
     return resolveBetaBypassActor(env);
   }
@@ -156,8 +156,8 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Authenticated user is missing an id');
   }
 
-  return {
+  return maybeAssumeTestPersona(request, env, {
     id: user.id,
     email: user.email ?? null,
-  };
+  });
 }
