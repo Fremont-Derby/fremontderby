@@ -1,0 +1,34 @@
+name: Break-glass hosted Cloudflare isolation proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-hosted-isolation-proof.yml'
+      - 'scripts/cloudflare-hosted-isolation-proof.mjs'
+
+concurrency:
+  group: cloudflare-hosted-isolation-proof
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify:
+    if: startsWith(github.event.head_commit.message, '[BREAK-GLASS][P0][JFL] Run hosted Cloudflare isolation proof')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run hosted isolation proof
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PRODUCTION_PROBE_SHA: ${{ github.sha }}
+          JFL_PROBE_SHA: '215447a53a5d2595e6df73aff567e15848390cb0'
+        run: node scripts/cloudflare-hosted-isolation-proof.mjs
