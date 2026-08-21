@@ -8,6 +8,7 @@ import {
   renderTeamStandingCard,
   routeJflModernStandings,
 } from '../src/jflModernStandings.js';
+import { enhancePublicSeasonSelection } from '../src/publicSeasonSelectionEnhancer.js';
 
 const teamRows = [
   {
@@ -97,6 +98,18 @@ test('modern standings document uses the same authoritative read APIs and clear 
   assert.match(html, /data-fd-shell/);
   assert.match(html, /data-fd-mobile-dock/);
   assert.match(html, /\?ui=legacy/);
+});
+
+test('modern standings survives shared public-season selection enhancement without legacy string rewrites', async () => {
+  const original = routeJflModernStandings(
+    new Request('https://jfl.fremontderby.com/standings'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  const enhanced = await enhancePublicSeasonSelection(original, '/standings');
+  assert.equal(enhanced.status, 200);
+  const html = await enhanced.text();
+  assert.match(html, /data-fd-modern-standings="true"/);
+  assert.match(html, /choosePublicSeason/);
 });
 
 test('JFL route is GET /standings only and preserves legacy/API/write behavior', async () => {
