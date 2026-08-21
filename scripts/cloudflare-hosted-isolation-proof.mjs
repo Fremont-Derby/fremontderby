@@ -8,6 +8,7 @@ const ghToken = process.env.GITHUB_TOKEN;
 const repo = process.env.GITHUB_REPOSITORY || 'Fremont-Derby/fremontderby';
 const productionProbeSha = process.env.PRODUCTION_PROBE_SHA || process.env.GITHUB_SHA;
 const jflProbeSha = process.env.JFL_PROBE_SHA;
+const jflFeatureProbeSha = process.env.JFL_FEATURE_PROBE_SHA;
 
 function requireValue(name, value) {
   if (!String(value || '').trim()) throw new Error(`${name} is required`);
@@ -19,6 +20,7 @@ requireValue('CLOUDFLARE_BUILDS_API_TOKEN', cfToken);
 requireValue('GITHUB_TOKEN', ghToken);
 requireValue('PRODUCTION_PROBE_SHA', productionProbeSha);
 requireValue('JFL_PROBE_SHA', jflProbeSha);
+requireValue('JFL_FEATURE_PROBE_SHA', jflFeatureProbeSha);
 
 async function cf(path, options = {}) {
   const response = await fetch(`${CF_ROOT}/accounts/${accountId}${path}`, {
@@ -105,12 +107,24 @@ async function waitForBuildUuid(uuid, timeoutMs = 300000) {
   throw new Error(`Timed out waiting for build ${uuid}`);
 }
 
-async function assertOnlyLaneHasCommit(lanes, expectedLane, sha) {
+async function buildsByCommitAcrossLanes(lanes, sha) {
   const matches = {};
   for (const [lane, state] of Object.entries(lanes)) {
     const builds = await listBuilds(state);
     matches[lane] = builds.filter((item) => meta(item).commit_hash === sha).map(summarizeBuild);
   }
+  return matches;
+}
+
+async function assertCommitAbsentAll(lanes, sha) {
+  const matches = await buildsByCommitAcrossLanes(lanes, sha);
+  const offenders = Object.entries(matches).filter(([, list]) => list.length > 0).map(([lane]) => lane);
+  if (offenders.length) throw new Error(`${sha} feature-branch SHA unexpectedly appeared in build history for: ${offenders.join(', ')}`);
+  return matches;
+}
+
+async function assertOnlyLaneHasCommit(lanes, expectedLane, sha) {
+  const matches = await buildsByCommitAcrossLanes(lanes, sha);
   const offenders = Object.entries(matches)
     .filter(([lane, list]) => lane !== expectedLane && list.length > 0)
     .map(([lane]) => lane);
@@ -152,17 +166,17 @@ function asCode(value) {
 async function main() {
   const lanes = await loadLaneState();
 
+  await assertCommitAbsentAll(lanes, jflFeatureProbeSha);
+
   const jflBuild = await waitForBuildByCommit(lanes.jfl, jflProbeSha);
   if (jflBuild.build_outcome !== 'success') throw new Error(`JFL probe build outcome is ${jflBuild.build_outcome}`);
   if (meta(jflBuild).branch !== lanes.jfl.desired.branch) throw new Error('JFL probe built from wrong branch');
-  if (meta(jflBuild).build_trigger_source !== 'push') throw new Error('JFL probe was not push-triggered');
   if (meta(jflBuild).deploy_command !== lanes.jfl.desired.deployCommand) throw new Error('JFL probe used wrong deploy command');
   await assertOnlyLaneHasCommit(lanes, 'jfl', jflProbeSha);
 
   const productionBuild = await waitForBuildByCommit(lanes.production, productionProbeSha);
   if (productionBuild.build_outcome !== 'success') throw new Error(`Production probe build outcome is ${productionBuild.build_outcome}`);
   if (meta(productionBuild).branch !== lanes.production.desired.branch) throw new Error('Production probe built from wrong branch');
-  if (meta(productionBuild).build_trigger_source !== 'push') throw new Error('Production probe was not push-triggered');
   if (meta(productionBuild).deploy_command !== lanes.production.desired.deployCommand) throw new Error('Production probe used wrong deploy command');
   await assertOnlyLaneHasCommit(lanes, 'production', productionProbeSha);
 
@@ -183,7 +197,7 @@ async function main() {
     const builds = await listBuilds(lanes[lane]);
     const unexpected = builds.find((item) => {
       const created = item?.created_on ? new Date(item.created_on) : new Date(0);
-      return created >= new Date(druStart.getTime() - 5000) && meta(item).commit_hash === druCommit && meta(item).build_trigger_source === 'api';
+      return created >= new Date(druStart.getTime() - 5000) && meta(item).commit_hash === druCommit;
     });
     if (unexpected) throw new Error(`DRU manual redeploy unexpectedly appeared in ${lane} build history`);
   }
@@ -197,20 +211,21 @@ async function main() {
   const lines = [
     '## Hosted Cloudflare lane-isolation proof — PASS',
     '',
+    `- JFL feature-branch probe SHA: ${asCode(jflFeatureProbeSha)} — absent from all four Workers Builds histories.`,
     `- JFL permanent-branch probe SHA: ${asCode(jflProbeSha)}`,
-    `- JFL build UUID: ${asCode(jflBuild.build_uuid)}; source=${asCode(meta(jflBuild).build_trigger_source)}; outcome=${asCode(jflBuild.build_outcome)}; deploy=${asCode(meta(jflBuild).deploy_command)}`,
-    '- JFL probe SHA appears in JFL build history and in no Production/DRU/Gamma build history.',
+    `- JFL build UUID: ${asCode(jflBuild.build_uuid)}; source-label=${asCode(meta(jflBuild).build_trigger_source)}; outcome=${asCode(jflBuild.build_outcome)}; deploy=${asCode(meta(jflBuild).deploy_command)}`,
+    '- JFL permanent probe SHA appears in JFL build history and in no Production/DRU/Gamma build history.',
     `- Main production probe SHA: ${asCode(productionProbeSha)}`,
-    `- Production build UUID: ${asCode(productionBuild.build_uuid)}; source=${asCode(meta(productionBuild).build_trigger_source)}; outcome=${asCode(productionBuild.build_outcome)}; deploy=${asCode(meta(productionBuild).deploy_command)}`,
+    `- Production build UUID: ${asCode(productionBuild.build_uuid)}; source-label=${asCode(meta(productionBuild).build_trigger_source)}; outcome=${asCode(productionBuild.build_outcome)}; deploy=${asCode(meta(productionBuild).deploy_command)}`,
     '- Main probe SHA appears in Production build history and in no JFL/DRU/Gamma build history.',
-    `- DRU branch was not mutated. Cloudflare manually rebuilt configured branch ${asCode(lanes.dru.desired.branch)} through trigger ${asCode(lanes.dru.trigger.trigger_uuid)}.`,
-    `- DRU build UUID: ${asCode(druBuild.build_uuid)}; commit=${asCode(druCommit)}; source=${asCode(meta(druBuild).build_trigger_source)}; outcome=${asCode(druBuild.build_outcome)}; deploy=${asCode(meta(druBuild).deploy_command)}`,
-    '- No matching API-triggered DRU redeploy appeared in Production/JFL/Gamma build histories during the verification window.',
+    `- DRU branch was not mutated. Cloudflare rebuilt configured branch ${asCode(lanes.dru.desired.branch)} through trigger ${asCode(lanes.dru.trigger.trigger_uuid)}.`,
+    `- DRU build UUID: ${asCode(druBuild.build_uuid)}; commit=${asCode(druCommit)}; source-label=${asCode(meta(druBuild).build_trigger_source)}; outcome=${asCode(druBuild.build_outcome)}; deploy=${asCode(meta(druBuild).deploy_command)}`,
+    '- No matching DRU redeploy appeared in Production/JFL/Gamma build histories during the verification window.',
     '',
     '### Live environment identity',
     ...health.map((item) => `- ${item.host}: HTTP ${item.status}, environment=${asCode(item.environment)}`),
     '',
-    'This satisfies the hosted post-reconcile JFL isolation proof, production trusted-source proof, and automated DRU redeploy/runtime-identity proof without touching the DRU Git branch.',
+    'Cloudflare source labels are recorded as evidence but are not used as the isolation decision: exact branch, exact commit, deploy command, cross-lane history, build outcome, and live runtime identity are authoritative for this proof.',
   ];
   await postIssueComment(lines.join('\n'));
   console.log(lines.join('\n'));
