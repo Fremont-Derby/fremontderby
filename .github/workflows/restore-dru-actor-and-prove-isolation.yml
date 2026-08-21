@@ -20,13 +20,23 @@ jobs:
     if: startsWith(github.event.head_commit.message, '[BREAK-GLASS][P0][JFL] Restore DRU beta actor secret and rerun proof')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main repair/proof tooling
+        uses: actions/checkout@v4
+
+      - name: Checkout DRU branch read-only as deployment source
+        uses: actions/checkout@v4
+        with:
+          ref: fremontderby-dru
+          path: dru-source
+          persist-credentials: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Restore missing DRU beta actor runtime secret
+      - name: Restore missing DRU beta actor runtime secret atomically
         env:
+          DRU_SOURCE_DIR: ${{ github.workspace }}/dru-source
           LANE_SUPABASE_URL: 'https://oqkkvqkerusepyokzbmt.supabase.co'
           LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
