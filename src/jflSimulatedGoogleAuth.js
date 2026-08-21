@@ -16,6 +16,16 @@ function simulatedAuthScript() {
     } catch {}
   }
 
+  function clearAssumedPersona(accessToken) {
+    if (!accessToken) return;
+    fetch('/api/test-persona', {
+      method: 'DELETE',
+      headers: { authorization: 'Bearer ' + accessToken },
+      keepalive: true,
+      cache: 'no-store',
+    }).catch(() => {});
+  }
+
   function beginSimulatedSession() {
     try {
       window.sessionStorage.setItem('fd.accessToken', simulatedToken);
@@ -43,6 +53,7 @@ function simulatedAuthScript() {
       if (currentToken !== simulatedToken) return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      clearAssumedPersona(currentToken);
       clearSimulatedSession();
       window.location.assign('/profile');
     }
