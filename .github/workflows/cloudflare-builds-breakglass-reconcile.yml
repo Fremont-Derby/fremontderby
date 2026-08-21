@@ -12,58 +12,107 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   reconcile:
-    if: startsWith(github.event.head_commit.message, '[BREAK-GLASS][P0][JFL] Execute Cloudflare Builds live reconcile')
+    if: startsWith(github.event.head_commit.message, '[BREAK-GLASS][P0][JFL] Reconcile Cloudflare Builds with proof')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Require trusted source and least-privilege Builds token
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
-        run: |
-          test "$GITHUB_REF_NAME" = "main"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$CLOUDFLARE_BUILDS_API_TOKEN"
-      - name: Preflight all lanes without mutation
-        id: preflight
+      - name: Reconcile and capture sanitized evidence
+        id: reconcile
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          log="$RUNNER_TEMP/cloudflare-builds.log"
+          evidence="$RUNNER_TEMP/cloudflare-builds-evidence.md"
+          : > "$log"
+          success=true
           drift=false
-          for lane in production jfl dru gamma; do
-            set +e
-            output=$(node scripts/configure-cloudflare-builds.mjs check "$lane" 2>&1)
+          failure="none"
+
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            success=false
+            failure="untrusted-ref"
+            printf 'FAIL trusted source: expected main, got %s\n' "$GITHUB_REF_NAME" >> "$log"
+          elif [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            success=false
+            failure="missing-account-id"
+            printf 'FAIL CLOUDFLARE_ACCOUNT_ID is missing.\n' >> "$log"
+          elif [ -z "${CLOUDFLARE_BUILDS_API_TOKEN:-}" ]; then
+            success=false
+            failure="missing-builds-token"
+            printf 'FAIL CLOUDFLARE_BUILDS_API_TOKEN is missing.\n' >> "$log"
+          fi
+
+          if [ "$success" = "true" ]; then
+            for lane in production jfl dru gamma; do
+              output=$(node scripts/configure-cloudflare-builds.mjs check "$lane" 2>&1)
+              status=$?
+              printf '%s\n' "$output" | tee -a "$log"
+              if [ "$status" -eq 0 ]; then
+                continue
+              fi
+              if printf '%s\n' "$output" | grep -q "Cloudflare Workers Builds drift detected for $lane"; then
+                drift=true
+                continue
+              fi
+              success=false
+              failure="preflight-$lane"
+              printf 'FAIL preflight for %s was not ordinary desired-state drift; refusing mutation.\n' "$lane" | tee -a "$log"
+              break
+            done
+          fi
+
+          if [ "$success" = "true" ] && [ "$drift" = "true" ]; then
+            output=$(node scripts/configure-cloudflare-builds.mjs apply all 2>&1)
             status=$?
-            set -e
-            printf '%s\n' "$output"
-            if [ "$status" -eq 0 ]; then
-              continue
+            printf '%s\n' "$output" | tee -a "$log"
+            if [ "$status" -ne 0 ]; then
+              success=false
+              failure="apply"
             fi
-            if printf '%s\n' "$output" | grep -q "Cloudflare Workers Builds drift detected for $lane"; then
-              drift=true
-              continue
+          fi
+
+          if [ "$success" = "true" ]; then
+            output=$(node scripts/configure-cloudflare-builds.mjs check all 2>&1)
+            status=$?
+            printf '%s\n' "$output" | tee -a "$log"
+            if [ "$status" -ne 0 ]; then
+              success=false
+              failure="final-check"
             fi
-            echo "::error::Preflight failed for $lane for a reason other than known configuration drift. Refusing mutation."
-            exit "$status"
-          done
+          fi
+
+          {
+            echo '## Break-glass Cloudflare Workers Builds live evidence'
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Preflight drift detected: \`$drift\`"
+            echo "- Reconcile success: \`$success\`"
+            echo "- Failure stage: \`$failure\`"
+            echo
+            echo '```text'
+            cat "$log"
+            echo '```'
+          } > "$evidence"
+
+          cat "$evidence" >> "$GITHUB_STEP_SUMMARY"
+          echo "success=$success" >> "$GITHUB_OUTPUT"
           echo "drift=$drift" >> "$GITHUB_OUTPUT"
-      - name: Apply reviewed four-lane desired state
-        if: steps.preflight.outputs.drift == 'true'
+          echo "failure=$failure" >> "$GITHUB_OUTPUT"
+      - name: Post evidence to tracking card
+        if: always()
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
-        run: node scripts/configure-cloudflare-builds.mjs apply all
-      - name: Final four-lane check
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
-        run: node scripts/configure-cloudflare-builds.mjs check all
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment 1192 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/cloudflare-builds-evidence.md"
+      - name: Enforce successful final state
+        if: always()
+        run: test "${{ steps.reconcile.outputs.success }}" = "true"
