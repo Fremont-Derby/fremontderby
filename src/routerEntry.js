@@ -39,6 +39,8 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { injectTestPersonaControls } from './testPersonaEnhancer.js';
+import { routeTestPersona } from './testPersonaHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -101,7 +103,8 @@ async function finalizeBrowserResponse(response, pathname) {
   const accessible = await injectAccessibilityLayer(adminThemed);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
-  return injectPublicSeo(withAuth, pathname);
+  const withTestPersona = await injectTestPersonaControls(withAuth);
+  return injectPublicSeo(withTestPersona, pathname);
 }
 
 // Replaced at deploy time by scripts/stamp-deploy-identity.mjs
@@ -177,6 +180,9 @@ export default {
       }
       return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
     }
+
+    const testPersonaResponse = await routeTestPersona(request, env);
+    if (testPersonaResponse) return testPersonaResponse;
 
     // Trades restored — paths served by legacy router / index handlers.
 
