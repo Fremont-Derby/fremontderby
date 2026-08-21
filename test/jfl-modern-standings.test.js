@@ -66,7 +66,7 @@ test('team card preserves authoritative row values and rank without recalculatin
   assert.match(first, /JFL QA Breakers/);
   assert.match(first, />3-0</);
   assert.match(first, />9</);
-  assert.match(first, />3 of 7</);
+  assert.match(first, />3 of 7 played</);
   assert.match(first, />7-2</);
   assert.match(first, />5</);
   assert.match(second, /data-standings-rank="2"/);
@@ -130,7 +130,7 @@ test('JFL route is GET /standings only and preserves legacy/API/write behavior',
 
 test('modern standings is mobile-first and keeps accessible touch/focus/high-contrast contracts', () => {
   assert.doesNotMatch(jflModernStandingsStyles, /overflow-x:\s*auto/i);
-  assert.match(jflModernStandingsStyles, /min-height:\s*44px/);
+  assert.match(jflModernStandingsStyles, /min-height:\s*48px/);
   assert.match(jflModernStandingsStyles, /:focus-visible/);
   assert.match(jflModernStandingsStyles, /forced-colors:\s*active/);
   assert.match(jflModernStandingsStyles, /prefers-reduced-motion/);
