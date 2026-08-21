@@ -1,4 +1,6 @@
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
+import { resolveTestPersonaActor } from './testPersona.js';
+
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -85,7 +87,7 @@ export function resolveBetaBypassActor(env = {}) {
   };
 }
 
-export async function authenticateSupabaseUser(
+export async function authenticateSupabaseBearerUser(
   request,
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -95,14 +97,6 @@ export async function authenticateSupabaseUser(
   }
 
   const token = bearerToken(request);
-
-  // Test-lane bypass is only for deliberately unauthenticated automation.
-  // Once a caller supplies a bearer token, validate it normally rather than
-  // escalating to the shared test actor.
-  if (!token && betaAuthBypassEnabled(env)) {
-    return resolveBetaBypassActor(env);
-  }
-
   if (!token) {
     throw new AuthError('Missing bearer token');
   }
@@ -131,4 +125,25 @@ export async function authenticateSupabaseUser(
     id: user.id,
     email: user.email ?? null,
   };
+}
+
+export async function authenticateSupabaseUser(
+  request,
+  env,
+  { fetch: fetchImpl = globalThis.fetch } = {},
+) {
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('fetch implementation is required');
+  }
+
+  const token = bearerToken(request);
+
+  // Test-lane bypass is only for deliberately unauthenticated automation.
+  // Persona assumption never rides this bypass: it requires a real bearer user.
+  if (!token && betaAuthBypassEnabled(env)) {
+    return resolveBetaBypassActor(env);
+  }
+
+  const user = await authenticateSupabaseBearerUser(request, env, { fetch: fetchImpl });
+  return resolveTestPersonaActor(request, env, user) || user;
 }
