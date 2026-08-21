@@ -68,6 +68,19 @@ values
   ('18580000-2000-4001-8000-000000000005', '18580000-0000-4001-8000-000000000005', 'TEST Player B')
 on conflict (id) do update set user_id = excluded.user_id, display_name = excluded.display_name, updated_at = now();
 
+-- Real captain workflows require contactability. Use reserved 555 fixture numbers.
+insert into jfl_private.player_contacts (player_id, phone)
+values
+  ('18580000-2000-4000-8000-000000000002', '+12065550102'),
+  ('18580000-2000-4000-8000-000000000003', '+12065550103')
+on conflict (player_id) do update set phone = excluded.phone, updated_at = now();
+
+insert into gamma_private.player_contacts (player_id, phone)
+values
+  ('18580000-2000-4001-8000-000000000002', '+12065551102'),
+  ('18580000-2000-4001-8000-000000000003', '+12065551103')
+on conflict (player_id) do update set phone = excluded.phone, updated_at = now();
+
 insert into jfl.team_memberships (id, season_id, team_id, player_id, role)
 values
   ('18580000-3000-4000-8000-000000000002', '18580000-1000-4000-8000-000000000000', '18580000-1100-4000-8000-000000000001', '18580000-2000-4000-8000-000000000002', 'captain'),
