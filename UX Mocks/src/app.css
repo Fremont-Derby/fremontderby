@@ -1,0 +1,28 @@
+@import '@amzn/sds-core/tokens.css';
+@import '@amzn/sds-core/fonts.css';
+
+/* SDS global styles — co-located with app.tsx per React convention. */
+
+body {
+  background: #fff;
+  color: #0F1111;
+  font-family: 'Amazon Ember Modern Text', Arial, sans-serif;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbars across all elements, including nested SDS scroll containers
+   (scrollbars originate inside child components, so a body rule isn't enough). */
+* {
+  scrollbar-width: none; /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+a, a:link, a:visited {
+  text-decoration: inherit;
+  color: inherit;
+}
