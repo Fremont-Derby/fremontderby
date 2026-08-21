@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
   "name": "fremontderby-jfl",
-  "main": "src/routerEntry.js",
+  "main": "src/personaRouterEntry.js",
   "compatibility_date": "2026-08-09",
   "workers_dev": false,
   "preview_urls": false,
@@ -19,6 +19,7 @@
     "BETA_AUTH_BYPASS": "1",
     "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
     "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
+    "TEST_PERSONA_OPERATOR_USER_IDS": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
     "SUPABASE_SCHEMA": "jfl",
     "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
@@ -58,6 +59,7 @@
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
         "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
+        "TEST_PERSONA_OPERATOR_USER_IDS": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
         "SUPABASE_SCHEMA": "jfl",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
@@ -114,6 +116,7 @@
       "vars": {
         "ENVIRONMENT": "gamma",
         "BETA_AUTH_BYPASS": "0",
+        "TEST_PERSONA_OPERATOR_USER_IDS": "e0b7c076-106b-4160-bfab-6de69a4f5ded",
         "SUPABASE_SCHEMA": "gamma"
       },
       "secrets": {
