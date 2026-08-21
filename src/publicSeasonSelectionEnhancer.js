@@ -38,6 +38,9 @@ export async function enhancePublicSeasonSelection(response, pathname) {
   }
 
   if (pathname === '/standings') {
+    if (html.includes('data-fd-modern-standings="true"')) {
+      return new Response(html, { status: response.status, statusText: response.statusText, headers });
+    }
     html = replaceRequired(
       html,
       "const explicit=seasons.find((season)=>season.id===requestedSeasonId);const registration=seasons.find((season)=>season.status==='registration');const remembered=seasons.find((season)=>season.id===rememberedSeasonId);const selected=explicit||remembered||registration||seasons[0];seasonInput.value=selected?.id||'';",
