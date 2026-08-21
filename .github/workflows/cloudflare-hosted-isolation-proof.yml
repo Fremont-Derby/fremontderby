@@ -30,5 +30,6 @@ jobs:
           CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
           PRODUCTION_PROBE_SHA: ${{ github.sha }}
+          JFL_FEATURE_PROBE_SHA: '1e10506c38064e88e8934522b9b02bce998804ca'
           JFL_PROBE_SHA: '215447a53a5d2595e6df73aff567e15848390cb0'
         run: node scripts/cloudflare-hosted-isolation-proof.mjs
