@@ -57,9 +57,9 @@ function configuredOperatorIds(env = {}) {
 export function isTestPersonaOperator(user, env = {}) {
   if (!testPersonaEnabled(env) || !user?.id || user.betaBypass) return false;
   const allowlist = configuredOperatorIds(env);
-  // Non-prod remains usable out of the box for authenticated testers. Operators
-  // can be narrowed without code by setting TEST_PERSONA_OPERATOR_USER_IDS.
-  return allowlist.size === 0 || allowlist.has(String(user.id));
+  // Missing operator configuration disables persona assumption. A test-lane
+  // config drift must fail closed rather than exposing impersonation broadly.
+  return allowlist.size > 0 && allowlist.has(String(user.id));
 }
 
 function cookieValue(request, name) {
