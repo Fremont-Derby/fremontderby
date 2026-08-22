@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  availableTeamApplicationSeasons,
+  friendlyTeamsError,
   jflModernTeamsStyles,
   normalizeTeamCards,
   renderJflModernTeams,
@@ -41,8 +43,8 @@ test('normalizes my captain and member teams first without duplicate directory c
 });
 
 test('visible actions are contextual and role-aware', () => {
-  assert.deepEqual(visibleTeamActions({ relationship: 'captain' }), ['manage', 'message']);
-  assert.deepEqual(visibleTeamActions({ relationship: 'member' }), ['roster', 'message']);
+  assert.deepEqual(visibleTeamActions({ relationship: 'captain' }), ['message']);
+  assert.deepEqual(visibleTeamActions({ relationship: 'member' }), ['message']);
   assert.deepEqual(visibleTeamActions({ relationship: 'pending' }), ['cancel']);
   assert.deepEqual(visibleTeamActions({ relationship: 'none' }), ['join']);
   assert.deepEqual(visibleTeamActions({ relationship: 'directory' }), []);
@@ -62,7 +64,7 @@ test('active-season directory teams remain discoverable when no team is joinable
   assert.deepEqual(visibleTeamActions(cards[1]), []);
   const directoryHtml = renderTeamCard(cards[1]);
   assert.match(directoryHtml, /Casey Captain/);
-  assert.doesNotMatch(directoryHtml, /Shown after joining|Request to join|Manage roster/);
+  assert.doesNotMatch(directoryHtml, /Shown after joining|Request to join|Manage roster|Roster & captain|<details/);
 });
 
 test('compact cards show membership, captain, roster, and only authorized actions without ID labels', () => {
@@ -72,6 +74,7 @@ test('compact cards show membership, captain, roster, and only authorized action
   assert.match(captainHtml, /Alex Captain/);
   assert.match(captainHtml, /2 players/);
   assert.match(captainHtml, />Manage roster</);
+  assert.equal((captainHtml.match(/Manage roster/g) || []).length, 1);
   assert.doesNotMatch(captainHtml, />Request to join</);
   assert.doesNotMatch(captainHtml, /Team ID|Membership ID|Player ID/i);
 
@@ -80,11 +83,36 @@ test('compact cards show membership, captain, roster, and only authorized action
   assert.doesNotMatch(otherHtml, />Manage roster</);
 });
 
+test('existing active applications are removed from the new-team season picker', () => {
+  const seasons = [
+    { id: 'season-open', name: 'Open', status: 'registration' },
+    { id: 'season-used', name: 'Used', status: 'registration' },
+    { id: 'season-old', name: 'Old', status: 'completed' },
+  ];
+  const registrations = [
+    { seasonId: 'season-used', applications: [{ status: 'applied' }] },
+    { seasonId: 'season-open', applications: [{ status: 'withdrawn' }] },
+  ];
+  assert.deepEqual(
+    availableTeamApplicationSeasons(seasons, registrations).map((season) => season.id),
+    ['season-open'],
+  );
+});
+
+test('duplicate application failures are translated into a plain recovery message', () => {
+  assert.equal(
+    friendlyTeamsError('Supabase request failed with 400: You already have a team application in this season'),
+    'You already have a team application for this season.',
+  );
+  assert.equal(friendlyTeamsError('Connection interrupted'), 'Connection interrupted');
+});
+
 test('modern Teams document preserves canonical read/write APIs, auth, and legacy escape hatch', () => {
   const html = renderJflModernTeams();
   assert.match(html, /data-fd-modern-teams="true"/);
   assert.match(html, /\/api\/me\/teams/);
   assert.match(html, /\/api\/me\/team-membership-requests/);
+  assert.match(html, /\/api\/seasons\/.*team-registration\/me/);
   assert.match(html, /\/api\/seasons\/.*team-standings/);
   assert.match(html, /captainName:\s*row\.captain_display_name/);
   assert.match(html, /\/api\/teams\/.*membership-request/);
@@ -122,4 +150,6 @@ test('modern Teams keeps touch, focus, reduced-motion, and forced-colors contrac
   assert.match(jflModernTeamsStyles, /:focus-visible/);
   assert.match(jflModernTeamsStyles, /prefers-reduced-motion/);
   assert.match(jflModernTeamsStyles, /forced-colors:\s*active/);
+  assert.match(jflModernTeamsStyles, /summary\s*\{[^}]*padding:\s*0\s+12px/s);
+  assert.match(jflModernTeamsStyles, /safe-area-inset-bottom/);
 });
