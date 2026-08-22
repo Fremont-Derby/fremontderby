@@ -9,6 +9,7 @@ import { renderJflNotFoundPage } from './jflNotFoundPage.js';
 import { routeJflModernHome } from './jflModernHome.js';
 import { routeJflModernSchedule } from './jflModernSchedule.js';
 import { routeJflModernStandings } from './jflModernStandings.js';
+import { routeJflModernTeams } from './jflModernTeams.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
@@ -126,6 +127,10 @@ const baseRouterEntry = {
     const modernStandingsResponse = routeJflModernStandings(request, env);
     if (modernStandingsResponse) {
       return finalizeBrowserResponse(modernStandingsResponse, url.pathname);
+    }
+    const modernTeamsResponse = routeJflModernTeams(request, env);
+    if (modernTeamsResponse) {
+      return finalizeBrowserResponse(modernTeamsResponse, url.pathname);
     }
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
