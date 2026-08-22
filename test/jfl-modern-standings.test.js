@@ -8,6 +8,7 @@ import {
   renderJflModernStandings,
   renderTeamStandingCard,
   routeJflModernStandings,
+  standingsSeasonCandidates,
 } from '../src/jflModernStandings.js';
 import { enhancePublicSeasonSelection } from '../src/publicSeasonSelectionEnhancer.js';
 
@@ -99,6 +100,27 @@ test('modern standings document uses the same authoritative read APIs and clear 
   assert.match(html, /data-fd-shell/);
   assert.match(html, /data-fd-mobile-dock/);
   assert.match(html, /\?ui=legacy/);
+});
+
+test('initial standings candidates fall back in season order but explicit and manual choices stay authoritative', () => {
+  const seasons = [
+    { id: 'invalid-default', status: 'active' },
+    { id: 'working-active', status: 'active' },
+    { id: 'registration', status: 'registration' },
+  ];
+
+  assert.deepEqual(
+    standingsSeasonCandidates(seasons, 'invalid-default', { allowFallback: true }).map((season) => season.id),
+    ['invalid-default', 'working-active', 'registration'],
+  );
+  assert.deepEqual(
+    standingsSeasonCandidates(seasons, 'invalid-default', { allowFallback: true, explicitId: 'invalid-default' }).map((season) => season.id),
+    ['invalid-default'],
+  );
+  assert.deepEqual(
+    standingsSeasonCandidates(seasons, 'working-active').map((season) => season.id),
+    ['working-active'],
+  );
 });
 
 test('modern standings emits syntactically valid inline browser scripts', () => {
