@@ -7,17 +7,22 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-secret',
 };
 
-test('standings repository lists team standings through the standings RPC', async () => {
+test('standings repository lists team standings with public captain context', async () => {
   const calls = [];
-  const fetch = async (url, init) => {
-    calls.push({ url, init });
-    return new Response(JSON.stringify([{
+  const responses = [
+    [{
       season_id: 'season-1',
       team_id: 'team-1',
       standings_rank: 1,
       standing_points: 2,
       match_points: 3,
-    }]), {
+    }],
+    [{ team_id: 'team-1', player_id: 'player-1' }],
+    [{ id: 'player-1', display_name: 'Casey Captain' }],
+  ];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify(responses.shift()), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
@@ -32,6 +37,10 @@ test('standings repository lists team standings through the standings RPC', asyn
     target_season_id: 'season-1',
   });
   assert.equal(standings[0].team_id, 'team-1');
+  assert.equal(standings[0].captain_display_name, 'Casey Captain');
+  assert.match(calls[1].url, /\/rest\/v1\/team_memberships\?/);
+  assert.match(calls[1].url, /role=eq\.captain/);
+  assert.match(calls[2].url, /\/rest\/v1\/players\?/);
 });
 
 test('standings repository lists individual standings through the standings RPC', async () => {

@@ -1,5 +1,3 @@
-import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
 import {
   adminOverrideReconciledPlayerMatchCommand,
   confirmPlayerMatchScoreCommand,
@@ -17,24 +15,41 @@ function jsonResponse(body, status = 200, headers = {}) {
   return Response.json(body, { status, headers });
 }
 
-export function dualScoringStatusForError(error) {
-  return rpcErrorStatus(error);
+function statusForError(error) {
+  const message = error?.message || 'Request failed';
+  if (message.includes('Actor is not a league admin')) return 403;
+  if (message.includes('not an active member of the scoring team')) return 403;
+  if (message.includes('Scoring team is not part')) return 403;
+  if (message.includes('Supabase request failed with 401')) return 401;
+  if (message.includes('Supabase request failed with 403')) return 403;
+  if (message.includes('Player match not found')) return 404;
+  if (
+    message.includes('finalized')
+    || message.includes('must match')
+    || message.includes('Both teams must confirm')
+    || message.includes('Both team score records are required')
+    || message.includes('Race target')
+    || message.includes('Score record')
+    || message.includes('Resolved rack history')
+    || message.includes('Opening discipline is locked')
+    || message.includes('Rack is not present')
+    || message.includes('Score changed on another device')
+    || message.includes('Refresh the scorecard before changing the score')
+  ) return 409;
+  return 400;
 }
 
 async function readJsonBody(request) {
-  return readSanitizedJsonBody(request);
+  const text = await request.text();
+  if (!text.trim()) return {};
+  const body = JSON.parse(text);
+  if (!body || Array.isArray(body) || typeof body !== 'object') throw new Error('Request body must be a JSON object');
+  return body;
 }
 
 function scoringTeamFromRequest(request, body = {}) {
   const url = new URL(request.url);
-  const scoringTeamId =
-    body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
-  if (!scoringTeamId) {
-    const error = new Error('scoringTeamId is required (query ?scoringTeamId= or JSON body)');
-    error.status = 400;
-    throw error;
-  }
-  return scoringTeamId;
+  return body.scoringTeamId ?? body.scoring_team_id ?? url.searchParams.get('scoringTeamId') ?? url.searchParams.get('team');
 }
 
 function scoreSnapshotCookieName(playerMatchId, scoringTeamId) {
@@ -72,7 +87,7 @@ function expectedRacksFromRequest(request, body, playerMatchId, scoringTeamId) {
   const cookieName = scoreSnapshotCookieName(playerMatchId, scoringTeamId);
   const snapshot = decodeScoreSnapshot(cookieValues(request).get(cookieName));
   if (snapshot) return snapshot;
-  throw new Error('Refresh the scorecard before changing the score (expected rack history is out of date or missing)');
+  throw new Error('Refresh the scorecard before changing the score');
 }
 
 function scoreSnapshotCookie(playerMatchId, scoringTeamId, racks) {
@@ -101,7 +116,7 @@ export function createDualScoringHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return jsonResponse({ error: safeClientErrorMessage(error) }, dualScoringStatusForError(error));
+      return jsonResponse({ error: error.message }, statusForError(error));
     }
   }
 
@@ -217,11 +232,10 @@ export function createDualScoringHttpHandlers({
 
     finalize(request, env, playerMatchId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
-        const body = await readJsonBody(request);
         const match = await finalizeReconciledPlayerMatchCommand({
           actorUserId: actor.id,
           playerMatchId,
-          scoringTeamId: scoringTeamFromRequest(request, body),
+          scoringTeamId: scoringTeamFromRequest(request),
         }, repository);
         return jsonResponse({ match });
       });

@@ -1,5 +1,4 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -9,7 +8,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return stripTrailingSlashes(value);
+  return value.replace(/\/+$/, '');
 }
 
 function jsonHeaders(serviceRoleKey) {

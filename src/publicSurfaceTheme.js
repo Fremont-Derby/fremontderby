@@ -35,15 +35,6 @@ export const publicSurfaceThemeStyles = `
     color: var(--fd-text) !important;
   }
   body[data-fd-public-surface="test-drive"] a { color: var(--fd-primary-strong) !important; }
-
-  body[data-fd-public-surface="test-drive"] a.button,
-  body[data-fd-public-surface="test-drive"] button,
-  body[data-fd-public-surface="test-drive"] .button,
-  body[data-fd-public-surface="rules"] a.button,
-  body[data-fd-public-surface="rules"] button {
-    min-height: 44px !important;
-    min-width: 44px !important;
-  }
   body[data-fd-public-surface="test-drive"] .demo-banner {
     color: #241e0c !important;
     background: var(--fd-accent) !important;

@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { domainsForEnv } from './lane-custom-domains.mjs';
 
 export const laneDeployments = Object.freeze({
   jfl: Object.freeze({ branch: 'fremontderby-jfl', environment: 'jfl' }),
@@ -37,11 +36,6 @@ export function assertLaneDeployContext(lane, env = process.env, spawn = spawnSy
   const config = laneDeployments[lane];
   if (!config) throw new Error(`Unknown release lane "${lane}".`);
 
-  // Controlled deploys from main (Actions or operator laptop) after explicit review.
-  if (env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1') {
-    return config;
-  }
-
   const branch = resolveDeployBranch(env, spawn);
   if (branch !== config.branch) {
     throw new Error(
@@ -62,13 +56,10 @@ export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
 }
 
 export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
-  // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell.
-  const isWin = process.platform === 'win32';
-  const args = laneDeployArgs(lane, env, spawn);
-  const result = spawn(isWin ? 'npx' : 'npx', args, {
+  const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const result = spawn(command, laneDeployArgs(lane, env, spawn), {
     env,
     stdio: 'inherit',
-    shell: isWin,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exitCode = result.status ?? 1;
@@ -82,11 +73,4 @@ if (isDirectRun) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   }
-}
-
-
-export function expectedHostnamesForLane(lane) {
-  const envName = laneDeployments[lane]?.environment;
-  if (!envName) return [];
-  return domainsForEnv(envName).map((row) => row.hostname);
 }

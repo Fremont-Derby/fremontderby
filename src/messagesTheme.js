@@ -1,7 +1,7 @@
 export const messagesThemeStyles = `
   /* Messages keeps its specialized two-column/chat layout, but not the legacy dark page theme. */
   main.app:has([data-chat-layout]) {
-    color-scheme: light !important;
+    color-scheme: light;
     color: var(--fd-text, #171b19) !important;
   }
   main.app:has([data-chat-layout]) .heading,

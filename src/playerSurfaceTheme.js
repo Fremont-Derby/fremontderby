@@ -1,16 +1,8 @@
-import { tokenRemapStyles } from './tokenRemap.js';
 const PLAYER_SURFACES = new Map([
   ['/', 'home'],
   ['/schedule', 'schedule'],
   ['/scorecard', 'score-picker'],
   ['/profile', 'profile'],
-  ['/teams', 'teams'],
-  ['/lineup', 'lineup'],
-  ['/availability', 'availability'],
-  ['/standings', 'standings'],
-  ['/prizes', 'standings'],
-  ['/messages', 'messages'],
-  ['/trades', 'teams'],
 ]);
 
 export const playerSurfaceThemeStyles = `
@@ -19,7 +11,6 @@ export const playerSurfaceThemeStyles = `
     overflow-x: hidden;
     background: var(--fd-bg-page) !important;
     color: var(--fd-text) !important;
-    ${tokenRemapStyles}
   }
 
   body[data-fd-player-surface] *,
@@ -28,185 +19,33 @@ export const playerSurfaceThemeStyles = `
     min-width: 0;
   }
 
-  /* Neutralize dark page skins that still ship local CSS variables. */
-  body[data-fd-player-surface] {
-    --panel: var(--fd-bg-surface) !important;
-    --line: var(--fd-border) !important;
-    --muted: var(--fd-text-muted) !important;
-    --green: var(--fd-success) !important;
-    --gold: var(--fd-accent) !important;
-    --red: var(--fd-danger) !important;
-    --bg: var(--fd-bg-page) !important;
-    --text: var(--fd-text) !important;
-  }
-
-  body[data-fd-player-surface] .app,
-  body[data-fd-player-surface] main {
-    color: var(--fd-text) !important;
-  }
-
   body[data-fd-player-surface] .topbar,
-  body[data-fd-player-surface] .head,
-  body[data-fd-player-surface] .hub-heading,
-  body[data-fd-player-surface] .page-head {
+  body[data-fd-player-surface] .head {
     border-color: var(--fd-border) !important;
     color: var(--fd-text) !important;
   }
 
-  body[data-fd-player-surface] h1,
-  body[data-fd-player-surface] h2,
-  body[data-fd-player-surface] h3,
-  body[data-fd-player-surface] strong {
-    color: var(--fd-text) !important;
-  }
-
-  body[data-fd-player-surface] .muted,
-  body[data-fd-player-surface] .meta,
-  body[data-fd-player-surface] .action-meta,
-  body[data-fd-player-surface] .hub-kicker,
-  body[data-fd-player-surface] .kicker,
-  body[data-fd-player-surface] .round-meta,
-  body[data-fd-player-surface] label {
-    color: var(--fd-text-muted) !important;
-  }
-
-  /* Sticky, readable status (works with live regions already in pages). */
   body[data-fd-player-surface] .status {
-    display: inline-flex !important;
-    align-items: center !important;
-    min-height: 34px !important;
-    max-width: min(100%, 420px) !important;
-    margin-left: auto !important;
-    padding: 6px 12px !important;
-    border: 1px solid var(--fd-border) !important;
-    border-radius: var(--fd-radius-control) !important;
-    background: var(--fd-bg-surface) !important;
     color: var(--fd-text-muted) !important;
-    font-size: .84rem !important;
-    font-weight: 750 !important;
-    line-height: 1.25 !important;
-    box-shadow: var(--fd-shadow-soft) !important;
   }
 
   body[data-fd-player-surface] .status[data-tone="error"] {
     background: var(--fd-danger-bg) !important;
-    border-color: #f0b4ad !important;
+    border-color: var(--fd-danger) !important;
     color: var(--fd-danger-text) !important;
   }
 
   body[data-fd-player-surface] .status[data-tone="ok"],
   body[data-fd-player-surface] .status[data-tone="ready"] {
-    background: var(--fd-success-bg) !important;
-    border-color: #b7dfc5 !important;
     color: var(--fd-success) !important;
-  }
-
-  body[data-fd-player-surface] .panel,
-  body[data-fd-player-surface] .round,
-  body[data-fd-player-surface] .card,
-  body[data-fd-player-surface] .match,
-  body[data-fd-player-surface] .filters,
-  body[data-fd-player-surface] .toolbar,
-  body[data-fd-player-surface] .controls,
-  body[data-fd-player-surface] .action-card,
-  body[data-fd-player-surface] .page-state,
-  body[data-fd-player-surface] .night-hub,
-  body[data-fd-player-surface] .empty {
-    background: var(--fd-bg-surface) !important;
-    border-color: var(--fd-border) !important;
-    color: var(--fd-text) !important;
-    box-shadow: var(--fd-shadow-soft) !important;
-  }
-
-  body[data-fd-player-surface] .match {
-    border-top-color: var(--fd-accent) !important;
-  }
-
-  body[data-fd-player-surface] .match[data-status="in_progress"] {
-    border-top-color: var(--fd-success) !important;
-    box-shadow: 0 0 0 1px rgba(8, 115, 61, .18), var(--fd-shadow-soft) !important;
-  }
-
-  body[data-fd-player-surface] .status-pill {
-    background: var(--fd-bg-subtle) !important;
-    color: var(--fd-text) !important;
-    border: 1px solid var(--fd-border) !important;
-  }
-
-  body[data-fd-player-surface] .status-pill[data-tone="live"] {
-    background: var(--fd-success-bg) !important;
-    color: var(--fd-success) !important;
-    border-color: #b7dfc5 !important;
-  }
-
-  body[data-fd-player-surface] .status-pill[data-tone="tonight"] {
-    background: var(--fd-accent-bg) !important;
-    color: var(--fd-accent-text) !important;
-    border-color: #ecd889 !important;
-  }
-
-  body[data-fd-player-surface] .status-pill[data-tone="done"] {
-    background: var(--fd-bg-subtle) !important;
-    color: var(--fd-text-muted) !important;
-  }
-
-  body[data-fd-player-surface] select,
-  body[data-fd-player-surface] input,
-  body[data-fd-player-surface] textarea {
-    min-height: max(var(--fd-control-min), var(--fd-touch-min)) !important;
-    border-radius: var(--fd-radius-control) !important;
-    background: var(--fd-bg-surface) !important;
-    border-color: var(--fd-border-control) !important;
-    color: var(--fd-text) !important;
-    font-size: 16px !important;
-  }
-  body[data-fd-player-surface] select {
-    appearance: none !important;
-    -webkit-appearance: none !important;
-  }
-  body[data-fd-player-surface] .status {
-    border-radius: var(--fd-radius-control) !important;
-  }
-  body[data-fd-player-surface] .status-pill {
-    border-radius: var(--fd-radius-pill) !important;
-  }
-
-  body[data-fd-player-surface] a.primary,
-  body[data-fd-player-surface] .match-actions a.primary,
-  body[data-fd-player-surface] button.primary,
-  body[data-fd-player-surface] .state-action:not(.state-action--secondary) {
-    background: linear-gradient(180deg, var(--fd-primary-hover), var(--fd-primary-strong)) !important;
-    border-color: var(--fd-primary-strong) !important;
-    color: var(--fd-primary-text) !important;
-  }
-
-  body[data-fd-player-surface] .match-actions a,
-  body[data-fd-player-surface] .action-card {
-    text-decoration: none !important;
-  }
-
-  body[data-fd-player-surface] .action-card:hover {
-    background: var(--fd-bg-subtle) !important;
-  }
-
-  body[data-fd-player-surface] .action-card--primary {
-    background: linear-gradient(145deg, var(--fd-success-bg), var(--fd-bg-surface) 55%) !important;
-  }
-
-  body[data-fd-player-surface] .hub-team {
-    background: var(--fd-bg-subtle) !important;
-    border-color: var(--fd-border) !important;
-    color: var(--fd-text) !important;
-  }
-
-  body[data-fd-player-surface] .page-state {
-    border-top-color: var(--fd-success) !important;
-    background:
-      linear-gradient(145deg, rgba(8, 115, 61, .08), var(--fd-bg-surface) 55%) !important;
   }
 
   body[data-fd-player-surface="home"] > main {
     width: min(720px, calc(100% - 28px));
+  }
+
+  body[data-fd-player-surface="home"] > main > nav {
+    border-color: var(--fd-border) !important;
   }
 
   body[data-fd-player-surface="home"] > main > nav a,
@@ -237,59 +76,142 @@ export const playerSurfaceThemeStyles = `
     color: var(--fd-text-muted) !important;
   }
 
-  body[data-fd-player-surface="schedule"] .round-head,
-  body[data-fd-player-surface="schedule"] .match-top,
-  body[data-fd-player-surface="schedule"] .versus span {
-    color: var(--fd-text-muted) !important;
+  body[data-fd-player-surface="schedule"] .controls {
+    border-color: var(--fd-border) !important;
   }
 
-  body[data-fd-player-surface="schedule"] .versus strong {
+  body[data-fd-player-surface="schedule"] select {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
     color: var(--fd-text) !important;
   }
 
-  body[data-fd-player-surface="score-picker"] .selection,
-  body[data-fd-player-surface="score-picker"] .list,
-  body[data-fd-player-surface="lineup"] .card,
-  body[data-fd-player-surface="availability"] .card {
+  body[data-fd-player-surface="schedule"] .round,
+  body[data-fd-player-surface="schedule"] .match {
     background: var(--fd-bg-surface) !important;
     border-color: var(--fd-border) !important;
+    color: var(--fd-text) !important;
+    box-shadow: var(--fd-shadow-soft) !important;
   }
 
-  body[data-fd-player-surface="standings"] table,
-  body[data-fd-player-surface="standings"] th,
-  body[data-fd-player-surface="standings"] td {
+  body[data-fd-player-surface="schedule"] .match {
+    border-top-color: var(--fd-accent) !important;
+  }
+
+  body[data-fd-player-surface="schedule"] .match-actions a {
+    min-height: var(--fd-control-min);
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="schedule"] .match-actions a.primary {
+    background: linear-gradient(180deg, var(--fd-primary-hover), var(--fd-primary-strong)) !important;
+    border-color: var(--fd-primary-strong) !important;
+    color: var(--fd-primary-text) !important;
+  }
+
+  body[data-fd-player-surface="score-picker"] .filters,
+  body[data-fd-player-surface="score-picker"] .status,
+  body[data-fd-player-surface="score-picker"] .empty,
+  body[data-fd-player-surface="score-picker"] .match {
+    background: var(--fd-bg-surface) !important;
     border-color: var(--fd-border) !important;
+    color: var(--fd-text) !important;
+    box-shadow: var(--fd-shadow-soft) !important;
+  }
+
+  body[data-fd-player-surface="score-picker"] .filters select {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
     color: var(--fd-text) !important;
   }
 
-  body[data-fd-player-surface="messages"] .thread,
-  body[data-fd-player-surface="messages"] .composer,
-  body[data-fd-player-surface="messages"] .inbox {
+  body[data-fd-player-surface="score-picker"] .match:hover {
+    border-color: var(--fd-primary) !important;
+  }
+
+  body[data-fd-player-surface="score-picker"] .side {
+    background: var(--fd-green-100) !important;
+    border: 1px solid #b6d4c1 !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="score-picker"] .button {
+    min-height: var(--fd-control-min);
+  }
+
+  body[data-fd-player-surface="score-picker"] .button:not(.secondary) {
+    background: linear-gradient(180deg, var(--fd-primary-hover), var(--fd-primary-strong)) !important;
+    border-color: var(--fd-primary-strong) !important;
+    color: var(--fd-primary-text) !important;
+  }
+
+  body[data-fd-player-surface="score-picker"] .button.secondary {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="profile"] .panel,
+  body[data-fd-player-surface="profile"] .admin-tools {
     background: var(--fd-bg-surface) !important;
     border-color: var(--fd-border) !important;
+    color: var(--fd-text) !important;
+    box-shadow: var(--fd-shadow-soft) !important;
   }
 
-  /* Breathing room above mobile dock. */
-  body[data-fd-player-surface] .app {
-    padding-bottom: max(28px, calc(16px + env(safe-area-inset-bottom))) !important;
+  body[data-fd-player-surface="profile"] input {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
+    color: var(--fd-text) !important;
   }
 
-  @media (max-width: 720px) {
+  body[data-fd-player-surface="profile"] .rating {
+    background: var(--fd-bg-subtle) !important;
+    color: var(--fd-text) !important;
+  }
+
+  body[data-fd-player-surface="profile"] .badge {
+    background: var(--fd-green-100) !important;
+    border: 1px solid #b6d4c1 !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="profile"] .admin-actions a {
+    min-height: var(--fd-control-lg);
+    background: var(--fd-bg-subtle) !important;
+    border-color: var(--fd-border) !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="profile"] .ghost,
+  body[data-fd-player-surface="profile"] .google {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
+    color: var(--fd-text) !important;
+  }
+
+  body[data-fd-player-surface="profile"] .danger {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-danger) !important;
+    color: var(--fd-danger-text) !important;
+  }
+
+  @media (max-width: 700px) {
     body[data-fd-player-surface] .app {
-      padding-bottom: max(92px, calc(72px + env(safe-area-inset-bottom))) !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
 
-    body[data-fd-player-surface="schedule"] .matches,
     body[data-fd-player-surface="schedule"] .controls,
+    body[data-fd-player-surface="schedule"] .matches,
     body[data-fd-player-surface="score-picker"] .filters,
     body[data-fd-player-surface="profile"] .grid,
     body[data-fd-player-surface="profile"] .actions,
-    body[data-fd-player-surface="teams"] .hub-grid {
+    body[data-fd-player-surface="profile"] .profile-head,
+    body[data-fd-player-surface="profile"] .admin-actions {
       grid-template-columns: minmax(0, 1fr) !important;
-    }
-
-    body[data-fd-player-surface="teams"] .action-card--primary {
-      grid-column: auto !important;
     }
   }
 
@@ -321,14 +243,6 @@ export const playerSurfaceThemeStyles = `
 `;
 
 function surfaceForPath(pathname) {
-  const exact = PLAYER_SURFACES.get(pathname);
-  if (exact) return exact;
-  if (pathname.startsWith('/messages')) return 'messages';
-  if (pathname.startsWith('/admin')) return '';
-  if (pathname.startsWith('/scorecard')) return 'score-picker';
-  if (pathname.startsWith('/profile')) return 'profile';
-  if (pathname.startsWith('/teams') || pathname.startsWith('/trades')) return 'teams';
-  if (pathname.startsWith('/standings') || pathname.startsWith('/prizes')) return 'standings';
   return PLAYER_SURFACES.get(pathname) || '';
 }
 
@@ -350,29 +264,16 @@ export async function injectPlayerSurfaceTheme(response, pathname) {
   }
 
   html = html.replace(/<body([^>]*)>/i, `<body$1 data-fd-player-surface="${surface}">`);
-  const themeHead = `<meta name="theme-color" content="#f3f1ed" />
-<style data-fd-player-surface-theme>${playerSurfaceThemeStyles}</style>
-  body[data-fd-player-surface] .status:empty {
-    display: none !important;
-  }
-  body[data-fd-player-surface] .empty {
-    text-align: left !important;
-    border-radius: var(--fd-radius-control) !important;
-  }
-  body[data-fd-player-surface] .match-actions a {
-    font-weight: 700 !important;
-    border-radius: var(--fd-radius-control) !important;
-  }
-  body[data-fd-player-surface] .status-pill {
-    text-transform: none !important;
-    font-weight: 700 !important;
-  }
-`;
-  if (/name="theme-color"/i.test(html)) {
-    html = html.replace(/<meta\s+name="theme-color"[^>]*>/i, '<meta name="theme-color" content="#f3f1ed" />');
-    html = html.replace('</head>', `<style data-fd-player-surface-theme>${playerSurfaceThemeStyles}</style></head>`);
-  } else {
-    html = html.replace('</head>', `${themeHead}</head>`);
+  html = html.replace(
+    '</head>',
+    `<style data-fd-player-surface-theme>${playerSurfaceThemeStyles}</style></head>`,
+  );
+
+  if (surface === 'home') {
+    html = html.replace(
+      '<meta name="theme-color" content="#07150f" />',
+      '<meta name="theme-color" content="#f3f1ed" />',
+    );
   }
 
   return new Response(html, {
