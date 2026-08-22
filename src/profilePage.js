@@ -1,11 +1,12 @@
-import { safeAutocompleteClientScript } from './safeAutocomplete.js';
-import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
-import { safeJson } from './textEscape.js';
 function browserConfig(env = {}) {
   return {
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   };
+}
+
+function safeJson(value) {
+  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
 }
 
 export function renderProfilePage(env = {}) {
@@ -30,9 +31,7 @@ export function renderProfilePage(env = {}) {
       --focus: #9ee5bd;
     }
     * { box-sizing: border-box; }
-    input, select, textarea { font-size: 16px; }
-    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: #111313; }
+    body { margin: 0; min-height: 100vh; background: #111313; }
     button, input { font: inherit; }
     button {
       min-height: 44px;
@@ -107,24 +106,8 @@ export function renderProfilePage(env = {}) {
   <main class="app">
     <header class="topbar">
       <div class="brand"><span class="mark">P</span><span>Fremont Derby Profile</span></div>
-      <div class="status" role="status" aria-live="polite" aria-atomic="true" data-status></div>
+      <div class="status" role="status" aria-live="polite" aria-atomic="true" data-status>Checking sign-in…</div>
     </header>
-    <nav class="profile-shortcuts" aria-label="Common destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px">
-      <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Check in</a>
-      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
-      <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
-      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
-      <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Lineup</a>
-      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
-      <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Lineup</a>
-      <a href="/trades" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Trades</a>
-      <a href="/playoffs" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Playoffs</a>
-      <a href="/notifications" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Alerts</a>
-      <a href="/prizes" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Prizes</a>
-      <a href="/rules" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Rules</a>
-      <a href="/messages" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Messages</a>
-      <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
-    </nav>
 
     <section class="grid">
       <article class="panel">
@@ -148,34 +131,9 @@ export function renderProfilePage(env = {}) {
             </div>
             <form class="actions" data-profile-form>
               <label>Display name
-                <input name="displayName" data-display-name-input autocomplete="name" data-safe-ac="publicPlayers" maxlength="80" />
+                <input name="displayName" data-display-name-input autocomplete="name" maxlength="80" />
               </label>
               <button class="primary" type="submit">Save profile</button>
-            </form>
-            <div class="hint" data-fargo-panel style="margin-top:12px">
-              <strong style="display:block;margin-bottom:4px">Fargo rating</strong>
-              <div data-fargo-detail>Rating appears here after league staff or a linked Fargo ID establishes it.</div>
-              <label style="display:grid;gap:4px;margin-top:10px;font-size:.85rem">Fargo ID
-                <input name="fargoId" data-fargo-id-input inputmode="text" autocomplete="off" maxlength="40" placeholder="Optional FargoRate ID" />
-              </label>
-              <div class="muted" data-fargo-id-line style="margin-top:6px"></div>
-            </div>
-            <form class="actions" data-standing-form style="margin-top:14px;display:grid;gap:10px">
-              <strong>Standing availability for captains</strong>
-              <p class="hint" style="margin:0">Optional signal for recruiting and subs. Night-of check-in on a published date still wins.</p>
-              <label>Status
-                <select name="standingStatus" data-standing-status>
-                  <option value="">Prefer not to say / unset</option>
-                  <option value="available_for_subs">Available for subs</option>
-                  <option value="limited">Limited availability</option>
-                  <option value="unavailable">Not available for extra matches</option>
-                  <option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
-              </label>
-              <label>Short note (optional)
-                <input name="standingNote" data-standing-note maxlength="120" placeholder="e.g. Weeknights only after 7pm" />
-              </label>
-              <button class="primary" type="submit">Save standing availability</button>
             </form>
           </div>
         </article>
@@ -184,9 +142,9 @@ export function renderProfilePage(env = {}) {
           <div class="panel-head"><span>League admin</span><span class="badge">Admin tools</span></div>
           <div class="hint" style="padding:12px 12px 0">Manage players, league health, season setup, and reported messages.</div>
           <nav class="admin-actions" aria-label="League admin tools">
-            <a href="/admin">Admin home</a>
             <a href="/admin/players">Players</a>
             <a href="/admin/operations">Operations</a>
+            <a href="/season-setup">Season setup</a>
             <a href="/messages/moderation">Moderation</a>
           </nav>
         </article>
@@ -201,10 +159,6 @@ export function renderProfilePage(env = {}) {
         </article>
 
         <article class="panel">
-          <div class="panel" data-season-status-panel style="margin-bottom:12px;padding:12px;border:1px solid var(--line,#343c45);border-radius:12px;background:var(--panel,#191d22)">
-            <strong style="display:block;margin-bottom:6px">Season & payment</strong>
-            <div data-season-status-summary class="muted">Loading…</div>
-          </div>
           <div class="panel-head"><span>Seasons</span><span class="badge" data-season-count>—</span></div>
           <table>
             <thead><tr><th>Season</th><th>Type</th><th>Status</th></tr></thead>
@@ -218,10 +172,8 @@ export function renderProfilePage(env = {}) {
 
   <script>
     const config = ${safeJson(browserConfig(env))};
-    function trimUrl(value){ let s=String(value||''); while(s.endsWith('/')) s=s.slice(0,-1); return s; }
     const profileForm = document.querySelector('[data-profile-form]');
     const displayNameInput = document.querySelector('[data-display-name-input]');
-    const fargoIdInput = document.querySelector('[data-fargo-id-input]');
     const statusEl = document.querySelector('[data-status]');
     const sessionState = document.querySelector('[data-session-state]');
     const googleSignInButton = document.querySelector('[data-google-sign-in]');
@@ -241,16 +193,15 @@ export function renderProfilePage(env = {}) {
     function token() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
-    function isOpenAuthLane() {
-      const host = String(location.hostname || '');
-      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
-    }
 
     function refreshToken() {
       return sessionStorage.getItem('fd.refreshToken') || '';
     }
 
-    function setStatus(message, tone){if(window.fdSetStatus){window.fdSetStatus(statusEl,message,tone || 'muted',{});return;}statusEl.textContent=message;statusEl.dataset.tone=tone || 'muted';}
+    function setStatus(message, tone) {
+      statusEl.textContent = message;
+      statusEl.dataset.tone = tone || 'muted';
+    }
 
     function setSession(accessToken, nextRefreshToken = '') {
       if (accessToken) {
@@ -281,7 +232,16 @@ export function renderProfilePage(env = {}) {
       return value == null || value === '' ? '—' : String(value);
     }
 
-    const friendlyErrorMessage = ${sharedFriendlyErrorMessage.toString()};
+    function friendlyErrorMessage(error) {
+      const message = String(error && error.message ? error.message : error || '').replace(/\\s+/g, ' ').trim();
+      if (/sign in is required|unauthorized|jwt|session.*expired/i.test(message)) {
+        return 'Your sign-in expired. Continue with Google to sign in again.';
+      }
+      if (/supabase|service role|schema|postgres|rpc|permission denied|browser config/i.test(message)) {
+        return 'We could not load your profile. Nothing was changed. Please try again.';
+      }
+      return message || 'We could not complete that action. Please try again.';
+    }
 
     function requireConfig() {
       if (!config.supabaseUrl || !config.supabasePublishableKey) {
@@ -303,7 +263,7 @@ export function renderProfilePage(env = {}) {
       requireConfig();
       const currentRefreshToken = refreshToken();
       if (!currentRefreshToken) return false;
-      const response = await fetch(trimUrl(config.supabaseUrl) + '/auth/v1/token?grant_type=refresh_token', {
+      const response = await fetch(config.supabaseUrl.replace(/\\/+$/, '') + '/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
         headers: {
           apikey: config.supabasePublishableKey,
@@ -320,12 +280,13 @@ export function renderProfilePage(env = {}) {
 
     async function api(path, options, retry = true) {
       const accessToken = token();
-      if (!accessToken && !isOpenAuthLane()) throw new Error('Sign in is required');
-      const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
-      if (accessToken) headers.authorization = 'Bearer ' + accessToken;
+      if (!accessToken) throw new Error('Sign in is required');
       const response = await fetch(path, {
         ...options,
-        headers,
+        headers: {
+          authorization: 'Bearer ' + accessToken,
+          'content-type': 'application/json',
+        },
       });
       if (response.status === 401 && retry && await refreshSession()) {
         return api(path, options, false);
@@ -396,47 +357,6 @@ export function renderProfilePage(env = {}) {
       document.querySelector('[data-rating]').textContent = profile && profile.fargo_rating != null ? String(profile.fargo_rating) : '—';
       document.querySelector('[data-rating-status]').textContent = profile && profile.rating_status ? profile.rating_status : 'Not rated';
       displayNameInput.value = profile && profile.display_name ? profile.display_name : '';
-      const fargoDetail = document.querySelector('[data-fargo-detail]');
-      const fargoIdLine = document.querySelector('[data-fargo-id-line]');
-      if (fargoDetail) {
-        if (profile && profile.fargo_rating != null) {
-          const sourceRaw = String(profile.rating_source || profile.ratingSource || profile.rating_status || '').toLowerCase();
-          const sourceLabel = sourceRaw === 'official_fargo' || sourceRaw === 'established'
-            ? 'Official Fargo'
-            : sourceRaw === 'derby_estimate'
-              ? 'Derby estimate'
-              : sourceRaw === 'admin_provisional' || sourceRaw === 'provisional'
-                ? 'Admin provisional'
-                : (profile.rating_status || 'On file');
-          const robustness = profile.robustness != null ? profile.robustness : profile.fargo_robustness;
-          const parts = [
-            'Current seed: ' + profile.fargo_rating,
-            sourceLabel,
-          ];
-          if (robustness != null && robustness !== '') parts.push('Robustness ' + robustness);
-          if (profile.confidence) parts.push(String(profile.confidence) + ' confidence');
-          fargoDetail.textContent = parts.join(' · ') + '. Official Fargo is never calculated inside Derby. Used for race targets when both players are rated.';
-        } else {
-          fargoDetail.textContent = 'No rating on file yet. Unrated players can still play; race targets use the season default until a rating is established. Add a Fargo ID below if you have one — it does not set your rating by itself.';
-        }
-      }
-      if (fargoIdInput) {
-        fargoIdInput.value = (profile && (profile.fargo_external_id || profile.fargoExternalId || profile.fargo_id || profile.fargoId)) || '';
-      }
-      if (fargoIdLine) {
-        const fid = profile && (profile.fargo_external_id || profile.fargoExternalId || profile.fargo_id || profile.fargoId);
-        fargoIdLine.textContent = fid
-          ? ('Saved Fargo ID: ' + fid + ' (rating still system-owned until Fargo sync)')
-          : 'Optional. Saving a Fargo ID prepares your profile for future rating sync; it does not change race targets by itself.';
-      }
-      const standingStatusEl = document.querySelector('[data-standing-status]');
-      const standingNoteEl = document.querySelector('[data-standing-note]');
-      if (standingStatusEl) {
-        standingStatusEl.value = (profile && (profile.standing_availability_status || profile.standingAvailabilityStatus)) || '';
-      }
-      if (standingNoteEl) {
-        standingNoteEl.value = (profile && (profile.standing_availability_note || profile.standingAvailabilityNote)) || '';
-      }
       const teams = profile && Array.isArray(profile.teams) ? profile.teams : [];
       const seasons = profile && Array.isArray(profile.seasons) ? profile.seasons : [];
       renderRows(
@@ -447,63 +367,36 @@ export function renderProfilePage(env = {}) {
         (row) => [['Season', row.seasonName], ['Team', row.teamName], ['Role', row.role]],
         ['No team memberships yet.', '/teams', 'Browse teams'],
       );
-      const statusSummary = document.querySelector('[data-season-status-summary]');
-      if (statusSummary) {
-        if (!seasons.length) {
-          statusSummary.textContent = 'You are not registered for a season yet.';
-        } else {
-          statusSummary.replaceChildren();
-          for (const row of seasons) {
-            const line = document.createElement('div');
-            line.style.marginTop = '6px';
-            const name = row.seasonName || row.season_name || 'Season';
-            const part = row.participationType || row.participation_type || 'player';
-            const pay = String(row.paymentStatus || row.payment_status || 'unpaid').toLowerCase();
-            const payLabel = pay === 'paid' || pay === 'waived' ? (pay === 'waived' ? 'Payment waived' : 'Paid') : 'Payment due';
-            const inSeason = String(row.status || '').toLowerCase() === 'active' || part;
-            line.innerHTML = '<strong>' + name + '</strong> · ' + part
-              + ' · <span style="color:' + (pay === 'paid' || pay === 'waived' ? '#9ee5bd' : '#d8ad3f') + '">' + payLabel + '</span>';
-            statusSummary.append(line);
-          }
-        }
-      }
       renderRows(
         seasonBody,
         seasonEmpty,
         seasonCount,
         seasons,
-        (row) => [
-          ['Season', row.seasonName],
-          ['Type', row.participationType],
-          ['Status', row.status],
-          ['Payment', row.paymentStatus || row.payment_status || 'unpaid'],
-        ],
+        (row) => [['Season', row.seasonName], ['Type', row.participationType], ['Status', row.status]],
         ['No season participation yet.', '/schedule', 'View the league schedule'],
       );
     }
 
-    async function loadProfile(opts = {}) {
-      const quiet = Boolean(opts && opts.quiet);
-      if (!quiet) {
-        setStatus('Loading profile…');
-        setHistoryLoading();
-      }
+    async function loadProfile() {
+      setStatus('Loading profile…');
+      setHistoryLoading();
       const body = await api('/api/me/profile', { method: 'GET' });
       renderProfile(body.profile);
-      if (!quiet) setStatus('Profile loaded', 'ok');
-    }
-
-    function safeNextPath() {
-      const next = new URLSearchParams(window.location.search).get('next') || '';
-      if (!next.startsWith('/') || next.startsWith('//') || next.includes('://')) return '';
-      return next;
+      setStatus('Profile loaded', 'ok');
     }
 
     function signInWithGoogle() {
+      // #655 JFL-only: simulate Google OIDC without leaving the site.
+      const host = String(window.location.hostname || '').toLowerCase();
+      const jflHost = host === 'jfl.fremontderby.com' || host.startsWith('jfl.');
+      if (jflHost) {
+        setSession('fd-jfl-simulated-google-oidc-v1', '');
+        setStatus('Signed in (JFL test actor)', 'ok');
+        return loadProfile();
+      }
       requireConfig();
-      const baseUrl = trimUrl(config.supabaseUrl);
-      const next = safeNextPath();
-      const redirectTo = window.location.origin + '/profile' + (next ? ('?next=' + encodeURIComponent(next)) : '');
+      const baseUrl = config.supabaseUrl.replace(/\/+$/, '');
+      const redirectTo = window.location.origin + '/profile';
       const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
       authorizeUrl.searchParams.set('provider', 'google');
       authorizeUrl.searchParams.set('redirect_to', redirectTo);
@@ -511,53 +404,41 @@ export function renderProfilePage(env = {}) {
     }
 
     function consumeOAuthCallback() {
-      const hash = window.location.hash.replace(/^#/, '');
-      const query = window.location.search.slice(1);
-      const params = new URLSearchParams(hash || query);
+      const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const authError = params.get('error_description') || params.get('error');
       if (authError) {
-        history.replaceState({}, '', window.location.pathname);
+        history.replaceState({}, '', window.location.pathname + window.location.search);
         throw new Error(authError);
       }
       const accessToken = params.get('access_token');
       if (!accessToken) return false;
       setSession(accessToken, params.get('refresh_token') || '');
-      const next = safeNextPath();
-      history.replaceState({}, '', window.location.pathname + (next ? ('?next=' + encodeURIComponent(next)) : ''));
+      history.replaceState({}, '', window.location.pathname + window.location.search);
       return true;
     }
 
     async function saveProfile() {
       const displayName = displayNameInput.value.trim();
       if (!displayName) throw new Error('Display name is required');
-      const fargoExternalId = fargoIdInput ? fargoIdInput.value.trim() : '';
       setStatus('Saving profile…');
-      const body = await api('/api/me/profile', { method: 'PUT', body: JSON.stringify({ displayName, fargoExternalId: fargoExternalId || null }) });
+      const body = await api('/api/me/profile', { method: 'PUT', body: JSON.stringify({ displayName }) });
       renderProfile(body.profile);
       setStatus('Profile saved', 'ok');
     }
 
-    async function signOut() {
+        async function signOut() {
       const accessToken = token();
-      if (accessToken && config.supabaseUrl && config.supabasePublishableKey) {
-        await fetch(trimUrl(config.supabaseUrl) + '/auth/v1/logout', {
+      // #655: simulated JFL session is local-only — never call Supabase logout.
+      if (accessToken && accessToken !== 'fd-jfl-simulated-google-oidc-v1' && accessToken !== 'fd-jfl-simulated-google-v1' && config.supabaseUrl && config.supabasePublishableKey) {
+        await fetch(config.supabaseUrl.replace(/\/+$/, '') + '/auth/v1/logout', {
           method: 'POST',
           headers: { apikey: config.supabasePublishableKey, authorization: 'Bearer ' + accessToken },
         }).catch(() => {});
       }
       setSession('', '');
-      // WHY: drop cached API bodies/ETags so the next account cannot see prior PII.
-      try {
-        const keys = [];
-        for (let i = 0; i < sessionStorage.length; i += 1) {
-          const key = sessionStorage.key(i);
-          if (key && (key.startsWith('fd.body:') || key.startsWith('fd.etag:'))) keys.push(key);
-        }
-        for (const key of keys) sessionStorage.removeItem(key);
-      } catch {}
     }
 
-    async function run(action) {
+async function run(action) {
       try {
         await action();
       } catch (error) {
@@ -572,43 +453,17 @@ export function renderProfilePage(env = {}) {
       event.preventDefault();
       run(saveProfile);
     });
-    const standingForm = document.querySelector('[data-standing-form]');
-    if (standingForm) {
-      standingForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        run(async () => {
-          setStatus('Saving standing availability…');
-          const standingStatus = document.querySelector('[data-standing-status]')?.value || '';
-          const standingNote = document.querySelector('[data-standing-note]')?.value || '';
-          await api('/api/me/profile/standing-availability', {
-            method: 'PUT',
-            body: JSON.stringify({ standingStatus, standingNote }),
-          });
-          setStatus('Standing availability saved', 'ok');
-          await loadProfile({ quiet: true });
-        });
-      });
-    }
 
     const existingAccessToken = token();
     setSession(existingAccessToken, refreshToken());
     run(async () => {
       const returnedFromGoogle = consumeOAuthCallback();
-      if (returnedFromGoogle) {
-        const next = safeNextPath();
-        if (next) {
-          window.location.replace(next);
-          return;
-        }
-      }
-      if (returnedFromGoogle || token() || isOpenAuthLane()) {
+      if (returnedFromGoogle || token()) {
         await loadProfile();
-        if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch(() => {}), { intervalMs: 45000, immediate: false });
         await refreshAdminAccess();
       }
     });
   </script>
-${safeAutocompleteClientScript}
 </body>
 </html>`;
 }

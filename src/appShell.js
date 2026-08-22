@@ -1,22 +1,13 @@
-import { livePageRefreshScript } from './livePageRefresh.js';
-import { friendlyErrorMessage } from './friendlyErrorMessage.js';
-import { applyScriptNonces } from './securityHeaders.js';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', key: 'home' },
   { href: '/teams', label: 'Teams', key: 'teams' },
   { href: '/schedule', label: 'Schedule', key: 'schedule' },
-  { href: '/playoffs', label: 'Playoffs', key: 'playoffs' },
   { href: '/standings', label: 'Standings', key: 'standings' },
-  { href: '/players', label: 'Players', key: 'players' },
-  { href: '/lineup', label: 'Lineup', key: 'lineup' },
-  { href: '/availability', label: 'Check in', key: 'availability' },
   { href: '/prizes', label: 'Prizes', key: 'prizes' },
-  { href: '/trades', label: 'Trades', key: 'trades' },
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
   { href: '/messages', label: 'Messages', key: 'messages' },
-  { href: '/notifications', label: 'Notices', key: 'notifications' },
   { href: '/admin', label: 'Admin', key: 'admin' },
   { href: '/profile', label: 'Profile', key: 'profile' },
 ];
@@ -25,7 +16,6 @@ const MOBILE_DOCK_ITEMS = [
   { href: '/teams', label: 'Teams', key: 'teams', ball: 'T' },
   { href: '/schedule', label: 'Schedule', key: 'schedule', ball: '9' },
   { href: '/scorecard', label: 'Score', key: 'score', ball: '8' },
-  { href: '/availability', label: 'Check in', key: 'availability', ball: 'C' },
   { href: '/messages', label: 'Messages', key: 'messages', ball: 'M' },
   { href: '/profile', label: 'Profile', key: 'profile', ball: 'P' },
 ];
@@ -33,11 +23,8 @@ const MOBILE_DOCK_ITEMS = [
 const APP_PAGE_PATHS = new Set([
   '/scorecard',
   '/schedule',
-  '/playoffs',
   '/standings',
-  '/players',
   '/prizes',
-  '/trades',
   '/season-setup',
   '/lineup',
   '/profile',
@@ -45,15 +32,6 @@ const APP_PAGE_PATHS = new Set([
   '/teams',
   '/messages',
   '/messages/moderation',
-  '/notifications',
-  '/admin',
-  '/admin/audit',
-  '/admin/operations',
-  '/admin/players',
-  '/admin/seasons',
-  '/admin/season-teams',
-  '/demo',
-  '/rules',
 ]);
 
 function sectionForPath(pathname) {
@@ -66,16 +44,11 @@ function sectionForPath(pathname) {
     || pathname === '/lineup'
   ) return 'teams';
   if (pathname.startsWith('/schedule')) return 'schedule';
-  if (pathname === '/playoffs') return 'playoffs';
-  if (pathname === '/trades') return 'trades';
-  if (pathname === '/notifications') return 'notifications';
   if (pathname === '/prizes') return 'prizes';
   if (pathname.startsWith('/standings')) return 'standings';
-  if (pathname === '/players' || pathname.startsWith('/players/')) return 'players';
   if (pathname.startsWith('/scorecard')) return 'score';
-  if (pathname.startsWith('/availability')) return 'availability';
   if (pathname.startsWith('/messages')) return 'messages';
-  if (pathname === '/season-setup' || pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
   if (pathname.startsWith('/profile')) return 'profile';
   return null;
 }
@@ -89,7 +62,7 @@ function navLinks(pathname, compact = false) {
   }).join(compact ? '' : '\n');
 }
 
-export function renderMobileDock(pathname) {
+function renderMobileDock(pathname) {
   if (pathname.startsWith('/scorecard')) return '';
   const active = sectionForPath(pathname);
   const links = MOBILE_DOCK_ITEMS.map((item) => {
@@ -103,7 +76,20 @@ export function renderMobileDock(pathname) {
   return `<nav class="fd-mobile-dock" aria-label="Quick navigation" data-fd-mobile-dock>${links}</nav>`;
 }
 
-export { friendlyErrorMessage } from './friendlyErrorMessage.js';
+export function friendlyErrorMessage(value) {
+  const message = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!message) return 'We could not complete that action. Please try again.';
+  if (/sign[- ]?in expired|session expired|unauthorized/i.test(message)) {
+    return 'Your sign-in expired. Open Profile, sign in again, and retry.';
+  }
+  if (
+    /supabase|permission denied|schema private|column reference|ambiguous|postgres|rpc/i
+      .test(message)
+  ) {
+    return 'We could not complete that action. Nothing was changed. Please try again.';
+  }
+  return message;
+}
 
 function renderMessageIndicator(pathname) {
   const current = sectionForPath(pathname) === 'messages';
@@ -141,16 +127,7 @@ function renderErrorPopup() {
 }
 
 export function renderPrimaryNavigation(pathname = '/') {
-  return `<div class="fd-ready-check" data-ready-check hidden data-open="false" role="region" aria-label="Team ready check">
-    <div class="fd-ready-check__title" data-ready-check-title>Team ready check</div>
-    <div class="fd-ready-check__meta" data-ready-check-meta></div>
-    <div class="fd-ready-check__actions">
-      <button type="button" data-ready-response="ready">👍 I'll be there</button>
-      <button type="button" data-ready-response="maybe">Not sure</button>
-      <button type="button" data-ready-response="not_ready">Can't make it</button>
-    </div>
-  </div>
-  <header class="fd-shell" data-fd-shell>
+  return `<header class="fd-shell" data-fd-shell>
     <div class="fd-shell__inner">
       <a class="fd-brand" href="/" aria-label="Fremont Derby home">
         <span class="fd-brand__ball" aria-hidden="true">8</span>
@@ -173,57 +150,25 @@ export function renderPrimaryNavigation(pathname = '/') {
 }
 
 export const shellStyles = `
-  .fd-shell { position: sticky; top: 0; z-index: 1000; width: 100%; padding-top: env(safe-area-inset-top, 0px); background: rgba(6,17,13,.96); border-bottom: 1px solid #315d45; backdrop-filter: blur(12px); color: #f4f7f5; }
+  .fd-shell { position: sticky; top: 0; z-index: 1000; width: 100%; background: rgba(6,17,13,.96); border-bottom: 1px solid #315d45; backdrop-filter: blur(12px); color: #f4f7f5; }
   .fd-shell, .fd-shell * { box-sizing: border-box; }
-  .fd-shell__inner { width: min(1120px, 100%); min-height: 58px; margin: 0 auto; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 12px; }
+  .fd-shell__inner { width: min(1120px, 100%); min-height: 58px; margin: 0 auto; padding: 8px 16px; display: flex; align-items: center; gap: 18px; }
   .fd-brand { display: inline-flex; align-items: center; gap: 9px; color: #f4f7f5; text-decoration: none; font: 800 .98rem/1 Inter, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; }
   .fd-brand__ball { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #f4f7f5; color: #07150f; border: 3px solid #d9dedb; font-size: .8rem; }
   .fd-nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-  .fd-nav a { min-height: 40px; display: inline-flex; align-items: center; padding: 9px 10px; border-radius: 9px; color: #c9d7cf; text-decoration: none; font: 700 .86rem/1 Inter, ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .fd-nav a { min-height: 40px; display: inline-flex; align-items: center; padding: 9px 10px; border-radius: 9px; color: #c9d7cf; text-decoration: none; font: 700 .86rem/1 Inter, ui-sans-serif, system-ui, sans-serif; border: 1px solid transparent; }
   .fd-nav a:hover { color: #fff; background: #10291d; }
   .fd-nav a[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-nav a:focus-visible, .fd-brand:focus-visible, .fd-nav-menu summary:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
-  .fd-ready-check {
-    position: sticky;
-    top: 0;
-    z-index: 1200;
-    display: none;
-    gap: 10px;
-    padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
-    border-bottom: 1px solid #315d45;
-    background: linear-gradient(180deg, #123522, #0b2418);
-    color: #f4f7f5;
-    font: 700 .9rem/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
-  }
-  .fd-ready-check[data-open="true"] { display: grid; }
-  .fd-ready-check__title { font-weight: 950; }
-  .fd-ready-check__meta { color: #b7d0c2; font-weight: 600; font-size: .82rem; }
-  .fd-ready-check__actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .fd-ready-check__actions button {
-    min-height: 44px;
-    padding: 0 14px;
-    border-radius: 10px;
-    border: 1px solid #3f6b52;
-    background: #0f2c1c;
-    color: #eef7f1;
-    font: 850 .86rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
-    cursor: pointer;
-    touch-action: manipulation;
-  }
-  .fd-ready-check__actions button[data-response="ready"] {
-    background: #2fa972;
-    border-color: #2fa972;
-    color: #06140c;
-  }
   .fd-mobile-dock { display: none; }
   .fd-mobile-dock-spacer { display: none; }
-  .fd-message-notifications { position: relative; flex: 0 0 auto; margin-right: 2px; }
+  .fd-message-notifications { position: relative; flex: 0 0 auto; }
   .fd-message-notifications[hidden] { display: none; }
-  .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; overflow: visible; }
+  .fd-message-indicator { position: relative; width: 42px; height: 42px; display: inline-grid; place-items: center; border: 1px solid #315d45; border-radius: 11px; color: #dbe8e0; background: #0b2418; text-decoration: none; }
   .fd-message-indicator:hover { color: #fff; background: #123522; }
   .fd-message-indicator[aria-current="page"] { color: #07150f; background: #e7f2eb; border-color: #e7f2eb; }
   .fd-message-indicator svg { width: 23px; height: 23px; }
-  .fd-message-indicator__badge { position: absolute; top: 2px; right: 2px; z-index: 1; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 4px; border: 2px solid #06110d; border-radius: 999px; color: #fff; background: #d83d37; font: 900 .64rem/1 Inter, ui-sans-serif, system-ui, sans-serif; box-sizing: border-box; pointer-events: none; }
+  .fd-message-indicator__badge { position: absolute; top: -6px; right: -7px; min-width: 20px; height: 20px; display: grid; place-items: center; padding: 0 5px; border: 2px solid #06110d; border-radius: 999px; color: #fff; background: #d83d37; font: 900 .68rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-message-indicator__badge[hidden] { display: none; }
   .fd-message-indicator:focus-visible { outline: 3px solid #9ad6ae; outline-offset: 2px; }
   .fd-message-preview { position: absolute; top: calc(100% + 9px); right: 0; width: min(360px, calc(100vw - 24px)); padding: 10px; border: 1px solid #315d45; border-radius: 13px; background: #081a12; box-shadow: 0 18px 46px rgba(0,0,0,.42); color: #f4f7f5; opacity: 0; visibility: hidden; transform: translateY(-4px); pointer-events: none; transition: opacity .14s ease, transform .14s ease, visibility .14s; }
@@ -245,83 +190,34 @@ export const shellStyles = `
   .fd-message-preview__all { min-height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid #244936; border-radius: 0 0 8px 8px; color: #b7e2c5; text-decoration: none; font: 850 .78rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-message-preview__all:hover, .fd-message-preview__all:focus-visible { color: #fff; background: #10291d; }
   .fd-nav-menu { display: none; margin-left: auto; position: relative; font: 700 .9rem/1 Inter, ui-sans-serif, system-ui, sans-serif; }
-  .fd-nav-menu summary {
-    cursor: pointer;
-    list-style: none;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    padding: 9px 14px;
-    border: 1px solid #315d45;
-    border-radius: 10px;
-    background: #0b2418;
-    color: #f4f7f5;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-appearance: none;
-    appearance: none;
-  }
+  .fd-nav-menu summary { cursor: pointer; list-style: none; min-height: 42px; display: inline-flex; align-items: center; padding: 9px 12px; border: 1px solid #315d45; border-radius: 10px; background: #0b2418; color: #f4f7f5; }
   .fd-nav-menu summary::-webkit-details-marker { display: none; }
-  .fd-nav-menu summary::marker { content: ''; }
-  .fd-nav-menu[open] summary { border-color: #9ad6ae; background: #123522; }
-  .fd-nav--mobile {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 8px);
-    width: min(280px, calc(100vw - 24px));
-    max-height: min(70vh, 480px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding: 8px;
-    display: grid;
-    gap: 4px;
-    border: 1px solid #315d45;
-    border-radius: 12px;
-    background: #081a12;
-    box-shadow: 0 14px 38px rgba(0,0,0,.35);
-    z-index: 1200;
-  }
-  .fd-nav--mobile a {
-    width: 100%;
-    min-height: 48px;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .fd-error-popup { position: fixed; top: calc(72px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 2100; width: min(430px, calc(100vw - 24px)); display: grid; grid-template-columns: 30px minmax(0,1fr) 40px; gap: 10px; align-items: start; padding: 14px; border: 2px solid #ff8f87; border-radius: 13px; background: #32110f; box-shadow: 0 18px 48px rgba(0,0,0,.48); color: #fff4f2; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  .fd-nav--mobile { position: absolute; right: 0; top: calc(100% + 8px); width: min(260px, calc(100vw - 24px)); padding: 8px; display: grid; gap: 4px; border: 1px solid #315d45; border-radius: 12px; background: #081a12; box-shadow: 0 14px 38px rgba(0,0,0,.35); }
+  .fd-nav--mobile a { width: 100%; }
+  .fd-error-popup { position: fixed; top: 72px; right: 16px; z-index: 2100; width: min(430px, calc(100vw - 24px)); display: grid; grid-template-columns: 30px minmax(0,1fr) 40px; gap: 10px; align-items: start; padding: 14px; border: 2px solid #ff8f87; border-radius: 13px; background: #32110f; box-shadow: 0 18px 48px rgba(0,0,0,.48); color: #fff4f2; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
   .fd-error-popup[hidden] { display: none; }
   .fd-error-popup__icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #f06a60; color: #250605; font-weight: 950; }
   .fd-error-popup__copy { min-width: 0; display: grid; gap: 4px; line-height: 1.35; }
   .fd-error-popup__copy strong { font-size: .92rem; }
   .fd-error-popup__copy span { overflow-wrap: anywhere; color: #ffd5d1; font-size: .86rem; }
-  .fd-error-popup__close { width: 40px; height: 40px; margin: 0; border: 0; border-radius: 9px; background: transparent; color: #fff4f2; font: 700 1.5rem/1 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+  .fd-error-popup__close { width: 40px; height: 40px; margin: -7px -7px 0 0; border: 0; border-radius: 9px; background: transparent; color: #fff4f2; font: 700 1.5rem/1 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
   .fd-error-popup__close:hover { background: rgba(255,255,255,.12); }
   .fd-error-popup__close:focus-visible { outline: 3px solid #ffd5d1; outline-offset: 2px; }
   @media (max-width: 760px) {
-    .fd-shell__inner { min-height: 56px; padding: 7px max(12px, env(safe-area-inset-right, 0px)) 7px max(12px, env(safe-area-inset-left, 0px)); gap: 10px; }
+    .fd-shell__inner { min-height: 56px; padding: 7px 12px; }
     .fd-nav--desktop { display: none; }
     .fd-message-notifications { margin-left: auto; }
-    .fd-message-preview { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); width: auto; }
-    .fd-nav-menu { display: block; margin-left: 0; position: static; }
-    .fd-nav-menu[open] { z-index: 1200; }
-    .fd-nav--mobile {
-      position: fixed;
-      top: calc(56px + env(safe-area-inset-top, 0px));
-      right: 12px;
-      left: auto;
-      width: min(280px, calc(100vw - 24px));
-      max-height: calc(100vh - 72px - env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
-      z-index: 1200;
-    }
-    .fd-error-popup { top: calc(66px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); width: auto; }
+    .fd-message-preview { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; }
+    .fd-nav-menu { display: block; margin-left: 0; }
+    .fd-error-popup { top: 66px; right: 12px; left: 12px; width: auto; }
     .fd-mobile-dock {
       position: fixed;
-      right: max(8px, env(safe-area-inset-right, 0px));
-      bottom: max(8px, env(safe-area-inset-bottom, 0px));
-      left: max(8px, env(safe-area-inset-left, 0px));
+      right: 8px;
+      bottom: max(8px, env(safe-area-inset-bottom));
+      left: 8px;
       z-index: 1050;
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 5px;
       padding: 6px;
       border: 1px solid #46694f;
@@ -346,19 +242,15 @@ export const shellStyles = `
       border-radius: 12px;
       color: #f7fbf8;
       text-decoration: none;
-      font-size: .72rem;
+      font-size: .68rem;
       font-weight: 850;
-      line-height: 1.05;
-      letter-spacing: .01em;
+      line-height: 1;
       text-align: center;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
     }
     .fd-mobile-dock a[data-nav-key="teams"] { --fd-dock-accent: #69c8ff; }
     .fd-mobile-dock a[data-nav-key="schedule"] { --fd-dock-accent: #ffd166; }
     .fd-mobile-dock a[data-nav-key="standings"] { --fd-dock-accent: #ffd166; }
     .fd-mobile-dock a[data-nav-key="score"] { --fd-dock-accent: #63e79a; }
-    .fd-mobile-dock a[data-nav-key="availability"] { --fd-dock-accent: #7dd3fc; }
     .fd-mobile-dock a[data-nav-key="messages"] { --fd-dock-accent: #d8a6ff; }
     .fd-mobile-dock a[data-nav-key="profile"] { --fd-dock-accent: #ffad8f; }
     .fd-mobile-dock__ball {
@@ -375,16 +267,11 @@ export const shellStyles = `
       font-weight: 950;
     }
     .fd-mobile-dock a[aria-current="page"] {
-      border-color: rgba(255,255,255,.35);
-      background: rgba(255,255,255,.16);
-      color: #fff;
-      box-shadow: inset 0 3px 0 var(--fd-dock-accent), 0 0 0 1px rgba(255,255,255,.08);
-      font-weight: 950;
+      border-color: var(--fd-dock-accent);
+      background: rgba(255,255,255,.09);
+      box-shadow: inset 0 3px 0 var(--fd-dock-accent);
     }
-    .fd-mobile-dock a[aria-current="page"] .fd-mobile-dock__ball {
-      box-shadow: 0 0 0 3px rgba(255,255,255,.2), 0 2px 6px rgba(0,0,0,.28);
-      transform: translateY(-1px);
-    }
+    .fd-mobile-dock a[aria-current="page"] .fd-mobile-dock__ball { box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.28); }
     .fd-mobile-dock a:focus-visible { outline: 3px solid var(--fd-dock-accent); outline-offset: 1px; }
     .fd-mobile-dock-spacer { display: block; height: calc(82px + env(safe-area-inset-bottom)); }
   }
@@ -462,20 +349,16 @@ const shellScript = `<script data-fd-message-indicator-script>
       indicator.title = label;
       renderPreviews(previews, unread);
     };
-    const isOpenAuthLane = () => {
-      const host = String(location.hostname || '');
-      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
-    };
     const refresh = async () => {
       const accessToken = token();
-      if (!accessToken && !isOpenAuthLane()) { render(0); return; }
+      if (!accessToken) { render(0); return; }
       notifications.hidden = false;
       if (loading || document.hidden) return;
       loading = true;
       try {
-        const headers = {};
-        if (accessToken) headers.authorization = 'Bearer ' + accessToken;
-        const response = await fetch('/api/me/message-notification-summary', { headers });
+        const response = await fetch('/api/me/message-notification-summary', {
+          headers: { authorization: 'Bearer ' + accessToken },
+        });
         if (response.status === 401) { render(0); return; }
         if (!response.ok) return;
         const body = await response.json();
@@ -491,30 +374,6 @@ const shellScript = `<script data-fd-message-indicator-script>
     window.addEventListener('focus', refresh);
     window.addEventListener('fd:messages-read', refresh);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
-    // WHY: warm public season payloads during idle so next navigation feels instant.
-    const prefetchPublic = () => {
-      if (!window.fdConditionalFetch) return;
-      const seasonId = localStorage.getItem('fd.scheduleSeasonId') || localStorage.getItem('fd.standingsSeasonId');
-      if (!seasonId) return;
-      const paths = [
-        '/api/seasons/' + encodeURIComponent(seasonId) + '/schedule',
-        '/api/seasons/' + encodeURIComponent(seasonId) + '/team-standings',
-      ];
-      paths.forEach((path) => {
-        window.fdConditionalFetch(path).catch(() => {});
-      });
-    };
-    if ('requestIdleCallback' in window) requestIdleCallback(() => prefetchPublic(), { timeout: 4000 });
-    else setTimeout(prefetchPublic, 2500);
-
-    window.addEventListener('fd:notifications-changed', () => {
-      refresh().catch(() => {});
-    });
-    // Message inbox may mark threads read without visiting /notifications.
-    window.addEventListener('fd:messages-changed', () => {
-      refresh().catch(() => {});
-    });
-
     notifications.addEventListener('mouseenter', () => setOpen(true));
     notifications.addEventListener('mouseleave', () => {
       if (!notifications.contains(document.activeElement)) setOpen(false);
@@ -542,99 +401,6 @@ const shellScript = `<script data-fd-message-indicator-script>
   })();
 </script>`;
 
-const navMenuScript = `<script data-fd-nav-menu-script>
-  (() => {
-    const menu = document.querySelector('details.fd-nav-menu');
-    if (!menu) return;
-    const close = () => { if (menu.open) menu.open = false; };
-    menu.querySelectorAll('a').forEach((link) => {
-      link.addEventListener('click', () => close());
-    });
-    document.addEventListener('pointerdown', (event) => {
-      if (!menu.open) return;
-      if (!menu.contains(event.target)) close();
-    }, { passive: true });
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') close();
-    });
-    // iOS: closing/opening details can leave sticky header in a bad paint state
-    menu.addEventListener('toggle', () => {
-      if (!menu.open) return;
-      const shell = document.querySelector('[data-fd-shell]');
-      if (shell) shell.style.transform = 'translateZ(0)';
-    });
-  })();
-</script>`;
-
-const readyCheckScript = `<script data-fd-ready-check-script>
-  (() => {
-    const banner = document.querySelector('[data-ready-check]');
-    if (!banner) return;
-    const title = document.querySelector('[data-ready-check-title]');
-    const meta = document.querySelector('[data-ready-check-meta]');
-    const token = () => sessionStorage.getItem('fd.accessToken') || '';
-    let current = null;
-    const paint = (row) => {
-      current = row;
-      if (!row || row.my_response || row.myResponse) {
-        banner.hidden = true;
-        banner.dataset.open = 'false';
-        return;
-      }
-      const team = row.team_name || row.teamName || 'Your team';
-      const round = row.round_number || row.roundNumber || '';
-      const when = row.scheduled_on || row.scheduledOn || '';
-      const starter = row.started_by_display_name || row.startedByDisplayName || 'A teammate';
-      title.textContent = team + ' · ready check';
-      meta.textContent = starter + ' asked who is coming' + (round ? (' for round ' + round) : '') + (when ? (' · ' + when) : '') + '.';
-      banner.hidden = false;
-      banner.dataset.open = 'true';
-    };
-    const isOpenAuthLane = () => {
-      const host = String(location.hostname || '');
-      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
-    };
-    const load = async () => {
-      if (!token() && !isOpenAuthLane()) return paint(null);
-      try {
-        const headers = {};
-        if (token()) headers.authorization = 'Bearer ' + token();
-        const response = await fetch('/api/me/ready-checks', { headers });
-        if (!response.ok) return paint(null);
-        const body = await response.json();
-        const rows = body.readyChecks || [];
-        paint(rows.find((row) => !(row.my_response || row.myResponse)) || null);
-      } catch {
-        paint(null);
-      }
-    };
-    banner.querySelectorAll('[data-ready-response]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        if (!current?.id) return;
-        button.disabled = true;
-        try {
-          const headers = { 'content-type': 'application/json' };
-          if (token()) headers.authorization = 'Bearer ' + token();
-          const response = await fetch('/api/ready-checks/' + encodeURIComponent(current.id) + '/respond', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ response: button.getAttribute('data-ready-response') }),
-          });
-          const body = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(body.error || 'Could not save ready check');
-          paint(null);
-        } catch (error) {
-          meta.textContent = error.message || 'Could not save response';
-        } finally {
-          button.disabled = false;
-        }
-      });
-    });
-    load();
-    window.addEventListener('focus', load);
-  })();
-</script>`;
-
 const errorPopupScript = `<script data-fd-error-popup-script>
   (() => {
     const popup = document.querySelector('[data-error-popup]');
@@ -655,7 +421,7 @@ const errorPopupScript = `<script data-fd-error-popup-script>
         const style = window.getComputedStyle ? window.getComputedStyle(node) : null;
         if (style && (style.display === 'none' || style.visibility === 'hidden')) return;
         const explicit = node.getAttribute('data-error-message') || node.querySelector?.('[data-error-message]')?.textContent;
-        const value = String(explicit || node.textContent || '').replace(/\\s+/g, ' ').trim();
+        const value = String(explicit || node.textContent || '').replace(/\s+/g, ' ').trim();
         if (!value || seen.get(node) === value) return;
         seen.set(node, value);
         show(value);
@@ -682,18 +448,12 @@ const errorPopupScript = `<script data-fd-error-popup-script>
   })();
 </script>`;
 
-export function decorateHtmlWithShell(html, pathname = '/', { nonce } = {}) {
+export function decorateHtmlWithShell(html, pathname = '/') {
   if (typeof html !== 'string' || html.includes('data-fd-shell')) return html;
   if (!/<body(?:\s|>)/i.test(html)) return html;
 
-  const referrerPolicyTag = html.includes('name="referrer"') || html.includes("name='referrer'")
-    ? ''
-    : '<meta name="referrer" content="no-referrer" />\n';
-  const themeColorTag = html.includes('name="theme-color"') || html.includes("name='theme-color'")
-    ? ''
-    : '<meta name="theme-color" content="#07150f" />\n';
   const withStyles = /<\/head>/i.test(html)
-    ? html.replace(/<\/head>/i, `${referrerPolicyTag}${themeColorTag}<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
+    ? html.replace(/<\/head>/i, `<style data-fd-shell-styles>${shellStyles}</style>\n</head>`)
     : html;
 
   const withShell = withStyles.replace(
@@ -703,10 +463,9 @@ export function decorateHtmlWithShell(html, pathname = '/', { nonce } = {}) {
   const mobileSpacer = pathname.startsWith('/scorecard')
     ? ''
     : '<div class="fd-mobile-dock-spacer" aria-hidden="true"></div>\n';
-  const assembled = /<\/body>/i.test(withShell)
-    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}${navMenuScript}\n${errorPopupScript}\n${readyCheckScript}\n${livePageRefreshScript}\n</body>`)
-    : `${withShell}${mobileSpacer}${shellScript}${navMenuScript}${errorPopupScript}${readyCheckScript}${livePageRefreshScript}`;
-  return applyScriptNonces(assembled, nonce);
+  return /<\/body>/i.test(withShell)
+    ? withShell.replace(/<\/body>/i, `${mobileSpacer}${shellScript}\n${errorPopupScript}\n</body>`)
+    : `${withShell}${mobileSpacer}${shellScript}${errorPopupScript}`;
 }
 
 export function isKnownAppPagePath(pathname) {
@@ -732,7 +491,7 @@ export function renderNotFoundPage(pathname = '') {
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: radial-gradient(circle at 50% 10%, #153d2a 0, #081a12 34%, #06110d 72%); color: #f4f7f5; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 10%, #153d2a 0, #081a12 34%, #06110d 72%); color: #f4f7f5; }
     .lost { width: min(820px, calc(100% - 28px)); margin: 0 auto; padding: clamp(28px, 7vw, 72px) 0 64px; text-align: center; }
     .hound { width: min(420px, 84vw); margin: 0 auto 22px; filter: drop-shadow(0 18px 24px rgba(0,0,0,.28)); }
     .hound svg { width: 100%; height: auto; display: block; }

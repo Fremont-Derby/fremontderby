@@ -35,7 +35,7 @@ JFL, DRU, and gamma share the non-production Supabase project `${stagingRef}` to
 - Git branch: `fremontderby-jfl`.
 - Cloudflare Worker environment: `jfl` (`fremontderby-jfl`).
 - Public hostname: `https://jfl.fremontderby.com`.
-- Preferred deploy branch: `fremontderby-jfl`. From `main`, `npm run deploy:jfl` is allowed only when `FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN=1` (Actions deploy workflow sets this). CI on `main` is currently `workflow_dispatch`-only while hosted runners are constrained; local/`wrangler` deploy remains valid.
+- Deploys only from `fremontderby-jfl` after CI.
 - Uses the shared staging project with its own schema and sandbox data.
 - May support test actors/auth bypass only when explicitly hard-gated to this environment.
 - Can be seeded/reset without affecting DRU, gamma, staging, or production.
@@ -44,7 +44,7 @@ JFL, DRU, and gamma share the non-production Supabase project `${stagingRef}` to
 - Git branch: `fremontderby-dru`.
 - Cloudflare Worker environment: `dru` (`fremontderby-dru`).
 - Public hostname: `https://dru.fremontderby.com`.
-- Preferred deploy branch: `fremontderby-dru`. Same main-lane exception and runner notes as JFL.
+- Deploys only from `fremontderby-dru` after CI.
 - Uses the shared staging project with its own schema and sandbox data.
 - May support test actors/auth bypass only when explicitly hard-gated to this environment.
 - Can be seeded/reset without affecting JFL, gamma, staging, or production.
@@ -53,15 +53,14 @@ JFL, DRU, and gamma share the non-production Supabase project `${stagingRef}` to
 - Git branch: `fremontderby-gamma`.
 - Cloudflare Worker environment: `gamma` (`fremontderby-gamma`).
 - Public hostname: `https://gamma.fremontderby.com`.
-- Preferred deploy branch: `fremontderby-gamma`. Same main-lane exception and runner notes as JFL.
+- Deploys only from `fremontderby-gamma` after CI.
 - Uses the shared staging project with the isolated `gamma` schema.
 - Gamma is the integration/release-candidate environment; auth and runtime behavior should be production-like.
 - Auth bypass is forbidden in gamma.
 - Gamma never points directly at the production database and never receives production service-role/write credentials.
 
 ### Production data refresh into gamma
-Gamma may receive a production-data copy only through the repository workflow **Gamma prod refresh** (`gamma-prod-refresh.yml`): daily schedule + `workflow_dispatch`. Both entry points share `scripts/gamma-prod-refresh.mjs` (fail-closed preflight). Deploys and branch pushes never trigger refresh.
-
+Gamma may receive a production-data copy only through an explicit manual refresh workflow.
 
 The refresh direction is strictly one-way:
 
@@ -161,64 +160,3 @@ The endpoint must not return credential values. It should return HTTP 200 only w
 - #245 — green pre-merge validation and traceable production releases.
 - #35 — hosted Supabase/environment isolation proof.
 - #545 and #572 — historical single-beta approach, superseded by this topology.
-
-
-## PostgREST Accept-Profile / Content-Profile
-
-Lane Workers isolate data on the **shared staging** Supabase project by schema, not by separate projects.
-
-| Worker `ENVIRONMENT` | Public profile headers | Private profile headers |
-|----------------------|------------------------|-------------------------|
-| `production` / `staging` | `public` | `private` |
-| `jfl` | `jfl` | `jfl_private` |
-| `dru` | `dru` | `dru_private` |
-| `gamma` | `gamma` | `gamma_private` |
-
-`src/supabaseSchema.js` wraps repository `fetch` so every `/rest/v1/*` call sets **both**:
-
-- `Accept-Profile`
-- `Content-Profile`
-
-Callers that need privileged tables pass `accept-profile: private`; the wrapper rewrites that to the lane private profile. Foreign lane profiles are forced back to this Worker’s schema (fail-closed isolation).
-
-PostgREST must list these schemas in `pgrst.db_schemas` (see migrations `20260814031843_*` and `20260814093000_*`) and reload config/schema after apply.
-
-## GitHub Actions secrets (names only)
-
-The repository is expected to hold these **Actions** secret *names* for deploy/diagnose workflows (values are never in git):
-
-- `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_API_TOKEN`
-
-Worker-level secrets (`SUPABASE_*`, `BETA_ACTOR_USER_ID`, …) are provisioned on each Cloudflare Worker / `wrangler secret`, not as a substitute for the Actions Cloudflare pair.
-
-Hosted runners must allocate (`runner_id` non-zero) for workflows to use those secrets. See `docs/GITHUB_ACTIONS.md`.
-
-## Host vs Worker identity
-
-`GET /health/environment` includes:
-
-- `environment` — Worker `ENVIRONMENT`
-- `host` — request hostname
-- `expectedHostEnvironment` — map for known public hosts (`dru.fremontderby.com` → `dru`, etc.)
-- `hostMatchesEnvironment` — `false` when a known lane/apex host is served by the wrong Worker
-
-A 200 with `"environment":"production"` on `dru.fremontderby.com` is a **failed** lane identity: DNS may resolve, but `wrangler deploy --env dru` (and secrets) still need to attach the lane Worker.
-
-## Publish paths (summary)
-
-See **`docs/GITHUB_ACTIONS.md`** for the production source-of-truth table (Workers Builds vs Actions), lane branch allowlists, and Cloudflare dashboard containment steps for #727 / #732.
-
-## Lane tip lockstep
-
-`dru`, `jfl`, and `gamma` must run the **same Worker tip** (same `versionTag` / git SHA). Only these differ by design:
-
-- `ENVIRONMENT` / host name
-- `SUPABASE_SCHEMA` (`dru` | `jfl` | `gamma`) and matching `*_private` schema
-- `BETA_ACTOR_EMAIL` (open-auth actor identity)
-
-Deploy with `lane=all-lanes` (workflow default) so tips stay unified. Single-lane deploys are for emergency hotfixes only; follow with the other two as soon as possible.
-
-## Backups, audit, and recovery
-
-See [ops-backup-audit-recovery.md](./ops-backup-audit-recovery.md) for Season 1 backup/PITR expectations, audit surfaces, health probes, and recovery runbooks (#30).

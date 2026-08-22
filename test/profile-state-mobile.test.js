@@ -6,7 +6,7 @@ import { renderProfilePage } from '../src/profilePage.js';
 test('Profile presents signed-out identity state before private data surfaces', () => {
   const html = renderProfilePage({});
 
-  assert.match(html, /data-status><\/div>/);
+  assert.match(html, /data-status>Checking sign-in…<\/div>/);
   assert.match(html, /role="status" aria-live="polite" aria-atomic="true"/);
   assert.match(html, /Sign in with Google to manage your profile, teams, availability, messages, and league-night scoring/);
   assert.match(html, /data-authenticated-content hidden/);
