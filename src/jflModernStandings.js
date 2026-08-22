@@ -164,6 +164,7 @@ function standingsClientScript() {
         const played = (Number(row.matches_played) || (Number(row.wins) + Number(row.losses))) > 0;
         const prize = played && row.is_prize_eligible ? 'Eligible #' + shown(row.prize_rank) : (played ? 'Needs ' + shown(row.minimum_matches) : 'Not yet ranked');
         return '<article class="fd-standing-row" data-standings-rank="' + esc(row.standings_rank) + '"><div class="fd-standing-row__identity"><span class="fd-standing-row__rank" aria-label="Rank ' + esc(rank(row, tied)) + '">' + esc(rank(row, tied)) + '</span><div><strong class="fd-standing-row__name">' + esc(row.display_name || 'Unnamed player') + '</strong><span class="fd-standing-row__sub">' + esc(prize) + '</span></div></div><div class="fd-standing-row__primary">' + stat('Record', shown(row.wins) + '-' + shown(row.losses), false) + stat('Win rate', percentage(row.win_percentage), true) + '</div><div class="fd-standing-row__secondary">' + stat('Games', shown(row.games_won) + '-' + shown(row.games_lost), false) + stat('Diff', row.game_differential, false) + stat('Prize', prize, false) + '</div></article>';
+      };
 
       function setStatus(message, tone) {
         statusEl.textContent = message;

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 import {
   jflModernStandingsStyles,
@@ -98,6 +99,20 @@ test('modern standings document uses the same authoritative read APIs and clear 
   assert.match(html, /data-fd-shell/);
   assert.match(html, /data-fd-mobile-dock/);
   assert.match(html, /\?ui=legacy/);
+});
+
+test('modern standings emits syntactically valid inline browser scripts', () => {
+  const html = renderJflModernStandings();
+  const scripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)]
+    .map((match) => match[1])
+    .filter((script) => script.trim());
+
+  assert.ok(scripts.length > 0);
+  scripts.forEach((script, index) => {
+    assert.doesNotThrow(() => new vm.Script(script, {
+      filename: `jfl-modern-standings-inline-${index}.js`,
+    }));
+  });
 });
 
 test('modern standings survives shared public-season selection enhancement without legacy string rewrites', async () => {
