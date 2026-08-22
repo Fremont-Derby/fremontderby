@@ -141,9 +141,10 @@ export function renderTeamCard(team = {}) {
   const actions = visibleTeamActions(team);
   const mine = Boolean(team.isMine);
   const captain = team.captainName || (mine ? 'Captain details in roster' : 'Captain not assigned');
-  const rosterCount = team.rosterCount === null || team.rosterCount === undefined
-    ? 'Roster details'
-    : `${team.rosterCount} player${Number(team.rosterCount) === 1 ? '' : 's'}`;
+  const hasRosterCount = team.rosterCount !== null && team.rosterCount !== undefined;
+  const rosterFact = hasRosterCount
+    ? `<span><small>Roster</small><strong>${escapeHtml(`${team.rosterCount} player${Number(team.rosterCount) === 1 ? '' : 's'}`)}</strong></span>`
+    : '';
   const relationship = team.relationship === 'captain'
     ? '<span class="fd-team-card__relationship">My team · Captain</span>'
     : (team.relationship === 'member'
@@ -168,7 +169,7 @@ export function renderTeamCard(team = {}) {
       <span class="fd-team-card__mark" aria-hidden="true">${escapeHtml(teamInitials(team.teamName))}</span>
       <div class="fd-team-card__identity"><div>${relationship}</div><h2>${escapeHtml(team.teamName || 'Unnamed team')}</h2><p>${escapeHtml(team.seasonName || 'Season')}</p></div>
     </div>
-    <div class="fd-team-card__facts"><span><small>Captain</small><strong>${escapeHtml(captain)}</strong></span><span><small>Roster</small><strong>${escapeHtml(rosterCount)}</strong></span></div>
+    <div class="fd-team-card__facts${hasRosterCount ? '' : ' fd-team-card__facts--single'}"><span><small>Captain</small><strong>${escapeHtml(captain)}</strong></span>${rosterFact}</div>
     ${rosterDetails}
     <div class="fd-team-card__actions">${buttons}</div>
   </article>`;
@@ -215,6 +216,7 @@ export const jflModernTeamsStyles = `
   .fd-team-card__pending { background: #fff1c9; color: #6b4a00; }
   .fd-team-card__directory { background: #eceae4; color: #38433d; }
   .fd-team-card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fd-team-card__facts--single { grid-template-columns: 1fr; }
   .fd-team-card__facts span { min-width: 0; padding: 10px; border-radius: 11px; background: #f5f4ef; }
   .fd-team-card__facts small { display: block; color: var(--fd-teams-muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; }
   .fd-team-card__facts strong { display: block; margin-top: 3px; overflow-wrap: anywhere; font-size: .88rem; }
@@ -381,9 +383,11 @@ function teamsClientScript() {
         else if (team.relationship === 'pending') relWrap.append(node('span', 'fd-team-card__pending', 'Request pending'));
         else if (team.relationship === 'directory') relWrap.append(node('span', 'fd-team-card__directory', 'League team'));
         identity.append(relWrap, node('h2', '', team.teamName || 'Unnamed team'), node('p', '', team.seasonName || 'Season')); head.append(identity);
-        const facts = node('div', 'fd-team-card__facts');
+        const hasRosterCount = team.rosterCount !== null && team.rosterCount !== undefined;
+        const facts = node('div', 'fd-team-card__facts' + (hasRosterCount ? '' : ' fd-team-card__facts--single'));
         const captainFact = document.createElement('span'); captainFact.append(node('small', '', 'Captain'), node('strong', '', team.captainName || (team.isMine ? 'See roster' : 'Captain not assigned')));
-        const rosterFact = document.createElement('span'); rosterFact.append(node('small', '', 'Roster'), node('strong', '', team.rosterCount == null ? 'Roster details' : team.rosterCount + ' player' + (team.rosterCount === 1 ? '' : 's'))); facts.append(captainFact, rosterFact);
+        facts.append(captainFact);
+        if (hasRosterCount) { const rosterFact = document.createElement('span'); rosterFact.append(node('small', '', 'Roster'), node('strong', '', team.rosterCount + ' player' + (team.rosterCount === 1 ? '' : 's'))); facts.append(rosterFact); }
         const actions = node('div', 'fd-team-card__actions');
         for (const action of relationActions(team)) {
           if (action === 'manage' || action === 'roster') actions.append(button(action === 'manage' ? 'Manage roster' : 'View roster', action, team.teamId));
