@@ -107,6 +107,7 @@ export function normalizeTeamCards(management = {}, requests = {}) {
       relationship,
     });
   }
+
   const remaining = [...directoryById.values()]
     .filter((team) => team?.teamId && !byId.has(String(team.teamId)))
     .map((team) => {
@@ -153,8 +154,6 @@ export function renderTeamCard(team = {}) {
         ? '<span class="fd-team-card__pending">Request pending</span>'
         : (team.relationship === 'directory' ? '<span class="fd-team-card__directory">League team</span>' : '')));
   const buttons = actions.map((action) => {
-    if (action === 'manage') return '<button type="button" data-team-action="manage">Manage roster</button>';
-    if (action === 'roster') return '<button type="button" data-team-action="roster">View roster</button>';
     if (action === 'message') return `<a href="/messages?team=${encodeURIComponent(team.teamId || '')}">Team messages</a>`;
     if (action === 'cancel') return '<button type="button" class="fd-team-button--quiet" data-team-action="cancel">Cancel request</button>';
     return '<button type="button" data-team-action="join">Request to join</button>';
@@ -176,105 +175,124 @@ export function renderTeamCard(team = {}) {
 }
 
 export const jflModernTeamsStyles = `
-  :root { --fd-teams-green: #075f3a; --fd-teams-green-dark: #04452a; --fd-teams-line: #d6d4ce; --fd-teams-muted: #666b67; }
+  :root { --fd-teams-green: #075f3a; --fd-teams-green-dark: #033c25; --fd-teams-line: #bdc6c0; --fd-teams-muted: #535c56; --fd-teams-ink: #151916; }
   .fd-teams, .fd-teams *, .fd-teams *::before, .fd-teams *::after { box-sizing: border-box; }
-  .fd-teams { width: min(100% - 32px, 920px); margin: 0 auto; padding: 32px 0 108px; color: #171b19; }
+  .fd-teams { width: min(100% - 32px, 920px); margin: 0 auto; padding: 32px 0 108px; color: var(--fd-teams-ink); }
   .fd-teams [hidden] { display: none !important; }
   .fd-teams__header { display: grid; gap: 10px; margin-bottom: 22px; }
   .fd-teams__eyebrow { color: var(--fd-teams-green); font-size: .8rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
   .fd-teams h1 { margin: 0; font-size: clamp(2.25rem, 8vw, 4rem); line-height: .98; letter-spacing: -.045em; }
   .fd-teams__lede { max-width: 60ch; margin: 0; color: var(--fd-teams-muted); line-height: 1.5; }
-  .fd-teams__toolbar { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--fd-teams-line); border-radius: 18px; background: #fff; }
+  .fd-teams__toolbar { display: grid; gap: 12px; padding: 16px; border: 2px solid var(--fd-teams-line); border-radius: 18px; background: #fff; }
   .fd-teams__toolbar-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
-  .fd-teams__toolbar label { display: grid; gap: 6px; color: var(--fd-teams-muted); font-size: .78rem; font-weight: 850; }
-  .fd-teams__toolbar input, .fd-teams__toolbar select { min-height: 48px; width: 100%; padding: 0 12px; border: 1px solid var(--fd-teams-line); border-radius: 11px; background: #faf9f5; color: #171b19; font: inherit; }
-  .fd-teams__filters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 6px; border: 1px solid var(--fd-teams-line); border-radius: 14px; background: #f1f0eb; }
-  .fd-teams__filters button { min-height: 44px; border: 2px solid transparent; border-radius: 10px; background: transparent; color: #315041; font: inherit; font-weight: 900; }
-  .fd-teams__filters button[aria-pressed="true"] { border-color: var(--fd-teams-green-dark); background: var(--fd-teams-green-dark); color: #fff; box-shadow: 0 2px 7px rgba(4,69,42,.3); }
+  .fd-teams__toolbar label { display: grid; gap: 6px; color: #39433d; font-size: .78rem; font-weight: 900; }
+  .fd-teams__toolbar input, .fd-teams__toolbar select { min-height: 48px; width: 100%; padding: 0 12px; border: 2px solid #aab5ad; border-radius: 11px; background: #fff; color: var(--fd-teams-ink); font: inherit; }
+  .fd-teams__filters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 6px; border: 2px solid #aeb8b1; border-radius: 14px; background: #dfe5e0; }
+  .fd-teams__filters button { min-height: 46px; border: 1px solid #8f9c93; border-radius: 10px; background: #fff; color: #173f2e; font: inherit; font-weight: 950; }
+  .fd-teams__filters button[aria-pressed="true"] { border: 3px solid #012f1d; background: var(--fd-teams-green-dark); color: #fff; box-shadow: 0 3px 8px rgba(3,60,37,.28); }
   .fd-teams__status { min-height: 22px; margin: 0; color: var(--fd-teams-muted); font-size: .86rem; }
-  .fd-teams__status[data-tone="error"] { color: #9d2118; }
-  .fd-teams__status[data-tone="ok"] { color: var(--fd-teams-green); }
-  .fd-teams__state { margin-top: 18px; padding: 28px 18px; border: 1px dashed var(--fd-teams-line); border-radius: 16px; color: var(--fd-teams-muted); text-align: center; }
-  .fd-teams__state strong { display: block; margin-bottom: 6px; color: #171b19; font-size: 1.05rem; }
-  .fd-teams__state a, .fd-teams__state button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; margin-top: 12px; padding: 0 16px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; text-decoration: none; }
-  .fd-teams__section { margin-top: 28px; }
-  .fd-teams__section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 0 2px 10px; }
-  .fd-teams__section-head h2 { margin: 0; font-size: 1.25rem; }
+  .fd-teams__status[data-tone="error"] { color: #8c1710; font-weight: 800; }
+  .fd-teams__status[data-tone="ok"] { color: #045a35; font-weight: 800; }
+  .fd-teams__state { margin-top: 18px; padding: 28px 18px; border: 2px dashed var(--fd-teams-line); border-radius: 16px; color: var(--fd-teams-muted); text-align: center; }
+  .fd-teams__state strong { display: block; margin-bottom: 6px; color: var(--fd-teams-ink); font-size: 1.05rem; }
+  .fd-teams__state a, .fd-teams__state button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; margin-top: 12px; padding: 0 16px; border: 2px solid var(--fd-teams-green-dark); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 950; text-decoration: none; }
+  .fd-teams__section { margin-top: 30px; }
+  .fd-teams__section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 0 2px 12px; }
+  .fd-teams__section-head h2 { margin: 0; font-size: 1.3rem; }
   .fd-teams__section-head span { color: var(--fd-teams-muted); font-size: .8rem; }
-  .fd-teams__cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .fd-team-card { min-width: 0; display: grid; align-content: start; gap: 14px; padding: 16px; border: 1px solid var(--fd-teams-line); border-radius: 17px; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.04); }
-  .fd-team-card--mine { border: 3px solid var(--fd-teams-green); padding: 14px; background: linear-gradient(145deg, #f0f8f3, #fff 62%); box-shadow: 0 7px 18px rgba(7,95,58,.14); }
-  .fd-team-card__head { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; align-items: center; }
-  .fd-team-card__mark { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 14px; background: #e8f2ed; color: var(--fd-teams-green); font-weight: 950; }
+  .fd-teams__cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .fd-team-card { min-width: 0; display: grid; align-content: start; gap: 18px; padding: 20px; border: 2px solid #c3cbc5; border-radius: 18px; background: #fff; box-shadow: 0 5px 16px rgba(0,0,0,.06); }
+  .fd-team-card--mine { border: 3px solid var(--fd-teams-green); padding: 19px; background: linear-gradient(145deg, #edf7f1, #fff 62%); box-shadow: 0 8px 20px rgba(7,95,58,.16); }
+  .fd-team-card__head { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .fd-team-card__mark { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; background: #dceae2; color: var(--fd-teams-green-dark); font-weight: 950; }
   .fd-team-card--mine .fd-team-card__mark { background: var(--fd-teams-green); color: #fff; }
   .fd-team-card__identity { min-width: 0; }
-  .fd-team-card__identity > div { min-height: 20px; }
-  .fd-team-card__identity h2 { margin: 1px 0 2px; overflow-wrap: anywhere; font-size: 1.12rem; }
-  .fd-team-card__identity p { margin: 0; color: var(--fd-teams-muted); font-size: .8rem; }
-  .fd-team-card__relationship, .fd-team-card__pending, .fd-team-card__directory { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: .68rem; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .fd-team-card__identity > div { min-height: 22px; }
+  .fd-team-card__identity h2 { margin: 3px 0 3px; overflow-wrap: anywhere; font-size: 1.18rem; line-height: 1.15; }
+  .fd-team-card__identity p { margin: 0; color: var(--fd-teams-muted); font-size: .84rem; }
+  .fd-team-card__relationship, .fd-team-card__pending, .fd-team-card__directory { display: inline-flex; min-height: 24px; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: .69rem; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .fd-team-card__relationship { background: var(--fd-teams-green-dark); color: #fff; }
-  .fd-team-card__pending { background: #fff1c9; color: #6b4a00; }
-  .fd-team-card__directory { background: #eceae4; color: #38433d; }
-  .fd-team-card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fd-team-card__pending { border: 1px solid #9f7500; background: #fff0b8; color: #513b00; }
+  .fd-team-card__directory { border: 1px solid #aab1ac; background: #e8ece9; color: #29362f; }
+  .fd-team-card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .fd-team-card__facts--single { grid-template-columns: 1fr; }
-  .fd-team-card__facts span { min-width: 0; padding: 12px 14px; border-radius: 11px; background: #f5f4ef; }
-  .fd-team-card__facts small { display: block; color: var(--fd-teams-muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; }
-  .fd-team-card__facts strong { display: block; margin-top: 3px; overflow-wrap: anywhere; font-size: .88rem; }
-  .fd-team-card__details { border: 0; border-top: 1px solid #eceae4; border-radius: 0; background: transparent; }
-  .fd-team-card__details summary { min-height: 48px; display: flex; align-items: center; padding: 0 2px; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
-  .fd-team-card__roster { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-  .fd-team-card__roster li { min-height: 46px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 10px 2px; border-top: 1px solid #eceae4; }
-  .fd-team-card__roster-name { min-width: 0; overflow-wrap: anywhere; }
-  .fd-team-card__roster strong { color: var(--fd-teams-muted); font-size: .72rem; text-transform: uppercase; }
+  .fd-team-card__facts span { min-width: 0; padding: 13px 15px; border: 1px solid #c3cbc5; border-radius: 12px; background: #edf1ee; }
+  .fd-team-card__facts small { display: block; color: #4b554f; font-size: .69rem; font-weight: 950; text-transform: uppercase; }
+  .fd-team-card__facts strong { display: block; margin-top: 4px; overflow-wrap: anywhere; font-size: .92rem; }
+  .fd-team-card__details { overflow: hidden; border: 2px solid #aebbb2; border-radius: 14px; background: #f5f8f5; }
+  .fd-team-card__details summary { min-height: 50px; display: flex; align-items: center; padding: 0 12px; background: #e2ece6; color: #034a2c; font-weight: 950; cursor: pointer; }
+  .fd-team-card__details[open] summary { border-bottom: 1px solid #b8c4bc; }
+  .fd-team-card__roster { display: grid; gap: 0; margin: 0; padding: 0 14px; list-style: none; background: #fff; }
+  .fd-team-card__roster li { min-height: 52px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px 12px; padding: 13px 0; border-top: 1px solid #d5dcd7; }
+  .fd-team-card__roster li:first-child { border-top: 0; }
+  .fd-team-card__roster-name { min-width: 0; overflow-wrap: anywhere; font-weight: 750; }
+  .fd-team-card__roster strong { color: #4b554f; font-size: .72rem; text-transform: uppercase; }
   .fd-team-card__roster-action { min-width: 0; }
-  .fd-team-card__empty { margin: 0; padding: 10px 2px; color: var(--fd-teams-muted); font-size: .82rem; }
-  .fd-team-card__captain-tools { display: grid; gap: 12px; padding-top: 14px; }
+  .fd-team-card__empty { margin: 0; padding: 13px 14px; color: var(--fd-teams-muted); font-size: .84rem; line-height: 1.4; }
+  .fd-team-card__captain-tools { display: grid; gap: 16px; padding: 16px 14px 14px; border-top: 2px solid #cad2cc; background: #eef3ef; }
+  .fd-team-card__work { display: grid; gap: 12px; }
+  .fd-team-card__work-section { overflow: hidden; border: 1px solid #b9c5bd; border-radius: 12px; background: #fff; }
+  .fd-team-card__work-title { margin: 0; padding: 10px 12px; border-bottom: 1px solid #cbd3cd; background: #dfe9e3; color: #173d2d; font-size: .74rem; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
+  .fd-team-card__work-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center; min-height: 54px; padding: 10px 12px; border-top: 1px solid #e0e5e1; }
+  .fd-team-card__work-row:first-of-type { border-top: 0; }
+  .fd-team-card__work-copy { min-width: 0; }
+  .fd-team-card__work-copy strong { display: block; overflow-wrap: anywhere; font-size: .9rem; }
+  .fd-team-card__work-copy small { display: block; margin-top: 2px; color: var(--fd-teams-muted); font-size: .74rem; }
+  .fd-team-card__work-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+  .fd-team-card__invite-block { display: grid; gap: 8px; }
+  .fd-team-card__invite-label { color: #173d2d; font-size: .76rem; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .fd-team-card__invite { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-  .fd-team-card__invite select { min-height: 44px; min-width: 0; padding: 0 12px; border: 1px solid var(--fd-teams-line); border-radius: 10px; background: #fff; font: inherit; }
+  .fd-team-card__invite select { min-height: 46px; min-width: 0; padding: 0 12px; border: 2px solid #a7b2aa; border-radius: 10px; background: #fff; color: var(--fd-teams-ink); font: inherit; }
   .fd-team-card__actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .fd-team-card__actions button, .fd-team-card__actions a, .fd-team-card__invite button, .fd-team-card__roster-action, .fd-team-request button, .fd-team-invitation button, .fd-team-formation button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 7px 13px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; text-decoration: none; }
-  .fd-team-card__actions .fd-team-button--quiet, .fd-team-card__roster-action, .fd-team-request button:last-child, .fd-team-invitation button:last-child { border-color: var(--fd-teams-line); background: #fff; color: #38433d; }
-  .fd-team-card__invite button:disabled, .fd-team-card__invite select:disabled { cursor: not-allowed; opacity: .62; }
-  .fd-teams__inbox { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
-  .fd-teams__panel { padding: 16px; border: 1px solid var(--fd-teams-line); border-radius: 17px; background: #fff; }
+  .fd-team-card__actions button, .fd-team-card__actions a, .fd-team-card__invite button, .fd-team-card__roster-action, .fd-team-card__work-actions button, .fd-team-invitation button, .fd-team-formation button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 7px 13px; border: 2px solid var(--fd-teams-green-dark); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 950; text-decoration: none; }
+  .fd-team-card__actions .fd-team-button--quiet, .fd-team-card__roster-action, .fd-team-card__work-actions .fd-team-button--quiet, .fd-team-invitation button:last-child { border-color: #89968d; background: #fff; color: #17412f; }
+  .fd-team-card__invite button:disabled, .fd-team-card__invite select:disabled { cursor: not-allowed; opacity: .6; }
+  .fd-teams__inbox { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 28px; }
+  .fd-teams__panel { padding: 17px; border: 2px solid var(--fd-teams-line); border-radius: 17px; background: #fff; }
   .fd-teams__panel h2 { margin: 0 0 10px; font-size: 1rem; }
-  .fd-team-request, .fd-team-invitation, .fd-team-formation { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid #eceae4; }
-  .fd-team-request:first-of-type, .fd-team-invitation:first-of-type, .fd-team-formation:first-of-type { border-top: 0; }
-  .fd-team-request p, .fd-team-invitation p, .fd-team-formation p { margin: 0; color: var(--fd-teams-muted); font-size: .82rem; }
-  .fd-team-request div, .fd-team-invitation div { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fd-team-invitation, .fd-team-formation { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid #d9dfdb; }
+  .fd-team-invitation:first-of-type, .fd-team-formation:first-of-type { border-top: 0; }
+  .fd-team-invitation p, .fd-team-formation p { margin: 0; color: var(--fd-teams-muted); font-size: .82rem; }
+  .fd-team-invitation div { display: flex; flex-wrap: wrap; gap: 8px; }
   .fd-teams__formation { margin-top: 28px; }
-  .fd-teams__formation > summary { min-height: 52px; display: flex; align-items: center; padding: 0 16px; border: 1px solid var(--fd-teams-line); border-radius: 14px; background: #fff; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
+  .fd-teams__formation > summary { min-height: 52px; display: flex; align-items: center; padding: 0 16px; border: 2px solid var(--fd-teams-line); border-radius: 14px; background: #fff; color: var(--fd-teams-green); font-weight: 950; cursor: pointer; }
   .fd-teams__formation[open] > summary { border-radius: 14px 14px 0 0; }
-  .fd-teams__formation-body { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--fd-teams-line); border-top: 0; border-radius: 0 0 14px 14px; background: #fff; }
+  .fd-teams__formation-body { display: grid; gap: 14px; padding: 16px; border: 2px solid var(--fd-teams-line); border-top: 0; border-radius: 0 0 14px 14px; background: #fff; }
   .fd-teams__formation-copy { margin: 0; color: var(--fd-teams-muted); font-size: .84rem; line-height: 1.45; }
   .fd-teams__formation-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
   .fd-teams__formation-form label { display: grid; gap: 6px; color: var(--fd-teams-muted); font-size: .78rem; font-weight: 850; }
-  .fd-teams__formation-form select, .fd-teams__formation-form input { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--fd-teams-line); border-radius: 10px; background: #faf9f5; font: inherit; }
-  .fd-teams__formation-form button { min-height: 48px; padding: 0 16px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; }
+  .fd-teams__formation-form select, .fd-teams__formation-form input { width: 100%; min-height: 48px; padding: 0 12px; border: 2px solid #aab5ad; border-radius: 10px; background: #fff; font: inherit; }
+  .fd-teams__formation-form button { min-height: 48px; padding: 0 16px; border: 2px solid var(--fd-teams-green-dark); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 950; }
   .fd-teams__formation-form [data-team-formation-help] { grid-column: 1 / -1; }
   .fd-teams__legacy { margin: 22px 0 0; color: var(--fd-teams-muted); font-size: .82rem; }
   .fd-teams__legacy a { color: var(--fd-teams-green); }
-  .fd-teams button:focus-visible, .fd-teams a:focus-visible, .fd-teams input:focus-visible, .fd-teams select:focus-visible, .fd-teams summary:focus-visible { outline: 3px solid #1f7a52; outline-offset: 3px; }
+  .fd-teams button:focus-visible, .fd-teams a:focus-visible, .fd-teams input:focus-visible, .fd-teams select:focus-visible, .fd-teams summary:focus-visible { outline: 3px solid #00693d; outline-offset: 3px; }
   @media (max-width: 720px) {
-    .fd-teams { width: min(100% - 40px, 920px); padding: 24px 0 calc(172px + env(safe-area-inset-bottom)); }
-    .fd-teams__toolbar-top, .fd-teams__cards, .fd-teams__inbox, .fd-teams__formation-form { grid-template-columns: 1fr; }
-    .fd-team-card { gap: 18px; padding: 18px; }
-    .fd-team-card--mine { padding: 16px; }
+    .fd-teams { width: min(100% - 24px, 920px); padding: 24px 0 calc(172px + env(safe-area-inset-bottom)); }
+    .fd-teams__toolbar-top, .fd-teams__cards, .fd-teams__formation-form { grid-template-columns: 1fr; }
+    .fd-team-card { gap: 20px; padding: 21px; }
+    .fd-team-card--mine { padding: 20px; }
     .fd-team-card__actions { display: grid; grid-template-columns: 1fr; }
     .fd-team-card__actions > * { width: 100%; }
   }
   @media (max-width: 520px) {
+    .fd-teams__section-head { display: grid; gap: 3px; }
     .fd-team-card__invite { grid-template-columns: 1fr; }
     .fd-team-card__invite button { width: 100%; }
-    .fd-team-card__roster-action { width: auto; min-height: 38px; padding: 5px 10px; justify-self: end; }
+    .fd-team-card__roster-action { width: auto; min-height: 40px; padding: 5px 11px; justify-self: end; }
+    .fd-team-card__work-row { grid-template-columns: 1fr; }
+    .fd-team-card__work-actions { justify-content: stretch; }
+    .fd-team-card__work-actions button { flex: 1 1 auto; }
   }
-  @media (max-width: 380px) {
-    .fd-team-card__facts, .fd-teams__filters, .fd-team-card__invite { grid-template-columns: 1fr; }
+  @media (max-width: 390px) {
+    .fd-team-card__facts { grid-template-columns: 1fr; }
     .fd-team-card__roster li { grid-template-columns: minmax(0, 1fr) auto; }
     .fd-team-card__roster-action { grid-column: 1 / -1; justify-self: stretch; width: 100%; }
+    .fd-teams__filters { gap: 5px; padding: 5px; }
+    .fd-teams__filters button { padding: 4px; font-size: .76rem; }
   }
   @media (prefers-reduced-motion: reduce) { .fd-teams * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
-  @media (forced-colors: active) { .fd-team-card, .fd-teams__toolbar, .fd-teams__filters { border: 1px solid CanvasText; } .fd-team-card--mine, .fd-teams__filters button[aria-pressed="true"] { border: 3px solid Highlight; } }
+  @media (forced-colors: active) { .fd-team-card, .fd-teams__toolbar, .fd-teams__filters, .fd-team-card__details { border: 1px solid CanvasText; } .fd-team-card--mine, .fd-teams__filters button[aria-pressed="true"] { border: 3px solid Highlight; } }
 `;
 
 function teamsClientScript() {
@@ -291,17 +309,20 @@ function teamsClientScript() {
       const searchInput = document.querySelector('[data-team-search]');
       const filters = Array.from(document.querySelectorAll('[data-team-filter]'));
       const invitationsEl = document.querySelector('[data-team-invitations]');
-      const requestsEl = document.querySelector('[data-captain-requests]');
       const inboxEl = document.querySelector('[data-teams-inbox]');
       const formationForm = document.querySelector('[data-team-formation-form]');
       const seasonSelect = document.querySelector('[data-team-season]');
       const teamNameInput = document.querySelector('[data-team-name]');
       const formationItems = document.querySelector('[data-team-formation-items]');
+      const filterKey = 'fd.teams.filter';
+      const openTeamKey = 'fd.teams.openTeam';
       let management = {};
       let requestData = {};
       let cards = [];
       let registrations = [];
-      let filter = 'all';
+      let filter = sessionStorage.getItem(filterKey) || 'all';
+      let openTeamId = sessionStorage.getItem(openTeamKey) || '';
+      if (!['all', 'mine', 'open'].includes(filter)) filter = 'all';
 
       const token = () => sessionStorage.getItem('fd.accessToken') || '';
       const clean = (value) => String(value == null ? '' : value).trim();
@@ -329,6 +350,9 @@ function teamsClientScript() {
         if (team.relationship === 'none') return ['join'];
         return [];
       }
+      function syncFilterControls() {
+        filters.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.teamFilter === filter)));
+      }
       function normalize() {
         const result = [];
         const seen = new Set();
@@ -353,29 +377,88 @@ function teamsClientScript() {
       }
       function node(tag, className, text) { const el = document.createElement(tag); if (className) el.className = className; if (text != null) el.textContent = text; return el; }
       function button(label, action, id, quiet = false) { const el = node('button', quiet ? 'fd-team-button--quiet' : '', label); el.type = 'button'; el.dataset.teamAction = action; if (id) el.dataset.actionId = id; return el; }
+      function playerName(playerId, fallback = 'Player') {
+        const player = (management.players || []).find((item) => clean(item.id) === clean(playerId));
+        return player && player.display_name || fallback;
+      }
+      function workSection(title) {
+        const section = node('section', 'fd-team-card__work-section');
+        section.append(node('h3', 'fd-team-card__work-title', title));
+        return section;
+      }
+      function workRow(name, meta) {
+        const row = node('div', 'fd-team-card__work-row');
+        const copy = node('div', 'fd-team-card__work-copy');
+        copy.append(node('strong', '', name), node('small', '', meta));
+        row.append(copy);
+        return row;
+      }
       function renderRoster(team, target) {
         target.replaceChildren();
         const roster = Array.isArray(team.roster) ? team.roster : [];
-        if (!roster.length) { target.append(node('p', 'fd-team-card__empty', 'Roster details are available to team members and captains.')); return; }
-        const list = node('ul', 'fd-team-card__roster');
-        for (const member of roster) {
-          const item = document.createElement('li'); item.append(node('span', 'fd-team-card__roster-name', member.displayName || 'Player'), node('strong', '', member.role === 'captain' ? 'Captain' : 'Player'));
-          if (team.relationship === 'captain' && member.role !== 'captain' && member.membershipId) { const remove = button('Remove', 'remove', member.membershipId, true); remove.classList.add('fd-team-card__roster-action'); item.append(remove); }
-          list.append(item);
+        if (roster.length) {
+          const list = node('ul', 'fd-team-card__roster');
+          for (const member of roster) {
+            const item = document.createElement('li');
+            item.append(node('span', 'fd-team-card__roster-name', member.displayName || 'Player'), node('strong', '', member.role === 'captain' ? 'Captain' : 'Player'));
+            if (team.relationship === 'captain' && member.role !== 'captain' && member.membershipId) {
+              const remove = button('Remove', 'remove', member.membershipId, true);
+              remove.classList.add('fd-team-card__roster-action');
+              item.append(remove);
+            }
+            list.append(item);
+          }
+          target.append(list);
+        } else {
+          target.append(node('p', 'fd-team-card__empty', 'No rostered players yet.'));
         }
-        target.append(list);
-        if (team.relationship === 'captain') {
-          const tools = node('div', 'fd-team-card__captain-tools');
-          const invite = node('div', 'fd-team-card__invite');
-          const select = document.createElement('select'); select.setAttribute('aria-label', 'Player to invite'); select.dataset.inviteSelect = team.teamId;
-          const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Invite a player…'; select.append(placeholder);
-          const excluded = new Set([...roster, ...(team.pendingInvitations || [])].map((entry) => clean(entry.playerId)).filter(Boolean));
-          const candidates = (management.players || []).filter((player) => !excluded.has(clean(player.id)) && !(player.activeSeasonIds || []).map(clean).includes(clean(team.seasonId)));
-          for (const player of candidates) { const option = document.createElement('option'); option.value = player.id; option.textContent = player.display_name; select.append(option); }
-          const send = button('Send invite', 'invite', team.teamId);
-          if (!candidates.length) { placeholder.textContent = 'No eligible players available'; select.disabled = true; send.disabled = true; }
-          invite.append(select, send); tools.append(invite); target.append(tools);
+
+        if (team.relationship !== 'captain') return;
+        const tools = node('div', 'fd-team-card__captain-tools');
+        const work = node('div', 'fd-team-card__work');
+        const pendingInvites = Array.isArray(team.pendingInvitations) ? team.pendingInvitations : [];
+        const inviteSection = workSection('Invited players');
+        if (pendingInvites.length) {
+          for (const invitation of pendingInvites) {
+            const row = workRow(invitation.displayName || playerName(invitation.playerId), 'Invite pending');
+            const actions = node('div', 'fd-team-card__work-actions');
+            actions.append(button('Cancel invite', 'cancel-invite', invitation.invitationId, true));
+            row.append(actions); inviteSection.append(row);
+          }
+        } else {
+          inviteSection.append(node('p', 'fd-team-card__empty', 'No pending invites.'));
         }
+        work.append(inviteSection);
+
+        const captainRequests = (requestData.captain_requests || []).filter((request) => {
+          if (request.teamId) return clean(request.teamId) === clean(team.teamId);
+          return clean(request.teamName) === clean(team.teamName);
+        });
+        const requestSection = workSection('Join requests');
+        if (captainRequests.length) {
+          for (const request of captainRequests) {
+            const row = workRow(request.displayName || 'Player', 'Wants to join this team');
+            const actions = node('div', 'fd-team-card__work-actions');
+            actions.append(button('Approve', 'approve-request', request.requestId), button('Decline', 'decline-request', request.requestId, true));
+            row.append(actions); requestSection.append(row);
+          }
+        } else {
+          requestSection.append(node('p', 'fd-team-card__empty', 'No pending join requests.'));
+        }
+        work.append(requestSection);
+        tools.append(work);
+
+        const inviteBlock = node('div', 'fd-team-card__invite-block');
+        inviteBlock.append(node('div', 'fd-team-card__invite-label', 'Invite another player'));
+        const invite = node('div', 'fd-team-card__invite');
+        const select = document.createElement('select'); select.setAttribute('aria-label', 'Player to invite'); select.dataset.inviteSelect = team.teamId;
+        const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Invite a player…'; select.append(placeholder);
+        const excluded = new Set([...roster, ...pendingInvites].map((entry) => clean(entry.playerId)).filter(Boolean));
+        const candidates = (management.players || []).filter((player) => !excluded.has(clean(player.id)) && !(player.activeSeasonIds || []).map(clean).includes(clean(team.seasonId)));
+        for (const player of candidates) { const option = document.createElement('option'); option.value = player.id; option.textContent = player.display_name; select.append(option); }
+        const send = button('Send invite', 'invite', team.teamId);
+        if (!candidates.length) { placeholder.textContent = 'No eligible players available'; select.disabled = true; send.disabled = true; }
+        invite.append(select, send); inviteBlock.append(invite); tools.append(inviteBlock); target.append(tools);
       }
       function renderCard(team) {
         const article = node('article', 'fd-team-card' + (team.isMine ? ' fd-team-card--mine' : ''));
@@ -393,13 +476,22 @@ function teamsClientScript() {
         if (hasRosterCount) { const rosterFact = document.createElement('span'); rosterFact.append(node('small', '', 'Roster'), node('strong', '', team.rosterCount + ' player' + (team.rosterCount === 1 ? '' : 's'))); facts.append(rosterFact); }
         const actions = node('div', 'fd-team-card__actions');
         for (const action of relationActions(team)) {
-          if (action === 'manage' || action === 'roster') actions.append(button(action === 'manage' ? 'Manage roster' : 'View roster', action, team.teamId));
-          else if (action === 'message') { const link = node('a', '', 'Team messages'); link.href = '/messages?team=' + encodeURIComponent(team.teamId); actions.append(link); }
+          if (action === 'message') { const link = node('a', '', 'Team messages'); link.href = '/messages?team=' + encodeURIComponent(team.teamId); actions.append(link); }
           else if (action === 'cancel') actions.append(button('Cancel request', 'cancel', team.pendingRequestId, true));
           else actions.append(button('Request to join', 'join', team.teamId));
         }
         article.append(head, facts);
-        if (team.relationship === 'captain' || team.relationship === 'member') { const details = node('details', 'fd-team-card__details'); const summary = document.createElement('summary'); summary.textContent = team.relationship === 'captain' ? 'Manage roster' : 'View roster'; const roster = document.createElement('div'); renderRoster(team, roster); details.append(summary, roster); article.append(details); }
+        if (team.relationship === 'captain' || team.relationship === 'member') {
+          const details = node('details', 'fd-team-card__details');
+          if (clean(openTeamId) === clean(team.teamId)) details.open = true;
+          const summary = document.createElement('summary'); summary.textContent = team.relationship === 'captain' ? 'Manage roster' : 'View roster';
+          const roster = document.createElement('div'); renderRoster(team, roster); details.append(summary, roster);
+          details.addEventListener('toggle', () => {
+            if (details.open) { openTeamId = team.teamId; sessionStorage.setItem(openTeamKey, openTeamId); }
+            else if (clean(openTeamId) === clean(team.teamId)) { openTeamId = ''; sessionStorage.removeItem(openTeamKey); }
+          });
+          article.append(details);
+        }
         article.append(actions); return article;
       }
       function matchesFilter(team) {
@@ -410,6 +502,7 @@ function teamsClientScript() {
         return true;
       }
       function renderCards() {
+        syncFilterControls();
         mineList.replaceChildren(); directoryList.replaceChildren();
         const visible = cards.filter(matchesFilter); const mine = visible.filter((team) => team.isMine); const others = visible.filter((team) => !team.isMine);
         for (const team of mine) mineList.append(renderCard(team));
@@ -417,16 +510,21 @@ function teamsClientScript() {
         mineSection.hidden = mine.length === 0; directorySection.hidden = others.length === 0; directoryEmpty.hidden = visible.length > 0;
       }
       function renderInbox() {
-        invitationsEl.replaceChildren(); requestsEl.replaceChildren();
-        const invitations = management.invitations || []; const captainRequests = requestData.captain_requests || [];
-        for (const invite of invitations) { const row = node('div', 'fd-team-invitation'); row.append(node('strong', '', invite.teamName || 'Team'), node('p', '', (invite.seasonName || 'Season') + ' · Invitation')); const actions = document.createElement('div'); actions.append(button('Accept', 'accept-invite', invite.invitationId), button('Decline', 'decline-invite', invite.invitationId, true)); row.append(actions); invitationsEl.append(row); }
-        for (const request of captainRequests) { const row = node('div', 'fd-team-request'); row.append(node('strong', '', request.displayName || 'Player'), node('p', '', 'Wants to join ' + (request.teamName || 'your team'))); const actions = document.createElement('div'); actions.append(button('Approve', 'approve-request', request.requestId), button('Decline', 'decline-request', request.requestId, true)); row.append(actions); requestsEl.append(row); }
+        invitationsEl.replaceChildren();
+        const invitations = management.invitations || [];
+        for (const invite of invitations) {
+          const row = node('div', 'fd-team-invitation');
+          row.append(node('strong', '', invite.teamName || 'Team'), node('p', '', (invite.seasonName || 'Season') + ' · Invitation'));
+          const actions = document.createElement('div'); actions.append(button('Accept', 'accept-invite', invite.invitationId), button('Decline', 'decline-invite', invite.invitationId, true)); row.append(actions); invitationsEl.append(row);
+        }
         if (!invitations.length) invitationsEl.append(node('p', 'fd-team-card__empty', 'No open invitations.'));
-        if (!captainRequests.length) requestsEl.append(node('p', 'fd-team-card__empty', 'No join requests need a captain response.'));
-        inboxEl.hidden = invitations.length === 0 && captainRequests.length === 0;
+        inboxEl.hidden = invitations.length === 0;
       }
       function renderSeasons(seasons) {
-        seasonSelect.replaceChildren(); const registrationSeasons = (seasons || []).filter((season) => season.status === 'registration'); const unavailable = new Set(registrations.filter((registration) => (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status))).map((registration) => clean(registration.seasonId))); const open = registrationSeasons.filter((season) => !unavailable.has(clean(season.id)));
+        seasonSelect.replaceChildren();
+        const registrationSeasons = (seasons || []).filter((season) => season.status === 'registration');
+        const unavailable = new Set(registrations.filter((registration) => (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status))).map((registration) => clean(registration.seasonId)));
+        const open = registrationSeasons.filter((season) => !unavailable.has(clean(season.id)));
         for (const season of open) { const option = document.createElement('option'); option.value = season.id; option.textContent = season.name + ' · New team application'; seasonSelect.append(option); }
         if (!open.length) { const option = document.createElement('option'); option.value = ''; option.textContent = registrationSeasons.length ? 'Application already submitted' : 'No registration season is open'; seasonSelect.append(option); }
         formationForm.querySelector('[data-team-formation-help]').textContent = !open.length && registrationSeasons.length ? 'You already have a team application for the open registration season.' : '';
@@ -462,9 +560,11 @@ function teamsClientScript() {
         setStatus('Loading teams…'); stateEl.hidden = false; stateEl.textContent = 'Loading teams…';
         try {
           const [teamBody, requestBody, seasonBody] = await Promise.all([api('/api/me/teams'), api('/api/me/team-membership-requests'), api('/api/seasons')]);
-          const seasons = seasonBody.seasons || []; const registrationSeasons = seasons.filter((season) => season.status === 'registration'); registrations = await Promise.all(registrationSeasons.map(async (season) => { const body = await api('/api/seasons/' + encodeURIComponent(season.id) + '/team-registration/me'); return { ...(body.registration || {}), seasonId: season.id }; }));
+          const seasons = seasonBody.seasons || [];
+          const registrationSeasons = seasons.filter((season) => season.status === 'registration');
+          registrations = await Promise.all(registrationSeasons.map(async (season) => { const body = await api('/api/seasons/' + encodeURIComponent(season.id) + '/team-registration/me'); return { ...(body.registration || {}), seasonId: season.id }; }));
           management = teamBody.teamManagement || {}; requestData = requestBody.requests || {}; requestData.league_teams = await loadLeagueTeams(seasons); cards = normalize();
-          renderCards(); renderInbox(); renderSeasons(seasonBody.seasons || []); renderFormation(); contentEl.hidden = false; stateEl.hidden = true; setStatus(cards.length ? cards.length + ' teams available' : 'No teams available', 'ok');
+          renderCards(); renderInbox(); renderSeasons(seasons); renderFormation(); contentEl.hidden = false; stateEl.hidden = true; setStatus(cards.length ? cards.length + ' teams available' : 'No teams available', 'ok');
         } catch (error) {
           contentEl.hidden = true; stateEl.hidden = false; stateEl.replaceChildren(node('strong', '', error.status === 401 ? 'Your sign-in expired' : 'Could not load teams'), node('span', '', error.message || 'Try again.')); const retry = button(error.status === 401 ? 'Sign in again' : 'Try again', error.status === 401 ? 'signin' : 'retry'); stateEl.append(retry); setStatus(error.message || 'Could not load teams', 'error');
         }
@@ -473,19 +573,39 @@ function teamsClientScript() {
         if (action === 'join') await api('/api/teams/' + encodeURIComponent(id) + '/membership-request', { method: 'POST', body: '{}' });
         if (action === 'cancel') await api('/api/team-membership-requests/' + encodeURIComponent(id) + '/cancel', { method: 'POST', body: '{}' });
         if (action === 'accept-invite' || action === 'decline-invite') await api('/api/team-invitations/' + encodeURIComponent(id) + '/respond', { method: 'POST', body: JSON.stringify({ response: action === 'accept-invite' ? 'accepted' : 'declined' }) });
+        if (action === 'cancel-invite') await api('/api/team-invitations/' + encodeURIComponent(id) + '/cancel', { method: 'POST', body: '{}' });
         if (action === 'approve-request' || action === 'decline-request') await api('/api/team-membership-requests/' + encodeURIComponent(id) + '/respond', { method: 'POST', body: JSON.stringify({ response: action === 'approve-request' ? 'approved' : 'declined' }) });
         if (action === 'remove') await api('/api/team-memberships/' + encodeURIComponent(id) + '/remove', { method: 'POST', body: '{}' });
         if (action === 'invite') { const select = document.querySelector('[data-invite-select="' + CSS.escape(id) + '"]'); const playerId = select && select.value; if (!playerId) throw new Error('Choose a player to invite.'); await api('/api/teams/' + encodeURIComponent(id) + '/invitations', { method: 'POST', body: JSON.stringify({ playerId }) }); }
       }
-      filters.forEach((control) => control.addEventListener('click', () => { filter = control.dataset.teamFilter; filters.forEach((item) => item.setAttribute('aria-pressed', String(item === control))); renderCards(); }));
+      filters.forEach((control) => control.addEventListener('click', () => {
+        filter = control.dataset.teamFilter;
+        sessionStorage.setItem(filterKey, filter);
+        syncFilterControls();
+        renderCards();
+      }));
       searchInput.addEventListener('input', renderCards);
       document.addEventListener('click', async (event) => {
-        const control = event.target.closest('[data-team-action]'); if (!control) return; const action = control.dataset.teamAction; const id = control.dataset.actionId || '';
-        if (action === 'manage' || action === 'roster') { const details = control.closest('[data-team-card]').querySelector('details'); details.open = true; details.scrollIntoView({ block: 'nearest' }); return; }
-        if (action === 'signin') { location.assign('/profile'); return; } if (action === 'retry') { load(); return; }
-        control.disabled = true; setStatus('Updating team…'); try { await mutate(action, id); await load(); setStatus('Team updated', 'ok'); } catch (error) { control.disabled = false; setStatus(friendlyError(error.message), 'error'); }
+        const control = event.target.closest('[data-team-action]'); if (!control) return;
+        const action = control.dataset.teamAction; const id = control.dataset.actionId || '';
+        if (action === 'signin') { location.assign('/profile'); return; }
+        if (action === 'retry') { load(); return; }
+        control.disabled = true; setStatus('Updating team…');
+        try { await mutate(action, id); await load(); setStatus('Team updated', 'ok'); }
+        catch (error) { control.disabled = false; setStatus(friendlyError(error.message), 'error'); }
       });
-      formationForm.addEventListener('submit', async (event) => { event.preventDefault(); const seasonId = seasonSelect.value; const teamName = clean(teamNameInput.value); const existing = registrations.find((registration) => clean(registration.seasonId) === seasonId && (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status))); if (existing) { setStatus('You already have a team application for this season.', 'error'); return; } if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; } const submit = formationForm.querySelector('button'); submit.disabled = true; try { await api('/api/seasons/' + encodeURIComponent(seasonId) + '/team-applications', { method: 'POST', body: JSON.stringify({ teamName }) }); teamNameInput.value = ''; await load(); setStatus('New team application submitted', 'ok'); } catch (error) { setStatus(friendlyError(error.message), 'error'); } finally { submit.disabled = seasonSelect.disabled; } });
+      formationForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const seasonId = seasonSelect.value; const teamName = clean(teamNameInput.value);
+        const existing = registrations.find((registration) => clean(registration.seasonId) === seasonId && (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status)));
+        if (existing) { setStatus('You already have a team application for this season.', 'error'); return; }
+        if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; }
+        const submit = formationForm.querySelector('button'); submit.disabled = true;
+        try { await api('/api/seasons/' + encodeURIComponent(seasonId) + '/team-applications', { method: 'POST', body: JSON.stringify({ teamName }) }); teamNameInput.value = ''; await load(); setStatus('New team application submitted', 'ok'); }
+        catch (error) { setStatus(friendlyError(error.message), 'error'); }
+        finally { submit.disabled = seasonSelect.disabled; }
+      });
+      syncFilterControls();
       load();
     })();
   `;
@@ -517,7 +637,7 @@ function teamsDocument() {
       <section class="fd-teams__section" data-my-teams-section hidden><div class="fd-teams__section-head"><h2>My teams</h2><span>Current memberships first</span></div><div class="fd-teams__cards" data-my-team-list></div></section>
       <section class="fd-teams__section" data-team-directory-section hidden><div class="fd-teams__section-head"><h2>League teams</h2><span>Join actions reflect your current season membership</span></div><div class="fd-teams__cards" data-team-directory></div></section>
       <div class="fd-teams__state" data-team-directory-empty hidden><strong>No matching teams</strong>Try another name or filter.</div>
-      <section class="fd-teams__inbox" data-teams-inbox hidden><article class="fd-teams__panel"><h2>My invitations</h2><div data-team-invitations></div></article><article class="fd-teams__panel"><h2>Requests for teams I captain</h2><div data-captain-requests></div></article></section>
+      <section class="fd-teams__inbox" data-teams-inbox hidden><article class="fd-teams__panel"><h2>My invitations</h2><div data-team-invitations></div></article></section>
       <details class="fd-teams__formation"><summary>Start or return a team</summary><div class="fd-teams__formation-body"><p class="fd-teams__formation-copy">A new team application is different from a returning-team reservation. Existing reservations stay labeled below so you know which path you are using.</p><form class="fd-teams__formation-form" data-team-formation-form><label>Registration season<select data-team-season></select></label><label>New team name<input data-team-name maxlength="80" autocomplete="organization" /></label><button type="submit">Apply for a team slot</button><p class="fd-teams__formation-copy" data-team-formation-help role="status"></p></form><div data-team-formation-items></div></div></details>
     </div>
     <p class="fd-teams__legacy">JFL preview · <a href="/teams?ui=legacy">View the classic Teams body</a></p>
