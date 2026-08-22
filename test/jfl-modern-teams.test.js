@@ -65,6 +65,9 @@ test('active-season directory teams remain discoverable when no team is joinable
   assert.deepEqual(visibleTeamActions(cards[1]), []);
   const directoryHtml = renderTeamCard(cards[1]);
   assert.match(directoryHtml, /Casey Captain/);
+  assert.match(directoryHtml, /fd-team-card__facts--single/);
+  assert.doesNotMatch(directoryHtml, />Roster</);
+  assert.doesNotMatch(directoryHtml, /Roster details/);
   assert.doesNotMatch(directoryHtml, /Shown after joining|Request to join|Manage roster|Roster & captain|<details/);
 });
 
@@ -73,7 +76,9 @@ test('compact cards show membership, captain, roster, and only authorized action
   assert.match(captainHtml, /My team/);
   assert.match(captainHtml, />Captain</);
   assert.match(captainHtml, /Alex Captain/);
+  assert.match(captainHtml, />Roster</);
   assert.match(captainHtml, /2 players/);
+  assert.doesNotMatch(captainHtml, /fd-team-card__facts--single/);
   assert.match(captainHtml, />Manage roster</);
   assert.equal((captainHtml.match(/Manage roster/g) || []).length, 1);
   assert.doesNotMatch(captainHtml, />Request to join</);
