@@ -57,6 +57,24 @@ export function renderIndividualStandingCard(row = {}, { tied = false } = {}) {
   </article>`;
 }
 
+export function standingsSeasonCandidates(
+  seasons,
+  selectedId,
+  { allowFallback = false, explicitId = '' } = {},
+) {
+  const list = Array.isArray(seasons) ? seasons : [];
+  if (explicitId) {
+    const explicit = list.find((season) => season.id === explicitId);
+    return explicit ? [explicit] : [];
+  }
+
+  const selected = list.find((season) => season.id === selectedId);
+  if (!selected) return [];
+  return allowFallback
+    ? [selected, ...list.filter((season) => season.id !== selected.id)]
+    : [selected];
+}
+
 export const jflModernStandingsStyles = `
   :root { --fd-standings-green: #075f3a; --fd-standings-line: #d9d7d0; --fd-standings-muted: #676c68; }
   .fd-standings, .fd-standings *, .fd-standings *::before, .fd-standings *::after { box-sizing: border-box; }
@@ -144,6 +162,7 @@ function standingsClientScript() {
       const rememberedSeasonId = localStorage.getItem('fd.standingsSeasonId') || '';
       const requestedView = query.get('view') || localStorage.getItem('fd.standingsView') || 'teams';
       let seasons = [];
+      const standingsSeasonCandidates = ${standingsSeasonCandidates.toString()};
 
       const esc = (value) => String(value == null ? '' : value)
         .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -260,29 +279,37 @@ function standingsClientScript() {
         return true;
       }
 
-      async function loadStandings() {
-        const seasonId = String(seasonInput.value || '').trim();
-        if (!seasonId) throw new Error('Choose a season first.');
-        localStorage.setItem('fd.standingsSeasonId', seasonId);
+      async function loadStandings({ allowFallback = false, explicitId = '' } = {}) {
+        const selectedId = String(seasonInput.value || '').trim();
+        const candidates = standingsSeasonCandidates(seasons, selectedId, { allowFallback, explicitId });
+        if (!candidates.length) throw new Error('Choose a season first.');
         setStatus('Loading standings…');
         showState('');
-        const encoded = encodeURIComponent(seasonId);
-        const responses = await Promise.all([
-          fetch('/api/seasons/' + encoded + '/team-standings'),
-          fetch('/api/seasons/' + encoded + '/individual-standings'),
-        ]);
-        const teamBody = await responses[0].json();
-        const playerBody = await responses[1].json();
-        if (!responses[0].ok || !responses[1].ok) {
-          throw new Error((teamBody && teamBody.error) || (playerBody && playerBody.error) || 'Standings could not be loaded.');
+        let lastError = new Error('Standings could not be loaded.');
+        for (const season of candidates) {
+          const seasonId = season.id;
+          const encoded = encodeURIComponent(seasonId);
+          const responses = await Promise.all([
+            fetch('/api/seasons/' + encoded + '/team-standings'),
+            fetch('/api/seasons/' + encoded + '/individual-standings'),
+          ]);
+          const teamBody = await responses[0].json();
+          const playerBody = await responses[1].json();
+          if (!responses[0].ok || !responses[1].ok) {
+            lastError = new Error((teamBody && teamBody.error) || (playerBody && playerBody.error) || 'Standings could not be loaded.');
+            continue;
+          }
+          seasonInput.value = seasonId;
+          localStorage.setItem('fd.standingsSeasonId', seasonId);
+          renderTeams(teamBody.standings || []);
+          renderPlayers(playerBody.standings || [], season);
+          renderRegistration(season);
+          teamEmpty.textContent = season.status === 'registration' ? 'Team standings begin after league play starts.' : 'No team standings are available for this season.';
+          playerEmpty.textContent = season.status === 'registration' ? 'Player standings begin after scored matches.' : 'No individual standings are available for this season.';
+          setStatus(season.status === 'registration' ? 'Registration progress loaded' : 'Standings loaded', 'ok');
+          return;
         }
-        const season = seasons.find((candidate) => candidate.id === seasonId);
-        renderTeams(teamBody.standings || []);
-        renderPlayers(playerBody.standings || [], season);
-        renderRegistration(season);
-        teamEmpty.textContent = season && season.status === 'registration' ? 'Team standings begin after league play starts.' : 'No team standings are available for this season.';
-        playerEmpty.textContent = season && season.status === 'registration' ? 'Player standings begin after scored matches.' : 'No individual standings are available for this season.';
-        setStatus(season && season.status === 'registration' ? 'Registration progress loaded' : 'Standings loaded', 'ok');
+        throw lastError;
       }
 
       async function run(action) {
@@ -307,7 +334,11 @@ function standingsClientScript() {
       seasonInput.addEventListener('change', () => { if (seasonInput.value) run(loadStandings); });
       form.addEventListener('submit', (event) => { event.preventDefault(); run(loadStandings); });
       selectView(requestedView, false);
-      run(async () => { if (await loadSeasons()) await loadStandings(); });
+      run(async () => {
+        if (await loadSeasons()) {
+          await loadStandings({ allowFallback: !requestedSeasonId, explicitId: requestedSeasonId });
+        }
+      });
     })();
   `;
 }
