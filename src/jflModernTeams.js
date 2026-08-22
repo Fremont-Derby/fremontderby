@@ -18,7 +18,8 @@ export function visibleTeamActions(team = {}) {
   if (team.relationship === 'captain') return ['manage', 'message'];
   if (team.relationship === 'member') return ['roster', 'message'];
   if (team.relationship === 'pending') return ['cancel'];
-  return ['join'];
+  if (team.relationship === 'none') return ['join'];
+  return [];
 }
 
 export function normalizeTeamCards(management = {}, requests = {}) {
@@ -42,13 +43,25 @@ export function normalizeTeamCards(management = {}, requests = {}) {
     });
   }
 
-  const directory = Array.isArray(requests.joinable_teams) ? requests.joinable_teams : [];
-  const remaining = directory
+  const directoryById = new Map();
+  for (const team of Array.isArray(requests.league_teams) ? requests.league_teams : []) {
+    if (team?.teamId) directoryById.set(String(team.teamId), { ...team, relationship: 'directory' });
+  }
+  for (const team of Array.isArray(requests.joinable_teams) ? requests.joinable_teams : []) {
+    if (!team?.teamId) continue;
+    const relationship = team.hasActiveMembership
+      ? 'member'
+      : (team.pendingRequestId ? 'pending' : 'none');
+    directoryById.set(String(team.teamId), {
+      ...(directoryById.get(String(team.teamId)) || {}),
+      ...team,
+      relationship,
+    });
+  }
+  const remaining = [...directoryById.values()]
     .filter((team) => team?.teamId && !byId.has(String(team.teamId)))
     .map((team) => {
-      const relationship = team.hasActiveMembership
-        ? 'member'
-        : (team.pendingRequestId ? 'pending' : 'none');
+      const relationship = team.relationship || 'directory';
       return {
         ...team,
         teamId: String(team.teamId),
@@ -86,7 +99,9 @@ export function renderTeamCard(team = {}) {
     ? '<span class="fd-team-card__relationship">My team · Captain</span>'
     : (team.relationship === 'member'
       ? '<span class="fd-team-card__relationship">My team · Player</span>'
-      : (team.relationship === 'pending' ? '<span class="fd-team-card__pending">Request pending</span>' : ''));
+      : (team.relationship === 'pending'
+        ? '<span class="fd-team-card__pending">Request pending</span>'
+        : (team.relationship === 'directory' ? '<span class="fd-team-card__directory">League team</span>' : '')));
   const buttons = actions.map((action) => {
     if (action === 'manage') return '<button type="button" data-team-action="manage">Manage roster</button>';
     if (action === 'roster') return '<button type="button" data-team-action="roster">View roster</button>';
@@ -142,9 +157,10 @@ export const jflModernTeamsStyles = `
   .fd-team-card__identity > div { min-height: 20px; }
   .fd-team-card__identity h2 { margin: 1px 0 2px; overflow-wrap: anywhere; font-size: 1.12rem; }
   .fd-team-card__identity p { margin: 0; color: var(--fd-teams-muted); font-size: .8rem; }
-  .fd-team-card__relationship, .fd-team-card__pending { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: .68rem; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .fd-team-card__relationship, .fd-team-card__pending, .fd-team-card__directory { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: .68rem; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .fd-team-card__relationship { background: var(--fd-teams-green-dark); color: #fff; }
   .fd-team-card__pending { background: #fff1c9; color: #6b4a00; }
+  .fd-team-card__directory { background: #eceae4; color: #38433d; }
   .fd-team-card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .fd-team-card__facts span { min-width: 0; padding: 10px; border-radius: 11px; background: #f5f4ef; }
   .fd-team-card__facts small { display: block; color: var(--fd-teams-muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; }
@@ -234,7 +250,8 @@ function teamsClientScript() {
         if (team.relationship === 'captain') return ['manage', 'message'];
         if (team.relationship === 'member') return ['roster', 'message'];
         if (team.relationship === 'pending') return ['cancel'];
-        return ['join'];
+        if (team.relationship === 'none') return ['join'];
+        return [];
       }
       function normalize() {
         const result = [];
@@ -245,8 +262,15 @@ function teamsClientScript() {
           const captain = roster.find((member) => member.role === 'captain');
           result.push({ ...team, teamId: id, relationship: 'captain', isMine: true, captainName: captain && captain.displayName || 'You', roster, rosterCount: roster.length });
         }
-        const rest = (requestData.joinable_teams || []).filter((team) => team.teamId && !seen.has(clean(team.teamId))).map((team) => {
+        const directory = new Map();
+        for (const team of requestData.league_teams || []) { if (team.teamId) directory.set(clean(team.teamId), { ...team, relationship: 'directory' }); }
+        for (const team of requestData.joinable_teams || []) {
+          if (!team.teamId) continue;
           const relationship = team.hasActiveMembership ? 'member' : (team.pendingRequestId ? 'pending' : 'none');
+          directory.set(clean(team.teamId), { ...(directory.get(clean(team.teamId)) || {}), ...team, relationship });
+        }
+        const rest = [...directory.values()].filter((team) => team.teamId && !seen.has(clean(team.teamId))).map((team) => {
+          const relationship = team.relationship || 'directory';
           return { ...team, teamId: clean(team.teamId), relationship, isMine: relationship === 'member', roster: team.roster || [], rosterCount: team.rosterCount == null ? null : Number(team.rosterCount), captainName: team.captainName || '' };
         }).sort((a, b) => Number(b.isMine) - Number(a.isMine) || clean(a.teamName).localeCompare(clean(b.teamName)));
         return result.concat(rest);
@@ -281,6 +305,7 @@ function teamsClientScript() {
         const identity = node('div', 'fd-team-card__identity'); const relWrap = document.createElement('div');
         if (team.relationship === 'captain' || team.relationship === 'member') relWrap.append(node('span', 'fd-team-card__relationship', team.relationship === 'captain' ? 'My team · Captain' : 'My team · Player'));
         else if (team.relationship === 'pending') relWrap.append(node('span', 'fd-team-card__pending', 'Request pending'));
+        else if (team.relationship === 'directory') relWrap.append(node('span', 'fd-team-card__directory', 'League team'));
         identity.append(relWrap, node('h2', '', team.teamName || 'Unnamed team'), node('p', '', team.seasonName || 'Season')); head.append(identity);
         const facts = node('div', 'fd-team-card__facts');
         const captainFact = document.createElement('span'); captainFact.append(node('small', '', 'Captain'), node('strong', '', team.captainName || (team.isMine ? 'See roster' : 'Shown after joining')));
@@ -324,6 +349,23 @@ function teamsClientScript() {
         if (!open.length) { const option = document.createElement('option'); option.value = ''; option.textContent = 'No registration season is open'; seasonSelect.append(option); }
         seasonSelect.disabled = open.length === 0; teamNameInput.disabled = open.length === 0; formationForm.querySelector('button').disabled = open.length === 0;
       }
+      async function loadLeagueTeams(seasons) {
+        const active = (seasons || []).filter((season) => ['active', 'playoffs'].includes(season.status));
+        const settled = await Promise.all(active.map(async (season) => {
+          try {
+            const body = await api('/api/seasons/' + encodeURIComponent(season.id) + '/team-standings');
+            return (body.standings || []).map((row) => ({
+              teamId: row.team_id,
+              teamName: row.team_name,
+              seasonId: season.id,
+              seasonName: season.name,
+              standingsRank: row.standings_rank,
+              relationship: 'directory',
+            }));
+          } catch { return []; }
+        }));
+        return settled.flat();
+      }
       function renderFormation() {
         formationItems.replaceChildren();
         for (const item of management.applications || []) { const row = node('div', 'fd-team-formation'); row.append(node('strong', '', item.proposedTeamName || 'New team'), node('p', '', 'New team application · ' + clean(item.status || 'submitted'))); formationItems.append(row); }
@@ -334,7 +376,7 @@ function teamsClientScript() {
         setStatus('Loading teams…'); stateEl.hidden = false; stateEl.textContent = 'Loading teams…';
         try {
           const [teamBody, requestBody, seasonBody] = await Promise.all([api('/api/me/teams'), api('/api/me/team-membership-requests'), api('/api/seasons')]);
-          management = teamBody.teamManagement || {}; requestData = requestBody.requests || {}; cards = normalize();
+          management = teamBody.teamManagement || {}; requestData = requestBody.requests || {}; requestData.league_teams = await loadLeagueTeams(seasonBody.seasons || []); cards = normalize();
           renderCards(); renderInbox(); renderSeasons(seasonBody.seasons || []); renderFormation(); contentEl.hidden = false; stateEl.hidden = true; setStatus(cards.length ? cards.length + ' teams available' : 'No teams available', 'ok');
         } catch (error) {
           contentEl.hidden = true; stateEl.hidden = false; stateEl.replaceChildren(node('strong', '', error.status === 401 ? 'Your sign-in expired' : 'Could not load teams'), node('span', '', error.message || 'Try again.')); const retry = button(error.status === 401 ? 'Sign in again' : 'Try again', error.status === 401 ? 'signin' : 'retry'); stateEl.append(retry); setStatus(error.message || 'Could not load teams', 'error');
