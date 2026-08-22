@@ -1,1 +1,0 @@
-Trigger the issue #1773 branch-local patch-and-verify workflow.
