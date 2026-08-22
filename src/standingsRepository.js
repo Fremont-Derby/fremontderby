@@ -43,16 +43,15 @@ async function requestJson(fetchImpl, url, init) {
   return body;
 }
 
-async function addCaptainContext(fetchImpl, supabaseUrl, headers, seasonId, standings) {
+async function addPublicRosterContext(fetchImpl, supabaseUrl, headers, seasonId, standings) {
   const rows = Array.isArray(standings) ? standings : [];
   const teamIds = [...new Set(rows.map((row) => row?.team_id).filter(Boolean))];
   if (!teamIds.length) return rows;
 
   const membershipParams = new URLSearchParams({
-    select: 'team_id,player_id',
+    select: 'team_id,player_id,role',
     season_id: `eq.${seasonId}`,
     team_id: `in.(${teamIds.join(',')})`,
-    role: 'eq.captain',
     ends_at: 'is.null',
   });
   const memberships = await requestJson(
@@ -60,9 +59,16 @@ async function addCaptainContext(fetchImpl, supabaseUrl, headers, seasonId, stan
     `${supabaseUrl}/rest/v1/team_memberships?${membershipParams}`,
     { method: 'GET', headers },
   );
-  const activeCaptains = Array.isArray(memberships) ? memberships : [];
-  const playerIds = [...new Set(activeCaptains.map((row) => row?.player_id).filter(Boolean))];
-  if (!playerIds.length) return rows;
+  const activeMemberships = Array.isArray(memberships) ? memberships : [];
+  const playerIds = [...new Set(activeMemberships.map((row) => row?.player_id).filter(Boolean))];
+  if (!playerIds.length) {
+    return rows.map((row) => ({
+      ...row,
+      captain_display_name: null,
+      roster_count: 0,
+      roster: [],
+    }));
+  }
 
   const playerParams = new URLSearchParams({
     select: 'id,display_name',
@@ -76,17 +82,28 @@ async function addCaptainContext(fetchImpl, supabaseUrl, headers, seasonId, stan
   const displayNameByPlayerId = new Map(
     (Array.isArray(players) ? players : []).map((player) => [player.id, player.display_name]),
   );
-  const captainNameByTeamId = new Map(
-    activeCaptains.map((membership) => [
-      membership.team_id,
-      displayNameByPlayerId.get(membership.player_id) ?? null,
-    ]),
-  );
 
-  return rows.map((row) => ({
-    ...row,
-    captain_display_name: captainNameByTeamId.get(row.team_id) ?? null,
-  }));
+  const rosterByTeamId = new Map();
+  for (const membership of activeMemberships) {
+    const roster = rosterByTeamId.get(membership.team_id) ?? [];
+    roster.push({
+      playerId: membership.player_id,
+      displayName: displayNameByPlayerId.get(membership.player_id) ?? 'Player',
+      role: membership.role === 'captain' ? 'captain' : 'player',
+    });
+    rosterByTeamId.set(membership.team_id, roster);
+  }
+
+  return rows.map((row) => {
+    const roster = rosterByTeamId.get(row.team_id) ?? [];
+    const captain = roster.find((member) => member.role === 'captain');
+    return {
+      ...row,
+      captain_display_name: captain?.displayName ?? null,
+      roster_count: roster.length,
+      roster,
+    };
+  });
 }
 
 export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
@@ -192,7 +209,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         }),
       });
       try {
-        return await addCaptainContext(
+        return await addPublicRosterContext(
           fetchImpl,
           supabaseUrl,
           headers,
@@ -200,7 +217,6 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           standings,
         );
       } catch {
-        // Standings remain available if optional public captain context cannot be enriched.
         return standings;
       }
     },
