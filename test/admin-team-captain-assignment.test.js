@@ -94,6 +94,33 @@ test('captain HTTP handler authenticates actor and maps active-phone rejection t
   assert.equal(blockedResponse.status, 409);
 });
 
+test('captain HTTP handler presents concurrent captaincy conflicts without backend wrappers', async () => {
+  const handlers = createAdminSeasonTeamsHttpHandlers({
+    authenticate: async () => ({ id: 'signed-in-admin' }),
+    createRepository: () => ({
+      assignCaptain() {
+        throw new Error(
+          'Supabase request failed with 400: Player already captains another open or live team',
+        );
+      },
+    }),
+  });
+
+  const response = await handlers.assignCaptain(
+    new Request('https://example.test/captain', {
+      method: 'POST', body: JSON.stringify({ playerId: 'player-1' }),
+    }),
+    {},
+    'season-1',
+    'team-1',
+  );
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    error: 'This player already captains another open or live team.',
+  });
+});
+
 test('captain repository uses service credentials and returns readiness without phone values', async () => {
   const requests = [];
   const repository = createAdminSeasonTeamsRepository(

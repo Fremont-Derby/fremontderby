@@ -17,12 +17,26 @@ function statusFor(error) {
   if (
     message.includes('already exists')
     || message.includes('already has an active captain')
+    || message.includes('already has a current captain')
     || message.includes('already captains another team')
+    || message.includes('already captains another open or live team')
     || message.includes('Phone number is required')
     || message.includes('must be qualified before it can take a season slot')
   ) return 409;
   if (message.includes('No team slots') || message.includes('before season publication')) return 409;
   return 400;
+}
+
+function clientMessage(error) {
+  const message = String(error?.message || 'Request failed')
+    .replace(/^Supabase request failed with \d+:\s*/i, '');
+  if (message.includes('Player already captains another open or live team')) {
+    return 'This player already captains another open or live team.';
+  }
+  if (message.includes('Team already has a current captain')) {
+    return 'This team already has a current captain. Use captain transfer instead.';
+  }
+  return message;
 }
 
 async function readJson(request) {
@@ -50,7 +64,7 @@ export function createAdminSeasonTeamsHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return Response.json({ error: error.message }, { status: statusFor(error) });
+      return Response.json({ error: clientMessage(error) }, { status: statusFor(error) });
     }
   }
 
