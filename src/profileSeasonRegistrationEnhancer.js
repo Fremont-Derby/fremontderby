@@ -6,7 +6,7 @@ const card = `<article class="panel" data-season-now>
   <div class="panel-head"><span>Current season</span><span class="badge" data-season-now-badge>Checking…</span></div>
   <div class="season-now" role="region" aria-label="Current season registration and payment status">
     <div class="season-now-head">
-      <div><h2 data-season-now-name>Loading season…</h2><div class="season-now-sub" data-season-now-copy>Loading your registration and payment status.</div></div>
+      <div><h2 data-season-now-name>Loading season…</h2><div class="season-now-sub" data-season-now-copy>Checking your current registration and payment status.</div></div>
       <button class="primary season-now-action" data-season-now-action type="button" hidden>Join this season</button>
     </div>
     <div class="season-now-states" data-season-now-states hidden>
@@ -51,53 +51,15 @@ const script = `<script data-profile-season-status-script>
   function renderRegistration(registration){
     currentRegistration=registration||null;errorEl.hidden=true;states.hidden=false;
     if(!registration){badge.textContent='Join now';registrationState.textContent='Not registered';registrationState.dataset.kind='';paymentState.textContent='Payment not started';paymentState.dataset.kind='';copy.textContent='Join this season even if you do not have a team yet.';action.hidden=false;action.textContent='Join this season';action.dataset.mode='join';note.textContent='Registration and payment are separate. You can register first and be marked paid later.';return}
-    registrationState.textContent='Registered';registrationState.dataset.kind='registered';paymentState.textContent=paymentLabel(registration.paymentStatus);paymentState.dataset.kind=paymentKind(registration.paymentStatus);const pay=String(registration.paymentStatus||'unpaid').toLowerCase();badge.textContent=pay==='paid'?'Registered • Paid':(pay==='waived'?'Registered • Waived':'Registered • Payment due');copy.textContent=pay==='paid'||pay==='waived'?'You are registered and payment is recorded for this season.':'You are registered. Payment is still due for this season.';action.hidden=true;note.textContent=pay==='paid'||pay==='waived'?'Your payment has been recorded by the league.':'Registration and payment are separate. Ask a captain or admin if you already paid.';
+    badge.textContent='Registered';registrationState.textContent='Registered';registrationState.dataset.kind='registered';paymentState.textContent=paymentLabel(registration.paymentStatus);paymentState.dataset.kind=paymentKind(registration.paymentStatus);copy.textContent='You are registered for this season.';action.hidden=true;note.textContent=registration.paymentStatus==='paid'?'Your payment has been recorded.':'Your registration is complete. Payment is still tracked separately by the league.';
   }
   async function load(){
-    errorEl.hidden=true;action.hidden=true;badge.textContent='Loading…';copy.textContent='Loading your registration and payment status.';
+    errorEl.hidden=true;action.hidden=true;badge.textContent='Checking…';copy.textContent='Checking your current registration and payment status.';
     const seasonsBody=await publicJson('/api/seasons');const seasons=seasonsBody.seasons||[];
-    const open=seasons.find((season)=>String(season.status||'').toLowerCase()==='registration');
-    const current=open
-      || seasons.find((season)=>['active','playoffs'].includes(String(season.status||'').toLowerCase()))
-      || seasons.find((season)=>String(season.status||'').toLowerCase()==='published')
-      || seasons[0]
-      || null;
-    if(!current){renderClosed(null);return}
-    selectedSeason=current;nameEl.textContent=current.name||'Fremont Derby';badge.textContent='Checking…';
-    const canJoin=String(current.status||'').toLowerCase()==='registration';
-    try{
-      const statusBody=await request('/api/seasons/'+encodeURIComponent(current.id)+'/registration/me',{method:'GET'});
-      const registration=statusBody.registration||null;
-      if(canJoin){renderRegistration(registration);return}
-      // Active / playoffs: still show registered vs not + payment, without a join CTA when closed.
-      states.hidden=false;
-      if(!registration){
-        badge.textContent='Not registered';
-        registrationState.textContent='Not registered';
-        registrationState.dataset.kind='registered';
-        paymentState.textContent='Payment status unavailable';
-        paymentState.dataset.kind='due';
-        copy.textContent='Registration is closed for this season. Ask an admin if you need to be added.';
-        action.hidden=true;
-        note.textContent='You can still use Score, Schedule, and Teams if you already have a roster or free-agent path.';
-        return;
-      }
-      renderRegistration(registration);
-      if(!canJoin){
-        action.hidden=true;
-        if(String(registration.paymentStatus||'').toLowerCase()==='paid'||String(registration.paymentStatus||'').toLowerCase()==='waived'){
-          badge.textContent='In season';
-        }else{
-          badge.textContent='Payment due';
-          copy.textContent='You are registered. Payment is still due for this season.';
-          note.textContent='Payment is tracked by the league — contact an admin or your captain if you already paid.';
-        }
-      }
-    }catch(error){
-      if(canJoin)throw error;
-      renderClosed(current);
-      note.textContent=(error&&error.message)||note.textContent;
-    }
+    const open=seasons.find((season)=>season.status==='registration');
+    if(!open){renderClosed(seasons.find((season)=>['active','playoffs','published'].includes(season.status))||seasons[0]||null);return}
+    selectedSeason=open;nameEl.textContent=open.name;badge.textContent='Checking…';
+    const statusBody=await request('/api/seasons/'+encodeURIComponent(open.id)+'/registration/me',{method:'GET'});renderRegistration(statusBody.registration||null);
   }
   async function join(){
     if(!selectedSeason)throw new Error('Registration is not open.');

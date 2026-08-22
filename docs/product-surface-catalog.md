@@ -31,7 +31,7 @@ This is the canonical index connecting **audiences → user stories → function
 | `/` | Public visitor | Understand Fremont Derby and choose the next appropriate action | Canonical introduction; #252 owns deeper practical/current-season details |
 | `/rules` | Public visitor / player | Read authoritative user-facing league rules | Canonical rules surface; rule-copy reconciliation shipped in #436/PR #441 |
 | `/profile` | Player | Sign in and manage own identity, participation/payment status, private contact, self-claim, and personal status | Canonical self-service identity surface; #335/#341/#343/#365 |
-| `/teams` | Public visitor / player / captain | Understand teams and, when signed in, find/join/create/manage/recruit for team relationships | Canonical team/directory/roster surface; #131 improved: signed-out `/teams` shows public team directory from standings + sign-in CTAs; full membership flows still require auth; #330/#410 extend recruiting/status |
+| `/teams` | Public visitor / player / captain | Understand teams and, when signed in, find/join/create/manage/recruit for team relationships | Canonical team/directory/roster surface; #131 is open because signed-out public-directory behavior is currently incomplete; #330/#410 extend recruiting/status |
 | `/schedule` | Public visitor / player / captain | See league dates/matchups and mark personal dated availability | Canonical schedule/availability surface under #370; normal public season inputs exclude QA-purpose seasons after PR #561; shared default-season policy shipped in PR #566 |
 | `/availability` | Player / captain | Transitional standalone availability editor | Duplicate transitional runtime surface; retire under #370 |
 | `/lineup` | Captain | Build and commit the team's blind lineup | Canonical lineup surface; Score may hand an unrevealed captain matchup here; Test Drive shares the production component |
@@ -40,7 +40,6 @@ This is the canonical index connecting **audiences → user stories → function
 | `/messages` | Player / captain / admin-support participant | Coordinate league/team/direct communication | Canonical communication surface; matchup chat is deprecated under #78 |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; separate from Admin Support |
 | `/standings` | Public visitor / player | View team and individual standings and season results | Canonical standings surface; public reads exclude QA-purpose seasons after PR #561; truthful season-loading controls shipped in PR #562; shared default-season policy shipped in PR #566; historical selection remains #180 |
-| `/players` | Public visitor / player / captain | Browse a sortable public player directory for recruiting and substitutes | Canonical player directory (#330); built from public individual standings; Message deep-link when signed in; no phone numbers |
 | `/prizes` | Public visitor / player | View purse and payout transparency | Canonical public/read-only prize surface; public reads exclude QA-purpose seasons after PR #561; mobile/first-paint cleanup shipped in PR #559; shared default-season policy shipped in PR #566; privileged configuration belongs in Admin under #18 |
 | `/admin` | Signed-in player / league admin | Route the signed-in user to appropriate administration/help destinations | Canonical Admin gateway; Admin Teams/#372 and Admin Support/#361 remain open |
 | `/admin/seasons` | League admin / director | Find an existing season by human-readable name/status and continue to the correct canonical season surface | Shipped in #519/#525/PR #520. Lookup only; **Admin → Seasons** satisfies the <=2-action rule |
@@ -139,10 +138,3 @@ When a PR or issue changes routes, navigation, page controls, roles, or user-vis
 - [ ] Are completed/stale issues reconciled after the change?
 
 The catalog should describe current product reality and approved ownership transitions clearly. Missing capabilities belong in linked issues with explicit state; legacy runtime must not be mistaken for supported product direction.
-
-## Recent implementation notes (2026-08-14)
-
-- **Live refresh stability** — `window.fdStableList` reduces full DOM rebuilds on quiet polls for trades, schedule match cards, standings tables/cards, score picker selection, teams captain hub, and admin audit.
-- **Opening-night readiness** — Captain team cards and admin season teams show `Needs depth` vs `Opening-night ready` (4 registered seats; separate from 3-player match format).
-- **Message deep-links** — `/messages?player=<playerId>` opens or preselects a direct conversation. Admin Players, Admin Season Teams, Teams roster/join, and Player directory expose Message actions where authorized.
-- **Player directory** — `/players` is the canonical recruiting directory (#330).

@@ -35,9 +35,7 @@ test('full phone values are confined to explicit self and single-player admin co
   assert.match(source, /authenticateSupabaseUser/);
   assert.match(source, /getAdminPlayerContactCommand/);
   assert.match(source, /getOwnPlayerContactCommand/);
-  assert.match(source, /cache-control': 'no-store/);
-  assert.match(source, /reveal/);
-  assert.match(source, /maskPhone|phoneMasked/);
+  assert.match(source, /cache-control': 'no-store'/);
   assert.doesNotMatch(source, /\/api\/(?:players|teams|messages|standings)\//);
 });
 

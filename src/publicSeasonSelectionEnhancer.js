@@ -1,50 +1,28 @@
 import { publicSeasonSelectionBrowserSource } from './publicSeasonSelection.js';
-import { applyScriptNonces } from './securityHeaders.js';
 
 const ROUTES = new Set(['/schedule', '/standings', '/prizes']);
 
 function replaceRequired(html, current, replacement, label) {
   if (!html.includes(current)) {
-    console.warn(`Public season selection integration drifted for ${label}`);
-    return html;
+    throw new Error(`Public season selection integration drifted for ${label}`);
   }
   return html.replace(current, replacement);
 }
 
-function nonceFromHtmlOrHeaders(html, headers) {
-  const fromTag = html.match(/<script\b[^>]*\bnonce=(["'])([^"']+)\1/i);
-  if (fromTag?.[2]) return fromTag[2];
-  const csp = headers?.get?.('content-security-policy') || '';
-  const fromCsp = csp.match(/nonce-([A-Za-z0-9_+\/=-]+)/);
-  return fromCsp?.[1] || '';
-}
-
 export async function enhancePublicSeasonSelection(response, pathname) {
   if (!ROUTES.has(pathname)) return response;
-  try {
-    return await enhancePublicSeasonSelectionInner(response, pathname);
-  } catch (error) {
-    console.warn('enhancePublicSeasonSelection failed', pathname, error);
-    return response;
-  }
-}
-
-async function enhancePublicSeasonSelectionInner(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
   const headers = new Headers(response.headers);
   let html = await response.text();
-  const nonce = nonceFromHtmlOrHeaders(html, headers);
-  // Define on window so later scripts can always resolve the helper, even if
-  // a future transform reorders tags. Nonce is required for CSP script-src.
-  const helper = nonce
-    ? `<script nonce="${nonce}">window.choosePublicSeason=${publicSeasonSelectionBrowserSource};var choosePublicSeason=window.choosePublicSeason;</script>`
-    : `<script>window.choosePublicSeason=${publicSeasonSelectionBrowserSource};var choosePublicSeason=window.choosePublicSeason;</script>`;
+  const helper = `<script>const choosePublicSeason=${publicSeasonSelectionBrowserSource};</script>`;
   html = replaceRequired(html, '</head>', `${helper}</head>`, `${pathname} helper`);
-  if (nonce) html = applyScriptNonces(html, nonce);
 
   if (pathname === '/schedule') {
+    if (html.includes('data-fd-modern-schedule="true"')) {
+      return new Response(html, { status: response.status, statusText: response.statusText, headers });
+    }
     html = replaceRequired(
       html,
       "const query=new URLSearchParams(location.search);const requestedSeason=query.get('season')||localStorage.getItem('fd.scheduleSeasonId')||'';const requestedRound=query.get('round')||localStorage.getItem('fd.scheduleRoundId')||'';let seasons=[];let rounds=[];",
@@ -60,6 +38,9 @@ async function enhancePublicSeasonSelectionInner(response, pathname) {
   }
 
   if (pathname === '/standings') {
+    if (html.includes('data-fd-modern-standings="true"')) {
+      return new Response(html, { status: response.status, statusText: response.statusText, headers });
+    }
     html = replaceRequired(
       html,
       "const explicit=seasons.find((season)=>season.id===requestedSeasonId);const registration=seasons.find((season)=>season.status==='registration');const remembered=seasons.find((season)=>season.id===rememberedSeasonId);const selected=explicit||remembered||registration||seasons[0];seasonInput.value=selected?.id||'';",
@@ -69,53 +50,13 @@ async function enhancePublicSeasonSelectionInner(response, pathname) {
   }
 
   if (pathname === '/prizes') {
-    const prizesFrom = [
-      `function preferredSeason(seasons) {
-      return seasons.find((season) => season.status === 'active')
-        || seasons.find((season) => season.status === 'playoffs')
-        || seasons.find((season) => season.status === 'registration')
-        || seasons.find((season) => season.status === 'complete')
-        || seasons[0]
-        || null;
-    }`,
-      `function preferredSeason(seasons) {
-      const explicit = seasons.find((season) => season.id === requestedSeason);
-      const remembered = seasons.find((season) => season.id === rememberedSeason);
-      return explicit
-        || remembered
-        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
-        || seasons.find((season) => season.status === 'registration')
-        || seasons.find((season) => season.status === 'complete')
-        || seasons[0];
-    }`,
-      `function preferredSeason(seasons) {
-      if (typeof choosePublicSeason === 'function') {
-        return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
-      }
-      const explicit = seasons.find((season) => season.id === requestedSeason);
-      const remembered = seasons.find((season) => season.id === rememberedSeason);
-      return explicit
-        || remembered
-        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
-        || seasons.find((season) => season.status === 'registration')
-        || seasons.find((season) => season.status === 'complete')
-        || seasons[0];
-    }`,
-    ];
-    const prizesTo = `function preferredSeason(seasons) {
-      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
-    }`;
-    for (const from of prizesFrom) {
-      if (html.includes(from)) {
-        html = html.replace(from, prizesTo);
-        break;
-      }
-    }
+    html = replaceRequired(
+      html,
+      "function preferredSeason(seasons) {\n      const explicit = seasons.find((season) => season.id === requestedSeason);\n      const remembered = seasons.find((season) => season.id === rememberedSeason);\n      return explicit\n        || remembered\n        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))\n        || seasons.find((season) => season.status === 'registration')\n        || seasons.find((season) => season.status === 'complete')\n        || seasons[0];\n    }",
+      "function preferredSeason(seasons) {\n      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });\n    }",
+      'prizes default',
+    );
   }
 
-  return new Response(html, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }

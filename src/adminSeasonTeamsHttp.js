@@ -7,11 +7,22 @@ import {
 } from './adminSeasonTeamsCommands.js';
 import { createAdminSeasonTeamsRepository } from './adminSeasonTeamsRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import { safeClientErrorMessage } from './requestSanitize.js';
 
-export function adminSeasonTeamsStatusFor(error) {
-  return rpcErrorStatus(error);
+function statusFor(error) {
+  const message = error?.message || 'Request failed';
+  if (message.includes('Actor is not a league admin')) return 403;
+  if (message.includes('Supabase request failed with 401')) return 401;
+  if (message.includes('Supabase request failed with 403')) return 403;
+  if (message.includes('Season not found') || message.includes('Team not found') || message.includes('Player not found')) return 404;
+  if (
+    message.includes('already exists')
+    || message.includes('already has an active captain')
+    || message.includes('already captains another team')
+    || message.includes('Phone number is required')
+    || message.includes('must be qualified before it can take a season slot')
+  ) return 409;
+  if (message.includes('No team slots') || message.includes('before season publication')) return 409;
+  return 400;
 }
 
 async function readJson(request) {
@@ -39,7 +50,7 @@ export function createAdminSeasonTeamsHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return Response.json({ error: safeClientErrorMessage(error) }, { status: adminSeasonTeamsStatusFor(error) });
+      return Response.json({ error: error.message }, { status: statusFor(error) });
     }
   }
 
@@ -62,12 +73,7 @@ export function createAdminSeasonTeamsHttpHandlers({
           seasonId,
           teamName: body.teamName ?? body.team_name,
         }, repository);
-        // Prepared rows are seed-only until captain + minimum roster qualify for a slot (#624).
-        return Response.json({
-          team,
-          occupiesSlot: false,
-          note: 'Prepared teams do not count toward the 8 registration slots until they have a captain, enough roster depth, and an accepted/confirmed slot.',
-        }, { status: 201 });
+        return Response.json({ team }, { status: 201 });
       });
     },
 
