@@ -217,20 +217,20 @@ export const jflModernTeamsStyles = `
   .fd-team-card__directory { background: #eceae4; color: #38433d; }
   .fd-team-card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .fd-team-card__facts--single { grid-template-columns: 1fr; }
-  .fd-team-card__facts span { min-width: 0; padding: 10px; border-radius: 11px; background: #f5f4ef; }
+  .fd-team-card__facts span { min-width: 0; padding: 12px 14px; border-radius: 11px; background: #f5f4ef; }
   .fd-team-card__facts small { display: block; color: var(--fd-teams-muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; }
   .fd-team-card__facts strong { display: block; margin-top: 3px; overflow-wrap: anywhere; font-size: .88rem; }
-  .fd-team-card__details { border-top: 1px solid #eceae4; }
-  .fd-team-card__details summary { min-height: 44px; display: flex; align-items: center; padding: 0 12px; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
+  .fd-team-card__details { border: 0; border-top: 1px solid #eceae4; border-radius: 0; background: transparent; }
+  .fd-team-card__details summary { min-height: 48px; display: flex; align-items: center; padding: 0 2px; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
   .fd-team-card__roster { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-  .fd-team-card__roster li { min-height: 42px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 7px 0; border-top: 1px solid #eceae4; }
+  .fd-team-card__roster li { min-height: 46px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 10px 2px; border-top: 1px solid #eceae4; }
   .fd-team-card__roster-name { min-width: 0; overflow-wrap: anywhere; }
   .fd-team-card__roster strong { color: var(--fd-teams-muted); font-size: .72rem; text-transform: uppercase; }
   .fd-team-card__roster-action { min-width: 0; }
-  .fd-team-card__empty { margin: 0; padding: 8px 0; color: var(--fd-teams-muted); font-size: .82rem; }
-  .fd-team-card__captain-tools { display: grid; gap: 10px; padding-top: 10px; }
+  .fd-team-card__empty { margin: 0; padding: 10px 2px; color: var(--fd-teams-muted); font-size: .82rem; }
+  .fd-team-card__captain-tools { display: grid; gap: 12px; padding-top: 14px; }
   .fd-team-card__invite { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-  .fd-team-card__invite select { min-height: 44px; min-width: 0; border: 1px solid var(--fd-teams-line); border-radius: 10px; background: #fff; font: inherit; }
+  .fd-team-card__invite select { min-height: 44px; min-width: 0; padding: 0 12px; border: 1px solid var(--fd-teams-line); border-radius: 10px; background: #fff; font: inherit; }
   .fd-team-card__actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .fd-team-card__actions button, .fd-team-card__actions a, .fd-team-card__invite button, .fd-team-card__roster-action, .fd-team-request button, .fd-team-invitation button, .fd-team-formation button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 7px 13px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; text-decoration: none; }
   .fd-team-card__actions .fd-team-button--quiet, .fd-team-card__roster-action, .fd-team-request button:last-child, .fd-team-invitation button:last-child { border-color: var(--fd-teams-line); background: #fff; color: #38433d; }
@@ -256,20 +256,23 @@ export const jflModernTeamsStyles = `
   .fd-teams__legacy a { color: var(--fd-teams-green); }
   .fd-teams button:focus-visible, .fd-teams a:focus-visible, .fd-teams input:focus-visible, .fd-teams select:focus-visible, .fd-teams summary:focus-visible { outline: 3px solid #1f7a52; outline-offset: 3px; }
   @media (max-width: 720px) {
-    .fd-teams { width: min(100% - 24px, 920px); padding: 24px 0 calc(172px + env(safe-area-inset-bottom)); }
+    .fd-teams { width: min(100% - 40px, 920px); padding: 24px 0 calc(172px + env(safe-area-inset-bottom)); }
     .fd-teams__toolbar-top, .fd-teams__cards, .fd-teams__inbox, .fd-teams__formation-form { grid-template-columns: 1fr; }
-    .fd-team-card { padding: 15px; }
-    .fd-team-card--mine { padding: 13px; }
+    .fd-team-card { gap: 18px; padding: 18px; }
+    .fd-team-card--mine { padding: 16px; }
     .fd-team-card__actions { display: grid; grid-template-columns: 1fr; }
     .fd-team-card__actions > * { width: 100%; }
   }
   @media (max-width: 520px) {
     .fd-team-card__invite { grid-template-columns: 1fr; }
     .fd-team-card__invite button { width: 100%; }
-    .fd-team-card__roster li { grid-template-columns: minmax(0, 1fr) auto; }
-    .fd-team-card__roster-action { grid-column: 1 / -1; width: 100%; }
+    .fd-team-card__roster-action { width: auto; min-height: 38px; padding: 5px 10px; justify-self: end; }
   }
-  @media (max-width: 380px) { .fd-team-card__facts, .fd-teams__filters, .fd-team-card__invite { grid-template-columns: 1fr; } }
+  @media (max-width: 380px) {
+    .fd-team-card__facts, .fd-teams__filters, .fd-team-card__invite { grid-template-columns: 1fr; }
+    .fd-team-card__roster li { grid-template-columns: minmax(0, 1fr) auto; }
+    .fd-team-card__roster-action { grid-column: 1 / -1; justify-self: stretch; width: 100%; }
+  }
   @media (prefers-reduced-motion: reduce) { .fd-teams * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
   @media (forced-colors: active) { .fd-team-card, .fd-teams__toolbar, .fd-teams__filters { border: 1px solid CanvasText; } .fd-team-card--mine, .fd-teams__filters button[aria-pressed="true"] { border: 3px solid Highlight; } }
 `;
