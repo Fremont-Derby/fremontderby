@@ -14,9 +14,38 @@ function teamInitials(name) {
   return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'T';
 }
 
+const activeTeamApplicationStatuses = new Set([
+  'applied',
+  'deferred',
+  'approved_pending_roster',
+  'ready',
+  'confirmed',
+]);
+
+export function availableTeamApplicationSeasons(seasons = [], registrations = []) {
+  const unavailableSeasonIds = new Set(
+    registrations
+      .filter((registration) => (registration?.applications || [])
+        .some((application) => activeTeamApplicationStatuses.has(application?.status)))
+      .map((registration) => String(registration?.seasonId || ''))
+      .filter(Boolean),
+  );
+  return seasons.filter((season) => season?.status === 'registration'
+    && !unavailableSeasonIds.has(String(season.id || '')));
+}
+
+export function friendlyTeamsError(message) {
+  const raw = String(message || '').trim();
+  if (/already have a team application/i.test(raw)) {
+    return 'You already have a team application for this season.';
+  }
+  return raw.replace(/^Supabase request failed with \d+:\s*/i, '')
+    || 'We could not update teams.';
+}
+
 export function visibleTeamActions(team = {}) {
-  if (team.relationship === 'captain') return ['manage', 'message'];
-  if (team.relationship === 'member') return ['roster', 'message'];
+  if (team.relationship === 'captain') return ['message'];
+  if (team.relationship === 'member') return ['message'];
   if (team.relationship === 'pending') return ['cancel'];
   if (team.relationship === 'none') return ['join'];
   return [];
@@ -110,13 +139,17 @@ export function renderTeamCard(team = {}) {
     return '<button type="button" data-team-action="join">Request to join</button>';
   }).join('');
 
+  const rosterDetails = ['captain', 'member'].includes(team.relationship)
+    ? `<details class="fd-team-card__details"><summary>${team.relationship === 'captain' ? 'Manage roster' : 'View roster'}</summary>${rosterMarkup(team)}</details>`
+    : '';
+
   return `<article class="fd-team-card${mine ? ' fd-team-card--mine' : ''}" data-team-card data-relationship="${escapeHtml(team.relationship || 'none')}" data-team-id="${escapeHtml(team.teamId || '')}">
     <div class="fd-team-card__head">
       <span class="fd-team-card__mark" aria-hidden="true">${escapeHtml(teamInitials(team.teamName))}</span>
       <div class="fd-team-card__identity"><div>${relationship}</div><h2>${escapeHtml(team.teamName || 'Unnamed team')}</h2><p>${escapeHtml(team.seasonName || 'Season')}</p></div>
     </div>
     <div class="fd-team-card__facts"><span><small>Captain</small><strong>${escapeHtml(captain)}</strong></span><span><small>Roster</small><strong>${escapeHtml(rosterCount)}</strong></span></div>
-    <details class="fd-team-card__details"><summary>${team.relationship === 'captain' ? 'Manage roster' : 'Roster & captain'}</summary>${rosterMarkup(team)}</details>
+    ${rosterDetails}
     <div class="fd-team-card__actions">${buttons}</div>
   </article>`;
 }
@@ -166,7 +199,7 @@ export const jflModernTeamsStyles = `
   .fd-team-card__facts small { display: block; color: var(--fd-teams-muted); font-size: .68rem; font-weight: 850; text-transform: uppercase; }
   .fd-team-card__facts strong { display: block; margin-top: 3px; overflow-wrap: anywhere; font-size: .88rem; }
   .fd-team-card__details { border-top: 1px solid #eceae4; }
-  .fd-team-card__details summary { min-height: 44px; display: flex; align-items: center; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
+  .fd-team-card__details summary { min-height: 44px; display: flex; align-items: center; padding: 0 12px; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
   .fd-team-card__roster { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
   .fd-team-card__roster li { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #eceae4; }
   .fd-team-card__roster strong { color: var(--fd-teams-muted); font-size: .72rem; text-transform: uppercase; }
@@ -193,11 +226,12 @@ export const jflModernTeamsStyles = `
   .fd-teams__formation-form label { display: grid; gap: 6px; color: var(--fd-teams-muted); font-size: .78rem; font-weight: 850; }
   .fd-teams__formation-form select, .fd-teams__formation-form input { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--fd-teams-line); border-radius: 10px; background: #faf9f5; font: inherit; }
   .fd-teams__formation-form button { min-height: 48px; padding: 0 16px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; }
+  .fd-teams__formation-form [data-team-formation-help] { grid-column: 1 / -1; }
   .fd-teams__legacy { margin: 22px 0 0; color: var(--fd-teams-muted); font-size: .82rem; }
   .fd-teams__legacy a { color: var(--fd-teams-green); }
   .fd-teams button:focus-visible, .fd-teams a:focus-visible, .fd-teams input:focus-visible, .fd-teams select:focus-visible, .fd-teams summary:focus-visible { outline: 3px solid #1f7a52; outline-offset: 3px; }
   @media (max-width: 720px) {
-    .fd-teams { width: min(100% - 24px, 920px); padding-top: 24px; }
+    .fd-teams { width: min(100% - 24px, 920px); padding: 24px 0 calc(172px + env(safe-area-inset-bottom)); }
     .fd-teams__toolbar-top, .fd-teams__cards, .fd-teams__inbox, .fd-teams__formation-form { grid-template-columns: 1fr; }
     .fd-team-card { padding: 15px; }
     .fd-team-card--mine { padding: 13px; }
@@ -232,23 +266,30 @@ function teamsClientScript() {
       let management = {};
       let requestData = {};
       let cards = [];
+      let registrations = [];
       let filter = 'all';
 
       const token = () => sessionStorage.getItem('fd.accessToken') || '';
       const clean = (value) => String(value == null ? '' : value).trim();
       const initials = (name) => clean(name || 'Team').split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'T';
       const setStatus = (message, tone = 'muted') => { statusEl.textContent = message; statusEl.dataset.tone = tone; };
+      const activeApplicationStatuses = new Set(['applied', 'deferred', 'approved_pending_roster', 'ready', 'confirmed']);
+      const friendlyError = (message) => {
+        const raw = clean(message);
+        if (/already have a team application/i.test(raw)) return 'You already have a team application for this season.';
+        return raw.replace(/^Supabase request failed with \d+:\s*/i, '') || 'We could not update teams.';
+      };
       async function json(response) { const text = await response.text(); if (!text) return {}; try { return JSON.parse(text); } catch { return { error: text }; } }
       async function api(path, options = {}) {
         if (!token()) { const error = new Error('Sign in to manage teams.'); error.status = 401; throw error; }
         const response = await fetch(path, { ...options, headers: { authorization: 'Bearer ' + token(), 'content-type': 'application/json', ...(options.headers || {}) } });
         const body = await json(response);
-        if (!response.ok) { const error = new Error(body.error || 'We could not update teams.'); error.status = response.status; throw error; }
+        if (!response.ok) { const error = new Error(friendlyError(body.error)); error.status = response.status; throw error; }
         return body;
       }
       function relationActions(team) {
-        if (team.relationship === 'captain') return ['manage', 'message'];
-        if (team.relationship === 'member') return ['roster', 'message'];
+        if (team.relationship === 'captain') return ['message'];
+        if (team.relationship === 'member') return ['message'];
         if (team.relationship === 'pending') return ['cancel'];
         if (team.relationship === 'none') return ['join'];
         return [];
@@ -310,7 +351,6 @@ function teamsClientScript() {
         const facts = node('div', 'fd-team-card__facts');
         const captainFact = document.createElement('span'); captainFact.append(node('small', '', 'Captain'), node('strong', '', team.captainName || (team.isMine ? 'See roster' : 'Captain not assigned')));
         const rosterFact = document.createElement('span'); rosterFact.append(node('small', '', 'Roster'), node('strong', '', team.rosterCount == null ? 'Roster details' : team.rosterCount + ' player' + (team.rosterCount === 1 ? '' : 's'))); facts.append(captainFact, rosterFact);
-        const details = node('details', 'fd-team-card__details'); const summary = document.createElement('summary'); summary.textContent = team.relationship === 'captain' ? 'Manage roster' : 'Roster & captain'; const roster = document.createElement('div'); renderRoster(team, roster); details.append(summary, roster);
         const actions = node('div', 'fd-team-card__actions');
         for (const action of relationActions(team)) {
           if (action === 'manage' || action === 'roster') actions.append(button(action === 'manage' ? 'Manage roster' : 'View roster', action, team.teamId));
@@ -318,7 +358,9 @@ function teamsClientScript() {
           else if (action === 'cancel') actions.append(button('Cancel request', 'cancel', team.pendingRequestId, true));
           else actions.append(button('Request to join', 'join', team.teamId));
         }
-        article.append(head, facts, details, actions); return article;
+        article.append(head, facts);
+        if (team.relationship === 'captain' || team.relationship === 'member') { const details = node('details', 'fd-team-card__details'); const summary = document.createElement('summary'); summary.textContent = team.relationship === 'captain' ? 'Manage roster' : 'View roster'; const roster = document.createElement('div'); renderRoster(team, roster); details.append(summary, roster); article.append(details); }
+        article.append(actions); return article;
       }
       function matchesFilter(team) {
         const query = clean(searchInput.value).toLowerCase();
@@ -344,9 +386,10 @@ function teamsClientScript() {
         inboxEl.hidden = invitations.length === 0 && captainRequests.length === 0;
       }
       function renderSeasons(seasons) {
-        seasonSelect.replaceChildren(); const open = (seasons || []).filter((season) => season.status === 'registration');
+        seasonSelect.replaceChildren(); const registrationSeasons = (seasons || []).filter((season) => season.status === 'registration'); const unavailable = new Set(registrations.filter((registration) => (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status))).map((registration) => clean(registration.seasonId))); const open = registrationSeasons.filter((season) => !unavailable.has(clean(season.id)));
         for (const season of open) { const option = document.createElement('option'); option.value = season.id; option.textContent = season.name + ' · New team application'; seasonSelect.append(option); }
-        if (!open.length) { const option = document.createElement('option'); option.value = ''; option.textContent = 'No registration season is open'; seasonSelect.append(option); }
+        if (!open.length) { const option = document.createElement('option'); option.value = ''; option.textContent = registrationSeasons.length ? 'Application already submitted' : 'No registration season is open'; seasonSelect.append(option); }
+        formationForm.querySelector('[data-team-formation-help]').textContent = !open.length && registrationSeasons.length ? 'You already have a team application for the open registration season.' : '';
         seasonSelect.disabled = open.length === 0; teamNameInput.disabled = open.length === 0; formationForm.querySelector('button').disabled = open.length === 0;
       }
       async function loadLeagueTeams(seasons) {
@@ -369,15 +412,18 @@ function teamsClientScript() {
       }
       function renderFormation() {
         formationItems.replaceChildren();
-        for (const item of management.applications || []) { const row = node('div', 'fd-team-formation'); row.append(node('strong', '', item.proposedTeamName || 'New team'), node('p', '', 'New team application · ' + clean(item.status || 'submitted'))); formationItems.append(row); }
-        for (const item of management.returning_slots || management.returningSlots || []) { const row = node('div', 'fd-team-formation'); row.append(node('strong', '', item.sourceTeamName || 'Returning team'), node('p', '', 'Returning team reservation · ' + clean(item.status || 'reserved'))); formationItems.append(row); }
+        for (const registration of registrations) {
+          for (const item of registration.applications || []) { const row = node('div', 'fd-team-formation'); row.append(node('strong', '', item.proposedTeamName || 'New team'), node('p', '', 'New team application · ' + clean(item.status || 'submitted'))); formationItems.append(row); }
+          for (const item of registration.returningSlots || []) { const row = node('div', 'fd-team-formation'); row.append(node('strong', '', item.sourceTeamName || 'Returning team'), node('p', '', 'Returning team reservation · ' + clean(item.status || 'reserved'))); formationItems.append(row); }
+        }
       }
       async function load() {
         if (!token()) { stateEl.hidden = false; stateEl.innerHTML = '<strong>Sign in to see your teams</strong><span>Your roster and role-aware actions appear after Google sign-in.</span><br><a href="/profile">Sign in</a>'; contentEl.hidden = true; setStatus('Sign in required'); return; }
         setStatus('Loading teams…'); stateEl.hidden = false; stateEl.textContent = 'Loading teams…';
         try {
           const [teamBody, requestBody, seasonBody] = await Promise.all([api('/api/me/teams'), api('/api/me/team-membership-requests'), api('/api/seasons')]);
-          management = teamBody.teamManagement || {}; requestData = requestBody.requests || {}; requestData.league_teams = await loadLeagueTeams(seasonBody.seasons || []); cards = normalize();
+          const seasons = seasonBody.seasons || []; const registrationSeasons = seasons.filter((season) => season.status === 'registration'); registrations = await Promise.all(registrationSeasons.map(async (season) => { const body = await api('/api/seasons/' + encodeURIComponent(season.id) + '/team-registration/me'); return { ...(body.registration || {}), seasonId: season.id }; }));
+          management = teamBody.teamManagement || {}; requestData = requestBody.requests || {}; requestData.league_teams = await loadLeagueTeams(seasons); cards = normalize();
           renderCards(); renderInbox(); renderSeasons(seasonBody.seasons || []); renderFormation(); contentEl.hidden = false; stateEl.hidden = true; setStatus(cards.length ? cards.length + ' teams available' : 'No teams available', 'ok');
         } catch (error) {
           contentEl.hidden = true; stateEl.hidden = false; stateEl.replaceChildren(node('strong', '', error.status === 401 ? 'Your sign-in expired' : 'Could not load teams'), node('span', '', error.message || 'Try again.')); const retry = button(error.status === 401 ? 'Sign in again' : 'Try again', error.status === 401 ? 'signin' : 'retry'); stateEl.append(retry); setStatus(error.message || 'Could not load teams', 'error');
@@ -399,7 +445,7 @@ function teamsClientScript() {
         if (action === 'signin') { location.assign('/profile'); return; } if (action === 'retry') { load(); return; }
         control.disabled = true; setStatus('Updating team…'); try { await mutate(action, id); await load(); setStatus('Team updated', 'ok'); } catch (error) { control.disabled = false; setStatus(error.message || 'Could not update team', 'error'); }
       });
-      formationForm.addEventListener('submit', async (event) => { event.preventDefault(); const seasonId = seasonSelect.value; const teamName = clean(teamNameInput.value); if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; } const submit = formationForm.querySelector('button'); submit.disabled = true; try { await api('/api/seasons/' + encodeURIComponent(seasonId) + '/team-applications', { method: 'POST', body: JSON.stringify({ teamName }) }); teamNameInput.value = ''; await load(); setStatus('New team application submitted', 'ok'); } catch (error) { setStatus(error.message || 'Could not submit application', 'error'); } finally { submit.disabled = false; } });
+      formationForm.addEventListener('submit', async (event) => { event.preventDefault(); const seasonId = seasonSelect.value; const teamName = clean(teamNameInput.value); const existing = registrations.find((registration) => clean(registration.seasonId) === seasonId && (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status))); if (existing) { setStatus('You already have a team application for this season.', 'error'); return; } if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; } const submit = formationForm.querySelector('button'); submit.disabled = true; try { await api('/api/seasons/' + encodeURIComponent(seasonId) + '/team-applications', { method: 'POST', body: JSON.stringify({ teamName }) }); teamNameInput.value = ''; await load(); setStatus('New team application submitted', 'ok'); } catch (error) { setStatus(friendlyError(error.message), 'error'); } finally { submit.disabled = seasonSelect.disabled; } });
       load();
     })();
   `;
@@ -432,7 +478,7 @@ function teamsDocument() {
       <section class="fd-teams__section" data-team-directory-section hidden><div class="fd-teams__section-head"><h2>League teams</h2><span>Join actions reflect your current season membership</span></div><div class="fd-teams__cards" data-team-directory></div></section>
       <div class="fd-teams__state" data-team-directory-empty hidden><strong>No matching teams</strong>Try another name or filter.</div>
       <section class="fd-teams__inbox" data-teams-inbox hidden><article class="fd-teams__panel"><h2>My invitations</h2><div data-team-invitations></div></article><article class="fd-teams__panel"><h2>Requests for teams I captain</h2><div data-captain-requests></div></article></section>
-      <details class="fd-teams__formation"><summary>Start or return a team</summary><div class="fd-teams__formation-body"><p class="fd-teams__formation-copy">A new team application is different from a returning-team reservation. Existing reservations stay labeled below so you know which path you are using.</p><form class="fd-teams__formation-form" data-team-formation-form><label>Registration season<select data-team-season></select></label><label>New team name<input data-team-name maxlength="80" autocomplete="organization" /></label><button type="submit">Apply for a team slot</button></form><div data-team-formation-items></div></div></details>
+      <details class="fd-teams__formation"><summary>Start or return a team</summary><div class="fd-teams__formation-body"><p class="fd-teams__formation-copy">A new team application is different from a returning-team reservation. Existing reservations stay labeled below so you know which path you are using.</p><form class="fd-teams__formation-form" data-team-formation-form><label>Registration season<select data-team-season></select></label><label>New team name<input data-team-name maxlength="80" autocomplete="organization" /></label><button type="submit">Apply for a team slot</button><p class="fd-teams__formation-copy" data-team-formation-help role="status"></p></form><div data-team-formation-items></div></div></details>
     </div>
     <p class="fd-teams__legacy">JFL preview · <a href="/teams?ui=legacy">View the classic Teams body</a></p>
   </main>
