@@ -152,3 +152,5 @@ test('touch, focus, reduced motion, forced colors, and mobile safe area remain c
   assert.match(jflModernTeamsStyles, /forced-colors:active/);
   assert.match(jflModernTeamsStyles, /safe-area-inset-bottom/);
 });
+
+// Human acceptance remains on #1773 after the JFL deploy.
