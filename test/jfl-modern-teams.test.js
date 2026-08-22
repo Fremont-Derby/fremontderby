@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  availableInvitationPlayers,
   availableTeamApplicationSeasons,
   friendlyTeamsError,
   jflModernTeamsStyles,
@@ -107,6 +108,33 @@ test('duplicate application failures are translated into a plain recovery messag
   assert.equal(friendlyTeamsError('Connection interrupted'), 'Connection interrupted');
 });
 
+test('active rosters and pending invitations are excluded from captain invite choices', () => {
+  const team = {
+    seasonId: 'season-active',
+    roster: [{ playerId: 'player-rostered' }],
+    pendingInvitations: [{ playerId: 'player-pending' }],
+  };
+  const players = [
+    { id: 'player-rostered', display_name: 'Rostered', activeSeasonIds: ['season-active'] },
+    { id: 'player-pending', display_name: 'Pending' },
+    { id: 'player-other-team', display_name: 'Other team', activeSeasonIds: ['season-active'] },
+    { id: 'player-other-season', display_name: 'Other season', activeSeasonIds: ['season-other'] },
+    { id: 'player-free', display_name: 'Free player', activeSeasonIds: [] },
+  ];
+
+  assert.deepEqual(
+    availableInvitationPlayers(team, players).map((player) => player.id),
+    ['player-other-season', 'player-free'],
+  );
+});
+
+test('active-membership invitation failures are translated into an actionable recovery message', () => {
+  assert.equal(
+    friendlyTeamsError('Supabase request failed with 400: Player already has an active team membership'),
+    'Already rostered for this season. Choose someone else.',
+  );
+});
+
 test('modern Teams document preserves canonical read/write APIs, auth, and legacy escape hatch', () => {
   const html = renderJflModernTeams();
   assert.match(html, /data-fd-modern-teams="true"/);
@@ -152,4 +180,5 @@ test('modern Teams keeps touch, focus, reduced-motion, and forced-colors contrac
   assert.match(jflModernTeamsStyles, /forced-colors:\s*active/);
   assert.match(jflModernTeamsStyles, /summary\s*\{[^}]*padding:\s*0\s+12px/s);
   assert.match(jflModernTeamsStyles, /safe-area-inset-bottom/);
+  assert.match(jflModernTeamsStyles, /max-width:\s*520px[\s\S]*fd-team-card__roster-action/);
 });

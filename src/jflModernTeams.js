@@ -39,8 +39,28 @@ export function friendlyTeamsError(message) {
   if (/already have a team application/i.test(raw)) {
     return 'You already have a team application for this season.';
   }
+  if (/already has an active team membership/i.test(raw)) {
+    return 'Already rostered for this season. Choose someone else.';
+  }
   return raw.replace(/^Supabase request failed with \d+:\s*/i, '')
     || 'We could not update teams.';
+}
+
+export function availableInvitationPlayers(team = {}, players = []) {
+  const seasonId = String(team.seasonId || '').trim();
+  const excludedPlayerIds = new Set([
+    ...(Array.isArray(team.roster) ? team.roster : []),
+    ...(Array.isArray(team.pendingInvitations) ? team.pendingInvitations : []),
+  ].map((entry) => String(entry?.playerId || '').trim()).filter(Boolean));
+
+  return (Array.isArray(players) ? players : []).filter((player) => {
+    const playerId = String(player?.id || '').trim();
+    if (!playerId || excludedPlayerIds.has(playerId)) return false;
+    const activeSeasonIds = Array.isArray(player?.activeSeasonIds)
+      ? player.activeSeasonIds.map((id) => String(id || '').trim())
+      : [];
+    return !seasonId || !activeSeasonIds.includes(seasonId);
+  });
 }
 
 export function visibleTeamActions(team = {}) {
@@ -114,7 +134,7 @@ function rosterMarkup(team) {
   if (!Array.isArray(team.roster) || team.roster.length === 0) {
     return '<p class="fd-team-card__empty">Roster details are available to team members and captains.</p>';
   }
-  return `<ul class="fd-team-card__roster">${team.roster.map((member) => `<li><span>${escapeHtml(member.displayName || 'Player')}</span><strong>${member.role === 'captain' ? 'Captain' : 'Player'}</strong></li>`).join('')}</ul>`;
+  return `<ul class="fd-team-card__roster">${team.roster.map((member) => `<li><span class="fd-team-card__roster-name">${escapeHtml(member.displayName || 'Player')}</span><strong>${member.role === 'captain' ? 'Captain' : 'Player'}</strong></li>`).join('')}</ul>`;
 }
 
 export function renderTeamCard(team = {}) {
@@ -201,15 +221,18 @@ export const jflModernTeamsStyles = `
   .fd-team-card__details { border-top: 1px solid #eceae4; }
   .fd-team-card__details summary { min-height: 44px; display: flex; align-items: center; padding: 0 12px; color: var(--fd-teams-green); font-weight: 900; cursor: pointer; }
   .fd-team-card__roster { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-  .fd-team-card__roster li { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #eceae4; }
+  .fd-team-card__roster li { min-height: 42px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 7px 0; border-top: 1px solid #eceae4; }
+  .fd-team-card__roster-name { min-width: 0; overflow-wrap: anywhere; }
   .fd-team-card__roster strong { color: var(--fd-teams-muted); font-size: .72rem; text-transform: uppercase; }
+  .fd-team-card__roster-action { min-width: 0; }
   .fd-team-card__empty { margin: 0; padding: 8px 0; color: var(--fd-teams-muted); font-size: .82rem; }
   .fd-team-card__captain-tools { display: grid; gap: 10px; padding-top: 10px; }
   .fd-team-card__invite { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   .fd-team-card__invite select { min-height: 44px; min-width: 0; border: 1px solid var(--fd-teams-line); border-radius: 10px; background: #fff; font: inherit; }
   .fd-team-card__actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .fd-team-card__actions button, .fd-team-card__actions a, .fd-team-card__invite button, .fd-team-request button, .fd-team-invitation button, .fd-team-formation button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 7px 13px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; text-decoration: none; }
-  .fd-team-card__actions .fd-team-button--quiet, .fd-team-request button:last-child, .fd-team-invitation button:last-child { border-color: var(--fd-teams-line); background: #fff; color: #38433d; }
+  .fd-team-card__actions button, .fd-team-card__actions a, .fd-team-card__invite button, .fd-team-card__roster-action, .fd-team-request button, .fd-team-invitation button, .fd-team-formation button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 7px 13px; border: 1px solid var(--fd-teams-green); border-radius: 10px; background: var(--fd-teams-green); color: #fff; font: inherit; font-weight: 900; text-decoration: none; }
+  .fd-team-card__actions .fd-team-button--quiet, .fd-team-card__roster-action, .fd-team-request button:last-child, .fd-team-invitation button:last-child { border-color: var(--fd-teams-line); background: #fff; color: #38433d; }
+  .fd-team-card__invite button:disabled, .fd-team-card__invite select:disabled { cursor: not-allowed; opacity: .62; }
   .fd-teams__inbox { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 28px; }
   .fd-teams__panel { padding: 16px; border: 1px solid var(--fd-teams-line); border-radius: 17px; background: #fff; }
   .fd-teams__panel h2 { margin: 0 0 10px; font-size: 1rem; }
@@ -237,6 +260,12 @@ export const jflModernTeamsStyles = `
     .fd-team-card--mine { padding: 13px; }
     .fd-team-card__actions { display: grid; grid-template-columns: 1fr; }
     .fd-team-card__actions > * { width: 100%; }
+  }
+  @media (max-width: 520px) {
+    .fd-team-card__invite { grid-template-columns: 1fr; }
+    .fd-team-card__invite button { width: 100%; }
+    .fd-team-card__roster li { grid-template-columns: minmax(0, 1fr) auto; }
+    .fd-team-card__roster-action { grid-column: 1 / -1; width: 100%; }
   }
   @media (max-width: 380px) { .fd-team-card__facts, .fd-teams__filters, .fd-team-card__invite { grid-template-columns: 1fr; } }
   @media (prefers-reduced-motion: reduce) { .fd-teams * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
@@ -277,6 +306,7 @@ function teamsClientScript() {
       const friendlyError = (message) => {
         const raw = clean(message);
         if (/already have a team application/i.test(raw)) return 'You already have a team application for this season.';
+        if (/already has an active team membership/i.test(raw)) return 'Already rostered for this season. Choose someone else.';
         return raw.replace(/^Supabase request failed with \d+:\s*/i, '') || 'We could not update teams.';
       };
       async function json(response) { const text = await response.text(); if (!text) return {}; try { return JSON.parse(text); } catch { return { error: text }; } }
@@ -324,8 +354,8 @@ function teamsClientScript() {
         if (!roster.length) { target.append(node('p', 'fd-team-card__empty', 'Roster details are available to team members and captains.')); return; }
         const list = node('ul', 'fd-team-card__roster');
         for (const member of roster) {
-          const item = document.createElement('li'); item.append(node('span', '', member.displayName || 'Player'), node('strong', '', member.role === 'captain' ? 'Captain' : 'Player'));
-          if (team.relationship === 'captain' && member.role !== 'captain' && member.membershipId) item.append(button('Remove', 'remove', member.membershipId, true));
+          const item = document.createElement('li'); item.append(node('span', 'fd-team-card__roster-name', member.displayName || 'Player'), node('strong', '', member.role === 'captain' ? 'Captain' : 'Player'));
+          if (team.relationship === 'captain' && member.role !== 'captain' && member.membershipId) { const remove = button('Remove', 'remove', member.membershipId, true); remove.classList.add('fd-team-card__roster-action'); item.append(remove); }
           list.append(item);
         }
         target.append(list);
@@ -334,9 +364,12 @@ function teamsClientScript() {
           const invite = node('div', 'fd-team-card__invite');
           const select = document.createElement('select'); select.setAttribute('aria-label', 'Player to invite'); select.dataset.inviteSelect = team.teamId;
           const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Invite a player…'; select.append(placeholder);
-          const excluded = new Set(roster.map((member) => clean(member.playerId)));
-          for (const player of management.players || []) { if (excluded.has(clean(player.id))) continue; const option = document.createElement('option'); option.value = player.id; option.textContent = player.display_name; select.append(option); }
-          invite.append(select, button('Send invite', 'invite', team.teamId)); tools.append(invite); target.append(tools);
+          const excluded = new Set([...roster, ...(team.pendingInvitations || [])].map((entry) => clean(entry.playerId)).filter(Boolean));
+          const candidates = (management.players || []).filter((player) => !excluded.has(clean(player.id)) && !(player.activeSeasonIds || []).map(clean).includes(clean(team.seasonId)));
+          for (const player of candidates) { const option = document.createElement('option'); option.value = player.id; option.textContent = player.display_name; select.append(option); }
+          const send = button('Send invite', 'invite', team.teamId);
+          if (!candidates.length) { placeholder.textContent = 'No eligible players available'; select.disabled = true; send.disabled = true; }
+          invite.append(select, send); tools.append(invite); target.append(tools);
         }
       }
       function renderCard(team) {
@@ -443,7 +476,7 @@ function teamsClientScript() {
         const control = event.target.closest('[data-team-action]'); if (!control) return; const action = control.dataset.teamAction; const id = control.dataset.actionId || '';
         if (action === 'manage' || action === 'roster') { const details = control.closest('[data-team-card]').querySelector('details'); details.open = true; details.scrollIntoView({ block: 'nearest' }); return; }
         if (action === 'signin') { location.assign('/profile'); return; } if (action === 'retry') { load(); return; }
-        control.disabled = true; setStatus('Updating team…'); try { await mutate(action, id); await load(); setStatus('Team updated', 'ok'); } catch (error) { control.disabled = false; setStatus(error.message || 'Could not update team', 'error'); }
+        control.disabled = true; setStatus('Updating team…'); try { await mutate(action, id); await load(); setStatus('Team updated', 'ok'); } catch (error) { control.disabled = false; setStatus(friendlyError(error.message), 'error'); }
       });
       formationForm.addEventListener('submit', async (event) => { event.preventDefault(); const seasonId = seasonSelect.value; const teamName = clean(teamNameInput.value); const existing = registrations.find((registration) => clean(registration.seasonId) === seasonId && (registration.applications || []).some((application) => activeApplicationStatuses.has(application.status))); if (existing) { setStatus('You already have a team application for this season.', 'error'); return; } if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; } const submit = formationForm.querySelector('button'); submit.disabled = true; try { await api('/api/seasons/' + encodeURIComponent(seasonId) + '/team-applications', { method: 'POST', body: JSON.stringify({ teamName }) }); teamNameInput.value = ''; await load(); setStatus('New team application submitted', 'ok'); } catch (error) { setStatus(friendlyError(error.message), 'error'); } finally { submit.disabled = seasonSelect.disabled; } });
       load();

@@ -44,8 +44,8 @@ test('team repository loads team management with open seasons and player directo
     },
     {
       body: [
-        { id: 'player-1', display_name: 'Alice' },
-        { id: 'player-2', display_name: 'Bob' },
+        { id: 'player-1', display_name: 'Alice', active_memberships: [{ season_id: 'season-1' }] },
+        { id: 'player-2', display_name: 'Bob', active_memberships: [] },
       ],
     },
   ]);
@@ -66,8 +66,8 @@ test('team repository loads team management with open seasons and player directo
       first_round_date: '2026-09-03',
     }],
     players: [
-      { id: 'player-1', display_name: 'Alice' },
-      { id: 'player-2', display_name: 'Bob' },
+      { id: 'player-1', display_name: 'Alice', activeSeasonIds: ['season-1'] },
+      { id: 'player-2', display_name: 'Bob', activeSeasonIds: [] },
     ],
   });
   assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_management');
@@ -79,6 +79,8 @@ test('team repository loads team management with open seasons and player directo
   assert.match(calls[1].url, /status=eq\.registration/);
   assert.equal(calls[1].init.headers.apikey, 'service-role-secret');
   assert.match(calls[2].url, /\/rest\/v1\/players\?/);
+  assert.match(calls[2].url, /active_memberships:team_memberships/);
+  assert.match(calls[2].url, /active_memberships\.ends_at=is\.null/);
   assert.equal(calls[2].init.headers.apikey, 'service-role-secret');
 });
 
