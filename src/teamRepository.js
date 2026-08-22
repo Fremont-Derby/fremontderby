@@ -266,14 +266,23 @@ export function createTeamRepository(env, { fetch: fetchImpl = globalThis.fetch 
         );
         const players = await requestJson(
           fetchImpl,
-          `${supabaseUrl}/rest/v1/players?select=id,display_name&order=display_name.asc`,
+          `${supabaseUrl}/rest/v1/players?select=id,display_name,active_memberships:team_memberships!left(season_id)&active_memberships.ends_at=is.null&order=display_name.asc`,
           { method: 'GET', headers },
         );
 
         enrichedManagement = {
           ...management,
           open_seasons: Array.isArray(openSeasons) ? openSeasons : [],
-          players: Array.isArray(players) ? players : [],
+          players: Array.isArray(players) ? players.map((player) => {
+            const activeSeasonIds = [...new Set(
+              (Array.isArray(player.active_memberships) ? player.active_memberships : [])
+                .map((membership) => membership?.season_id)
+                .filter(Boolean),
+            )];
+            const directoryPlayer = { ...player };
+            delete directoryPlayer.active_memberships;
+            return { ...directoryPlayer, activeSeasonIds };
+          }) : [],
         };
       } catch {
         // Team management remains useful even if optional picker data is unavailable.
