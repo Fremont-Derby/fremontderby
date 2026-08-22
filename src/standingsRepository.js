@@ -43,6 +43,52 @@ async function requestJson(fetchImpl, url, init) {
   return body;
 }
 
+async function addCaptainContext(fetchImpl, supabaseUrl, headers, seasonId, standings) {
+  const rows = Array.isArray(standings) ? standings : [];
+  const teamIds = [...new Set(rows.map((row) => row?.team_id).filter(Boolean))];
+  if (!teamIds.length) return rows;
+
+  const membershipParams = new URLSearchParams({
+    select: 'team_id,player_id',
+    season_id: `eq.${seasonId}`,
+    team_id: `in.(${teamIds.join(',')})`,
+    role: 'eq.captain',
+    ends_at: 'is.null',
+  });
+  const memberships = await requestJson(
+    fetchImpl,
+    `${supabaseUrl}/rest/v1/team_memberships?${membershipParams}`,
+    { method: 'GET', headers },
+  );
+  const activeCaptains = Array.isArray(memberships) ? memberships : [];
+  const playerIds = [...new Set(activeCaptains.map((row) => row?.player_id).filter(Boolean))];
+  if (!playerIds.length) return rows;
+
+  const playerParams = new URLSearchParams({
+    select: 'id,display_name',
+    id: `in.(${playerIds.join(',')})`,
+  });
+  const players = await requestJson(
+    fetchImpl,
+    `${supabaseUrl}/rest/v1/players?${playerParams}`,
+    { method: 'GET', headers },
+  );
+  const displayNameByPlayerId = new Map(
+    (Array.isArray(players) ? players : []).map((player) => [player.id, player.display_name]),
+  );
+  const captainNameByTeamId = new Map(
+    activeCaptains.map((membership) => [
+      membership.team_id,
+      displayNameByPlayerId.get(membership.player_id) ?? null,
+    ]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    captain_display_name: captainNameByTeamId.get(row.team_id) ?? null,
+  }));
+}
+
 export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== 'function') {
     throw new Error('fetch implementation is required');
@@ -138,13 +184,25 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
     },
 
     async listTeamStandings({ seasonId }) {
-      return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_team_standings`, {
+      const standings = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/list_team_standings`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           target_season_id: seasonId,
         }),
       });
+      try {
+        return await addCaptainContext(
+          fetchImpl,
+          supabaseUrl,
+          headers,
+          seasonId,
+          standings,
+        );
+      } catch {
+        // Standings remain available if optional public captain context cannot be enriched.
+        return standings;
+      }
     },
 
     async listIndividualStandings({ seasonId }) {

@@ -91,7 +91,7 @@ function rosterMarkup(team) {
 export function renderTeamCard(team = {}) {
   const actions = visibleTeamActions(team);
   const mine = Boolean(team.isMine);
-  const captain = team.captainName || (mine ? 'Captain details in roster' : 'Shown after joining');
+  const captain = team.captainName || (mine ? 'Captain details in roster' : 'Captain not assigned');
   const rosterCount = team.rosterCount === null || team.rosterCount === undefined
     ? 'Roster details'
     : `${team.rosterCount} player${Number(team.rosterCount) === 1 ? '' : 's'}`;
@@ -308,7 +308,7 @@ function teamsClientScript() {
         else if (team.relationship === 'directory') relWrap.append(node('span', 'fd-team-card__directory', 'League team'));
         identity.append(relWrap, node('h2', '', team.teamName || 'Unnamed team'), node('p', '', team.seasonName || 'Season')); head.append(identity);
         const facts = node('div', 'fd-team-card__facts');
-        const captainFact = document.createElement('span'); captainFact.append(node('small', '', 'Captain'), node('strong', '', team.captainName || (team.isMine ? 'See roster' : 'Shown after joining')));
+        const captainFact = document.createElement('span'); captainFact.append(node('small', '', 'Captain'), node('strong', '', team.captainName || (team.isMine ? 'See roster' : 'Captain not assigned')));
         const rosterFact = document.createElement('span'); rosterFact.append(node('small', '', 'Roster'), node('strong', '', team.rosterCount == null ? 'Roster details' : team.rosterCount + ' player' + (team.rosterCount === 1 ? '' : 's'))); facts.append(captainFact, rosterFact);
         const details = node('details', 'fd-team-card__details'); const summary = document.createElement('summary'); summary.textContent = team.relationship === 'captain' ? 'Manage roster' : 'Roster & captain'; const roster = document.createElement('div'); renderRoster(team, roster); details.append(summary, roster);
         const actions = node('div', 'fd-team-card__actions');
@@ -360,6 +360,7 @@ function teamsClientScript() {
               seasonId: season.id,
               seasonName: season.name,
               standingsRank: row.standings_rank,
+              captainName: row.captain_display_name || '',
               relationship: 'directory',
             }));
           } catch { return []; }

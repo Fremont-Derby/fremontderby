@@ -52,14 +52,17 @@ test('active-season directory teams remain discoverable when no team is joinable
   const cards = normalizeTeamCards(management, {
     joinable_teams: [],
     league_teams: [
-      { teamId: 'team-other', teamName: 'Rail Riders', seasonId: 'season-active', seasonName: 'Active League Lab' },
+      { teamId: 'team-other', teamName: 'Rail Riders', seasonId: 'season-active', seasonName: 'Active League Lab', captainName: 'Casey Captain' },
       { teamId: 'team-mine', teamName: 'JFL QA Breakers', seasonId: 'season-active', seasonName: 'Active League Lab' },
     ],
   });
   assert.deepEqual(cards.map((card) => card.teamId), ['team-mine', 'team-other']);
   assert.equal(cards[1].relationship, 'directory');
+  assert.equal(cards[1].captainName, 'Casey Captain');
   assert.deepEqual(visibleTeamActions(cards[1]), []);
-  assert.doesNotMatch(renderTeamCard(cards[1]), /Request to join|Manage roster/);
+  const directoryHtml = renderTeamCard(cards[1]);
+  assert.match(directoryHtml, /Casey Captain/);
+  assert.doesNotMatch(directoryHtml, /Shown after joining|Request to join|Manage roster/);
 });
 
 test('compact cards show membership, captain, roster, and only authorized actions without ID labels', () => {
@@ -83,6 +86,7 @@ test('modern Teams document preserves canonical read/write APIs, auth, and legac
   assert.match(html, /\/api\/me\/teams/);
   assert.match(html, /\/api\/me\/team-membership-requests/);
   assert.match(html, /\/api\/seasons\/.*team-standings/);
+  assert.match(html, /captainName:\s*row\.captain_display_name/);
   assert.match(html, /\/api\/teams\/.*membership-request/);
   assert.match(html, /\/api\/team-membership-requests\/.*\/respond/);
   assert.match(html, /\/api\/team-invitations\/.*\/respond/);
