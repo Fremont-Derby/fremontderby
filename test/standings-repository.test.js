@@ -7,7 +7,7 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-secret',
 };
 
-test('standings repository lists team standings with public captain context', async () => {
+test('standings repository lists team standings with public captain and roster context', async () => {
   const calls = [];
   const responses = [
     [{
@@ -17,8 +17,14 @@ test('standings repository lists team standings with public captain context', as
       standing_points: 2,
       match_points: 3,
     }],
-    [{ team_id: 'team-1', player_id: 'player-1' }],
-    [{ id: 'player-1', display_name: 'Casey Captain' }],
+    [
+      { team_id: 'team-1', player_id: 'player-1', role: 'captain' },
+      { team_id: 'team-1', player_id: 'player-2', role: 'player' },
+    ],
+    [
+      { id: 'player-1', display_name: 'Casey Captain' },
+      { id: 'player-2', display_name: 'Morgan Member' },
+    ],
   ];
   const fetch = async (url, init) => {
     calls.push({ url, init });
@@ -38,8 +44,13 @@ test('standings repository lists team standings with public captain context', as
   });
   assert.equal(standings[0].team_id, 'team-1');
   assert.equal(standings[0].captain_display_name, 'Casey Captain');
+  assert.equal(standings[0].roster_count, 2);
+  assert.deepEqual(standings[0].roster, [
+    { playerId: 'player-1', displayName: 'Casey Captain', role: 'captain' },
+    { playerId: 'player-2', displayName: 'Morgan Member', role: 'player' },
+  ]);
   assert.match(calls[1].url, /\/rest\/v1\/team_memberships\?/);
-  assert.match(calls[1].url, /role=eq\.captain/);
+  assert.doesNotMatch(calls[1].url, /role=eq\.captain/);
   assert.match(calls[2].url, /\/rest\/v1\/players\?/);
 });
 
@@ -117,7 +128,6 @@ test('standings repository lists public seasons with registration progress', asy
       headers: { 'content-type': 'application/json' },
     });
   };
-
   const repository = createStandingsRepository(env, { fetch });
   const seasons = await repository.listPublicSeasons();
 
