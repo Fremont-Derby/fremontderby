@@ -223,7 +223,7 @@ function teamsClientScript() {
     if(roster.length) target.append(list); else target.append(node('p','fd-team-card__empty','No rostered players yet.'));
     if(team.relationship!=='captain') return;
     const tools=node('div','fd-team-card__captain-tools');
-    for(const [title,items,type] of [['Invited players',team.pendingInvitations||[],'invite'],['Join requests',(requestData.captain_requests||[]).filter((r)=>clean(r.teamId)===clean(team.teamId)||(!r.teamId&&clean(r.teamName)===clean(team.teamName)),'request']]){
+    for(const [title,items,type] of [['Invited players',team.pendingInvitations||[],'invite'],['Join requests',(requestData.captain_requests||[]).filter((r)=>clean(r.teamId)===clean(team.teamId)||(!r.teamId&&clean(r.teamName)===clean(team.teamName))),'request']]){
       const section=node('section','fd-team-card__work-section'); section.append(node('h3','fd-team-card__work-title',title));
       if(!items.length)section.append(node('p','fd-team-card__empty',type==='invite'?'No pending invites.':'No pending join requests.'));
       for(const item of items){ const row=node('div','fd-team-card__work-row'); const copy=node('div','fd-team-card__work-copy'); copy.append(node('strong','',item.displayName||'Player'),node('small','',type==='invite'?'Invite pending':'Wants to join this team')); const actions=node('div','fd-team-card__work-actions'); if(type==='invite') actions.append(button('Cancel invite','cancel-invite',item.invitationId,true)); else actions.append(button('Approve','approve-request',item.requestId),button('Decline','decline-request',item.requestId,true)); row.append(copy,actions); section.append(row); }
