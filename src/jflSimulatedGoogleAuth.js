@@ -24,6 +24,13 @@ function simulatedAuthScript() {
 </script>`;
 }
 
+function repairJflProfileInlineAuthSyntax(html = '') {
+  return String(html).replace(
+    "const baseUrl = config.supabaseUrl.replace(//+$/, '');",
+    "const baseUrl = config.supabaseUrl.replace(/\\/+$/, '');",
+  );
+}
+
 export async function injectJflSimulatedGoogleAuth(response, env = {}) {
   if (env.ENVIRONMENT !== 'jfl') return response;
 
@@ -31,7 +38,7 @@ export async function injectJflSimulatedGoogleAuth(response, env = {}) {
   if (!contentType.includes('text/html')) return response;
 
   const headers = new Headers(response.headers);
-  let html = await response.text();
+  let html = repairJflProfileInlineAuthSyntax(await response.text());
 
   if (jflSimulatedOidcEnabled(env) && !html.includes('data-fd-jfl-simulated-auth')) {
     const script = simulatedAuthScript();
