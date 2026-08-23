@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 import { renderProfilePage } from '../src/profilePage.js';
 import { enhanceProfileContact } from '../src/profileContactEnhancer.js';
@@ -122,7 +123,7 @@ test('full JFL Profile response emits syntactically valid inline browser scripts
   assert.ok(scripts.length > 0);
   scripts.forEach(({ source, tag }, index) => {
     assert.doesNotThrow(
-      () => new Function(source),
+      () => new vm.Script(source, { filename: `profile-inline-${index + 1}.js` }),
       `inline script ${index + 1} ${tag} must parse`,
     );
   });
