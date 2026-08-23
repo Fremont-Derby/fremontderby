@@ -6,14 +6,20 @@ import { enhanceJflModernProfile } from './jflModernProfileEnhancer.js';
 function simulatedAuthScript() {
   return `<script data-fd-jfl-simulated-auth>
 (() => {
-  window.addEventListener('DOMContentLoaded', () => {
+  const updateSimulationCopy = () => {
     const signInButton = document.querySelector('[data-google-sign-in]');
     const signedOutCopy = document.querySelector('[data-signed-out-copy]');
     if (signInButton) signInButton.setAttribute('aria-label', 'Continue with Google — simulated JFL test login');
     if (signedOutCopy) {
       signedOutCopy.textContent = 'JFL test mode: Continue with Google simulates OIDC and signs in as the JFL admin test actor.';
     }
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateSimulationCopy, { once: true });
+  } else {
+    updateSimulationCopy();
+  }
 })();
 </script>`;
 }
