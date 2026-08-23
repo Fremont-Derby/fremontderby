@@ -5,6 +5,8 @@ import { renderProfilePage } from '../src/profilePage.js';
 import { enhanceProfileContact } from '../src/profileContactEnhancer.js';
 import { enhanceProfilePlayerClaim } from '../src/profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from '../src/profileSeasonRegistrationEnhancer.js';
+import { injectJflSimulatedGoogleAuth } from '../src/jflSimulatedGoogleAuth.js';
+import { injectPersistentAuthSession } from '../src/persistentAuthSession.js';
 import {
   enhanceJflModernProfile,
   jflModernProfileStyles,
@@ -24,6 +26,23 @@ async function enhancedProfileHtml() {
   response = await enhanceProfileContact(response);
   response = await enhanceProfilePlayerClaim(response);
   response = await enhanceJflModernProfile(response, { ENVIRONMENT: 'jfl' });
+  return response.text();
+}
+
+async function fullJflProfileHtml() {
+  let response = htmlResponse(renderProfilePage({
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'public-key',
+  }));
+  response = await enhanceProfileSeasonRegistration(response);
+  response = await enhanceProfileContact(response);
+  response = await enhanceProfilePlayerClaim(response);
+  response = await injectJflSimulatedGoogleAuth(response, {
+    ENVIRONMENT: 'jfl',
+    BETA_AUTH_BYPASS: '1',
+    BETA_ACTOR_USER_ID: 'test-user@example.com',
+  });
+  response = await injectPersistentAuthSession(response);
   return response.text();
 }
 
@@ -83,4 +102,21 @@ test('modernizer is idempotent', () => {
   const once = modernizeJflProfileHtml(source);
   const twice = modernizeJflProfileHtml(once);
   assert.equal(twice, once);
+});
+
+test('JFL simulated Profile login uses the canonical in-page session flow without forced reload interception', async () => {
+  const html = await fullJflProfileHtml();
+  assert.match(html, /data-fd-jfl-simulated-auth/);
+  assert.match(html, /setSession\('fd-jfl-simulated-google-oidc-v1', ''\)/);
+  assert.match(html, /return loadProfile\(\)/);
+  assert.doesNotMatch(html, /beginSimulatedSession/);
+  assert.doesNotMatch(html, /window\.location\.assign\('\/profile'\)/);
+});
+
+test('full JFL Profile response emits syntactically valid inline browser scripts', async () => {
+  const html = await fullJflProfileHtml();
+  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
+    .map((match) => match[1]);
+  assert.ok(scripts.length >= 4);
+  for (const source of scripts) assert.doesNotThrow(() => new Function(source));
 });
