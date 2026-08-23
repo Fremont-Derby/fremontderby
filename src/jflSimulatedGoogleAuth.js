@@ -2,6 +2,7 @@ import {
   JFL_SIMULATED_OIDC_ACCESS_TOKEN,
   jflSimulatedOidcEnabled,
 } from './supabaseAuth.js';
+import { enhanceJflModernProfile } from './jflModernProfileEnhancer.js';
 
 function simulatedAuthScript() {
   const token = JSON.stringify(JFL_SIMULATED_OIDC_ACCESS_TOKEN);
@@ -72,29 +73,25 @@ function simulatedAuthScript() {
 }
 
 export async function injectJflSimulatedGoogleAuth(response, env = {}) {
-  if (!jflSimulatedOidcEnabled(env)) return response;
+  if (env.ENVIRONMENT !== 'jfl') return response;
 
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
   const headers = new Headers(response.headers);
-  const html = await response.text();
-  if (html.includes('data-fd-jfl-simulated-auth')) {
-    return new Response(html, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
+  let html = await response.text();
+
+  if (jflSimulatedOidcEnabled(env) && !html.includes('data-fd-jfl-simulated-auth')) {
+    const script = simulatedAuthScript();
+    html = /<\/head>/i.test(html)
+      ? html.replace(/<\/head>/i, `${script}\n</head>`)
+      : html.replace(/<body([^>]*)>/i, `${script}\n<body$1>`);
   }
 
-  const script = simulatedAuthScript();
-  const withSimulatedAuth = /<\/head>/i.test(html)
-    ? html.replace(/<\/head>/i, `${script}\n</head>`)
-    : html.replace(/<body([^>]*)>/i, `${script}\n<body$1>`);
-
-  return new Response(withSimulatedAuth, {
+  const withAuth = new Response(html, {
     status: response.status,
     statusText: response.statusText,
     headers,
   });
+  return enhanceJflModernProfile(withAuth, env);
 }
