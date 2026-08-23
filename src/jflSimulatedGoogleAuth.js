@@ -25,9 +25,9 @@ function simulatedAuthScript() {
 }
 
 function repairJflProfileInlineAuthSyntax(html = '') {
-  return String(html).replace(
-    "const baseUrl = config.supabaseUrl.replace(//+$/, '');",
-    "const baseUrl = config.supabaseUrl.replace(/\\/+$/, '');",
+  return String(html).replaceAll(
+    "replace(//+$/, '')",
+    "replace(/\\/+$/, '')",
   );
 }
 
