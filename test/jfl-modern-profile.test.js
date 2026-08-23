@@ -122,9 +122,10 @@ test('full JFL Profile response emits syntactically valid inline browser scripts
     .map((match) => ({ source: match[1], tag: match[0].slice(0, match[0].indexOf('>') + 1) }));
   assert.ok(scripts.length > 0);
   scripts.forEach(({ source, tag }, index) => {
-    assert.doesNotThrow(
-      () => new vm.Script(source, { filename: `profile-inline-${index + 1}.js` }),
-      `inline script ${index + 1} ${tag} must parse`,
-    );
+    try {
+      new vm.Script(source, { filename: `profile-inline-${index + 1}.js` });
+    } catch (error) {
+      assert.fail(`inline script ${index + 1} ${tag} failed to parse:\n${error.stack}`);
+    }
   });
 });
