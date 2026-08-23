@@ -111,6 +111,7 @@ test('JFL simulated Profile login uses the canonical in-page session flow withou
   assert.match(html, /return loadProfile\(\)/);
   assert.doesNotMatch(html, /beginSimulatedSession/);
   assert.doesNotMatch(html, /window\.location\.assign\('\/profile'\)/);
+  assert.match(html, /document\.readyState === 'loading'/);
 });
 
 test('full JFL Profile response emits syntactically valid inline browser scripts', async () => {
