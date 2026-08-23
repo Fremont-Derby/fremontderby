@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 import { renderProfilePage } from '../src/profilePage.js';
 import { enhanceProfileContact } from '../src/profileContactEnhancer.js';
 import { enhanceProfilePlayerClaim } from '../src/profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from '../src/profileSeasonRegistrationEnhancer.js';
+import { injectJflSimulatedGoogleAuth } from '../src/jflSimulatedGoogleAuth.js';
+import { injectPersistentAuthSession } from '../src/persistentAuthSession.js';
 import {
   enhanceJflModernProfile,
   jflModernProfileStyles,
@@ -24,6 +27,23 @@ async function enhancedProfileHtml() {
   response = await enhanceProfileContact(response);
   response = await enhanceProfilePlayerClaim(response);
   response = await enhanceJflModernProfile(response, { ENVIRONMENT: 'jfl' });
+  return response.text();
+}
+
+async function fullJflProfileHtml() {
+  let response = htmlResponse(renderProfilePage({
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'public-key',
+  }));
+  response = await enhanceProfileSeasonRegistration(response);
+  response = await enhanceProfileContact(response);
+  response = await enhanceProfilePlayerClaim(response);
+  response = await injectJflSimulatedGoogleAuth(response, {
+    ENVIRONMENT: 'jfl',
+    BETA_AUTH_BYPASS: '1',
+    BETA_ACTOR_USER_ID: 'test-user@example.com',
+  });
+  response = await injectPersistentAuthSession(response);
   return response.text();
 }
 
@@ -83,4 +103,29 @@ test('modernizer is idempotent', () => {
   const once = modernizeJflProfileHtml(source);
   const twice = modernizeJflProfileHtml(once);
   assert.equal(twice, once);
+});
+
+test('JFL simulated Profile login uses the canonical in-page session flow without forced reload interception', async () => {
+  const html = await fullJflProfileHtml();
+  assert.match(html, /data-fd-jfl-simulated-auth/);
+  assert.match(html, /fd-jfl-simulated-google-oidc-v1/);
+  assert.match(html, /setSession\s*\(/);
+  assert.match(html, /return\s+loadProfile\(\)/);
+  assert.doesNotMatch(html, /beginSimulatedSession/);
+  assert.doesNotMatch(html, /window\.location\.assign\(\s*['"]\/profile['"]\s*\)/);
+  assert.match(html, /document\.readyState === 'loading'/);
+});
+
+test('full JFL Profile response emits syntactically valid inline browser scripts', async () => {
+  const html = await fullJflProfileHtml();
+  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
+    .map((match) => ({ source: match[1], tag: match[0].slice(0, match[0].indexOf('>') + 1) }));
+  assert.ok(scripts.length > 0);
+  scripts.forEach(({ source, tag }, index) => {
+    try {
+      new vm.Script(source, { filename: `profile-inline-${index + 1}.js` });
+    } catch (error) {
+      assert.fail(`inline script ${index + 1} ${tag} failed to parse:\n${error.stack}`);
+    }
+  });
 });
