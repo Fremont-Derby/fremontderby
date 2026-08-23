@@ -118,7 +118,12 @@ test('JFL simulated Profile login uses the canonical in-page session flow withou
 test('full JFL Profile response emits syntactically valid inline browser scripts', async () => {
   const html = await fullJflProfileHtml();
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
-    .map((match) => match[1]);
+    .map((match) => ({ source: match[1], tag: match[0].slice(0, match[0].indexOf('>') + 1) }));
   assert.ok(scripts.length > 0);
-  for (const source of scripts) assert.doesNotThrow(() => new Function(source));
+  scripts.forEach(({ source, tag }, index) => {
+    assert.doesNotThrow(
+      () => new Function(source),
+      `inline script ${index + 1} ${tag} must parse`,
+    );
+  });
 });
