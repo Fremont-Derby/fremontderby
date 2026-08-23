@@ -93,8 +93,12 @@ test('modern document maps public roster data and persists obvious filter state'
   assert.match(html, /searchParams\.get\('view'\)/);
   assert.match(html, /history\.replaceState/);
   assert.match(html, /aria-pressed="true"/);
-  assert.match(jflModernTeamsStyles, /aria-pressed=\"true\"/);
+  assert.match(
+    jflModernTeamsStyles,
+    /\.fd-teams \.fd-teams__filters button\[aria-pressed=\"true\"\]/,
+  );
   assert.match(jflModernTeamsStyles, /content:'✓ '/);
+  assert.match(html, /details\.addEventListener\('toggle',\(\)=>\{syncFilters\(\);/);
   assert.doesNotMatch(html, />League team</);
 });
 
