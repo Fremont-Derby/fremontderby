@@ -59,6 +59,7 @@ test('modern Profile promotes identity and keeps canonical settings surfaces', a
   const html = await enhancedProfileHtml();
   assert.match(html, /data-fd-modern-profile="true"/);
   assert.match(html, /data-profile-identity/);
+  assert.match(html, /data-fd-profile-status/);
   assert.match(html, />Your profile</);
   assert.match(html, /data-season-now/);
   assert.match(html, /data-profile-contact/);
@@ -107,6 +108,8 @@ test('modern Profile has explicit mobile, focus, readable disabled, and forced-c
   assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.primary:focus-visible/);
   assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.status\[data-tone="ok"\]/);
   assert.match(jflModernProfileStyles, /--fd-profile-success-ink:#fff/);
+  assert.match(jflModernProfileStyles, /data-fd-profile-status.*data-tone="ok"/);
+  assert.match(jflModernProfileStyles, /-webkit-text-fill-color:#fff/);
 });
 
 test('Profile phone UI formats readable numbers and clears contradictory save states', async () => {
