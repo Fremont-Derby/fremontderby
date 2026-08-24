@@ -23,7 +23,7 @@ const script = `<script data-profile-contact-script>
   const form=root.querySelector('[data-contact-form]');const phone=root.querySelector('[data-contact-phone]');const save=root.querySelector('[data-contact-save]');const badge=root.querySelector('[data-contact-badge]');const state=root.querySelector('[data-contact-state]');const errorEl=root.querySelector('[data-contact-error]');
   let lastContact=null;
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
-  function digits(value){return String(value||'').replace(/\\D/g,'').slice(0,15)}
+  function digits(value){return String(value||'').replace(/\\D/g,'')}
   function formatPhone(value){const raw=digits(value);if(raw.length===10)return '('+raw.slice(0,3)+') '+raw.slice(3,6)+'-'+raw.slice(6);if(raw.length===11&&raw.startsWith('1'))return '+1 ('+raw.slice(1,4)+') '+raw.slice(4,7)+'-'+raw.slice(7);return raw}
   async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
   async function request(options={},retry=true){const accessToken=token();if(!accessToken)throw new Error('Sign in to manage your contact information.');const response=await fetch('/api/me/contact',{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json'}});if(response.status===401&&retry){await new Promise(resolve=>setTimeout(resolve,250));const refreshed=token();if(refreshed&&refreshed!==accessToken)return request(options,false)}const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body}
