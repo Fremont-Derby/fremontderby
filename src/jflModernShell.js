@@ -156,7 +156,7 @@ export const jflModernShellStyles = `
     min-height: 44px !important;
   }
   .fd-more-menu { display: block !important; margin-left: 0 !important; }
-  .fd-shell[data-fd-modern-shell="true"] .fd-more-menu summary {
+  .fd-shell[data-fd-modern-shell="true"] [data-fd-more-menu] > summary {
     min-width: 64px;
     display: flex !important;
     align-items: center;
@@ -164,10 +164,11 @@ export const jflModernShellStyles = `
     border: 1px solid #7fa991 !important;
     background: #073c28 !important;
     color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
     font-weight: 900 !important;
   }
-  .fd-shell[data-fd-modern-shell="true"] .fd-more-menu summary:hover,
-  .fd-shell[data-fd-modern-shell="true"] .fd-more-menu summary:focus-visible {
+  .fd-shell[data-fd-modern-shell="true"] [data-fd-more-menu] > summary:hover,
+  .fd-shell[data-fd-modern-shell="true"] [data-fd-more-menu] > summary:focus-visible {
     background: #0a5136 !important;
     color: #fff !important;
   }
@@ -263,7 +264,10 @@ export async function decorateJflModernShell(response, request, env = {}) {
   let html = await response.text();
   if (!html.includes('data-fd-shell')) return responseWithBody(response, html, headers);
 
-  html = html.replace('data-fd-shell', 'data-fd-shell data-fd-modern-shell="true"');
+  html = html.replace(
+    '<header class="fd-shell" data-fd-shell>',
+    '<header class="fd-shell" data-fd-shell data-fd-modern-shell="true">',
+  );
   html = html.replace(/<body([^>]*)>/i, '<body$1 data-fd-modern-shell-body="true">');
   html = injectEnvironmentBadge(html, env);
   html = replaceNavigation(html, url.pathname);
