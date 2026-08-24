@@ -103,6 +103,10 @@ test('modern Profile has explicit mobile, focus, readable disabled, and forced-c
   assert.match(jflModernProfileStyles, /button:disabled \*\{color:inherit/);
   assert.match(jflModernProfileStyles, /\.status\[data-tone="error"\]/);
   assert.match(jflModernProfileStyles, /\.badge\[data-tone="loading"\]/);
+  assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.primary:active/);
+  assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.primary:focus-visible/);
+  assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.status\[data-tone="ok"\]/);
+  assert.match(jflModernProfileStyles, /--fd-profile-success-ink:#fff/);
 });
 
 test('Profile phone UI formats readable numbers and clears contradictory save states', async () => {
