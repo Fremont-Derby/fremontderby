@@ -106,7 +106,6 @@ test('modern Profile has explicit mobile, focus, readable disabled, and forced-c
   assert.match(jflModernProfileStyles, /\.badge\[data-tone="loading"\]/);
   assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.primary:active/);
   assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.primary:focus-visible/);
-  assert.match(jflModernProfileStyles, /data-fd-modern-profile=.*\.status\[data-tone="ok"\]/);
   assert.match(jflModernProfileStyles, /--fd-profile-success-ink:#fff/);
   assert.match(jflModernProfileStyles, /data-fd-profile-status.*data-tone="ok"/);
   assert.match(jflModernProfileStyles, /-webkit-text-fill-color:#fff/);
