@@ -43,7 +43,10 @@ test('JFL shell renders five-item mobile dock, secondary navigation, current-pag
 
   assert.equal(response.headers.get('x-fremont-ui-shell'), 'modern-v1');
   const html = await response.text();
-  assert.match(html, /data-fd-modern-shell="true"/);
+  const shellTag = html.match(/<header class="fd-shell"[^>]*>/)?.[0] || '';
+  const shellStyleTag = html.match(/<style[^>]*data-fd-shell-styles[^>]*>/)?.[0] || '';
+  assert.match(shellTag, /data-fd-modern-shell="true"/);
+  assert.doesNotMatch(shellStyleTag, /data-fd-modern-shell/);
   assert.match(html, /data-fd-jfl-environment/);
   assert.match(html, />JFL</);
   assert.match(html, /1234567/);
@@ -83,6 +86,8 @@ test('modern shell keeps keyboard/touch and forced-colors accessibility contract
   assert.match(jflModernShellStyles, /prefers-reduced-motion/);
   assert.match(jflModernShellStyles, /data-fd-modern-shell=.*\.fd-more-menu summary/);
   assert.match(jflModernShellStyles, /background:\s*#073c28\s*!important/);
+  assert.match(jflModernShellStyles, /data-fd-more-menu.*> summary/);
+  assert.match(jflModernShellStyles, /-webkit-text-fill-color:\s*#fff\s*!important/);
   assert.match(jflModernShellStyles, /\.fd-more-menu\[open\] summary/);
 });
 
