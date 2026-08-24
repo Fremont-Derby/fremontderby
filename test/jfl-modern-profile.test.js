@@ -90,12 +90,35 @@ test('modern Profile keeps private captain-contact copy and hides technical iden
   assert.doesNotMatch(html, />Database ID</i);
 });
 
-test('modern Profile has explicit mobile, focus, contrast-state, and forced-colors contracts', () => {
+test('modern Profile has explicit mobile, focus, readable disabled, and forced-colors contracts', () => {
   assert.match(jflModernProfileStyles, /@media\(max-width:640px\)/);
   assert.match(jflModernProfileStyles, /focus-visible/);
   assert.match(jflModernProfileStyles, /@media\(forced-colors:active\)/);
   assert.match(jflModernProfileStyles, /min-height:44px/);
   assert.match(jflModernProfileStyles, /--fd-profile-green-dark:#033c25/);
+  assert.match(jflModernProfileStyles, /--fd-profile-disabled-bg:#d9dedb/);
+  assert.match(jflModernProfileStyles, /button:disabled\{opacity:1/);
+  assert.match(jflModernProfileStyles, /\.status\[data-tone="error"\]/);
+  assert.match(jflModernProfileStyles, /\.badge\[data-tone="loading"\]/);
+});
+
+test('Profile phone UI formats readable numbers and clears contradictory save states', async () => {
+  const html = await enhancedProfileHtml();
+  assert.match(html, /function formatPhone/);
+  assert.match(html, /\\D\/g/);
+  assert.match(html, /Contact on file/);
+  assert.match(html, /Fix phone/);
+  assert.match(html, /Saved phone was not changed/);
+  assert.match(html, /badge\.dataset\.tone='error'/);
+});
+
+test('Profile name save preserves an existing rating while the partial save response renders', async () => {
+  const html = await enhancedProfileHtml();
+  assert.match(html, /data-fd-profile-ui-polish/);
+  assert.match(html, /savedRating/);
+  assert.match(html, /savedStatus/);
+  assert.match(html, /rating\.textContent==='—'/);
+  assert.match(html, /ratingStatus\.textContent==='Not rated'/);
 });
 
 test('modernizer is idempotent', () => {
