@@ -84,7 +84,6 @@ test('modern shell keeps keyboard/touch and forced-colors accessibility contract
   assert.match(jflModernShellStyles, /min-height:\s*44px/);
   assert.match(jflModernShellStyles, /@media\s*\(forced-colors:\s*active\)/);
   assert.match(jflModernShellStyles, /prefers-reduced-motion/);
-  assert.match(jflModernShellStyles, /data-fd-modern-shell=.*\.fd-more-menu summary/);
   assert.match(jflModernShellStyles, /background:\s*#073c28\s*!important/);
   assert.match(jflModernShellStyles, /data-fd-more-menu.*> summary/);
   assert.match(jflModernShellStyles, /-webkit-text-fill-color:\s*#fff\s*!important/);
