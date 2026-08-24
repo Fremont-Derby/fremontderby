@@ -96,8 +96,11 @@ test('modern Profile has explicit mobile, focus, readable disabled, and forced-c
   assert.match(jflModernProfileStyles, /@media\(forced-colors:active\)/);
   assert.match(jflModernProfileStyles, /min-height:44px/);
   assert.match(jflModernProfileStyles, /--fd-profile-green-dark:#033c25/);
-  assert.match(jflModernProfileStyles, /--fd-profile-disabled-bg:#d9dedb/);
+  assert.match(jflModernProfileStyles, /--fd-profile-disabled-bg:#c7d0ca/);
+  assert.match(jflModernProfileStyles, /--fd-profile-disabled-ink:#1f2b24/);
   assert.match(jflModernProfileStyles, /button:disabled\{opacity:1/);
+  assert.match(jflModernProfileStyles, /body\[data-fd-player-surface="profile"\].*button:disabled/);
+  assert.match(jflModernProfileStyles, /button:disabled \*\{color:inherit/);
   assert.match(jflModernProfileStyles, /\.status\[data-tone="error"\]/);
   assert.match(jflModernProfileStyles, /\.badge\[data-tone="loading"\]/);
 });
@@ -110,6 +113,20 @@ test('Profile phone UI formats readable numbers and clears contradictory save st
   assert.match(html, /Fix phone/);
   assert.match(html, /Saved phone was not changed/);
   assert.match(html, /badge\.dataset\.tone='error'/);
+});
+
+test('Profile async subpanels react to in-page sign-in and cannot stay loading forever', async () => {
+  const html = await enhancedProfileHtml();
+  const observers = html.match(/new MutationObserver\(syncSession\)/g) || [];
+  assert.equal(observers.length, 2);
+  const timeouts = html.match(/requestTimeoutMs=8000/g) || [];
+  assert.equal(timeouts.length, 2);
+  assert.match(html, /Season status took too long to load\. Please try again\./);
+  assert.match(html, /Contact information took too long to load\. Please try again\./);
+  assert.match(html, /data-contact-retry/);
+  assert.match(html, /Retry loading contact/);
+  assert.match(html, /action\.textContent='Try again'/);
+  assert.match(html, /badge\.dataset\.tone='loading'/);
 });
 
 test('Profile name save preserves an existing rating while the partial save response renders', async () => {
