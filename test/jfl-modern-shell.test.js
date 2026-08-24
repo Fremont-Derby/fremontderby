@@ -81,6 +81,9 @@ test('modern shell keeps keyboard/touch and forced-colors accessibility contract
   assert.match(jflModernShellStyles, /min-height:\s*44px/);
   assert.match(jflModernShellStyles, /@media\s*\(forced-colors:\s*active\)/);
   assert.match(jflModernShellStyles, /prefers-reduced-motion/);
+  assert.match(jflModernShellStyles, /data-fd-modern-shell=.*\.fd-more-menu summary/);
+  assert.match(jflModernShellStyles, /background:\s*#073c28\s*!important/);
+  assert.match(jflModernShellStyles, /\.fd-more-menu\[open\] summary/);
 });
 
 test('JFL shell can fail back to legacy and never changes non-JFL environments', async () => {
