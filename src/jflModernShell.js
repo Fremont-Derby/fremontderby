@@ -156,14 +156,30 @@ export const jflModernShellStyles = `
     min-height: 44px !important;
   }
   .fd-more-menu { display: block !important; margin-left: 0 !important; }
-  .fd-more-menu summary {
+  .fd-shell[data-fd-modern-shell="true"] .fd-more-menu summary {
     min-width: 64px;
+    display: flex !important;
+    align-items: center;
     justify-content: center;
+    border: 1px solid #7fa991 !important;
+    background: #073c28 !important;
+    color: #fff !important;
+    font-weight: 900 !important;
+  }
+  .fd-shell[data-fd-modern-shell="true"] .fd-more-menu summary:hover,
+  .fd-shell[data-fd-modern-shell="true"] .fd-more-menu summary:focus-visible {
+    background: #0a5136 !important;
+    color: #fff !important;
+  }
+  .fd-more-menu[open] summary {
+    border-color: #b7dac4 !important;
+    background: #0f6845 !important;
+    color: #fff !important;
   }
   .fd-more-menu[data-active="true"] summary {
-    border-color: #fff !important;
-    background: #fff !important;
-    color: var(--fd-green-950) !important;
+    border-color: #d8ad3f !important;
+    background: #073c28 !important;
+    color: #fff !important;
     font-weight: 900 !important;
   }
   .fd-nav--secondary {
