@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderAvailabilityPage } from '../src/availabilityPage.js';
 
-test('availability page uses signed-in human-readable league-night selection', () => {
+test('availability page uses signed-in human-readable league-night list', () => {
   const html = renderAvailabilityPage();
 
   assert.match(html, /Check in/);
-  assert.match(html, /data-context-select/);
+  assert.match(html, /data-date-list/);
+  assert.doesNotMatch(html, /data-context-select/);
   assert.doesNotMatch(html, /data-season-id/);
   assert.doesNotMatch(html, /data-round-id/);
   assert.doesNotMatch(html, /data-token/);
@@ -15,47 +16,50 @@ test('availability page uses signed-in human-readable league-night selection', (
   assert.doesNotMatch(html, />Access token</i);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/teams/);
-  assert.match(html, /data-availability-status="available"/);
-  assert.match(html, /data-availability-status="unsure"/);
-  assert.match(html, /data-availability-status="unavailable"/);
+  assert.match(html, /data-value=item\.value/);
+  assert.match(html, /value:'available'/);
+  assert.match(html, /value:'unsure'/);
+  assert.match(html, /value:'unavailable'/);
   assert.match(html, /No published regular-season rounds/);
 });
 
-test('one-tap check-in restores saved date availability and makes current state obvious', () => {
+test('one-tap check-in restores saved date availability and makes every row state obvious', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /data-current-status/);
-  assert.match(html, /Your answer/);
+  assert.match(html, /data-response/);
+  assert.match(html, /Not marked/);
   assert.match(html, /\/api\/seasons\/.*\/availability\/me\?date=/);
   assert.match(html, /method:'PUT'/);
   assert.match(html, /availability_status/);
-  assert.match(html, /await loadSavedAvailability\(context\)/);
-  assert.match(html, /setAvailabilityState\(availability\.availability_status\|\|'unsure'\)/);
-  assert.match(html, /setAvailabilityState\(body\.availability\?\.availability_status\|\|value\)/);
-  assert.doesNotMatch(html, /renderContext\(\)\{const context=selectedContext\(\);setAvailabilityState\(null\)/);
+  assert.match(html, /Promise\.all\(groups\.map/);
+  assert.match(html, /setRowState\(card,availability\.availability_status\|\|null\)/);
+  assert.match(html, /setRowState\(card,body\.availability\?\.availability_status\|\|value\)/);
+  assert.match(html, /card\.dataset\.state=state/);
 });
 
-test('availability choices are large accessible one-tap controls', () => {
+test('availability choices are large accessible one-tap controls per date', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /class="actions" role="group" aria-label="Your availability"/);
-  assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
-  assert.match(html, /\.actions button\{min-height:64px/);
-  assert.match(html, /button\[aria-pressed="true"\]/);
-  assert.match(html, /button:focus-visible,select:focus-visible,.signin:focus-visible,.retry:focus-visible/);
-  assert.match(html, /function setAvailabilityState\(value\)/);
-  assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.availabilityStatus===value\)\)/);
+  assert.match(html, /actions\.setAttribute\('role','group'\)/);
+  assert.match(html, /actions\.setAttribute\('aria-label','Availability for '/);
+  assert.match(html, /button\.setAttribute\('aria-pressed','false'\)/);
+  assert.match(html, /\.quick-actions button\{min-height:52px/);
+  assert.match(html, /\.quick-actions button\[aria-pressed="true"\]/);
+  assert.match(html, /button:focus-visible,.signin:focus-visible,.retry:focus-visible/);
+  assert.match(html, /function setRowState\(card,value\)/);
+  assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.value===value\)\)/);
 });
 
-test('match date and team context appear before the check-in action', () => {
+test('match date and team context appear before each check-in action', () => {
   const html = renderAvailabilityPage();
 
-  const contextIndex = html.indexOf('data-context-title');
-  const actionsIndex = html.indexOf('class="actions"');
+  const contextIndex = html.indexOf("copy.append(title,detail)");
+  const actionsIndex = html.indexOf("actions.setAttribute('role','group')");
   assert.ok(contextIndex > -1 && actionsIndex > contextIndex);
-  assert.match(html, /data-context-detail/);
-  assert.match(html, /Team: /);
-  assert.match(html, /available to substitute/);
+  assert.match(html, /contextSummary\(group\)/);
+  assert.match(html, /Round '\+context\.roundNumber/);
+  assert.match(html, /context\.teamName\|\|'Your team'/);
+  assert.match(html, /Free agent \/ substitute/);
 });
 
 test('dual-team player chooses one matchup team before captains build lineups', () => {
