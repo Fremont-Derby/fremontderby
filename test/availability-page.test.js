@@ -38,6 +38,10 @@ test('one-tap check-in restores saved date availability and makes every row stat
   assert.match(html, /\.date-card\[data-state="available"\]\{background:var\(--green-bg\)\}/);
   assert.match(html, /\.date-card\[data-state="unsure"\]\{background:var\(--yellow-bg\)\}/);
   assert.match(html, /\.date-card\[data-state="unavailable"\]\{background:var\(--red-bg\)\}/);
+  assert.match(html, /\.date-card\[data-state="unmarked"\]\{background:var\(--neutral-bg\)\}/);
+  assert.match(html, /\.quick-actions button\{[^}]*background:transparent/);
+  assert.match(html, /\.quick-actions button\[aria-pressed="true"\]\{[^}]*background:transparent/);
+  assert.doesNotMatch(html, /\.quick-actions button\{[^}]*background:rgba\(255,255,255/);
 });
 
 test('availability uses compact accessible one-tap controls per date', () => {
