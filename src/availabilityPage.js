@@ -25,7 +25,7 @@ const trippyCheckinTheme = `<style data-checkin-trippy-theme>
     -webkit-text-fill-color: transparent !important;
     filter: drop-shadow(0 0 7px rgba(255,79,216,.78)) drop-shadow(0 0 12px rgba(51,244,199,.56));
   }
-  .intro p, .status { color: #e9f8ff !important; text-shadow: 0 1px 3px #07050f; }
+  .intro p, .status { color: #e9f8ff !important; text-shadow: none !important; }
   .status[data-tone="ok"] { color: #7dff9a !important; }
   .status[data-tone="error"] { color: #ff8b9d !important; }
 
@@ -140,8 +140,15 @@ const trippyCheckinTheme = `<style data-checkin-trippy-theme>
   }
 </style>`;
 
+const unsafeParseJson = `async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}`;
+const safeParseJson = `async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{const rateLimited=response.status===429||/error\\s*(code[: ]*)?1015|temporarily banned|rate limit/i.test(text);return{error:rateLimited?'Check-in is temporarily busy. Wait a moment and try again.':'Check-in service is temporarily unavailable. Try again.'}}}`;
+const parallelSavedStateLoad = `await Promise.all(groups.map((group)=>{const card=dateList.querySelector('[data-group-key="'+CSS.escape(group.key)+'"]');return loadSavedAvailability(group,card)}));`;
+const sequentialSavedStateLoad = `for(const group of groups){const card=dateList.querySelector('[data-group-key="'+CSS.escape(group.key)+'"]');await loadSavedAvailability(group,card)}`;
+
 export function renderAvailabilityPage() {
   return renderAvailabilityPageCore()
+    .replace(unsafeParseJson, safeParseJson)
+    .replace(parallelSavedStateLoad, sequentialSavedStateLoad)
     .replace(
       'data-date-list role="table" aria-label="Upcoming league nights"',
       'data-date-list data-register data-roster-status data-free-agent-status role="table" aria-label="Upcoming league nights"',
