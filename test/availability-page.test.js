@@ -35,15 +35,23 @@ test('one-tap check-in restores saved date availability and makes every row stat
   assert.match(html, /setRowState\(card,availability\.availability_status\|\|null\)/);
   assert.match(html, /setRowState\(card,body\.availability\?\.availability_status\|\|value\)/);
   assert.match(html, /card\.dataset\.state=state/);
+  assert.match(html, /\.date-card\[data-state="available"\]\{background:var\(--green-bg\)\}/);
+  assert.match(html, /\.date-card\[data-state="unsure"\]\{background:var\(--yellow-bg\)\}/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\]\{background:var\(--red-bg\)\}/);
 });
 
-test('availability choices are large accessible one-tap controls per date', () => {
+test('availability uses compact accessible one-tap controls per date', () => {
   const html = renderAvailabilityPage();
 
+  assert.match(html, /data-date-list role="table"/);
+  assert.match(html, /card\.setAttribute\('role','row'\)/);
   assert.match(html, /actions\.setAttribute\('role','group'\)/);
   assert.match(html, /actions\.setAttribute\('aria-label','Availability for '/);
+  assert.match(html, /button\.setAttribute\('aria-label',item\.ariaLabel\+' for '/);
   assert.match(html, /button\.setAttribute\('aria-pressed','false'\)/);
-  assert.match(html, /\.quick-actions button\{min-height:52px/);
+  assert.match(html, /\.date-card\{display:grid;grid-template-columns:/);
+  assert.match(html, /\.quick-actions button\{min-height:36px/);
+  assert.match(html, /@media\(max-width:560px\).*\.quick-actions button\{min-height:34px/);
   assert.match(html, /\.quick-actions button\[aria-pressed="true"\]/);
   assert.match(html, /button:focus-visible,.signin:focus-visible,.retry:focus-visible/);
   assert.match(html, /function setRowState\(card,value\)/);
@@ -60,6 +68,7 @@ test('match date and team context appear before each check-in action', () => {
   assert.match(html, /Round '\+context\.roundNumber/);
   assert.match(html, /context\.teamName\|\|'Your team'/);
   assert.match(html, /Free agent \/ substitute/);
+  assert.match(html, /white-space:nowrap;overflow:hidden;text-overflow:ellipsis/);
 });
 
 test('dual-team player chooses one matchup team before captains build lineups', () => {
