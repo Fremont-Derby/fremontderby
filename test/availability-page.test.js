@@ -124,16 +124,20 @@ test('availability first render and recovery states are task-oriented', () => {
   assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
 });
 
-test('JFL check-in validation theme is deliberately saturated and keeps selected buttons lit', () => {
+test('JFL check-in theme uses Fremont Open style layered psychedelic gradients', () => {
   const html = renderAvailabilityPage();
 
   assert.match(html, /data-checkin-trippy-theme/);
-  assert.match(html, /radial-gradient\(circle at 12% 10%/);
-  assert.match(html, /\.date-card\[data-state="available"\][\s\S]*#00d66f/);
-  assert.match(html, /\.date-card\[data-state="unsure"\][\s\S]*#ffb800/);
-  assert.match(html, /\.date-card\[data-state="unavailable"\][\s\S]*#ff1744/);
-  assert.match(html, /\.quick-actions button\[aria-pressed="true"\][\s\S]*brightness\(1\.18\)/);
-  assert.match(html, /background: linear-gradient\(180deg, #35ff84, #00a94e\) !important/);
-  assert.match(html, /background: linear-gradient\(180deg, #fff66b, #ffad00\) !important/);
-  assert.match(html, /background: linear-gradient\(180deg, #ff6480, #df0037\) !important/);
+  assert.match(html, /radial-gradient\(circle at 7% 12%/);
+  assert.match(html, /conic-gradient\(from 35deg at 52% 48%/);
+  assert.match(html, /repeating-linear-gradient\(115deg/);
+  assert.match(html, /repeating-radial-gradient\(circle at 50% 50%/);
+  assert.match(html, /linear-gradient\(135deg, #07050f 0%, #1c0b3e 28%, #3b0d48 54%, #062a36 78%, #07050f 100%\)/);
+  assert.match(html, /\.date-card\[data-state="available"\][\s\S]*#35ff84/);
+  assert.match(html, /\.date-card\[data-state="unsure"\][\s\S]*#ffe156/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\][\s\S]*#ff5b8a/);
+  assert.match(html, /\.quick-actions button\[aria-pressed="true"\][\s\S]*brightness\(1\.22\)/);
+  assert.match(html, /background: linear-gradient\(145deg, #d7ff4f 0%, #35ff84 32%, #00c76a 68%, #00a3a8 100%\) !important/);
+  assert.match(html, /background: linear-gradient\(145deg, #fff99b 0%, #ffe156 34%, #ffb000 70%, #ff7a00 100%\) !important/);
+  assert.match(html, /background: linear-gradient\(145deg, #ff9db4 0%, #ff5b8a 34%, #ff1744 68%, #c70083 100%\) !important/);
 });
