@@ -63,8 +63,8 @@ function renderMoreMenu(pathname) {
   const secondaryActive = MODERN_SECONDARY_DESTINATIONS.some((item) => item.key === activeKey);
   const active = secondaryActive ? ' data-active="true"' : '';
   return `<details class="fd-nav-menu fd-more-menu" data-fd-more-menu${active}>
-    <summary aria-label="More navigation">More</summary>
-    <nav class="fd-nav fd-nav--mobile fd-nav--secondary" aria-label="More navigation">
+    <summary aria-label="Menu navigation">Menu</summary>
+    <nav class="fd-nav fd-nav--mobile fd-nav--secondary" aria-label="Menu navigation">
       ${MODERN_SECONDARY_DESTINATIONS.map((item) => link(item, activeKey)).join('\n      ')}
     </nav>
   </details>`;
