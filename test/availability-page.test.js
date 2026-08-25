@@ -16,7 +16,7 @@ test('availability page uses signed-in human-readable league-night list', () => 
   assert.doesNotMatch(html, />Access token</i);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/teams/);
-  assert.match(html, /data-value=item\.value/);
+  assert.match(html, /button\.dataset\.value=item\.value/);
   assert.match(html, /value:'available'/);
   assert.match(html, /value:'unsure'/);
   assert.match(html, /value:'unavailable'/);
