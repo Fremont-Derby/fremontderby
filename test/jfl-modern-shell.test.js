@@ -59,7 +59,8 @@ test('JFL shell renders five-item mobile dock, secondary navigation, current-pag
   assert.doesNotMatch(dock, /\/scorecard|\/standings|\/rules|\/admin|\/availability|\/lineup/);
 
   const more = html.match(/<details[^>]+data-fd-more-menu[\s\S]*?<\/details>/)?.[0] || '';
-  assert.match(more, /aria-label="More navigation"/);
+  assert.match(more, /<summary aria-label="Menu navigation">Menu<\/summary>/);
+  assert.doesNotMatch(more, />More<\/summary>/);
   for (const href of ['/scorecard', '/availability', '/lineup', '/standings', '/prizes', '/rules', '/admin']) {
     assert.match(more, new RegExp(`href=["']${href.replace('/', '\\/')}["']`), `missing ${href} from More menu`);
   }
