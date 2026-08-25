@@ -3,6 +3,7 @@ const PLAYER_SURFACES = new Map([
   ['/schedule', 'schedule'],
   ['/scorecard', 'score-picker'],
   ['/profile', 'profile'],
+  ['/availability', 'availability'],
 ]);
 
 export const playerSurfaceThemeStyles = `
@@ -196,6 +197,77 @@ export const playerSurfaceThemeStyles = `
     background: var(--fd-bg-surface) !important;
     border-color: var(--fd-danger) !important;
     color: var(--fd-danger-text) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .app,
+  body[data-fd-player-surface="availability"] .panel,
+  body[data-fd-player-surface="availability"] .recovery,
+  body[data-fd-player-surface="availability"] .choice-card,
+  body[data-fd-player-surface="availability"] .answer {
+    color: var(--fd-text) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .panel,
+  body[data-fd-player-surface="availability"] .recovery,
+  body[data-fd-player-surface="availability"] .choice-card {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border) !important;
+    box-shadow: var(--fd-shadow-soft) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .answer {
+    background: var(--fd-bg-subtle) !important;
+    border-color: var(--fd-border) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .intro h1,
+  body[data-fd-player-surface="availability"] .context strong,
+  body[data-fd-player-surface="availability"] .answer strong,
+  body[data-fd-player-surface="availability"] .panel-head,
+  body[data-fd-player-surface="availability"] .choice-card > strong {
+    color: var(--fd-text) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .intro p,
+  body[data-fd-player-surface="availability"] label,
+  body[data-fd-player-surface="availability"] .context span,
+  body[data-fd-player-surface="availability"] .answer span,
+  body[data-fd-player-surface="availability"] .choice-copy,
+  body[data-fd-player-surface="availability"] .empty,
+  body[data-fd-player-surface="availability"] .recovery p {
+    color: var(--fd-text-muted) !important;
+  }
+
+  body[data-fd-player-surface="availability"] select {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-border-control) !important;
+    color: var(--fd-text) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .badge {
+    background: var(--fd-green-100) !important;
+    border: 1px solid #b6d4c1 !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .signin,
+  body[data-fd-player-surface="availability"] .choice-team {
+    background: var(--fd-bg-surface) !important;
+    border-color: var(--fd-primary-strong) !important;
+    color: var(--fd-primary-strong) !important;
+  }
+
+  body[data-fd-player-surface="availability"] .choice-team.selected,
+  body[data-fd-player-surface="availability"] .retry {
+    background: var(--fd-primary-strong) !important;
+    border-color: var(--fd-primary-strong) !important;
+    color: var(--fd-primary-text) !important;
+  }
+
+  body[data-fd-player-surface="availability"] button:focus-visible,
+  body[data-fd-player-surface="availability"] select:focus-visible,
+  body[data-fd-player-surface="availability"] .signin:focus-visible {
+    outline-color: var(--fd-focus) !important;
   }
 
   @media (max-width: 700px) {
