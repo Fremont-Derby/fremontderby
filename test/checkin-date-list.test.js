@@ -17,10 +17,12 @@ test('each check-in date uses redundant green yellow red controls and saved resp
   assert.match(html, /data-value='?"?available/);
   assert.match(html, /data-value='?"?unsure/);
   assert.match(html, /data-value='?"?unavailable/);
-  assert.match(html, /Green = available, yellow = unsure, red = unavailable/);
+  assert.match(html, /Each week has fixed green, yellow, and red choices/);
   assert.match(html, /Needs response/);
   assert.match(html, /aria-pressed/);
-  assert.match(html, /repeating-linear-gradient/);
+  assert.match(html, /quick-actions button\[data-value="available"\]\{background:linear-gradient/);
+  assert.match(html, /quick-actions button\[data-value="unsure"\]\{background:linear-gradient/);
+  assert.match(html, /quick-actions button\[data-value="unavailable"\]\{background:linear-gradient/);
 });
 
 test('saved responses load for every grouped upcoming date and saves update only the tapped row', () => {
