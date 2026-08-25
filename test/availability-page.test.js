@@ -5,7 +5,7 @@ import { renderAvailabilityPage } from '../src/availabilityPage.js';
 test('availability page uses signed-in human-readable league-night selection', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /Fremont Derby Availability/);
+  assert.match(html, /Check in/);
   assert.match(html, /data-context-select/);
   assert.doesNotMatch(html, /data-season-id/);
   assert.doesNotMatch(html, /data-round-id/);
@@ -18,24 +18,44 @@ test('availability page uses signed-in human-readable league-night selection', (
   assert.match(html, /data-availability-status="available"/);
   assert.match(html, /data-availability-status="unsure"/);
   assert.match(html, /data-availability-status="unavailable"/);
-  assert.match(html, /\/availability\/me/);
-  assert.match(html, /\/free-agent-availability\/me/);
   assert.match(html, /No published regular-season rounds/);
 });
 
-test('availability choices stay compact and expose selected state accessibly', () => {
+test('one-tap check-in restores saved date availability and makes current state obvious', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /class="actions" role="group" aria-label="Availability status"/);
+  assert.match(html, /data-current-status/);
+  assert.match(html, /Your answer/);
+  assert.match(html, /\/api\/seasons\/.*\/availability\/me\?date=/);
+  assert.match(html, /method:'PUT'/);
+  assert.match(html, /availability_status/);
+  assert.match(html, /await loadSavedAvailability\(context\)/);
+  assert.match(html, /setAvailabilityState\(availability\.availability_status\|\|'unsure'\)/);
+  assert.match(html, /setAvailabilityState\(body\.availability\?\.availability_status\|\|value\)/);
+  assert.doesNotMatch(html, /renderContext\(\)\{const context=selectedContext\(\);setAvailabilityState\(null\)/);
+});
+
+test('availability choices are large accessible one-tap controls', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /class="actions" role="group" aria-label="Your availability"/);
   assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
-  assert.match(html, /\.actions\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.doesNotMatch(html, /\.actions,.choice-actions\{grid-template-columns:1fr\}/);
+  assert.match(html, /\.actions button\{min-height:64px/);
+  assert.match(html, /button\[aria-pressed="true"\]/);
   assert.match(html, /button:focus-visible,select:focus-visible,.signin:focus-visible,.retry:focus-visible/);
-  assert.match(html, /button\[aria-pressed="true"\]::after\{content:' ✓'/);
   assert.match(html, /function setAvailabilityState\(value\)/);
   assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.availabilityStatus===value\)\)/);
-  assert.match(html, /renderContext\(\)\{const context=selectedContext\(\);setAvailabilityState\(null\)/);
-  assert.match(html, /await signedApi\(path,[\s\S]*setAvailabilityState\(value\);setStatus\('Availability saved'/);
+});
+
+test('match date and team context appear before the check-in action', () => {
+  const html = renderAvailabilityPage();
+
+  const contextIndex = html.indexOf('data-context-title');
+  const actionsIndex = html.indexOf('class="actions"');
+  assert.ok(contextIndex > -1 && actionsIndex > contextIndex);
+  assert.match(html, /data-context-detail/);
+  assert.match(html, /Team: /);
+  assert.match(html, /available to substitute/);
 });
 
 test('dual-team player chooses one matchup team before captains build lineups', () => {
@@ -56,13 +76,9 @@ test('availability first render and recovery states are task-oriented', () => {
   assert.match(html, /data-recovery aria-live="polite"/);
   assert.match(html, /data-workspace hidden/);
   assert.match(html, /Loading your league nights…/);
-  assert.match(html, /Sign in to mark availability/);
+  assert.match(html, /Sign in to check in/);
   assert.match(html, /Open Profile and sign in again/);
-  assert.match(html, /Availability could not be loaded/);
+  assert.match(html, /Check-in could not be loaded/);
   assert.match(html, /Try again/);
   assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
-  assert.match(html, /if\(!accessToken\(\)\)\{setStatus\('Sign in to mark availability\.'/);
-  assert.match(html, /if\(message\.startsWith\('Your sign-in expired'\)\)showRecovery/);
-  assert.match(html, /else showRecovery\('Availability could not be loaded'/);
-  assert.match(html, /\.recovery-actions\{display:grid;grid-template-columns:1fr\}/);
 });
