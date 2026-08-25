@@ -20,28 +20,50 @@ test('availability page uses signed-in human-readable league-night list', () => 
   assert.match(html, /value:'available'/);
   assert.match(html, /value:'unsure'/);
   assert.match(html, /value:'unavailable'/);
-  assert.match(html, /No published regular-season rounds/);
+  assert.match(html, /No upcoming published regular-season rounds/);
+});
+
+test('check-in hides past weeks before rendering or loading saved state', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /function localDateKey\(date=new Date\(\)\)/);
+  assert.match(html, /const today=localDateKey\(\)/);
+  assert.match(html, /if\(context\.scheduledOn&&context\.scheduledOn<today\)continue/);
+  assert.match(html, /const groups=groupContexts\(contexts\)/);
+  assert.match(html, /Promise\.all\(groups\.map/);
 });
 
 test('one-tap check-in restores saved date availability and makes every row state obvious', () => {
   const html = renderAvailabilityPage();
 
   assert.match(html, /data-response/);
-  assert.match(html, /Not marked/);
+  assert.match(html, /Needs response/);
   assert.match(html, /\/api\/seasons\/.*\/availability\/me\?date=/);
   assert.match(html, /method:'PUT'/);
   assert.match(html, /availability_status/);
-  assert.match(html, /Promise\.all\(groups\.map/);
   assert.match(html, /setRowState\(card,availability\.availability_status\|\|null\)/);
   assert.match(html, /setRowState\(card,body\.availability\?\.availability_status\|\|value\)/);
   assert.match(html, /card\.dataset\.state=state/);
-  assert.match(html, /\.date-card\[data-state="available"\]\{background:var\(--green-bg\)\}/);
-  assert.match(html, /\.date-card\[data-state="unsure"\]\{background:var\(--yellow-bg\)\}/);
-  assert.match(html, /\.date-card\[data-state="unavailable"\]\{background:var\(--red-bg\)\}/);
-  assert.match(html, /\.date-card\[data-state="unmarked"\]\{background:var\(--neutral-bg\)\}/);
+  assert.match(html, /\.date-card\[data-state="available"\]\{background:repeating-linear-gradient/);
+  assert.match(html, /\.date-card\[data-state="unsure"\]\{background:repeating-linear-gradient/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\]\{background:repeating-linear-gradient/);
+  assert.match(html, /\.date-card\[data-state="unmarked"\]\{background:repeating-linear-gradient/);
+  assert.match(html, /border-left-width:7px/);
+  assert.match(html, /\.date-list\{display:grid;gap:3px;padding:3px;border:2px solid/);
   assert.match(html, /\.quick-actions button\{[^}]*background:transparent/);
   assert.match(html, /\.quick-actions button\[aria-pressed="true"\]\{[^}]*background:transparent/);
   assert.doesNotMatch(html, /\.quick-actions button\{[^}]*background:rgba\(255,255,255/);
+});
+
+test('unanswered upcoming weeks are explicitly called out', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /'Needs response'/);
+  assert.match(html, /function updateNeedsResponseStatus\(\)/);
+  assert.match(html, /querySelectorAll\('\.date-card\[data-state="unmarked"\]'\)/);
+  assert.match(html, /upcoming week/);
+  assert.match(html, /All upcoming weeks are checked in/);
+  assert.match(html, /updateNeedsResponseStatus\(\)/);
 });
 
 test('availability uses compact accessible one-tap controls per date', () => {
@@ -55,7 +77,7 @@ test('availability uses compact accessible one-tap controls per date', () => {
   assert.match(html, /button\.setAttribute\('aria-pressed','false'\)/);
   assert.match(html, /\.date-card\{display:grid;grid-template-columns:/);
   assert.match(html, /\.quick-actions button\{min-height:36px/);
-  assert.match(html, /@media\(max-width:560px\).*\.quick-actions button\{min-height:34px/);
+  assert.match(html, /@media\(max-width:560px\).*\.quick-actions button\{min-height:33px/);
   assert.match(html, /\.quick-actions button\[aria-pressed="true"\]/);
   assert.match(html, /button:focus-visible,.signin:focus-visible,.retry:focus-visible/);
   assert.match(html, /function setRowState\(card,value\)/);
