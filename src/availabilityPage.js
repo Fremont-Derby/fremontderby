@@ -2,7 +2,7 @@ import { renderAvailabilityPage as renderAvailabilityPageCore } from './availabi
 
 export function renderAvailabilityPage() {
   return renderAvailabilityPageCore().replace(
-    'data-date-list aria-label="Upcoming league nights"',
-    'data-date-list data-register data-roster-status data-free-agent-status aria-label="Upcoming league nights"',
+    'data-date-list role="table" aria-label="Upcoming league nights"',
+    'data-date-list data-register data-roster-status data-free-agent-status role="table" aria-label="Upcoming league nights"',
   );
 }
