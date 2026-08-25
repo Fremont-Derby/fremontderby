@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import { injectPlayerSurfaceTheme, playerSurfaceThemeStyles } from '../src/playerSurfaceTheme.js';
 
+// Human-failed Onion 8 gate: keep both contrast and participation regressions explicit.
 test('availability is a modern light player surface with scoped readable colors', async () => {
   const response = new Response('<!doctype html><html><head></head><body><main class="app"><section class="panel"><div class="answer"><strong>Not marked</strong></div></section></main></body></html>', {
     headers: { 'content-type': 'text/html; charset=utf-8' },
