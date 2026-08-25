@@ -1,7 +1,8 @@
 -- #1899: reconcile the live JFL lane RPC fix. JFL has active roster members
 -- that legitimately lack a season_players row, so either active registration
 -- or active roster membership qualifies for Check-in. Preserve the JFL
--- compatibility caches used by lineup submission.
+-- compatibility caches used by lineup submission without routing rostered
+-- players through the free-agent cache.
 
 create or replace function jfl.get_own_date_availability(
   actor_user_id uuid,
@@ -127,16 +128,31 @@ begin
   on conflict on constraint player_date_availability_pkey do update
   set status = excluded.status, updated_at = now();
 
-  insert into jfl_private.free_agent_availability(
-    season_id, round_id, player_id, status, updated_at
-  )
-  select target_season_id, r.id, target_player_id,
-         target_availability_status, now()
-  from jfl.rounds r
-  where r.season_id = target_season_id
-    and r.scheduled_on = target_availability_date
-  on conflict (round_id, player_id) do update
-  set status = excluded.status, updated_at = now();
+  -- free_agent_availability has an FK to season_players and is only valid for
+  -- unrostered active season participants. Roster-only players must not be
+  -- written there or the cache FK rejects an otherwise-valid Check-in.
+  if exists (
+    select 1 from jfl.season_players sp
+    where sp.season_id = target_season_id
+      and sp.player_id = target_player_id
+      and sp.status = 'active'
+  ) and not exists (
+    select 1 from jfl.team_memberships tm
+    where tm.season_id = target_season_id
+      and tm.player_id = target_player_id
+      and tm.ends_at is null
+  ) then
+    insert into jfl_private.free_agent_availability(
+      season_id, round_id, player_id, status, updated_at
+    )
+    select target_season_id, r.id, target_player_id,
+           target_availability_status, now()
+    from jfl.rounds r
+    where r.season_id = target_season_id
+      and r.scheduled_on = target_availability_date
+    on conflict (round_id, player_id) do update
+    set status = excluded.status, updated_at = now();
+  end if;
 
   update jfl_private.roster_availability ra
   set status = target_availability_status, updated_at = now()
