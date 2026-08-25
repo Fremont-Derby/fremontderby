@@ -43,7 +43,7 @@ test('one-tap check-in restores saved date availability and makes every row stat
 test('availability uses compact accessible one-tap controls per date', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /data-date-list role="table"/);
+  assert.match(html, /data-date-list[^>]*role="table"/);
   assert.match(html, /card\.setAttribute\('role','row'\)/);
   assert.match(html, /actions\.setAttribute\('role','group'\)/);
   assert.match(html, /actions\.setAttribute\('aria-label','Availability for '/);
