@@ -36,6 +36,8 @@ test('schedule enhancer injects team points and racks-won versus race-target UI'
   const html = await enhanced.text();
   assert.match(html, /Team points/);
   assert.match(html, /Racks won \/ race target/);
+  assert.match(html, /racks won/);
+  assert.match(html, /race to/);
   assert.match(html, /raceToA/);
   assert.match(html, /raceToB/);
   assert.match(html, /fd-finished-breakdown__race/);
