@@ -1,4 +1,5 @@
 import { createStandingsRepository } from './standingsRepository.js';
+import { enrichFinishedScheduleRounds } from './jflFinishedMatchResults.js';
 
 const POSTGRES_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SCHEDULE_PATH_RE = /^\/api\/seasons\/([^/]+)\/schedule$/;
@@ -33,7 +34,8 @@ export async function routeJflSeasonSchedule(
     if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: 'Season not found' }, 404);
     }
-    const rounds = await repository.listSeasonSchedule({ seasonId });
+    const scheduleRounds = await repository.listSeasonSchedule({ seasonId });
+    const rounds = await enrichFinishedScheduleRounds(scheduleRounds, env, { fetch: fetchImpl });
     return jsonResponse({ rounds });
   } catch (error) {
     return jsonResponse({ error: error?.message || 'Unable to load the schedule.' }, 500);
