@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import worker from '../src/index.js';
+import worker from '../src/personaRouterEntry.js';
 
 const LEGACY_SEASON_ID = '8a38a413-0359-a95a-4dc8-383123c7e092';
 
@@ -12,7 +12,7 @@ function json(body, status = 200) {
   });
 }
 
-test('public season routes accept PostgreSQL UUID text even when it is not RFC version/variant tagged', async () => {
+test('JFL schedule accepts PostgreSQL UUID text even when it is not RFC version/variant tagged', async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];
   globalThis.fetch = async (input) => {
@@ -67,7 +67,7 @@ test('public season routes accept PostgreSQL UUID text even when it is not RFC v
   }
 });
 
-test('public season routes still reject malformed UUID text before touching Supabase', async () => {
+test('JFL schedule still rejects malformed UUID text before touching Supabase', async () => {
   const response = await worker.fetch(
     new Request('https://jfl.fremontderby.com/api/seasons/not-a-uuid/schedule'),
     { ENVIRONMENT: 'jfl' },
