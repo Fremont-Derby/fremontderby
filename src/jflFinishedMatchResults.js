@@ -35,7 +35,7 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
   const headers = headersFor(required(env, 'SUPABASE_SERVICE_ROLE_KEY'));
   const ids = finished.map((match) => match.teamMatchId);
   const individualParams = new URLSearchParams({
-    select: 'team_match_id,slot_number,player_a_id,player_b_id,score_a,score_b,winner_side,status',
+    select: 'team_match_id,slot_number,player_a_id,player_b_id,score_a,score_b,race_to_a,race_to_b,winner_side,status',
     team_match_id: `in.(${ids.join(',')})`,
     order: 'team_match_id.asc,slot_number.asc',
   });
@@ -57,6 +57,8 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
       playerBName: playersById.get(row.player_b_id) || 'Player',
       scoreA: row.score_a,
       scoreB: row.score_b,
+      raceToA: row.race_to_a,
+      raceToB: row.race_to_b,
       winnerSide: row.winner_side,
       status: row.status,
     });
