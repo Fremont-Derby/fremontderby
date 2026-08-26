@@ -41,4 +41,6 @@ test('schedule enhancer injects team points and racks-won versus race-target UI'
   assert.match(html, /raceToA/);
   assert.match(html, /raceToB/);
   assert.match(html, /fd-finished-breakdown__race/);
+  assert.match(html, /scoreA/);
+  assert.match(html, /scoreB/);
 });
