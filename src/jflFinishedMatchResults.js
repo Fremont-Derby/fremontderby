@@ -34,13 +34,13 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
   const supabaseUrl = required(env, 'SUPABASE_URL').replace(/\/+$/, '');
   const headers = headersFor(required(env, 'SUPABASE_SERVICE_ROLE_KEY'));
   const ids = finished.map((match) => match.teamMatchId);
-  const individualParams = new URLSearchParams({
+  const playerMatchParams = new URLSearchParams({
     select: 'team_match_id,slot_number,player_a_id,player_b_id,score_a,score_b,race_to_a,race_to_b,winner_side,status',
     team_match_id: `in.(${ids.join(',')})`,
     order: 'team_match_id.asc,slot_number.asc',
   });
-  const individualRows = await getJson(fetchImpl, `${supabaseUrl}/rest/v1/individual_matches?${individualParams}`, headers);
-  const playerIds = [...new Set(individualRows.flatMap((row) => [row.player_a_id, row.player_b_id]).filter(Boolean))];
+  const playerMatchRows = await getJson(fetchImpl, `${supabaseUrl}/rest/v1/player_matches?${playerMatchParams}`, headers);
+  const playerIds = [...new Set(playerMatchRows.flatMap((row) => [row.player_a_id, row.player_b_id]).filter(Boolean))];
   const playersById = new Map();
   if (playerIds.length) {
     const playerParams = new URLSearchParams({ select: 'id,display_name', id: `in.(${playerIds.join(',')})` });
@@ -49,7 +49,7 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
   }
 
   const rowsByMatch = new Map();
-  for (const row of individualRows) {
+  for (const row of playerMatchRows) {
     const list = rowsByMatch.get(row.team_match_id) || [];
     list.push({
       slotNumber: row.slot_number,
