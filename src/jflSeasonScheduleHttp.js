@@ -35,7 +35,14 @@ export async function routeJflSeasonSchedule(
       return jsonResponse({ error: 'Season not found' }, 404);
     }
     const scheduleRounds = await repository.listSeasonSchedule({ seasonId });
-    const rounds = await enrichFinishedScheduleRounds(scheduleRounds, env, { fetch: fetchImpl });
+    let rounds = scheduleRounds;
+    try {
+      rounds = await enrichFinishedScheduleRounds(scheduleRounds, env, { fetch: fetchImpl });
+    } catch {
+      // Finished-result detail is additive. Never make the base schedule unavailable
+      // because optional result enrichment cannot be loaded.
+      rounds = scheduleRounds;
+    }
     return jsonResponse({ rounds });
   } catch (error) {
     return jsonResponse({ error: error?.message || 'Unable to load the schedule.' }, 500);
