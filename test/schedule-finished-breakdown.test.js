@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { enrichFinishedScheduleRounds } from '../src/jflFinishedMatchResults.js';
-import { enhanceFinishedScheduleBreakdown } from '../src/finishedScheduleEnhancer.js';
+import { enhanceFinishedScheduleBreakdown, finishedScheduleWinnerSide } from '../src/finishedScheduleEnhancer.js';
 
 function json(data) { return new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } }); }
 
@@ -30,7 +30,18 @@ test('finished result enrichment adds player rows, race targets, and team points
   ]);
 });
 
-test('schedule enhancer injects team points and racks-won versus race-target UI', async () => {
+test('finished Schedule winner detection identifies home and away wins', () => {
+  assert.equal(finishedScheduleWinnerSide({ status: 'finalized', teamAScore: 2, teamBScore: 1 }), 'a');
+  assert.equal(finishedScheduleWinnerSide({ status: 'corrected', teamAScore: 1, teamBScore: 2 }), 'b');
+});
+
+test('finished Schedule winner detection does not identify tied or unfinalized matches', () => {
+  assert.equal(finishedScheduleWinnerSide({ status: 'finalized', teamAScore: 1, teamBScore: 1 }), '');
+  assert.equal(finishedScheduleWinnerSide({ status: 'scheduled', teamAScore: 2, teamBScore: 1 }), '');
+  assert.equal(finishedScheduleWinnerSide({ status: 'in_progress', teamAScore: 2, teamBScore: 0 }), '');
+});
+
+test('schedule enhancer injects team points, racks/race targets, and accessible winner emphasis', async () => {
   const response = new Response('<html><head></head><body><main data-schedule-groups></main></body></html>', { headers: { 'content-type': 'text/html' } });
   const enhanced = await enhanceFinishedScheduleBreakdown(response);
   const html = await enhanced.text();
@@ -43,4 +54,8 @@ test('schedule enhancer injects team points and racks-won versus race-target UI'
   assert.match(html, /fd-finished-breakdown__race/);
   assert.match(html, /scoreA/);
   assert.match(html, /scoreB/);
+  assert.match(html, /data-result="winner"/);
+  assert.match(html, /data-result="loser"/);
+  assert.match(html, /winner'\)/);
+  assert.match(html, /forced-colors:active/);
 });
