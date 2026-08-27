@@ -9,9 +9,9 @@ test('finished result enrichment adds player rows, race targets, and team points
   const fetch = async (url) => {
     const value = String(url);
     if (value.includes('/player_matches?')) return json([
-      { team_match_id: 'tm1', slot_number: 1, player_a_id: 'a1', player_b_id: 'b1', score_a: 4, score_b: 2, race_to_a: 5, race_to_b: 4, winner_side: 'a', status: 'finalized' },
-      { team_match_id: 'tm1', slot_number: 2, player_a_id: 'a2', player_b_id: 'b2', score_a: 1, score_b: 4, race_to_a: 4, race_to_b: 4, winner_side: 'b', status: 'finalized' },
-      { team_match_id: 'tm1', slot_number: 3, player_a_id: 'a3', player_b_id: 'b3', score_a: 4, score_b: 3, race_to_a: 4, race_to_b: 5, winner_side: 'a', status: 'finalized' },
+      { team_match_id: 'tm1', slot_number: 1, player_a_id: 'a1', player_b_id: 'b1', score_a: 4, score_b: 2, race_to_a: 5, race_to_b: 4, winner_side: 'A', status: 'finalized' },
+      { team_match_id: 'tm1', slot_number: 2, player_a_id: 'a2', player_b_id: 'b2', score_a: 1, score_b: 4, race_to_a: 4, race_to_b: 4, winner_side: 'B', status: 'finalized' },
+      { team_match_id: 'tm1', slot_number: 3, player_a_id: 'a3', player_b_id: 'b3', score_a: 4, score_b: 3, race_to_a: 4, race_to_b: 5, winner_side: 'A', status: 'finalized' },
     ]);
     if (value.includes('/players?')) return json([
       { id: 'a1', display_name: 'Alice' }, { id: 'b1', display_name: 'Bob' },
