@@ -59,7 +59,7 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
       scoreB: row.score_b,
       raceToA: row.race_to_a,
       raceToB: row.race_to_b,
-      winnerSide: row.winner_side,
+      winnerSide: String(row.winner_side || '').toLowerCase(),
       status: row.status,
     });
     rowsByMatch.set(row.team_match_id, list);
