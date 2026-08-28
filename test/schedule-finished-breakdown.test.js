@@ -74,6 +74,7 @@ test('schedule enhancer makes race details and my-match emphasis unmistakable', 
   assert.match(html, /border:4px solid Highlight!important/);
   assert.match(html, /justify-content:center;width:100%/);
   assert.match(html, /details\.replaceChildren\(summary,make\(match\)\)/);
+  assert.match(html, /details\.removeAttribute\('data-empty-actions'\)/);
   assert.match(html, /details\.open=false/);
   assert.match(html, /matchesById\(body\.rounds\|\|\[\]\)/);
   assert.match(html, /teamMatchId/);
