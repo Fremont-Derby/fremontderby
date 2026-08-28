@@ -55,11 +55,11 @@ test('finished Schedule indexes every rendered match by stable team-match id acr
   assert.deepEqual(Object.keys(byId).sort(), ['tm-away', 'tm-home']);
 });
 
-test('schedule enhancer exposes obvious Race details with player names and closeness to target', async () => {
+test('schedule enhancer makes race details and my-match emphasis unmistakable', async () => {
   const response = new Response('<html><head></head><body><main data-schedule-groups></main></body></html>', { headers: { 'content-type': 'text/html' } });
   const enhanced = await enhanceFinishedScheduleBreakdown(response);
   const html = await enhanced.text();
-  assert.match(html, /Race details/);
+  assert.match(html, /Race details · who played & how close/);
   assert.match(html, /Show race details/);
   assert.match(html, /Hide race details/);
   assert.match(html, /Racks won \/ race target/);
@@ -70,6 +70,9 @@ test('schedule enhancer exposes obvious Race details with player names and close
   assert.match(html, /winnerSide/);
   assert.match(html, /data-race-result="winner"/);
   assert.match(html, /data-race-result="loser"/);
+  assert.match(html, /fd-schedule-match--mine\{border-width:4px!important\}/);
+  assert.match(html, /border:4px solid Highlight!important/);
+  assert.match(html, /justify-content:center;width:100%/);
   assert.match(html, /details\.replaceChildren\(summary,make\(match\)\)/);
   assert.match(html, /details\.open=false/);
   assert.match(html, /matchesById\(body\.rounds\|\|\[\]\)/);
