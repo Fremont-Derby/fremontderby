@@ -1,3 +1,5 @@
+import { jflScheduleRaceClientScript, jflScheduleRaceStyles } from './jflScheduleRaceClient.js';
+
 export const MODERN_PRIMARY_DESTINATIONS = Object.freeze([
   Object.freeze({ href: '/', label: 'Home', key: 'home', ball: 'H' }),
   Object.freeze({ href: '/teams', label: 'Teams', key: 'teams', ball: 'T' }),
@@ -100,6 +102,24 @@ export function formatJflDeployTimestamp(value) {
   return `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z`;
 }
 
+export const jflDeployTimeClientScript = String.raw`
+  (() => {
+    const badge = document.querySelector('[data-fd-jfl-environment][data-deploy-timestamp]');
+    const value = badge?.querySelector('[data-fd-jfl-deploy-time]');
+    const raw = badge?.dataset.deployTimestamp || '';
+    if (!value || !raw) return;
+    const date = new Date(raw);
+    if (Number.isNaN(date.valueOf())) return;
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      month: '2-digit',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date);
+    value.textContent = formatted.replace(',', '');
+  })();
+`;
+
 function renderEnvironmentBadge(env = {}) {
   const fullSha = String(env.DEPLOY_GIT_SHA || '').trim();
   const metadata = env.CF_VERSION_METADATA || {};
@@ -110,7 +130,8 @@ function renderEnvironmentBadge(env = {}) {
   if (deployedAt) titleParts.push(deployedAt);
   if (versionId) titleParts.push(`version ${versionId}`);
   if (fullSha) titleParts.push(`git ${fullSha}`);
-  return `<span class="fd-env-badge" data-fd-jfl-environment title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><span>${escapeAttribute(badgeValue)}</span></span>`;
+  const timestampAttr = deployedAt ? ` data-deploy-timestamp="${escapeAttribute(deployedAt)}"` : '';
+  return `<span class="fd-env-badge" data-fd-jfl-environment${timestampAttr} title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><span data-fd-jfl-deploy-time>${escapeAttribute(badgeValue)}</span></span>`;
 }
 
 function injectEnvironmentBadge(html, env) {
@@ -290,6 +311,18 @@ export async function decorateJflModernShell(response, request, env = {}) {
     html = html.replace(
       /<\/head>/i,
       `<style data-fd-modern-shell-styles>${jflModernShellStyles}</style>\n</head>`,
+    );
+  }
+  if (!html.includes('data-fd-jfl-local-deploy-time')) {
+    html = html.replace(
+      /<\/head>/i,
+      `<script data-fd-jfl-local-deploy-time>${jflDeployTimeClientScript}</script>\n</head>`,
+    );
+  }
+  if (url.pathname === '/schedule' && !html.includes('data-fd-jfl-schedule-races')) {
+    html = html.replace(
+      /<\/head>/i,
+      `<style data-fd-jfl-schedule-race-styles>${jflScheduleRaceStyles}</style>\n<script data-fd-jfl-schedule-races>${jflScheduleRaceClientScript}</script>\n</head>`,
     );
   }
 
