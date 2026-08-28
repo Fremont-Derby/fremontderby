@@ -91,11 +91,26 @@ function escapeAttribute(value) {
     .replaceAll('>', '&gt;');
 }
 
+export function formatJflDeployTimestamp(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return 'local';
+  const date = new Date(raw);
+  if (Number.isNaN(date.valueOf())) return raw;
+  const iso = date.toISOString();
+  return `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z`;
+}
+
 function renderEnvironmentBadge(env = {}) {
   const fullSha = String(env.DEPLOY_GIT_SHA || '').trim();
-  const shortSha = fullSha ? fullSha.slice(0, 7) : 'local';
-  const title = fullSha ? `JFL deploy ${fullSha}` : 'JFL environment';
-  return `<span class="fd-env-badge" data-fd-jfl-environment title="${escapeAttribute(title)}"><strong>JFL</strong><span>${escapeAttribute(shortSha)}</span></span>`;
+  const metadata = env.CF_VERSION_METADATA || {};
+  const deployedAt = String(metadata.timestamp || '').trim();
+  const versionId = String(metadata.id || '').trim();
+  const badgeValue = formatJflDeployTimestamp(deployedAt);
+  const titleParts = ['JFL deployment'];
+  if (deployedAt) titleParts.push(deployedAt);
+  if (versionId) titleParts.push(`version ${versionId}`);
+  if (fullSha) titleParts.push(`git ${fullSha}`);
+  return `<span class="fd-env-badge" data-fd-jfl-environment title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><span>${escapeAttribute(badgeValue)}</span></span>`;
 }
 
 function injectEnvironmentBadge(html, env) {

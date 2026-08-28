@@ -5,6 +5,7 @@ import { renderPrimaryNavigation } from '../src/appShell.js';
 import router from '../src/routerEntry.js';
 import {
   decorateJflModernShell,
+  formatJflDeployTimestamp,
   jflModernShellStyles,
   MODERN_PRIMARY_DESTINATIONS,
   MODERN_SECONDARY_DESTINATIONS,
@@ -33,12 +34,24 @@ test('modern shell defines exactly the approved five primary destinations in ord
   assert.ok(MODERN_SECONDARY_DESTINATIONS.some((item) => item.href === '/admin'));
 });
 
-test('JFL shell renders five-item mobile dock, secondary navigation, current-page semantics, and identity', async () => {
+test('JFL deployment timestamp is compact, stable UTC text for mobile screenshots', () => {
+  assert.equal(formatJflDeployTimestamp('2026-08-28T05:14:13.123Z'), '08-28 05:14Z');
+  assert.equal(formatJflDeployTimestamp(''), 'local');
+});
+
+test('JFL shell renders five-item mobile dock, secondary navigation, current-page semantics, and deployment identity', async () => {
   const request = new Request('https://jfl.fremontderby.com/schedule');
   const response = await decorateJflModernShell(
     htmlResponse('/schedule'),
     request,
-    { ENVIRONMENT: 'jfl', DEPLOY_GIT_SHA: '1234567890abcdef' },
+    {
+      ENVIRONMENT: 'jfl',
+      DEPLOY_GIT_SHA: '1234567890abcdef',
+      CF_VERSION_METADATA: {
+        id: 'version-abc',
+        timestamp: '2026-08-28T05:14:13.123Z',
+      },
+    },
   );
 
   assert.equal(response.headers.get('x-fremont-ui-shell'), 'modern-v1');
@@ -49,7 +62,10 @@ test('JFL shell renders five-item mobile dock, secondary navigation, current-pag
   assert.doesNotMatch(shellStyleTag, /data-fd-modern-shell/);
   assert.match(html, /data-fd-jfl-environment/);
   assert.match(html, />JFL</);
-  assert.match(html, /1234567/);
+  assert.match(html, /08-28 05:14Z/);
+  assert.match(html, /2026-08-28T05:14:13\.123Z/);
+  assert.match(html, /version version-abc/);
+  assert.match(html, /git 1234567890abcdef/);
   assert.match(html, /data-message-indicator/);
   assert.match(html, /data-message-badge/);
 
@@ -116,12 +132,16 @@ test('JFL shell can fail back to legacy and never changes non-JFL environments',
 test('routerEntry applies the modern shell to the static JFL design-system route', async () => {
   const response = await router.fetch(
     new Request('https://jfl.fremontderby.com/design-system'),
-    { ENVIRONMENT: 'jfl', DEPLOY_GIT_SHA: '7654321abcdef000' },
+    {
+      ENVIRONMENT: 'jfl',
+      DEPLOY_GIT_SHA: '7654321abcdef000',
+      CF_VERSION_METADATA: { id: 'router-version', timestamp: '2026-08-28T05:30:00Z' },
+    },
     {},
   );
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('x-fremont-ui-shell'), 'modern-v1');
   const html = await response.text();
   assert.match(html, /data-fd-modern-shell="true"/);
-  assert.match(html, /7654321/);
+  assert.match(html, /08-28 05:30Z/);
 });
