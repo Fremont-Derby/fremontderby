@@ -29,8 +29,8 @@ test('finished result enrichment adds player rows, race targets, and team points
   const [match] = round.matches;
   assert.equal(match.teamAScore, 2);
   assert.equal(match.teamBScore, 1);
-  assert.deepEqual(match.playerResults.map((r) => [r.playerAName, r.scoreA, r.raceToA, r.scoreB, r.raceToB, r.playerBName]), [
-    ['Alice', 4, 5, 2, 4, 'Bob'], ['Cara', 1, 4, 4, 4, 'Dan'], ['Eve', 4, 4, 3, 5, 'Finn'],
+  assert.deepEqual(match.playerResults.map((r) => [r.playerAName, r.scoreA, r.raceToA, r.scoreB, r.raceToB, r.playerBName, r.winnerSide]), [
+    ['Alice', 4, 5, 2, 4, 'Bob', 'a'], ['Cara', 1, 4, 4, 4, 'Dan', 'b'], ['Eve', 4, 4, 3, 5, 'Finn', 'a'],
   ]);
 });
 
@@ -55,20 +55,24 @@ test('finished Schedule indexes every rendered match by stable team-match id acr
   assert.deepEqual(Object.keys(byId).sort(), ['tm-away', 'tm-home']);
 });
 
-test('schedule enhancer keeps finalized results compact and installs per-match expandable details', async () => {
+test('schedule enhancer exposes obvious Race details with player names and closeness to target', async () => {
   const response = new Response('<html><head></head><body><main data-schedule-groups></main></body></html>', { headers: { 'content-type': 'text/html' } });
   const enhanced = await enhanceFinishedScheduleBreakdown(response);
   const html = await enhanced.text();
-  assert.match(html, /Team points/);
+  assert.match(html, /Race details/);
+  assert.match(html, /Show race details/);
+  assert.match(html, /Hide race details/);
   assert.match(html, /Racks won \/ race target/);
-  assert.match(html, /data-result="winner"/);
-  assert.match(html, /data-result="loser"/);
-  assert.match(html, /forced-colors:active/);
-  assert.match(html, /matchesById\(body\.rounds\|\|\[\]\)/);
-  assert.match(html, /teamMatchId/);
-  assert.match(html, /scorecard\?match=/);
+  assert.match(html, /playerAName/);
+  assert.match(html, /playerBName/);
+  assert.match(html, /raceToA/);
+  assert.match(html, /raceToB/);
+  assert.match(html, /winnerSide/);
+  assert.match(html, /data-race-result="winner"/);
+  assert.match(html, /data-race-result="loser"/);
   assert.match(html, /details\.replaceChildren\(summary,make\(match\)\)/);
   assert.match(html, /details\.open=false/);
-  assert.match(html, /Show match details/);
-  assert.match(html, /Hide match details/);
+  assert.match(html, /matchesById\(body\.rounds\|\|\[\]\)/);
+  assert.match(html, /teamMatchId/);
+  assert.match(html, /forced-colors:active/);
 });
