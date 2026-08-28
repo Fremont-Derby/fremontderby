@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { enrichFinishedScheduleRounds } from '../src/jflFinishedMatchResults.js';
-import { enhanceFinishedScheduleBreakdown, finishedScheduleWinnerSide } from '../src/finishedScheduleEnhancer.js';
+import {
+  enhanceFinishedScheduleBreakdown,
+  finishedScheduleMatchesById,
+  finishedScheduleWinnerSide,
+} from '../src/finishedScheduleEnhancer.js';
 
 function json(data) { return new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } }); }
 
@@ -41,21 +45,30 @@ test('finished Schedule winner detection does not identify tied or unfinalized m
   assert.equal(finishedScheduleWinnerSide({ status: 'in_progress', teamAScore: 2, teamBScore: 0 }), '');
 });
 
-test('schedule enhancer injects team points, racks/race targets, and accessible winner emphasis', async () => {
+test('finished Schedule indexes every rendered match by stable team-match id across rounds', () => {
+  const byId = finishedScheduleMatchesById([
+    { roundId: 'r1', matches: [{ teamMatchId: 'tm-home', status: 'finalized', teamAScore: 2, teamBScore: 1 }] },
+    { roundId: 'r2', matches: [{ team_match_id: 'tm-away', status: 'finalized', teamAScore: 1, teamBScore: 2 }] },
+  ]);
+  assert.equal(byId['tm-home'].teamAScore, 2);
+  assert.equal(byId['tm-away'].teamBScore, 2);
+  assert.deepEqual(Object.keys(byId).sort(), ['tm-away', 'tm-home']);
+});
+
+test('schedule enhancer keeps finalized results compact and installs per-match expandable details', async () => {
   const response = new Response('<html><head></head><body><main data-schedule-groups></main></body></html>', { headers: { 'content-type': 'text/html' } });
   const enhanced = await enhanceFinishedScheduleBreakdown(response);
   const html = await enhanced.text();
   assert.match(html, /Team points/);
   assert.match(html, /Racks won \/ race target/);
-  assert.match(html, /racks won/);
-  assert.match(html, /race to/);
-  assert.match(html, /raceToA/);
-  assert.match(html, /raceToB/);
-  assert.match(html, /fd-finished-breakdown__race/);
-  assert.match(html, /scoreA/);
-  assert.match(html, /scoreB/);
   assert.match(html, /data-result="winner"/);
   assert.match(html, /data-result="loser"/);
-  assert.match(html, /winner'\)/);
   assert.match(html, /forced-colors:active/);
+  assert.match(html, /matchesById\(body\.rounds\|\|\[\]\)/);
+  assert.match(html, /teamMatchId/);
+  assert.match(html, /scorecard\?match=/);
+  assert.match(html, /details\.replaceChildren\(summary,make\(match\)\)/);
+  assert.match(html, /details\.open=false/);
+  assert.match(html, /Show match details/);
+  assert.match(html, /Hide match details/);
 });
