@@ -32,6 +32,8 @@ test('Schedule race enhancer consumes the actual enriched playerResults contract
 
 test('Schedule race enhancer enforces 3 regular-season and 4 postseason result expectations without fabricating rows', () => {
   assert.match(jflScheduleRaceClientScript, /isPostseasonRound/);
+  assert.match(jflScheduleRaceClientScript, /semifinal/);
+  assert.match(jflScheduleRaceClientScript, /championship/);
   assert.match(jflScheduleRaceClientScript, /\? 4 : 3/);
   assert.match(jflScheduleRaceClientScript, /Result data is incomplete/);
   assert.match(jflScheduleRaceClientScript, /results\.map\(raceRow\)/);
