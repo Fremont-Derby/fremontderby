@@ -11,6 +11,7 @@ import { routeJflModernSchedule } from './jflModernSchedule.js';
 import { routeJflModernStandings } from './jflModernStandings.js';
 import { routeJflModernTeams } from './jflModernTeams.js';
 import { decorateJflModernShell } from './jflModernShell.js';
+import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
@@ -115,6 +116,8 @@ async function finalizeBrowserResponse(response, pathname) {
 const baseRouterEntry = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const jflSeasonScheduleResponse = await routeJflSeasonSchedule(request, env);
+    if (jflSeasonScheduleResponse) return jflSeasonScheduleResponse;
     const modernHomeResponse = routeJflModernHome(request, env);
     if (modernHomeResponse) {
       return finalizeBrowserResponse(modernHomeResponse, url.pathname);
