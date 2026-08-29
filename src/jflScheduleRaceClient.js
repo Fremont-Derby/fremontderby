@@ -143,6 +143,23 @@ export const jflScheduleRaceClientScript = String.raw`
       return row;
     }
 
+    function resultSignature(match, round, results) {
+      return JSON.stringify({
+        id: matchId(match),
+        expected: expectedRaceCount(round),
+        results: results.map((result, index) => [
+          slotNumber(result, index),
+          clean(result.playerAName || result.player_a_name),
+          scoreA(result),
+          raceToA(result),
+          clean(result.playerBName || result.player_b_name),
+          scoreB(result),
+          raceToB(result),
+          clean(result.winnerSide || result.winner_side),
+        ]),
+      });
+    }
+
     function decorateCard(card, match, round) {
       const id = matchId(match);
       if (id) {
@@ -154,6 +171,10 @@ export const jflScheduleRaceClientScript = String.raw`
       if (!results.length) return;
       const details = card.querySelector('.fd-schedule-match__details');
       if (!details) return;
+
+      const signature = resultSignature(match, round, results);
+      if (card.dataset.raceDetailsSignature === signature) return;
+
       const summary = details.querySelector('summary');
       const expected = expectedRaceCount(round);
       if (summary) summary.textContent = 'Race details · ' + results.length + ' races';
@@ -173,6 +194,7 @@ export const jflScheduleRaceClientScript = String.raw`
         warning.textContent = 'Result data is incomplete: expected ' + expected + ' races, found ' + results.length + '.';
         list.before(warning);
       }
+      card.dataset.raceDetailsSignature = signature;
     }
 
     function decorateSchedule() {
