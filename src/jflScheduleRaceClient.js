@@ -49,6 +49,16 @@ export const jflScheduleRaceStyles = `
     text-transform: uppercase;
     white-space: nowrap;
   }
+  .fd-schedule-match__race-warning {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border: 1px solid #b86f18;
+    border-radius: 9px;
+    background: #fff7e7;
+    color: #70410c;
+    font-size: .78rem;
+    font-weight: 800;
+  }
   @media (max-width: 390px) {
     .fd-schedule-race { gap: 5px; padding: 6px; }
     .fd-schedule-race__player { padding-inline: 6px; }
@@ -74,6 +84,8 @@ export const jflScheduleRaceClientScript = String.raw`
     const tableNumber = (match) => Number(match.tableNumber ?? match.table_number ?? 9999);
     const isFinished = (match) => ['finalized', 'corrected'].includes(clean(match.status));
     const raceResults = (match) => Array.isArray(match.playerResults) ? [...match.playerResults] : [];
+    const isPostseasonRound = (round) => ['semifinal', 'championship', 'tiebreaker', 'postseason', 'playoffs'].includes(clean(round.stage).toLowerCase());
+    const expectedRaceCount = (round) => isPostseasonRound(round) ? 4 : 3;
 
     function sortMatches(matches = []) {
       return [...matches].sort((a, b) => tableNumber(a) - tableNumber(b) || matchId(a).localeCompare(matchId(b)));
@@ -105,36 +117,46 @@ export const jflScheduleRaceClientScript = String.raw`
       return side;
     }
 
+    function scoreA(result) { return result.scoreA ?? result.score_a ?? result.racksWonA ?? result.racks_won_a; }
+    function scoreB(result) { return result.scoreB ?? result.score_b ?? result.racksWonB ?? result.racks_won_b; }
+    function raceToA(result) { return result.raceToA ?? result.race_to_a; }
+    function raceToB(result) { return result.raceToB ?? result.race_to_b; }
+    function slotNumber(result, index) { return result.slotNumber ?? result.slot_number ?? result.sequenceNumber ?? result.sequence_number ?? (index + 1); }
+
     function raceRow(result, index) {
       const winner = clean(result.winnerSide || result.winner_side).toUpperCase();
       const row = document.createElement('div');
       row.className = 'fd-schedule-race';
-      const sequence = result.sequenceNumber ?? result.sequence_number ?? (index + 1);
+      const sequence = slotNumber(result, index);
       row.dataset.playerMatchId = clean(result.playerMatchId || result.player_match_id);
-      row.setAttribute('aria-label', 'Race ' + sequence + ': ' + (clean(result.playerAName || result.player_a_name) || 'Player A') + ' ' + progress(result.racksWonA ?? result.racks_won_a, result.raceToA ?? result.race_to_a) + ', ' + (clean(result.playerBName || result.player_b_name) || 'Player B') + ' ' + progress(result.racksWonB ?? result.racks_won_b, result.raceToB ?? result.race_to_b));
+      row.setAttribute('aria-label', 'Race ' + sequence + ': ' + (clean(result.playerAName || result.player_a_name) || 'Player A') + ' ' + progress(scoreA(result), raceToA(result)) + ', ' + (clean(result.playerBName || result.player_b_name) || 'Player B') + ' ' + progress(scoreB(result), raceToB(result)));
       const leftTone = winner === 'A' ? 'winner' : winner === 'B' ? 'loser' : '';
       const rightTone = winner === 'B' ? 'winner' : winner === 'A' ? 'loser' : '';
       const number = document.createElement('span');
       number.className = 'fd-schedule-race__number';
       number.textContent = 'Race ' + sequence;
       row.append(
-        player(result.playerAName || result.player_a_name, result.racksWonA ?? result.racks_won_a, result.raceToA ?? result.race_to_a, leftTone),
+        player(result.playerAName || result.player_a_name, scoreA(result), raceToA(result), leftTone),
         number,
-        player(result.playerBName || result.player_b_name, result.racksWonB ?? result.racks_won_b, result.raceToB ?? result.race_to_b, rightTone),
+        player(result.playerBName || result.player_b_name, scoreB(result), raceToB(result), rightTone),
       );
       return row;
     }
 
-    function decorateCard(card, match) {
+    function decorateCard(card, match, round) {
       const id = matchId(match);
-      if (id) card.dataset.matchId = id;
+      if (id) {
+        card.dataset.matchId = id;
+        card.dataset.teamMatchId = id;
+      }
       if (!isFinished(match)) return;
-      const results = raceResults(match).sort((a, b) => Number(a.sequenceNumber ?? a.sequence_number ?? 9999) - Number(b.sequenceNumber ?? b.sequence_number ?? 9999));
+      const results = raceResults(match).sort((a, b) => Number(slotNumber(a, 9999)) - Number(slotNumber(b, 9999)));
       if (!results.length) return;
       const details = card.querySelector('.fd-schedule-match__details');
       if (!details) return;
       const summary = details.querySelector('summary');
-      if (summary) summary.textContent = 'Race details';
+      const expected = expectedRaceCount(round);
+      if (summary) summary.textContent = 'Race details · ' + results.length + ' races';
       let list = details.querySelector('.fd-schedule-match__race-list');
       if (!list) {
         list = document.createElement('div');
@@ -143,16 +165,25 @@ export const jflScheduleRaceClientScript = String.raw`
         details.insertBefore(list, actions || null);
       }
       list.replaceChildren(...results.map(raceRow));
+      const oldWarning = details.querySelector('.fd-schedule-match__race-warning');
+      if (oldWarning) oldWarning.remove();
+      if (results.length !== expected) {
+        const warning = document.createElement('p');
+        warning.className = 'fd-schedule-match__race-warning';
+        warning.textContent = 'Result data is incomplete: expected ' + expected + ' races, found ' + results.length + '.';
+        list.before(warning);
+      }
     }
 
     function decorateSchedule() {
       if (!scheduleBody) return;
-      const byRound = new Map(sortedRounds(scheduleBody).map((round) => [roundId(round), round.matches || []]));
+      const byRound = new Map(sortedRounds(scheduleBody).map((round) => [roundId(round), round]));
       for (const section of document.querySelectorAll('.fd-schedule-round[data-round-id]')) {
-        const matches = byRound.get(clean(section.dataset.roundId)) || [];
+        const round = byRound.get(clean(section.dataset.roundId));
+        const matches = round?.matches || [];
         const cards = [...section.querySelectorAll('.fd-schedule-match')];
         cards.forEach((card, index) => {
-          if (matches[index]) decorateCard(card, matches[index]);
+          if (matches[index]) decorateCard(card, matches[index], round || {});
         });
       }
     }

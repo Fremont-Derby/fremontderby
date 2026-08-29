@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import {
   jflScheduleRaceClientScript,
@@ -17,23 +18,42 @@ function shellResponse() {
   });
 }
 
-test('Schedule race enhancer consumes direct playerResults and exposes race progress', () => {
+test('Schedule race enhancer consumes the actual enriched playerResults contract', () => {
   assert.match(jflScheduleRaceClientScript, /playerResults/);
   assert.match(jflScheduleRaceClientScript, /teamMatchId/);
-  assert.match(jflScheduleRaceClientScript, /dataset\.matchId/);
+  assert.match(jflScheduleRaceClientScript, /dataset\.teamMatchId/);
   assert.match(jflScheduleRaceClientScript, /Race details/);
-  assert.match(jflScheduleRaceClientScript, /racksWonA/);
+  assert.match(jflScheduleRaceClientScript, /scoreA/);
+  assert.match(jflScheduleRaceClientScript, /scoreB/);
   assert.match(jflScheduleRaceClientScript, /raceToA/);
-  assert.match(jflScheduleRaceClientScript, /racksWonB/);
   assert.match(jflScheduleRaceClientScript, /raceToB/);
-  assert.match(jflScheduleRaceClientScript, /sequenceNumber/);
-  assert.match(jflScheduleRaceClientScript, /playerMatchId/);
+  assert.match(jflScheduleRaceClientScript, /slotNumber/);
+});
+
+test('Schedule race enhancer enforces 3 regular-season and 4 postseason result expectations without fabricating rows', () => {
+  assert.match(jflScheduleRaceClientScript, /isPostseasonRound/);
+  assert.match(jflScheduleRaceClientScript, /semifinal/);
+  assert.match(jflScheduleRaceClientScript, /championship/);
+  assert.match(jflScheduleRaceClientScript, /\? 4 : 3/);
+  assert.match(jflScheduleRaceClientScript, /Result data is incomplete/);
+  assert.match(jflScheduleRaceClientScript, /results\.map\(raceRow\)/);
+  assert.doesNotMatch(jflScheduleRaceClientScript, /while\s*\([^)]*results\.length/);
+});
+
+test('active router wires the JFL enriched season schedule endpoint before legacy routing', async () => {
+  const routerEntry = await readFile(new URL('../src/routerEntry.js', import.meta.url), 'utf8');
+  assert.match(routerEntry, /routeJflSeasonSchedule/);
+  const routeIndex = routerEntry.indexOf('await routeJflSeasonSchedule(request, env)');
+  const legacyIndex = routerEntry.indexOf('await legacyRouter.fetch(request, env, ctx)');
+  assert.ok(routeIndex >= 0, 'JFL enriched schedule route must be invoked');
+  assert.ok(legacyIndex > routeIndex, 'JFL enriched schedule route must run before legacy API delegation');
 });
 
 test('Schedule race detail styling makes winners clear while retaining loser context', () => {
   assert.match(jflScheduleRaceStyles, /fd-schedule-race__player--winner/);
   assert.match(jflScheduleRaceStyles, /fd-schedule-race__player--loser/);
   assert.match(jflScheduleRaceStyles, /font-variant-numeric:\s*tabular-nums/);
+  assert.match(jflScheduleRaceStyles, /fd-schedule-match__race-warning/);
   assert.match(jflScheduleRaceStyles, /@media\s*\(forced-colors:\s*active\)/);
 });
 
