@@ -30,6 +30,17 @@ test('Schedule race enhancer consumes the actual enriched playerResults contract
   assert.match(jflScheduleRaceClientScript, /slotNumber/);
 });
 
+test('Schedule race enhancer is idempotent so its MutationObserver cannot rewrite the same card forever', () => {
+  assert.match(jflScheduleRaceClientScript, /resultSignature/);
+  assert.match(jflScheduleRaceClientScript, /dataset\.raceDetailsSignature === signature/);
+  assert.match(jflScheduleRaceClientScript, /dataset\.raceDetailsSignature = signature/);
+  const guardIndex = jflScheduleRaceClientScript.indexOf('card.dataset.raceDetailsSignature === signature');
+  const rewriteIndex = jflScheduleRaceClientScript.indexOf('list.replaceChildren');
+  const stampIndex = jflScheduleRaceClientScript.indexOf('card.dataset.raceDetailsSignature = signature');
+  assert.ok(guardIndex >= 0 && rewriteIndex > guardIndex, 'repeat-render guard must run before DOM replacement');
+  assert.ok(stampIndex > rewriteIndex, 'signature must be stamped after the first successful render');
+});
+
 test('Schedule race enhancer enforces 3 regular-season and 4 postseason result expectations without fabricating rows', () => {
   assert.match(jflScheduleRaceClientScript, /isPostseasonRound/);
   assert.match(jflScheduleRaceClientScript, /semifinal/);
