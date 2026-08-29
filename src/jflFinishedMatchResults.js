@@ -35,7 +35,7 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
   const headers = headersFor(required(env, 'SUPABASE_SERVICE_ROLE_KEY'));
   const ids = finished.map((match) => match.teamMatchId);
   const playerMatchParams = new URLSearchParams({
-    select: 'team_match_id,slot_number,player_a_id,player_b_id,score_a,score_b,race_to_a,race_to_b,winner_side,status',
+    select: 'team_match_id,slot_number,player_a_id,player_b_id,score_a,score_b,race_to_a,race_to_b,winner_side,status,opening_discipline',
     team_match_id: `in.(${ids.join(',')})`,
     order: 'team_match_id.asc,slot_number.asc',
   });
@@ -60,6 +60,7 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
       raceToA: row.race_to_a,
       raceToB: row.race_to_b,
       winnerSide: String(row.winner_side || '').toLowerCase(),
+      openingDiscipline: row.opening_discipline || null,
       status: row.status,
     });
     rowsByMatch.set(row.team_match_id, list);
