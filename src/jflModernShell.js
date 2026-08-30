@@ -95,11 +95,9 @@ function escapeAttribute(value) {
 
 export function formatJflDeployTimestamp(value) {
   const raw = String(value || '').trim();
-  if (!raw) return 'local';
+  if (!raw) return '';
   const date = new Date(raw);
-  if (Number.isNaN(date.valueOf())) return raw;
-  const iso = date.toISOString();
-  return `${iso.slice(5, 10)} ${iso.slice(11, 16)}Z`;
+  return Number.isNaN(date.valueOf()) ? '' : '…';
 }
 
 export const jflDeployTimeClientScript = String.raw`
@@ -110,13 +108,13 @@ export const jflDeployTimeClientScript = String.raw`
     if (!value || !raw) return;
     const date = new Date(raw);
     if (Number.isNaN(date.valueOf())) return;
-    const formatted = new Intl.DateTimeFormat(undefined, {
-      month: '2-digit',
-      day: '2-digit',
+    value.textContent = new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZoneName: 'short',
     }).format(date);
-    value.textContent = formatted.replace(',', '');
   })();
 `;
 
@@ -127,7 +125,6 @@ function renderEnvironmentBadge(env = {}) {
   const versionId = String(metadata.id || '').trim();
   const badgeValue = formatJflDeployTimestamp(deployedAt);
   const titleParts = ['JFL deployment'];
-  if (deployedAt) titleParts.push(deployedAt);
   if (versionId) titleParts.push(`version ${versionId}`);
   if (fullSha) titleParts.push(`git ${fullSha}`);
   const timestampAttr = deployedAt ? ` data-deploy-timestamp="${escapeAttribute(deployedAt)}"` : '';
@@ -179,7 +176,7 @@ export const jflModernShellStyles = `
     border-radius: 999px;
     background: rgba(0,0,0,.18);
     color: #fff;
-    font: 800 .68rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+    font: 800 .68rem/1 Inter, ui-sans-serif,system-ui,sans-serif;
     letter-spacing: .02em;
     white-space: nowrap;
   }
