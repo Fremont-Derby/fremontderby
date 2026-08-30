@@ -45,7 +45,7 @@ export const jflScheduleRaceStyles = `
     align-self: center;
     display: grid;
     justify-items: center;
-    gap: 4px;
+    gap: 5px;
     white-space: nowrap;
   }
   .fd-schedule-race__number {
@@ -57,16 +57,20 @@ export const jflScheduleRaceStyles = `
   .fd-schedule-race__discipline {
     display: inline-flex;
     align-items: center;
-    min-height: 20px;
-    padding: 2px 6px;
-    border: 1px solid #c8d8ce;
+    justify-content: center;
+    min-height: 25px;
+    min-width: 54px;
+    padding: 3px 8px;
+    border: 2px solid #075f3a;
     border-radius: 999px;
-    background: #eef6f1;
-    color: #075f3a;
-    font-size: .58rem;
+    background: #075f3a;
+    color: #fff;
+    font-size: .68rem;
+    line-height: 1;
     font-weight: 950;
-    letter-spacing: .04em;
+    letter-spacing: .045em;
     text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
   }
   .fd-schedule-match__race-warning {
     margin: 0 0 8px;
@@ -82,7 +86,7 @@ export const jflScheduleRaceStyles = `
     .fd-schedule-race { gap: 5px; padding: 6px; }
     .fd-schedule-race__player { padding-inline: 6px; }
     .fd-schedule-race__number { font-size: .62rem; }
-    .fd-schedule-race__discipline { padding-inline: 5px; font-size: .54rem; }
+    .fd-schedule-race__discipline { min-width: 50px; padding-inline: 6px; font-size: .64rem; }
   }
   @media (forced-colors: active) {
     .fd-schedule-race,
@@ -156,8 +160,10 @@ export const jflScheduleRaceClientScript = String.raw`
       const row = document.createElement('div');
       row.className = 'fd-schedule-race';
       const sequence = slotNumber(result, index);
+      const disciplineValue = openingDiscipline(result);
       const disciplineLabel = openingLabel(result);
       row.dataset.playerMatchId = clean(result.playerMatchId || result.player_match_id);
+      if (disciplineValue) row.dataset.openingDiscipline = disciplineValue;
       row.setAttribute('aria-label', 'Race ' + sequence + (disciplineLabel ? ', ' + disciplineLabel : '') + ': ' + (clean(result.playerAName || result.player_a_name) || 'Player A') + ' ' + progress(scoreA(result), raceToA(result)) + ', ' + (clean(result.playerBName || result.player_b_name) || 'Player B') + ' ' + progress(scoreB(result), raceToB(result)));
       const leftTone = winner === 'A' ? 'winner' : winner === 'B' ? 'loser' : '';
       const rightTone = winner === 'B' ? 'winner' : winner === 'A' ? 'loser' : '';
@@ -171,6 +177,7 @@ export const jflScheduleRaceClientScript = String.raw`
         const discipline = document.createElement('span');
         discipline.className = 'fd-schedule-race__discipline';
         discipline.textContent = disciplineLabel;
+        discipline.setAttribute('aria-hidden', 'true');
         meta.append(discipline);
       }
       row.append(
