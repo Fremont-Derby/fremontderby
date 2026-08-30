@@ -28,6 +28,10 @@ test('Schedule race enhancer consumes the actual enriched playerResults contract
   assert.match(jflScheduleRaceClientScript, /raceToA/);
   assert.match(jflScheduleRaceClientScript, /raceToB/);
   assert.match(jflScheduleRaceClientScript, /slotNumber/);
+  assert.match(jflScheduleRaceClientScript, /openingDiscipline/);
+  assert.match(jflScheduleRaceClientScript, /opening_discipline/);
+  assert.match(jflScheduleRaceClientScript, /8 first/);
+  assert.match(jflScheduleRaceClientScript, /9 first/);
 });
 
 test('Schedule race enhancer is idempotent so its MutationObserver cannot rewrite the same card forever', () => {
@@ -60,9 +64,11 @@ test('active router wires the JFL enriched season schedule endpoint before legac
   assert.ok(legacyIndex > routeIndex, 'JFL enriched schedule route must run before legacy API delegation');
 });
 
-test('Schedule race detail styling makes winners clear while retaining loser context', () => {
+test('Schedule race detail styling makes winners and opening discipline clear while retaining loser context', () => {
   assert.match(jflScheduleRaceStyles, /fd-schedule-race__player--winner/);
   assert.match(jflScheduleRaceStyles, /fd-schedule-race__player--loser/);
+  assert.match(jflScheduleRaceStyles, /fd-schedule-race__discipline/);
+  assert.match(jflScheduleRaceStyles, /border-radius:\s*999px/);
   assert.match(jflScheduleRaceStyles, /font-variant-numeric:\s*tabular-nums/);
   assert.match(jflScheduleRaceStyles, /fd-schedule-match__race-warning/);
   assert.match(jflScheduleRaceStyles, /@media\s*\(forced-colors:\s*active\)/);
