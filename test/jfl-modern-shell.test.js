@@ -6,6 +6,7 @@ import router from '../src/routerEntry.js';
 import {
   decorateJflModernShell,
   formatJflDeployTimestamp,
+  jflDeployTimeClientScript,
   jflModernShellStyles,
   MODERN_PRIMARY_DESTINATIONS,
   MODERN_SECONDARY_DESTINATIONS,
@@ -34,9 +35,11 @@ test('modern shell defines exactly the approved five primary destinations in ord
   assert.ok(MODERN_SECONDARY_DESTINATIONS.some((item) => item.href === '/admin'));
 });
 
-test('JFL deployment timestamp is compact, stable UTC text for mobile screenshots', () => {
-  assert.equal(formatJflDeployTimestamp('2026-08-28T05:14:13.123Z'), '08-28 05:14Z');
-  assert.equal(formatJflDeployTimestamp(''), 'local');
+test('JFL deployment timestamp stays neutral until the browser localizes it', () => {
+  assert.equal(formatJflDeployTimestamp('2026-08-28T05:14:13.123Z'), '…');
+  assert.equal(formatJflDeployTimestamp(''), '');
+  assert.match(jflDeployTimeClientScript, /Intl\.DateTimeFormat\(undefined/);
+  assert.match(jflDeployTimeClientScript, /timeZoneName:\s*'short'/);
 });
 
 test('JFL shell renders five-item mobile dock, secondary navigation, current-page semantics, and deployment identity', async () => {
@@ -143,5 +146,7 @@ test('routerEntry applies the modern shell to the static JFL design-system route
   assert.equal(response.headers.get('x-fremont-ui-shell'), 'modern-v1');
   const html = await response.text();
   assert.match(html, /data-fd-modern-shell="true"/);
-  assert.match(html, /08-28 05:30Z/);
+  assert.match(html, /data-fd-jfl-deploy-time>…<\/span>/);
+  assert.match(html, /data-deploy-timestamp="2026-08-28T05:30:00Z"/);
+  assert.match(html, /data-fd-jfl-local-deploy-time/);
 });
