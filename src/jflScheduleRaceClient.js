@@ -41,13 +41,32 @@ export const jflScheduleRaceStyles = `
   }
   .fd-schedule-race__player--winner .fd-schedule-race__progress { color: #075f3a; }
   .fd-schedule-race__player--loser { color: #666966; }
-  .fd-schedule-race__number {
+  .fd-schedule-race__meta {
     align-self: center;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .fd-schedule-race__number {
     color: #747773;
     font-size: .68rem;
     font-weight: 900;
     text-transform: uppercase;
-    white-space: nowrap;
+  }
+  .fd-schedule-race__discipline {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 2px 6px;
+    border: 1px solid #c8d8ce;
+    border-radius: 999px;
+    background: #eef6f1;
+    color: #075f3a;
+    font-size: .58rem;
+    font-weight: 950;
+    letter-spacing: .04em;
+    text-transform: uppercase;
   }
   .fd-schedule-match__race-warning {
     margin: 0 0 8px;
@@ -63,10 +82,12 @@ export const jflScheduleRaceStyles = `
     .fd-schedule-race { gap: 5px; padding: 6px; }
     .fd-schedule-race__player { padding-inline: 6px; }
     .fd-schedule-race__number { font-size: .62rem; }
+    .fd-schedule-race__discipline { padding-inline: 5px; font-size: .54rem; }
   }
   @media (forced-colors: active) {
     .fd-schedule-race,
-    .fd-schedule-race__player--winner { border: 1px solid ButtonText; forced-color-adjust: auto; }
+    .fd-schedule-race__player--winner,
+    .fd-schedule-race__discipline { border: 1px solid ButtonText; forced-color-adjust: auto; }
   }
 `;
 
@@ -122,22 +143,39 @@ export const jflScheduleRaceClientScript = String.raw`
     function raceToA(result) { return result.raceToA ?? result.race_to_a; }
     function raceToB(result) { return result.raceToB ?? result.race_to_b; }
     function slotNumber(result, index) { return result.slotNumber ?? result.slot_number ?? result.sequenceNumber ?? result.sequence_number ?? (index + 1); }
+    function openingDiscipline(result) { return clean(result.openingDiscipline || result.opening_discipline).toLowerCase(); }
+    function openingLabel(result) {
+      const discipline = openingDiscipline(result);
+      if (discipline === '8-ball') return '8 first';
+      if (discipline === '9-ball') return '9 first';
+      return '';
+    }
 
     function raceRow(result, index) {
       const winner = clean(result.winnerSide || result.winner_side).toUpperCase();
       const row = document.createElement('div');
       row.className = 'fd-schedule-race';
       const sequence = slotNumber(result, index);
+      const disciplineLabel = openingLabel(result);
       row.dataset.playerMatchId = clean(result.playerMatchId || result.player_match_id);
-      row.setAttribute('aria-label', 'Race ' + sequence + ': ' + (clean(result.playerAName || result.player_a_name) || 'Player A') + ' ' + progress(scoreA(result), raceToA(result)) + ', ' + (clean(result.playerBName || result.player_b_name) || 'Player B') + ' ' + progress(scoreB(result), raceToB(result)));
+      row.setAttribute('aria-label', 'Race ' + sequence + (disciplineLabel ? ', ' + disciplineLabel : '') + ': ' + (clean(result.playerAName || result.player_a_name) || 'Player A') + ' ' + progress(scoreA(result), raceToA(result)) + ', ' + (clean(result.playerBName || result.player_b_name) || 'Player B') + ' ' + progress(scoreB(result), raceToB(result)));
       const leftTone = winner === 'A' ? 'winner' : winner === 'B' ? 'loser' : '';
       const rightTone = winner === 'B' ? 'winner' : winner === 'A' ? 'loser' : '';
+      const meta = document.createElement('span');
+      meta.className = 'fd-schedule-race__meta';
       const number = document.createElement('span');
       number.className = 'fd-schedule-race__number';
       number.textContent = 'Race ' + sequence;
+      meta.append(number);
+      if (disciplineLabel) {
+        const discipline = document.createElement('span');
+        discipline.className = 'fd-schedule-race__discipline';
+        discipline.textContent = disciplineLabel;
+        meta.append(discipline);
+      }
       row.append(
         player(result.playerAName || result.player_a_name, scoreA(result), raceToA(result), leftTone),
-        number,
+        meta,
         player(result.playerBName || result.player_b_name, scoreB(result), raceToB(result), rightTone),
       );
       return row;
@@ -156,6 +194,7 @@ export const jflScheduleRaceClientScript = String.raw`
           scoreB(result),
           raceToB(result),
           clean(result.winnerSide || result.winner_side),
+          openingDiscipline(result),
         ]),
       });
     }
