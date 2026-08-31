@@ -7,6 +7,7 @@ import { renderLineupPage } from '../src/lineupPage.js';
 import {
   sharedBlindLineupControllerSource,
   sharedBlindLineupMarkup,
+  sharedBlindLineupStyles,
 } from '../src/blindLineupComponent.js';
 
 test('production lineup and Captain War Games render the exact shared blind-lineup component/controller', () => {
@@ -24,6 +25,11 @@ test('production lineup and Captain War Games render the exact shared blind-line
     assert.match(html, /function moveSlot\(from,to\)/);
     assert.match(html, /Lock this lineup\?/);
   }
+});
+
+test('score action stays centered on desktop and mobile', () => {
+  assert.match(sharedBlindLineupStyles, /\.score-link\{display:flex;width:max-content;margin:0 auto 12px/);
+  assert.doesNotMatch(sharedBlindLineupStyles, /\.lineup-panel \.score-link\{margin-left:0;margin-right:0\}/);
 });
 
 test('live and sandbox pages are adapters instead of duplicate lineup controllers', async () => {
