@@ -33,7 +33,8 @@ test('lineup page is a mobile one-tap roster and substitute picker', () => {
   const html = renderLineupPage();
   assert.match(html, /Pick your three/);
   assert.doesNotMatch(html, /Pick tonight's players/);
-  assert.match(html, /Available substitutes/);
+  assert.match(html, /Find a sub/);
+  assert.match(html, /Paid \+ available substitutes/);
   assert.match(html, /data-player-search/);
   assert.match(html, /dataset\.addPlayer/);
   assert.match(html, /\/7 played/);
