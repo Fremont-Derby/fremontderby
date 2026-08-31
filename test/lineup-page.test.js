@@ -31,6 +31,14 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/lineup/);
 });
 
+test('rendered lineup browser script is syntactically valid', () => {
+  const html = renderLineupPage();
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+
+  assert.ok(scripts.length > 0);
+  assert.doesNotThrow(() => new Function(scripts.at(-1)[1]));
+});
+
 test('week selection auto-loads and shows completion or lineup readiness', () => {
   const html = renderLineupPage();
 
