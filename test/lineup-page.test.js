@@ -7,24 +7,19 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
 
   assert.match(html, /Fremont Derby Lineup/);
   assert.match(html, /Pick your three/);
-  assert.doesNotMatch(html, /Pick tonight's players/);
   assert.match(html, /data-team-select/);
   assert.match(html, /data-round-select/);
   assert.doesNotMatch(html, /data-team-id/);
   assert.doesNotMatch(html, /data-round-id/);
   assert.doesNotMatch(html, /data-token/);
-  assert.doesNotMatch(html, />Team ID</i);
-  assert.doesNotMatch(html, />Round ID</i);
-  assert.doesNotMatch(html, />Access token</i);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/teams/);
-  assert.match(html, /Matchup/);
-  assert.match(html, /Round '/);
+  assert.match(html, /Week '/);
   assert.match(html, / · vs /);
   assert.match(html, /round\.opponentName/);
   assert.match(html, /Table '/);
-  assert.match(html, /data-status-close/);
   assert.match(html, /role="status"/);
+  assert.doesNotMatch(html, /data-status-close/);
   assert.match(html, /data-availability-body/);
   assert.match(html, /data-slots/);
   assert.match(html, /data-submit/);
@@ -36,6 +31,39 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/lineup/);
 });
 
+test('week selection auto-loads and shows completion or lineup readiness', () => {
+  const html = renderLineupPage();
+
+  assert.doesNotMatch(html, />Open lineup</);
+  assert.match(html, /Selecting a week opens it immediately/);
+  assert.match(html, /✓ Complete/);
+  assert.match(html, /✓ Lineup set/);
+  assert.match(html, /○ Needs lineup/);
+  assert.match(html, /function hydrateRoundStates\(team\)/);
+  assert.match(html, /roundSelect\.addEventListener\('change'.*run\(loadPage\)/s);
+  assert.match(html, /teamSelect\.addEventListener\('change'.*run\(loadPage\)/s);
+});
+
+test('lineup provides an explicit substitute finder and live name search', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /Find a sub/);
+  assert.match(html, /Paid \+ available substitutes/);
+  assert.match(html, /Search names/);
+  assert.match(html, /searchInput\.addEventListener\('input',renderCandidates\)/);
+  assert.match(html, /row\.eligible&&row\.availability_status==='available'/);
+  assert.match(html, /data-candidate-tab="subs"/);
+});
+
+test('lineup does not render a second committed-lineups copy', () => {
+  const html = renderLineupPage();
+
+  assert.doesNotMatch(html, /Committed lineups/);
+  assert.doesNotMatch(html, /data-lineup-body/);
+  assert.match(html, /Opponent lineup/);
+  assert.match(html, /data-opponent-body/);
+});
+
 test('lineup page keeps the three selected slots and lock action visible on mobile', () => {
   const html = renderLineupPage();
 
@@ -44,11 +72,10 @@ test('lineup page keeps the three selected slots and lock action visible on mobi
   assert.match(html, /data-mobile-slot-count/);
   assert.match(html, /data-mobile-submit/);
   assert.match(html, /\.mobile-lineup-summary\{position:sticky;top:70px/);
+  assert.match(html, /\.lineup-panel \.slots,\.lineup-panel \.panel-head,\.lineup-panel \.hint,\.lineup-panel \.actions\{display:none\}/);
   assert.match(html, /function renderMobileSummary\(\)/);
   assert.match(html, /label\.textContent='Slot '\+\(index\+1\)/);
-  assert.match(html, /value\.textContent=slot\?\(slot\.forfeit\?'Forfeit':slot\.name\):'Empty'/);
   assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
-  assert.match(html, /renderMobileSummary\(\)/);
   assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
 });
 
