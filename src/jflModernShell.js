@@ -102,19 +102,26 @@ export function formatJflDeployTimestamp(value) {
 
 export const jflDeployTimeClientScript = String.raw`
   (() => {
-    const badge = document.querySelector('[data-fd-jfl-environment][data-deploy-timestamp]');
-    const value = badge?.querySelector('[data-fd-jfl-deploy-time]');
-    const raw = badge?.dataset.deployTimestamp || '';
-    if (!value || !raw) return;
-    const date = new Date(raw);
-    if (Number.isNaN(date.valueOf())) return;
-    value.textContent = new Intl.DateTimeFormat(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    }).format(date);
+    function localizeDeployTime() {
+      const badge = document.querySelector('[data-fd-jfl-environment][data-deploy-timestamp]');
+      const value = badge?.querySelector('[data-fd-jfl-deploy-time]');
+      const raw = badge?.dataset.deployTimestamp || '';
+      if (!value || !raw) return;
+      const date = new Date(raw);
+      if (Number.isNaN(date.valueOf())) return;
+      value.textContent = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }).format(date);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', localizeDeployTime, { once: true });
+    } else {
+      localizeDeployTime();
+    }
   })();
 `;
 
@@ -246,18 +253,16 @@ export const jflModernShellStyles = `
       padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
     }
     .fd-shell[data-fd-modern-shell="true"] .fd-shell__inner {
-      padding-inline: 10px !important;
-      gap: 8px !important;
+      padding-inline: 8px !important;
+      gap: 6px !important;
     }
     .fd-shell[data-fd-modern-shell="true"] .fd-brand > span:last-child { display: none; }
-    .fd-env-badge { margin-right: auto; }
+    .fd-env-badge { margin-right: auto; gap: 4px; padding-inline: 7px; font-size: .62rem; }
+    .fd-env-badge span { display: inline !important; }
     .fd-nav--modern-primary { display: none !important; }
     .fd-message-notifications { margin-left: 0 !important; }
     .fd-more-menu { margin-left: 0 !important; }
     .fd-more-menu summary { min-width: 52px; padding-inline: 9px !important; }
-  }
-  @media (max-width: 380px) {
-    .fd-env-badge span { display: none; }
   }
   @media (forced-colors: active) {
     .fd-env-badge,
