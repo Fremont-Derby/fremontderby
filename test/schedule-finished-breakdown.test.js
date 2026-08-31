@@ -49,10 +49,11 @@ test('finished postseason result enrichment folds finalized anchor tiebreaker in
   const anchorRow = { id: 'anchor1', team_match_id: 'tm-tie', slot_number: 1, player_a_id: 'a1', player_b_id: 'b1', score_a: 5, score_b: 3, race_to_a: 5, race_to_b: 4, winner_side: 'A', opening_discipline: '8-ball', status: 'finalized' };
   const fetch = async (url) => {
     const value = String(url);
+    const parsed = new URL(value);
     if (value.includes('/postseason_anchor_tiebreakers?')) return json([
       { parent_team_match_id: 'tm-post', tiebreaker_team_match_id: 'tm-tie', anchor_player_match_id: 'anchor1' },
     ]);
-    if (value.includes('/player_matches?') && value.includes('id=')) return json([anchorRow]);
+    if (value.includes('/player_matches?') && parsed.searchParams.has('id')) return json([anchorRow]);
     if (value.includes('/player_matches?')) return json(baseRows.concat([
       { ...anchorRow, id: 'other', team_match_id: 'tm-tie' },
     ]));
