@@ -17,7 +17,8 @@ test('production lineup and Captain War Games render the exact shared blind-line
     assert.match(html, /data-shared-blind-lineup/);
     assert.ok(html.includes(sharedBlindLineupMarkup));
     assert.ok(html.includes(sharedBlindLineupControllerSource));
-    assert.match(html, /Available substitutes/);
+    assert.match(html, /Find a sub/);
+    assert.match(html, /Paid \+ available substitutes/);
     assert.match(html, /Forfeit slot/);
     assert.match(html, /function renderMobileSummary\(\)/);
     assert.match(html, /function moveSlot\(from,to\)/);
@@ -49,6 +50,6 @@ test('shared controller owns the blind-lineup integrity and mobile behavior', ()
   assert.match(source, /new Set\(players\)\.size!==players\.length/);
   assert.match(source, /forfeitSlot/);
   assert.match(source, /lineupLocked=rows\.some/);
-  assert.match(source, /opponentVisible=rows\.some/);
+  assert.match(source, /opponentRows\.length>0/);
   assert.match(source, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
 });
