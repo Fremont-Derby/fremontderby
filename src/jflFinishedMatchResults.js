@@ -57,6 +57,7 @@ export async function enrichFinishedScheduleRounds(rounds, env, { fetch: fetchIm
   });
   const playerMatchRows = await getJson(fetchImpl, `${supabaseUrl}/rest/v1/player_matches?${playerMatchParams}`, headers);
 
+  // Resolve the real private parent->anchor linkage so the UI never fabricates a fifth slot.
   const privateHeaders = { ...headers, 'accept-profile': 'private', 'content-profile': 'private' };
   const tiebreakerParams = new URLSearchParams({
     select: 'parent_team_match_id,tiebreaker_team_match_id,anchor_player_match_id',
