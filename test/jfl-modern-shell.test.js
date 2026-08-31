@@ -35,11 +35,16 @@ test('modern shell defines exactly the approved five primary destinations in ord
   assert.ok(MODERN_SECONDARY_DESTINATIONS.some((item) => item.href === '/admin'));
 });
 
-test('JFL deployment timestamp stays neutral until the browser localizes it', () => {
+test('JFL deployment timestamp waits for DOM readiness and remains visible on mobile', () => {
   assert.equal(formatJflDeployTimestamp('2026-08-28T05:14:13.123Z'), '…');
   assert.equal(formatJflDeployTimestamp(''), '');
   assert.match(jflDeployTimeClientScript, /Intl\.DateTimeFormat\(undefined/);
   assert.match(jflDeployTimeClientScript, /timeZoneName:\s*'short'/);
+  assert.match(jflDeployTimeClientScript, /document\.readyState === 'loading'/);
+  assert.match(jflDeployTimeClientScript, /DOMContentLoaded/);
+  assert.match(jflDeployTimeClientScript, /localizeDeployTime/);
+  assert.match(jflModernShellStyles, /\.fd-env-badge span \{ display: inline !important; \}/);
+  assert.doesNotMatch(jflModernShellStyles, /@media \(max-width: 380px\)[\s\S]*display:\s*none/);
 });
 
 test('JFL shell renders five-item mobile dock, secondary navigation, current-page semantics, and deployment identity', async () => {
