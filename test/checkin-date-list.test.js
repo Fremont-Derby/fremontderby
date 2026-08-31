@@ -20,9 +20,24 @@ test('each check-in date uses redundant green yellow red controls and saved resp
   assert.match(html, /Each week has fixed green, yellow, and red choices/);
   assert.match(html, /Needs response/);
   assert.match(html, /aria-pressed/);
-  assert.match(html, /quick-actions button\[data-value="available"\]\{background:linear-gradient/);
-  assert.match(html, /quick-actions button\[data-value="unsure"\]\{background:linear-gradient/);
-  assert.match(html, /quick-actions button\[data-value="unavailable"\]\{background:linear-gradient/);
+  assert.match(html, /quick-actions button\[data-value="available"\][\s\S]*background: #70c95a/);
+  assert.match(html, /quick-actions button\[data-value="unsure"\][\s\S]*background: #f5c93c/);
+  assert.match(html, /quick-actions button\[data-value="unavailable"\][\s\S]*background: #ef4a45/);
+});
+
+test('check-in presentation is readable pastel with no neon blur or glow treatment', () => {
+  const html = renderAvailabilityPage();
+  assert.match(html, /data-checkin-readable-theme/);
+  assert.match(html, /body \{[\s\S]*background: #f7f7f4 !important/);
+  assert.match(html, /\.intro h1 \{[\s\S]*color: #0a4f31 !important/);
+  assert.match(html, /\.intro p \{[\s\S]*color: #171b18 !important/);
+  assert.match(html, /\.date-card\[data-state="available"\][\s\S]*background: #b9e5ad !important/);
+  assert.match(html, /\.date-card\[data-state="unsure"\][\s\S]*background: #ffe7a0 !important/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\][\s\S]*background: #f6ada6 !important/);
+  assert.match(html, /button\[aria-pressed="true"\][\s\S]*box-shadow: 0 0 0 4px #111713/);
+  assert.doesNotMatch(html, /data-checkin-trippy-theme/);
+  assert.doesNotMatch(html, /drop-shadow/);
+  assert.doesNotMatch(html, /backdrop-filter: blur\(3px\)/);
 });
 
 test('saved responses load for every grouped upcoming date and saves update only the tapped row', () => {
