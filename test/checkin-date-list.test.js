@@ -25,6 +25,13 @@ test('each check-in date uses redundant green yellow red controls and saved resp
   assert.match(html, /quick-actions button\[data-value="unavailable"\][\s\S]*background: #ef4a45/);
 });
 
+test('selected check-in controls keep their semantic fill colors', () => {
+  const html = renderAvailabilityPage();
+  assert.match(html, /button\[data-value="available"\]\[aria-pressed="true"\][\s\S]*background: #70c95a !important/);
+  assert.match(html, /button\[data-value="unsure"\]\[aria-pressed="true"\][\s\S]*background: #f5c93c !important/);
+  assert.match(html, /button\[data-value="unavailable"\]\[aria-pressed="true"\][\s\S]*background: #ef4a45 !important/);
+});
+
 test('check-in presentation is readable pastel with no neon blur or glow treatment', () => {
   const html = renderAvailabilityPage();
   assert.match(html, /data-checkin-readable-theme/);
