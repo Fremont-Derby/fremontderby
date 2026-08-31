@@ -189,6 +189,21 @@ const readableCheckinTheme = `<style data-checkin-readable-theme>
     filter: none !important;
   }
 
+  .quick-actions button[data-value="available"][aria-pressed="true"] {
+    background: #70c95a !important;
+    color: #0b1d0c !important;
+  }
+
+  .quick-actions button[data-value="unsure"][aria-pressed="true"] {
+    background: #f5c93c !important;
+    color: #191609 !important;
+  }
+
+  .quick-actions button[data-value="unavailable"][aria-pressed="true"] {
+    background: #ef4a45 !important;
+    color: #fff !important;
+  }
+
   .quick-actions button[aria-pressed="true"]::after {
     content: '' !important;
   }
