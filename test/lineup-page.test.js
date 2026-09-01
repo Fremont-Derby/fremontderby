@@ -44,7 +44,7 @@ test('week selection auto-loads and shows completion or lineup readiness', () =>
   const html = renderLineupPage();
 
   assert.doesNotMatch(html, />Open lineup</);
-  assert.match(html, /Selecting a week opens it immediately/);
+  assert.match(html, /Choose the week you are setting a lineup for/);
   assert.match(html, /✓ Complete/);
   assert.match(html, /✓ Lineup set/);
   assert.match(html, /○ Needs lineup/);
