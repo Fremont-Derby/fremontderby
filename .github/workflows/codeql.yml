@@ -17,6 +17,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/codeql.yml'
+      - '.github/codeql/**'
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -37,12 +38,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      # Default security queries only (skip security-extended pack — much slower).
+      # security-extended suite ("security" alone is invalid). Config also sets suite.
       # Pure JS Worker: no autobuild needed.
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript
-          queries: security
+          queries: security-extended
           config-file: ./.github/codeql/codeql-config.yml
       - uses: github/codeql-action/analyze@v3
         with:
