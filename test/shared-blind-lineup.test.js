@@ -67,8 +67,7 @@ test('shared controller locks only at the both-submitted boundary', () => {
   assert.match(source, /opponentSubmitted=opponentRows\.length>0/);
   assert.match(source, /lineupLocked=ownSubmitted&&opponentSubmitted/);
   assert.match(source, /Opponent/);
-  assert.match(source, /Submitted/);
-  assert.match(source, /Waiting/);
+  assert.match(source, /submitted\?'Submitted':'Not submitted'/);
   assert.match(source, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
   assert.match(source, /togglePlayer/);
 });
