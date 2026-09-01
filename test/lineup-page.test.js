@@ -23,8 +23,9 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
   assert.match(html, /data-availability-body/);
   assert.match(html, /data-slots/);
   assert.match(html, /data-submit/);
-  assert.match(html, /Lock lineup/);
+  assert.match(html, /Submit lineup/);
   assert.match(html, /Opponent order stays hidden until both teams submit/);
+  assert.match(html, /data-opponent-status/);
   assert.match(html, /index<3/);
   assert.doesNotMatch(html, /4 slots/);
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/availability/);
@@ -72,13 +73,14 @@ test('lineup does not render a second committed-lineups copy', () => {
   assert.match(html, /data-opponent-body/);
 });
 
-test('lineup page keeps the three selected slots and lock action visible on mobile', () => {
+test('lineup page keeps the three selected slots and submit action visible on mobile', () => {
   const html = renderLineupPage();
 
   assert.match(html, /data-mobile-lineup-summary/);
   assert.match(html, /data-mobile-lineup-slots aria-live="polite"/);
   assert.match(html, /data-mobile-slot-count/);
   assert.match(html, /data-mobile-submit/);
+  assert.match(html, /data-mobile-opponent-status/);
   assert.match(html, /\.mobile-lineup-summary\{position:sticky;top:70px/);
   assert.match(html, /\.lineup-panel \.slots,\.lineup-panel \.panel-head,\.lineup-panel \.hint,\.lineup-panel \.actions\{display:none\}/);
   assert.match(html, /function renderMobileSummary\(\)/);
