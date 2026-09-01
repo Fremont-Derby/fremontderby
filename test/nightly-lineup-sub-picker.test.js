@@ -36,11 +36,12 @@ test('lineup page is a mobile one-tap roster and substitute picker', () => {
   assert.match(html, /Find a sub/);
   assert.match(html, /Paid \+ available substitutes/);
   assert.match(html, /data-player-search/);
-  assert.match(html, /dataset\.addPlayer/);
+  assert.match(html, /dataset\.togglePlayer/);
   assert.match(html, /\/7 played/);
   assert.match(html, /eligibility_reason/);
   assert.match(html, /Forfeit slot/);
-  assert.match(html, /Lock this lineup\?/);
+  assert.match(html, /Submit this lineup\?/);
+  assert.match(html, /You can keep editing it until the opponent captain submits/);
   assert.match(html, /Score the three matches/);
   assert.match(html, /selectedSlots\.findIndex/);
   assert.match(html, /index<3/);
