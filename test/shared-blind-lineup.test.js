@@ -23,13 +23,21 @@ test('production lineup and Captain War Games render the exact shared blind-line
     assert.match(html, /Forfeit slot/);
     assert.match(html, /function renderMobileSummary\(\)/);
     assert.match(html, /function moveSlot\(from,to\)/);
-    assert.match(html, /Lock this lineup\?/);
+    assert.match(html, /You can keep editing it until the opponent captain submits/);
   }
 });
 
 test('score action stays centered on desktop and mobile', () => {
   assert.match(sharedBlindLineupStyles, /\.score-link\{display:flex;width:max-content;margin:0 auto 12px/);
   assert.doesNotMatch(sharedBlindLineupStyles, /\.lineup-panel \.score-link\{margin-left:0;margin-right:0\}/);
+});
+
+test('mobile lineup uses readable stacked slots with direct removal', () => {
+  assert.match(sharedBlindLineupStyles, /\.mobile-lineup-summary-slots\{display:grid;grid-template-columns:1fr/);
+  assert.match(sharedBlindLineupStyles, /\.mobile-slot\{min-width:0;display:grid;grid-template-columns:52px minmax\(0,1fr\) auto/);
+  assert.doesNotMatch(sharedBlindLineupStyles, /text-overflow:ellipsis/);
+  assert.match(sharedBlindLineupControllerSource, /data\.mobileRemoveSlot/);
+  assert.match(sharedBlindLineupControllerSource, /remove\.textContent='Remove'/);
 });
 
 test('live and sandbox pages are adapters instead of duplicate lineup controllers', async () => {
@@ -50,12 +58,17 @@ test('live and sandbox pages are adapters instead of duplicate lineup controller
   assert.doesNotMatch(sandboxSource, /fd\.accessToken/);
 });
 
-test('shared controller owns the blind-lineup integrity and mobile behavior', () => {
+test('shared controller locks only at the both-submitted boundary', () => {
   const source = sharedBlindLineupControllerSource;
   assert.match(source, /selectedSlots=\[null,null,null\]/);
   assert.match(source, /new Set\(players\)\.size!==players\.length/);
   assert.match(source, /forfeitSlot/);
-  assert.match(source, /lineupLocked=rows\.some/);
-  assert.match(source, /opponentRows\.length>0/);
+  assert.match(source, /ownSubmitted=ownRows\.length>0/);
+  assert.match(source, /opponentSubmitted=opponentRows\.length>0/);
+  assert.match(source, /lineupLocked=ownSubmitted&&opponentSubmitted/);
+  assert.match(source, /Opponent/);
+  assert.match(source, /Submitted/);
+  assert.match(source, /Waiting/);
   assert.match(source, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
+  assert.match(source, /togglePlayer/);
 });
