@@ -2,7 +2,7 @@
  * Attach Fremont Derby hostnames to the correct Workers via Cloudflare API.
  * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
  *
- * CRITICAL: production apex must stay on fremontderby-prod — never on a lane Worker.
+ * CRITICAL: production apex must stay on fremontderby or fremontderby-prod — never on a lane Worker.
  *
  * #639: Prefer durable `wrangler deploy --env <lane>` (custom_domain routes in wrangler.jsonc)
  * over relying on this script as the steady-state source of truth. This remains an emergency tool.
@@ -12,6 +12,18 @@ import { LANE_CUSTOM_DOMAINS } from './lane-custom-domains.mjs';
 
 /** @deprecated Prefer LANE_CUSTOM_DOMAINS; kept for existing tests. */
 export const WORKER_DOMAIN_BINDINGS = LANE_CUSTOM_DOMAINS;
+
+/** Live-safe Worker script names for a domain row (apex may be legacy fremontderby-prod). */
+export function allowedServicesFor(lane) {
+  if (lane.hostname === 'fremontderby.com' || lane.hostname === 'www.fremontderby.com') {
+    return ['fremontderby', 'fremontderby-prod'];
+  }
+  return [lane.service];
+}
+
+export function apexBindingIsSafe(service) {
+  return allowedServicesFor({ hostname: 'fremontderby.com' }).includes(service);
+}
 
 function requireEnv(name) {
   const value = String(process.env[name] || '').trim();
@@ -75,12 +87,13 @@ async function main() {
 
   for (const lane of WORKER_DOMAIN_BINDINGS) {
     const current = byHost.get(lane.hostname);
-    if (current && current.service === lane.service) {
-      console.log(`OK already correct: ${lane.hostname} -> ${lane.service}`);
-      results.push({ ...lane, status: 'already' });
+    const allowed = allowedServicesFor(lane);
+    if (current && allowed.includes(current.service)) {
+      console.log(`OK already correct: ${lane.hostname} -> ${current.service}`);
+      results.push({ ...lane, status: 'already', service: current.service });
       continue;
     }
-    if (current && current.service !== lane.service) {
+    if (current && !allowed.includes(current.service)) {
       console.warn(`MISROUTE: ${lane.hostname} currently -> ${current.service}; rebinding to ${lane.service}`);
     }
     console.log(`Attaching ${lane.hostname} -> ${lane.service}…`);
@@ -97,7 +110,7 @@ async function main() {
 
   const after = await listWorkerDomains().catch(() => []);
   const apex = after.find((row) => row.hostname === 'fremontderby.com');
-  if (apex && apex.service !== 'fremontderby-prod') {
+  if (apex && !apexBindingIsSafe(apex.service)) {
     console.error(`CRITICAL: fremontderby.com still bound to ${apex.service}`);
     process.exitCode = 1;
   }

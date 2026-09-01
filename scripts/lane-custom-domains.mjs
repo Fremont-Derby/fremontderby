@@ -1,13 +1,29 @@
 /**
  * Source of truth for Worker custom domains (#639).
  * Deploy must use wrangler --env so these routes stay attached; do not rely on ad-hoc API restore.
+ *
+ * Host → environment identity comes from HOST_ENVIRONMENT_EXPECTATIONS.
+ * Worker service names are derived: production → fremontderby; lanes → fremontderby-<lane>.
  */
-export const LANE_CUSTOM_DOMAINS = Object.freeze([
-  Object.freeze({ hostname: 'fremontderby.com', service: 'fremontderby-prod', env: 'production' }),
-  Object.freeze({ hostname: 'dru.fremontderby.com', service: 'fremontderby-dru', env: 'dru' }),
-  Object.freeze({ hostname: 'jfl.fremontderby.com', service: 'fremontderby-jfl', env: 'jfl' }),
-  Object.freeze({ hostname: 'gamma.fremontderby.com', service: 'fremontderby-gamma', env: 'gamma' }),
-]);
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
+
+export function workerServiceForEnvironment(envName) {
+  const environment = String(envName || '').trim();
+  if (environment === 'production') return 'fremontderby';
+  if (!environment) return 'fremontderby';
+  return `fremontderby-${environment}`;
+}
+
+/** Derived from HOST_ENVIRONMENT_EXPECTATIONS so host/env/service cannot drift. */
+export const LANE_CUSTOM_DOMAINS = Object.freeze(
+  Object.entries(HOST_ENVIRONMENT_EXPECTATIONS).map(([hostname, env]) =>
+    Object.freeze({
+      hostname,
+      service: workerServiceForEnvironment(env),
+      env,
+    }),
+  ),
+);
 
 export function domainsForEnv(envName) {
   return LANE_CUSTOM_DOMAINS.filter((row) => row.env === envName);
