@@ -89,6 +89,20 @@ test('lineup page keeps the three selected slots and submit action visible on mo
   assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
 });
 
+test('submitted lineup can be explicitly unlocked while opponent is waiting', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /data-unlock/);
+  assert.match(html, /data-mobile-unlock/);
+  assert.match(html, />Unlock lineup</);
+  assert.match(html, /unlockButton\.hidden=!\(ownSubmitted&&!opponentSubmitted\)/);
+  assert.match(html, /mobileUnlockButton\.hidden=!\(ownSubmitted&&!opponentSubmitted\)/);
+  assert.match(html, /async function unlockLineup\(\)/);
+  assert.match(html, /await adapter\.submit\(\[\]\)/);
+  assert.match(html, /It will no longer count as submitted until you submit three slots again/);
+  assert.match(html, /Lineup unlocked\. Make your changes, then submit three slots when ready\./);
+});
+
 test('lineup correction controls meet the phone touch and focus contract', () => {
   const html = renderLineupPage();
 
