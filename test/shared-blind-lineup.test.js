@@ -36,7 +36,7 @@ test('mobile lineup uses readable stacked slots with direct removal', () => {
   assert.match(sharedBlindLineupStyles, /\.mobile-lineup-summary-slots\{display:grid;grid-template-columns:1fr/);
   assert.match(sharedBlindLineupStyles, /\.mobile-slot\{min-width:0;display:grid;grid-template-columns:52px minmax\(0,1fr\) auto/);
   assert.doesNotMatch(sharedBlindLineupStyles, /text-overflow:ellipsis/);
-  assert.match(sharedBlindLineupControllerSource, /data\.mobileRemoveSlot/);
+  assert.match(sharedBlindLineupControllerSource, /dataset\.mobileRemoveSlot/);
   assert.match(sharedBlindLineupControllerSource, /remove\.textContent='Remove'/);
 });
 
