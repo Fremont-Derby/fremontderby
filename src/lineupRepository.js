@@ -45,7 +45,7 @@ function participantFacingError(body, status) {
     return 'Both captains have submitted. This lineup is locked.';
   }
   if (normalized.includes('player is already scheduled for another team')) {
-    return 'Player is already scheduled for another team this round. Choose another player.';
+    return `Supabase request failed with ${status}: Player is already scheduled for another team in this round`;
   }
   if (normalized.includes('lineup deadline has passed')) {
     return 'The lineup deadline has passed.';
