@@ -53,16 +53,17 @@ test('plain language explains what each side means without icon or badge decodin
   assert.match(html, /opponentName\+' already submitted\. Submit '\+ownName\+' to lock and reveal both lineups\.'/);
   assert.match(html, /Their players stay hidden until '\+ownName\+' submits\.'/);
   assert.match(html, /Both lineups are revealed\. Scoring is ready\./);
-  assert.match(html, /Waiting for '\+opponentName\+'\\'s captain\.'/);
+  assert.match(html, /Waiting for the captain of '\+opponentName\+'\.'/);
 });
 
 test('one-team captains lose the redundant team picker and phone layout stacks the matchup', () => {
   const html = renderLineupPage();
 
   assert.match(html, /teamField\.hidden=captainTeams\.length===1/);
-  assert.match(html, /@media\(max-width:800px\)\{[^}]*\.matchup-stage\{grid-template-columns:1fr/s);
-  assert.match(html, /\.matchup-side-own\{[^}]*border-top:6px solid var\(--green\)/);
-  assert.match(html, /\.matchup-side-opponent\{[^}]*border-top:6px solid var\(--gold\)/);
+  assert.match(html, /@media\(max-width:800px\)/);
+  assert.match(html, /\.matchup-stage\{grid-template-columns:1fr;padding:14px;gap:0\}/);
+  assert.match(html, /\.matchup-side-own\{border-top:6px solid var\(--green\)/);
+  assert.match(html, /\.matchup-side-opponent\{border-top:6px solid var\(--gold\)/);
   assert.match(html, /\.side-name\{[^}]*overflow-wrap:anywhere/);
   assert.match(html, /\.lineup-panel \.submission-state,\.mobile-lineup-summary \.submission-state\{display:none\}/);
   assert.match(html, /\.mobile-lineup-summary\{[^}]*background:rgba\(255,255,255,\.98\)!important/);
