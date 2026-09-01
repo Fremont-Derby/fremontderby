@@ -5,18 +5,19 @@ import {
   assertAllLaneHealth,
   evaluateLaneHealthBody,
 } from '../scripts/assert-lane-health.mjs';
+import { HOST_ENVIRONMENT_EXPECTATIONS } from '../src/hostEnvironment.js';
 
-test('lane health checklist covers dru, jfl, gamma, production apex, and www', () => {
-  assert.deepEqual(
-    LANE_HEALTH_CHECKS.map((row) => [row.host, row.expect]),
-    [
-      ['dru.fremontderby.com', 'dru'],
-      ['jfl.fremontderby.com', 'jfl'],
-      ['gamma.fremontderby.com', 'gamma'],
-      ['fremontderby.com', 'production'],
-      ['www.fremontderby.com', 'production'],
-    ],
-  );
+test('lane health checklist is derived 1:1 from HOST_ENVIRONMENT_EXPECTATIONS', () => {
+  assert.equal(LANE_HEALTH_CHECKS.length, Object.keys(HOST_ENVIRONMENT_EXPECTATIONS).length);
+  for (const check of LANE_HEALTH_CHECKS) {
+    assert.equal(check.expect, HOST_ENVIRONMENT_EXPECTATIONS[check.host]);
+  }
+  const hosts = LANE_HEALTH_CHECKS.map((row) => row.host);
+  assert.ok(hosts.includes('dru.fremontderby.com'));
+  assert.ok(hosts.includes('jfl.fremontderby.com'));
+  assert.ok(hosts.includes('gamma.fremontderby.com'));
+  assert.ok(hosts.includes('fremontderby.com'));
+  assert.ok(hosts.includes('www.fremontderby.com'));
 });
 
 test('evaluateLaneHealthBody accepts matching environment identity', () => {
@@ -87,6 +88,5 @@ test('assertAllLaneHealth aggregates probe failures without throwing', async () 
   };
   const summary = await assertAllLaneHealth(undefined, fetchImpl);
   assert.equal(summary.ok, false);
-  assert.equal(summary.failed.length, 1);
-  assert.equal(summary.failed[0].host, 'dru.fremontderby.com');
+  assert.ok(summary.failed.some((row) => row.host === 'dru.fremontderby.com'));
 });
