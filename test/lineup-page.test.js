@@ -85,8 +85,20 @@ test('lineup page keeps the three selected slots and submit action visible on mo
   assert.match(html, /\.lineup-panel \.slots,\.lineup-panel \.panel-head,\.lineup-panel \.hint,\.lineup-panel \.actions\{display:none\}/);
   assert.match(html, /function renderMobileSummary\(\)/);
   assert.match(html, /label\.textContent='Slot '\+\(index\+1\)/);
+  assert.match(html, /data-mobile-forfeit-slot/);
+  assert.match(html, /forfeit\.textContent='Forfeit'/);
+  assert.match(html, /button\.dataset\.mobileForfeitSlot!=null/);
   assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
   assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
+});
+
+test('opponent state and lineup mark stay clear on narrow screens', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /Opponent has not submitted, so you can still edit it/);
+  assert.match(html, /submitted\?'Submitted':'Not submitted'/);
+  assert.match(html, /data-mobile-opponent-status>Not submitted</);
+  assert.match(html, /\.topbar \.mark\{flex:0 0 34px;min-width:34px\}/);
 });
 
 test('submitted lineup can be explicitly unlocked while opponent is waiting', () => {
