@@ -29,14 +29,17 @@ test('exact map is non-empty catalog for #950', () => {
   assert.ok(Object.keys(EXACT_PAGE_ALIASES).length >= 8);
 });
 
-test('HTML page aliases rewrite to canonical routes', () => {
-  assert.equal(normalizePagePathname('/player'), '/players');
+test('HTML page aliases rewrite to live JFL destinations', () => {
+  assert.equal(normalizePagePathname('/player'), '/teams');
+  assert.equal(normalizePagePathname('/players'), '/teams');
   assert.equal(normalizePagePathname('/check-in'), '/availability');
   assert.equal(normalizePagePathname('/checkin'), '/availability');
   assert.equal(normalizePagePathname('/schedules'), '/schedule');
-  assert.equal(normalizePagePathname('/playoff'), '/playoffs');
+  assert.equal(normalizePagePathname('/playoff'), '/standings');
+  assert.equal(normalizePagePathname('/playoffs'), '/standings');
   assert.equal(normalizePagePathname('/prize'), '/prizes');
-  assert.equal(normalizePagePathname('/trade'), '/trades');
+  assert.equal(normalizePagePathname('/trade'), '/teams');
+  assert.equal(normalizePagePathname('/trades'), '/teams');
   assert.equal(normalizePagePathname('/chat'), '/messages');
   assert.equal(normalizePagePathname('/roster'), '/teams');
   assert.equal(normalizePagePathname('/score'), '/scorecard');
@@ -44,13 +47,16 @@ test('HTML page aliases rewrite to canonical routes', () => {
   assert.equal(normalizePagePathname('/scorecards'), '/scorecard');
   assert.equal(normalizePagePathname('/inbox'), '/messages');
   assert.equal(normalizePagePathname('/lineups'), '/lineup');
-  assert.equal(normalizePagePathname('/bracket'), '/playoffs');
-  assert.equal(normalizePagePathname('/notify'), '/notifications');
+  assert.equal(normalizePagePathname('/bracket'), '/standings');
+  assert.equal(normalizePagePathname('/notify'), '/messages');
+  assert.equal(normalizePagePathname('/notifications'), '/messages');
   assert.equal(normalizePagePathname('/home'), '/');
   assert.equal(normalizePagePathname('/score/'), '/scorecard');
   assert.equal(normalizePagePathname('/practice'), '/schedule');
   assert.equal(normalizePagePathname('/practices'), '/schedule');
   assert.equal(normalizePagePathname('/subs'), '/teams');
+  assert.equal(normalizePagePathname('/free-agents'), '/teams');
+  assert.equal(normalizePagePathname('/fa'), '/teams');
   assert.equal(normalizePagePathname('/account'), '/profile');
   assert.equal(normalizePagePathname('/venues'), '/rules');
   assert.equal(normalizePagePathname('/stats'), '/standings');

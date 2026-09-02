@@ -45,15 +45,22 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/fa': '/api/me/teams',
 };
 
-/** HTML bookmarks that should land on an existing canonical page. */
+/**
+ * HTML bookmarks that should land on an existing live page.
+ * Alias targets must already 200 on JFL. Dedicated pages (#2136 #2139 #2141 #2143)
+ * intercept in personaRouterEntry before this rewrite when those PRs merge.
+ */
 export const EXACT_PAGE_ALIASES = {
-  '/player': '/players',
+  '/player': '/teams',
+  '/players': '/teams',
   '/check-in': '/availability',
   '/checkin': '/availability',
   '/schedules': '/schedule',
-  '/playoff': '/playoffs',
+  '/playoffs': '/standings',
+  '/playoff': '/standings',
   '/prize': '/prizes',
-  '/trade': '/trades',
+  '/trades': '/teams',
+  '/trade': '/teams',
   '/chat': '/messages',
   '/roster': '/teams',
   '/score': '/scorecard',
@@ -64,9 +71,10 @@ export const EXACT_PAGE_ALIASES = {
   '/msgs': '/messages',
   '/inbox': '/messages',
   '/lineups': '/lineup',
-  '/bracket': '/playoffs',
-  '/brackets': '/playoffs',
-  '/notify': '/notifications',
+  '/bracket': '/standings',
+  '/brackets': '/standings',
+  '/notifications': '/messages',
+  '/notify': '/messages',
   '/home': '/',
   '/login': '/profile',
   '/signin': '/profile',
@@ -92,9 +100,10 @@ export const EXACT_PAGE_ALIASES = {
   '/directory': '/teams',
   '/subs': '/teams',
   '/substitutes': '/teams',
-  '/fa': '/free-agents',
-  '/freeagent': '/free-agents',
-  '/free-agent': '/free-agents',
+  '/free-agents': '/teams',
+  '/fa': '/teams',
+  '/freeagent': '/teams',
+  '/free-agent': '/teams',
   '/stats': '/standings',
   '/history': '/standings',
   '/awards': '/prizes',
