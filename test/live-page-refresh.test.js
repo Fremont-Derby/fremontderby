@@ -15,7 +15,7 @@ test('live refresh script is resilient and battery-aware', () => {
   assert.match(livePageRefreshScript, /online/);
   assert.match(livePageRefreshScript, /DEBOUNCE_MS/);
   assert.match(livePageRefreshScript, /failCount/);
-  assert.match(livePageRefreshScript, /quiet: reason !== 'manual'/);
+  assert.match(livePageRefreshScript, /quiet = reason !== 'manual'/);
   assert.match(livePageRefreshScript, /fdConditionalFetch/);
   assert.match(livePageRefreshScript, /if-none-match/);
 });
