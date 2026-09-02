@@ -51,7 +51,7 @@ test('shared navigation deterministically maps representative routes to one curr
 });
 
 test('mobile quick dock stays five destinations and only marks a current item for dock-owned sections', () => {
-  const dockKeys = ['teams', 'schedule', 'score', 'messages', 'profile'];
+  const dockKeys = ['teams', 'schedule', 'score', 'availability', 'messages', 'profile'];
 
   for (const [path, expectedKey] of routeMatrix) {
     const html = renderPrimaryNavigation(path);
