@@ -11,6 +11,10 @@ test('messages page is mobile-first and uses the existing Google session', () =>
   assert.match(html, /Messages · Fremont Derby/);
   assert.match(html, /data-thread-select/);
   assert.match(html, /data-message-list/);
+  assert.match(html, /\.layout \{ height: min\(720px, calc\(100vh - 160px\)\)/);
+  assert.match(html, /max-height: calc\(100vh - 160px\)/);
+  assert.match(html, /\.message-list \{ min-height: 0; overflow-y: auto/);
+  assert.match(html, /touch-action: pan-y/);
   assert.match(html, /data-composer/);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/chat-threads/);
