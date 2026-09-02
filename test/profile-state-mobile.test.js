@@ -25,8 +25,8 @@ test('Profile distinguishes loading and true empty participation with useful nex
   assert.match(html, /No season participation yet\./);
   assert.match(html, /'\/schedule', 'View the league schedule'/);
   assert.match(html, /friendlyErrorMessage/);
-  assert.match(html, /Your sign-in expired\. Continue with Google to sign in again\./);
-  assert.match(html, /We could not load your profile\. Nothing was changed\. Please try again\./);
+  assert.match(html, /Your sign-in expired\. Open Profile, sign in again, and retry\./);
+  assert.match(html, /We could not complete that action\. Nothing was changed\. Please try again\./);
 });
 
 test('Profile history reflows on narrow phones without horizontal scrolling', () => {
@@ -38,7 +38,7 @@ test('Profile history reflows on narrow phones without horizontal scrolling', ()
   assert.match(html, /td::before \{ content: attr\(data-label\)/);
   assert.match(html, /td\.dataset\.label = label/);
   assert.match(html, /\['Season', row\.seasonName\], \['Team', row\.teamName\], \['Role', row\.role\]/);
-  assert.match(html, /\['Season', row\.seasonName\], \['Type', row\.participationType\], \['Status', row\.status\]/);
+  assert.match(html, /\['Season', row\.seasonName\],\s*\['Type', row\.participationType\],\s*\['Status', row\.status\],\s*\['Payment', row\.paymentStatus/);
   assert.doesNotMatch(html, /overflow-x: auto/);
   assert.doesNotMatch(html, /min-width: 620px/);
 });
