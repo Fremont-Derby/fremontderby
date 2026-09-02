@@ -207,7 +207,7 @@ export function renderPrizesPage() {
       <a class="ghost" href="/playoffs" style="min-height:44px;display:inline-flex;align-items:center">Playoffs</a>
       <a class="ghost" href="/teams" style="min-height:44px;display:inline-flex;align-items:center">Teams</a>
       <a class="ghost" href="/players" style="min-height:44px;display:inline-flex;align-items:center">Players</a>
-      <button class="load" data-load type="submit" disabled>Load prizes</button>
+
     </form>
 
     <section class="state-card" data-page-state hidden aria-live="polite">
@@ -278,8 +278,7 @@ export function renderPrizesPage() {
   <script>
     const form = document.querySelector('[data-form]');
     const seasonInput = document.querySelector('[data-season-id]');
-    const loadButton = document.querySelector('[data-load]');
-    const statusEl = document.querySelector('[data-status]');
+        const statusEl = document.querySelector('[data-status]');
     const pageState = document.querySelector('[data-page-state]');
     const stateTitle = document.querySelector('[data-state-title]');
     const stateDetail = document.querySelector('[data-state-detail]');
@@ -416,7 +415,6 @@ export function renderPrizesPage() {
       setStatus('Loading seasons…');
       hideState();
       seasonInput.disabled = true;
-      loadButton.disabled = true;
       const response = await fetch('/api/seasons');
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Could not load seasons');
@@ -440,7 +438,6 @@ export function renderPrizesPage() {
       const preferred = preferredSeason(seasons);
       seasonInput.value = preferred?.id || seasons[0].id;
       seasonInput.disabled = false;
-      loadButton.disabled = false;
       return true;
     }
 
@@ -451,7 +448,7 @@ export function renderPrizesPage() {
       if (!quiet) hideState();
       localStorage.setItem('fd.prizesSeasonId', seasonId);
       if (!quiet) setStatus('Loading prizes…');
-      if (!quiet) loadButton.disabled = true;
+      if (!quiet) seasonInput.disabled = true;
       try {
         const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
         const body = await response.json();
@@ -461,7 +458,6 @@ export function renderPrizesPage() {
         renderSummary(body.summary || {});
         setStatus('Prizes loaded', 'ok');
       } finally {
-        loadButton.disabled = seasonInput.disabled;
       }
     }
 

@@ -27,7 +27,8 @@ test('prizes first paint is truthful and unavailable until seasons resolve', () 
   assert.doesNotMatch(html, /data-status[^>]*>Ready</);
   assert.match(html, /<label>Season\s*<select[^>]*data-season-id disabled>/);
   assert.doesNotMatch(html, /Season ID/);
-  assert.match(html, /data-load type="submit" disabled>Load prizes/);
+  assert.doesNotMatch(html, /Load prizes/);
+  assert.match(html, /seasonInput\.addEventListener\('change'/);
   assert.match(html, /data-page-state hidden aria-live="polite"/);
   assert.match(html, /No public seasons/);
   assert.match(html, /No season yet/);
