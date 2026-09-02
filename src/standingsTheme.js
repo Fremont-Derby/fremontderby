@@ -23,17 +23,20 @@ export const standingsThemeStyles = `
     background: var(--fd-bg-surface) !important;
     box-shadow: var(--fd-shadow-soft) !important;
   }
-  body[data-fd-standings-theme] .tab {
-    color: var(--fd-primary-strong) !important;
-    background: transparent !important;
-    border-color: transparent !important;
+  body[data-fd-standings-theme] button.tab[aria-selected="false"],
+  body[data-fd-standings-theme] .tab[aria-selected="false"] {
+    color: var(--fd-text) !important;
+    background: var(--fd-bg-page) !important;
+    border-color: var(--fd-border) !important;
+    font-weight: 700 !important;
   }
+  body[data-fd-standings-theme] button.tab[aria-selected="true"],
   body[data-fd-standings-theme] .tab[aria-selected="true"] {
     color: var(--fd-primary-text) !important;
     background: var(--fd-primary-strong) !important;
-    border-color: var(--fd-primary-strong) !important;
-    box-shadow: none !important;
-    font-weight: 950;
+    border-color: var(--fd-green-950, #06120d) !important;
+    box-shadow: inset 0 0 0 2px var(--fd-green-950, #06120d) !important;
+    font-weight: 950 !important;
   }
   body[data-fd-standings-theme] label,
   body[data-fd-standings-theme] .status,

@@ -47,5 +47,8 @@ test('standings tabs and controls expose keyboard and motion accessibility', () 
   assert.match(html, /event\.key!==\'ArrowRight\'/);
   assert.match(html, /\.focus\(\)/);
   assert.match(html, /aria-live="polite"/);
-  assert.match(html, />Load standings<\/button>/);
+  assert.doesNotMatch(html, />Load standings<\/button>/);
+  assert.match(html, /seasonInput\.addEventListener\('change'/);
+  assert.match(html, /localStorage\.setItem\('fd\.standingsView'/);
+  assert.match(html, /button\.tab\[aria-selected="true"\]/);
 });
