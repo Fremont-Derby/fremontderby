@@ -195,8 +195,55 @@ test('release smoke fails when public season bootstrap is not readable', async (
       expectedVersionTag: 'abc123',
       fetchImpl,
     }),
-    /\/api\/seasons failed with HTTP 405/,
+    /season bootstrap failed with HTTP 405/,
   );
+});
+
+test('release smoke fails closed when season bootstrap omits the seasons array', async () => {
+  await assert.rejects(
+    () => checkReleaseOnce({
+      baseUrl: 'https://jfl.fremontderby.com',
+      expectedEnvironment: 'production',
+      expectedVersionTag: 'abc123',
+      fetchImpl: async (url) => {
+        if (url.endsWith('/api/seasons')) {
+          return json({ ok: true });
+        }
+        return successfulFetch('abc123')(url);
+      },
+    }),
+    /did not return a seasons array/,
+  );
+});
+
+test('release smoke does not retry a tagged deploy whose season bootstrap is broken', async () => {
+  let fetchCalls = 0;
+  let sleepCalls = 0;
+
+  await assert.rejects(
+    () => smokeRelease({
+      baseUrl: 'https://jfl.fremontderby.com',
+      expectedEnvironment: 'production',
+      expectedVersionTag: 'abc123',
+      attempts: 5,
+      delayMs: 0,
+      sleep: async () => {
+        sleepCalls += 1;
+      },
+      log: () => {},
+      fetchImpl: async (url) => {
+        fetchCalls += 1;
+        if (url.endsWith('/api/seasons')) {
+          return json({ error: 'Method Not Allowed' }, 405);
+        }
+        return successfulFetch('abc123')(url);
+      },
+    }),
+    /season bootstrap failed with HTTP 405/,
+  );
+
+  assert.equal(sleepCalls, 0);
+  assert.ok(fetchCalls >= 3);
 });
 
 test('release smoke fails fast when Cloudflare challenges a run with no bypass secret', async () => {
