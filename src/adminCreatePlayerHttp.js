@@ -4,7 +4,7 @@ import { rpcErrorStatus } from './rpcErrorStatus.js';
 import { safeClientErrorMessage } from './requestSanitize.js';
 
 export function adminCreatePlayerStatusFor(error) {
-  return rpcErrorStatus(error);
+  return rpcErrorStatus(error, { fallback: 502 });
 }
 
 export async function handleCreateAdminPlayerRequest(
