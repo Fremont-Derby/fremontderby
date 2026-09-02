@@ -4,13 +4,23 @@ import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { routeJflSeasonPublicReads } from './jflSeasonPublicReadsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
+import { renderPracticePage } from './practicePage.js';
 import { applyJflRegistrationNav } from './jflRegistrationNav.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
 import { testPersonaEnabled } from './testPersona.js';
 
-const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free-agent', '/freeagent']);
+const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free-agent', '/freeagent', '/substitutes', '/subs']);
+const PRACTICE_PAGES = new Set(['/practice', '/practice/', '/practices']);
+
+function htmlPage(render, pathname, request, env) {
+  const html = decorateHtmlWithShell(render(), pathname);
+  const response = new Response(html, {
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
+  return decorateJflModernShell(response, request, env);
+}
 
 export default {
   ...baseRouterEntry,
@@ -21,11 +31,10 @@ export default {
 
     const url = new URL(request.url);
     if (FREE_AGENT_PAGES.has(url.pathname) && request.method === 'GET') {
-      const html = decorateHtmlWithShell(renderFreeAgentsPage(), '/free-agents');
-      const response = new Response(html, {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
-      });
-      return decorateJflModernShell(response, request, env);
+      return htmlPage(renderFreeAgentsPage, '/free-agents', request, env);
+    }
+    if (PRACTICE_PAGES.has(url.pathname) && request.method === 'GET') {
+      return htmlPage(renderPracticePage, '/practice', request, env);
     }
 
     const scheduleResponse = await routeJflSeasonSchedule(request, env);
