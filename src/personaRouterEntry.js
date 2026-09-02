@@ -12,6 +12,7 @@ import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
 import { applyJflRegistrationNav } from './jflRegistrationNav.js';
 import { applyJflPrizesAutoloadFix } from './jflPrizesAutoloadFix.js';
+import { applyJflChatScrollFix } from './jflChatScrollFix.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
@@ -25,6 +26,7 @@ const PLAYER_PAGES = new Set(['/players', '/players/', '/player']);
 const NOTIFICATION_PAGES = new Set(['/notifications', '/notifications/', '/notify']);
 const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight']);
 const AUTOLOAD_PAGES = new Set(['/prizes', '/prizes/', '/standings', '/standings/']);
+const MESSAGE_PAGES = new Set(['/messages', '/messages/', '/inbox', '/chat']);
 
 function htmlPage(render, pathname, request, env) {
   const html = decorateHtmlWithShell(render(), pathname);
@@ -84,6 +86,9 @@ export default {
     response = await applyJflRegistrationNav(response);
     if (AUTOLOAD_PAGES.has(url.pathname)) {
       response = await applyJflPrizesAutoloadFix(response);
+    }
+    if (MESSAGE_PAGES.has(url.pathname)) {
+      response = await applyJflChatScrollFix(response);
     }
     if (!testPersonaEnabled(env)) return response;
     return injectTestPersonaControls(response);
