@@ -3,7 +3,7 @@ const READ_ALL_PATHS = new Set([
   '/api/me/notifications/read-all',
   '/api/me/notifications/mark-all-read',
 ]);
-const INVITE_PATHS = new Set(['/api/me/invitations', '/api/me/team-invitations']);
+const INVITE_PATHS = new Set(['/api/me/invitations', '/api/me/team-invitations', '/api/me/invites', '/api/me/team-invites']);
 const PRIZE_PATHS = new Set(['/api/prizes', '/api/prize-pool']);
 const READY_CHECK_PATHS = new Set(['/api/me/ready-checks', '/api/me/ready-check']);
 const LINEUP_PATHS = new Set(['/api/me/lineups', '/api/me/lineup']);

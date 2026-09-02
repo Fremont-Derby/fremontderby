@@ -33,6 +33,12 @@ test('JFL GET /api/me/invitations is an empty list instead of 404', async () => 
   assert.deepEqual(await response.json(), { invitations: [], playerId: null });
 });
 
+test('JFL GET /api/me/invites matches invitations', async () => {
+  const response = await get('/api/me/invites');
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { invitations: [], playerId: null });
+});
+
 test('JFL GET /api/prizes returns a summary object instead of 404', async () => {
   const response = await get('/api/prizes');
   assert.equal(response.status, 200);
