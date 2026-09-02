@@ -21,6 +21,7 @@ test('segment aliases', () => {
 test('non-api paths unchanged', () => {
   assert.equal(normalizeApiPathname('/teams'), '/teams');
   assert.equal(normalizePagePathname('/availability'), '/availability');
+  assert.equal(normalizePagePathname('/standings/'), '/standings');
 });
 
 test('exact map is non-empty catalog for #950', () => {
@@ -38,6 +39,14 @@ test('HTML page aliases rewrite to canonical routes', () => {
   assert.equal(normalizePagePathname('/trade'), '/trades');
   assert.equal(normalizePagePathname('/chat'), '/messages');
   assert.equal(normalizePagePathname('/roster'), '/teams');
+  assert.equal(normalizePagePathname('/score'), '/scorecard');
+  assert.equal(normalizePagePathname('/scorecards'), '/scorecard');
+  assert.equal(normalizePagePathname('/inbox'), '/messages');
+  assert.equal(normalizePagePathname('/lineups'), '/lineup');
+  assert.equal(normalizePagePathname('/bracket'), '/playoffs');
+  assert.equal(normalizePagePathname('/notify'), '/notifications');
+  assert.equal(normalizePagePathname('/home'), '/');
+  assert.equal(normalizePagePathname('/score/'), '/scorecard');
   assert.equal(normalizeApiPathname('/check-in'), '/availability');
 });
 
