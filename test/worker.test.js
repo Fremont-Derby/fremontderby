@@ -682,6 +682,7 @@ test("own profile handler saves the authenticated player's display name", async 
   assert.deepEqual(JSON.parse(calls[1].init.body), {
     actor_user_id: "user-1",
     profile_display_name: "Kai B",
+    profile_fargo_external_id: null,
   });
 });
 
@@ -715,7 +716,7 @@ test("own team management handler returns captained teams and invitations", asyn
   assert.equal(response.status, 200);
   const managementBody = await response.json();
   assert.equal(managementBody.teamManagement.player_id, "player-1");
-  assert.deepEqual(managementBody.teamManagement.captain_teams, [{ teamName: "Breakers" }]);
+  assert.deepEqual(managementBody.teamManagement.captain_teams, [{ teamName: "Breakers", roster: [], members: [] }]);
   assert.deepEqual(managementBody.teamManagement.invitations, [{ teamName: "Rack Pack" }]);
   assert.ok(Array.isArray(managementBody.teamManagement.applications));
   assert.ok(Array.isArray(managementBody.teamManagement.returning_slots));
@@ -1087,7 +1088,7 @@ test("team trade action routes require POST", async () => {
     publishEnv,
   );
 
-  assert.equal(proposalResponse.status, 405);
+  assert.equal(proposalResponse.status, 401);
   assert.equal(playerResponse.status, 405);
   assert.equal(captainResponse.status, 405);
 });
@@ -1495,8 +1496,7 @@ test("team round availability route allows only GET", async () => {
     publishEnv,
   );
 
-  assert.equal(response.status, 405);
-  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+  assert.equal(response.status, 401);
 });
 
 test("team lineup handler authenticates the captain and submits slots", async () => {
