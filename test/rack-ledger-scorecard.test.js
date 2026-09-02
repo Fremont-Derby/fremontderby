@@ -85,9 +85,13 @@ test('scorecard first view is a compact aligned W/L rack ledger with contained h
   assert.match(html, /Match details/);
 });
 
-test('individual score counts only reconciled matching racks and next rack follows this team history', () => {
+test('individual score counts this team submitted racks and next rack follows this team history', () => {
   const html = renderScorecardPage();
-  assert.match(html, /if\(rackState\(own\[i\],opponent\[i\],i\+1\)!=='matched'\)continue/);
+  assert.match(html, /function submittedScore\(racks\)/);
+  assert.match(html, /function raceReached\(scorecard,score\)/);
+  assert.match(html, /const score=submittedScore\(own\)/);
+  assert.match(html, /const complete=raceReached\(currentScorecard,score\)/);
+  assert.match(html, /addRackButton\.disabled=locked\|\|Boolean\(comparison\.own_confirmed_at\)\|\|complete/);
   assert.match(html, /if\(side==='A'\)a\+=1/);
   assert.match(html, /if\(side==='B'\)b\+=1/);
   assert.match(html, /opening_block_length\|\|3/);
@@ -95,4 +99,29 @@ test('individual score counts only reconciled matching racks and next rack follo
   assert.match(html, /const nextRack=own\.length\+1/);
   assert.doesNotMatch(html, /const nextRack=Math\.max\(own\.length,opponent\.length\)\+1/);
   assert.match(html, /data-next-discipline/);
+});
+
+test('live adapter posts the last loaded own rack snapshot with every mutation', () => {
+  const html = renderScorecardPage();
+  assert.match(html, /let lastOwnRacks=\[\]/);
+  assert.match(html, /lastOwnRacks=Array\.isArray\(comparisonBody\.comparison\?\.own_racks\)\?comparisonBody\.comparison\.own_racks:\[\]/);
+  assert.match(html, /expectedRacks:lastOwnRacks/);
+  assert.match(html, /score-racks\/undo[\s\S]*expectedRacks:lastOwnRacks/);
+  assert.match(html, /score-confirm[\s\S]*expectedRacks:lastOwnRacks/);
+});
+
+test('scorecard status uses the specific mutation error instead of a generic Action failed toast', () => {
+  const html = renderScorecardPage();
+  assert.match(html, /setStatus\(message,'error'\)/);
+  assert.match(html, /showError\(message\)/);
+  assert.doesNotMatch(html, /setStatus\('Action failed','error'\)/);
+});
+
+test('shipped controller source owns submitted-score progression without a rewrite helper', () => {
+  const html = renderScorecardPage();
+  assert.match(html, /function submittedScore\(racks\)/);
+  assert.match(html, /const score=submittedScore\(own\)/);
+  assert.match(html, /addRackButton\.textContent=complete\?'Race complete'/);
+  assert.doesNotMatch(html, /applyScorecardProgressionRuntime/);
+  assert.doesNotMatch(html, /setStatus\('Action failed','error'\)/);
 });
