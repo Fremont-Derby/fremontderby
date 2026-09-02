@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import routerEntry from '../src/routerEntry.js';
+import worker from '../src/personaRouterEntry.js';
 
 test('JFL router entry serves the public players directory', () => {
   const src = readFileSync(new URL('../src/routerEntry.js', import.meta.url), 'utf8');
@@ -26,4 +27,17 @@ test('JFL worker serves /players as HTML 200', async () => {
   assert.match(html, /data-search/);
   assert.doesNotMatch(html, /This dog lost the rack/);
   assert.doesNotMatch(html, /tel:|data-phone|phoneNumber|phone_number/i);
+});
+
+test('JFL persona entry intercepts /players and /player before aliases', async () => {
+  for (const path of ['/players', '/player']) {
+    const response = await worker.fetch(
+      new Request(`https://jfl.fremontderby.test${path}`),
+      { ENVIRONMENT: 'jfl' },
+    );
+    const html = await response.text();
+    assert.equal(response.status, 200, path);
+    assert.match(html, /Player directory · Fremont Derby/);
+    assert.doesNotMatch(html, /This dog lost the rack/);
+  }
 });
