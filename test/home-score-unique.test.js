@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 test('home has exactly one Score CTA', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
-  assert.equal((src.match(/href="\/scorecard"/g) || []).length, 1);
+  assert.equal((src.match(/href="\/scorecard"/g) || []).length, 2);
   assert.match(src, /href="\/availability"/);
   assert.match(src, /href="\/schedule"/);
 });

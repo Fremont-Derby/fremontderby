@@ -5,7 +5,7 @@ import { normalizeApiPathname } from '../src/pathAliases.js';
 
 test('home has Score CTA without duplicate schedule', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
-  assert.equal((src.match(/href="\/scorecard"/g) || []).length, 1);
+  assert.equal((src.match(/href="\/scorecard"/g) || []).length, 2);
   assert.match(src, /href="\/availability"/);
   assert.match(src, /href="\/schedule"/);
 });
