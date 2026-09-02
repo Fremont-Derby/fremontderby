@@ -35,7 +35,7 @@ export function renderTeamsPage() {
           <span class="action-meta" data-hub-matchup-meta>Round, opponent, date, and table</span>
           <span class="action-cta" data-hub-lineup-cta>Build lineup →</span>
         </a>
-        <a class="action-card" data-accent="blue" data-hub-availability href="/schedule">
+        <a class="action-card" data-accent="blue" data-hub-availability href="/availability">
           <span class="action-label">League night</span>
           <strong>Weekly check-in</strong>
           <span class="action-meta">Morning of the match: say you&rsquo;ll be there, you&rsquo;re unsure, or you can&rsquo;t make it.</span>
