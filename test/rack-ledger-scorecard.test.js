@@ -116,3 +116,18 @@ test('scorecard status uses the specific mutation error instead of a generic Act
   assert.match(html, /showError\(message\)/);
   assert.doesNotMatch(html, /setStatus\('Action failed','error'\)/);
 });
+
+test('progression runtime rewrites the shipped controller onto submitted-score behavior', async () => {
+  const { applyScorecardProgressionRuntime } = await import('../src/scorecardProgressionRuntime.js');
+  const source = [
+    "function reconciledScore(comparison){return [0,0]}",
+    "const score=reconciledScore(comparison);setText('[data-score-a]',score[0]);setText('[data-score-b]',score[1]);renderLedger();const nextRack=own.length+1;setText('[data-next-rack]',nextRack);setText('[data-next-discipline]',gameForRack(nextRack));addRackButton.textContent='Add Rack '+nextRack+' · '+gameForRack(nextRack);",
+    "addRackButton.disabled=locked||Boolean(comparison.own_confirmed_at);",
+    "if(error.message.includes('Score changed on another device')){winnerPicker.dataset.open='false';closeRackEditor();await loadAll({quiet:true});setStatus('Score changed on another phone','error');showError('Score changed on another phone. We refreshed it\u2014check the current rack before scoring.');return}setStatus('Action failed','error');showError(error.message)}",
+  ].join('');
+  const html = applyScorecardProgressionRuntime(source);
+  assert.match(html, /function submittedScore\(racks\)/);
+  assert.match(html, /const score=submittedScore\(own\)/);
+  assert.match(html, /\|\|complete/);
+  assert.doesNotMatch(html, /setStatus\('Action failed','error'\)/);
+});
