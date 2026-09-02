@@ -76,6 +76,15 @@ export const EXACT_PAGE_ALIASES = {
   '/faq': '/rules',
   '/support': '/rules',
   '/contact': '/rules',
+  '/tonight': '/schedule',
+  '/week': '/schedule',
+  '/this-week': '/schedule',
+  '/join': '/teams',
+  '/apply': '/teams',
+  '/captain': '/teams',
+  '/fa': '/free-agents',
+  '/freeagent': '/free-agents',
+  '/free-agent': '/free-agents',
 };
 
 export const SEGMENT_ALIAS_RULES = [

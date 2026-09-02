@@ -29,6 +29,11 @@ test('JFL HTML aliases that already have a live canonical page return 200', asyn
     ['/support', /Rules|Fremont Derby/i],
     ['/schedule/', /Schedule/i],
     ['/scorecard/', /Score a Match|Scorecard|scorecard/i],
+    ['/tonight', /Schedule/i],
+    ['/week', /Schedule/i],
+    ['/join', /Teams/i],
+    ['/apply', /Teams/i],
+    ['/captain', /Teams/i],
   ];
   for (const [path, title] of cases) {
     const response = await get(path);
