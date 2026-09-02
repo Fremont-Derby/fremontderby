@@ -165,3 +165,22 @@ test('JFL free-agent list rejects malformed season ids', async () => {
   );
   assert.equal(response.status, 400);
 });
+
+test('JFL standings and prizes stay 200 without Supabase bindings', async () => {
+  const env = { ENVIRONMENT: 'jfl' };
+  const standings = await worker.fetch(
+    new Request(`https://jfl.fremontderby.com/api/seasons/${LIVE_JFL_SEASON_ID}/team-standings`),
+    env,
+  );
+  assert.equal(standings.status, 200);
+  assert.deepEqual(await standings.json(), { standings: [] });
+
+  const prizes = await worker.fetch(
+    new Request(`https://jfl.fremontderby.com/api/seasons/${LIVE_JFL_SEASON_ID}/prizes`),
+    env,
+  );
+  assert.equal(prizes.status, 200);
+  const body = await prizes.json();
+  assert.equal(body.summary.season_id, LIVE_JFL_SEASON_ID);
+  assert.deepEqual(body.summary.projected_payouts, []);
+});

@@ -26,6 +26,30 @@ function canQuerySupabase(env) {
   return Boolean(env?.SUPABASE_URL && env?.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+function emptyPrizeSummary(seasonId) {
+  return {
+    season_id: seasonId || null,
+    season_name: null,
+    season_status: null,
+    player_count: 0,
+    paid_amount_cents: 0,
+    committed_amount_cents: 0,
+    entry_fee_cents: 0,
+    administration_amount_cents: 0,
+    projected_field_size: 0,
+    projected_gross_cents: 0,
+    projected_prize_pool_cents: 0,
+    team_allocation_basis_points: 0,
+    individual_allocation_basis_points: 0,
+    team_prize_pool_cents: 0,
+    individual_prize_pool_cents: 0,
+    configuration_version: null,
+    configured_at: null,
+    projected_payouts: [],
+    finalized_payouts: [],
+  };
+}
+
 export async function routeJflSeasonPublicReads(
   request,
   env,
@@ -56,11 +80,13 @@ export async function routeJflSeasonPublicReads(
       return jsonResponse({ freeAgents: Array.isArray(freeAgents) ? freeAgents : [] });
     }
     if (prizesMatch) {
+      if (!canQuerySupabase(env)) return jsonResponse({ summary: emptyPrizeSummary(seasonId) });
       const repository = createPrizeRepository(env, { fetch: fetchImpl });
       const summary = await getSeasonPrizeSummaryCommand({ seasonId }, repository);
-      return jsonResponse({ summary });
+      return jsonResponse({ summary: summary || emptyPrizeSummary(seasonId) });
     }
 
+    if (!canQuerySupabase(env)) return jsonResponse({ standings: [] });
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
     const seasons = await repository.listPublicSeasons();
     if (!seasons.some((season) => season.id === seasonId)) {
@@ -68,11 +94,14 @@ export async function routeJflSeasonPublicReads(
     }
     if (teamMatch) {
       const standings = await listTeamStandingsCommand({ seasonId }, repository);
-      return jsonResponse({ standings });
+      return jsonResponse({ standings: Array.isArray(standings) ? standings : [] });
     }
     const standings = await listIndividualStandingsCommand({ seasonId }, repository);
-    return jsonResponse({ standings });
+    return jsonResponse({ standings: Array.isArray(standings) ? standings : [] });
   } catch (error) {
+    if (prizesMatch) return jsonResponse({ summary: emptyPrizeSummary(seasonId) });
+    if (freeAgentsMatch) return jsonResponse({ freeAgents: [] });
+    if (teamMatch || individualMatch) return jsonResponse({ standings: [] });
     return jsonResponse({ error: error?.message || 'Unable to load season data.' }, 500);
   }
 }
