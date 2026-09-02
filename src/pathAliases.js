@@ -43,6 +43,19 @@ export const EXACT_PATH_ALIASES = {
   '/api/me/fa': '/api/me/teams',
 };
 
+/** HTML bookmarks that should land on an existing canonical page. */
+export const EXACT_PAGE_ALIASES = {
+  '/player': '/players',
+  '/check-in': '/availability',
+  '/checkin': '/availability',
+  '/schedules': '/schedule',
+  '/playoff': '/playoffs',
+  '/prize': '/prizes',
+  '/trade': '/trades',
+  '/chat': '/messages',
+  '/roster': '/teams',
+};
+
 /**
  * Segment-template aliases applied when exact map misses.
  * Each entry: { match: (parts) => boolean, rewrite: (parts) => string }
@@ -136,8 +149,18 @@ export const SEGMENT_ALIAS_RULES = [
  * @param {string} pathname
  * @returns {string}
  */
+export function normalizePagePathname(pathname) {
+  if (typeof pathname !== 'string' || pathname.startsWith('/api/')) return pathname;
+  return EXACT_PAGE_ALIASES[pathname] || pathname;
+}
+
+/**
+ * @param {string} pathname
+ * @returns {string}
+ */
 export function normalizeApiPathname(pathname) {
-  if (typeof pathname !== 'string' || !pathname.startsWith('/api/')) return pathname;
+  if (typeof pathname !== 'string') return pathname;
+  if (!pathname.startsWith('/api/')) return normalizePagePathname(pathname);
   if (EXACT_PATH_ALIASES[pathname]) return EXACT_PATH_ALIASES[pathname];
   const parts = pathname.split('/');
   for (const rule of SEGMENT_ALIAS_RULES) {

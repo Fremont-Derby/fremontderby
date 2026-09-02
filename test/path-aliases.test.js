@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeApiPathname, EXACT_PATH_ALIASES } from '../src/pathAliases.js';
+import {
+  normalizeApiPathname,
+  normalizePagePathname,
+  EXACT_PATH_ALIASES,
+  EXACT_PAGE_ALIASES,
+} from '../src/pathAliases.js';
 
 test('exact aliases', () => {
   assert.equal(normalizeApiPathname('/api/me/matches'), '/api/me/scorable-matches');
@@ -15,10 +20,25 @@ test('segment aliases', () => {
 
 test('non-api paths unchanged', () => {
   assert.equal(normalizeApiPathname('/teams'), '/teams');
+  assert.equal(normalizePagePathname('/availability'), '/availability');
 });
 
 test('exact map is non-empty catalog for #950', () => {
   assert.ok(Object.keys(EXACT_PATH_ALIASES).length >= 5);
+  assert.ok(Object.keys(EXACT_PAGE_ALIASES).length >= 8);
+});
+
+test('HTML page aliases rewrite to canonical routes', () => {
+  assert.equal(normalizePagePathname('/player'), '/players');
+  assert.equal(normalizePagePathname('/check-in'), '/availability');
+  assert.equal(normalizePagePathname('/checkin'), '/availability');
+  assert.equal(normalizePagePathname('/schedules'), '/schedule');
+  assert.equal(normalizePagePathname('/playoff'), '/playoffs');
+  assert.equal(normalizePagePathname('/prize'), '/prizes');
+  assert.equal(normalizePagePathname('/trade'), '/trades');
+  assert.equal(normalizePagePathname('/chat'), '/messages');
+  assert.equal(normalizePagePathname('/roster'), '/teams');
+  assert.equal(normalizeApiPathname('/check-in'), '/availability');
 });
 
 test('trades and playoffs convenience aliases', () => {
