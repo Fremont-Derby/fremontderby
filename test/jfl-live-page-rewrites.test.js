@@ -16,15 +16,23 @@ const CASES = [
   ['/account', /Profile|Sign in|Fremont Derby/],
   ['/settings', /Profile|Sign in|Fremont Derby/],
   ['/me', /Profile|Sign in|Fremont Derby/],
+  ['/signup', /Profile|Sign in|Fremont Derby/],
   ['/scoring', /Score a Match|Scorecard|scorecard/i],
   ['/awards', /Prizes/i],
   ['/stats', /Standings/i],
   ['/tonight', /Schedule/i],
   ['/week', /Schedule/i],
+  ['/matches', /Schedule/i],
+  ['/rounds', /Schedule/i],
+  ['/seasons', /Schedule/i],
   ['/directory', /Player directory · Fremont Derby/],
   ['/ready-check', /Check in/i],
+  ['/readycheck', /Check in/i],
   ['/lineups', /Lineup/i],
   ['/join', /Teams/i],
+  ['/captains', /Teams/i],
+  ['/dashboard', /Fremont Derby/],
+  ['/app', /Fremont Derby/],
 ];
 
 test('JFL leftover bookmarks rewrite onto live 200 pages', async () => {

@@ -24,7 +24,7 @@ const PLAYOFF_PAGES = new Set(['/playoffs', '/playoffs/', '/playoff', '/bracket'
 const TRADE_PAGES = new Set(['/trades', '/trades/', '/trade']);
 const PLAYER_PAGES = new Set(['/players', '/players/', '/player', '/directory']);
 const NOTIFICATION_PAGES = new Set(['/notifications', '/notifications/', '/notify']);
-const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight', '/ready-check']);
+const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight', '/ready-check', '/readycheck']);
 const AUTOLOAD_PAGES = new Set(['/prizes', '/prizes/', '/standings', '/standings/']);
 const MESSAGE_PAGES = new Set(['/messages', '/messages/']);
 
@@ -44,6 +44,8 @@ const LIVE_PAGE_REWRITES = new Map([
   ['/login', '/profile'],
   ['/signin', '/profile'],
   ['/sign-in', '/profile'],
+  ['/signup', '/profile'],
+  ['/sign-up', '/profile'],
   ['/register', '/profile'],
   ['/registration', '/profile'],
   ['/scoring', '/scorecard'],
@@ -58,16 +60,25 @@ const LIVE_PAGE_REWRITES = new Map([
   ['/week', '/schedule'],
   ['/this-week', '/schedule'],
   ['/schedules', '/schedule'],
+  ['/matches', '/schedule'],
+  ['/match', '/schedule'],
+  ['/rounds', '/schedule'],
+  ['/round', '/schedule'],
+  ['/season', '/schedule'],
+  ['/seasons', '/schedule'],
   ['/roster', '/teams'],
   ['/join', '/teams'],
   ['/apply', '/teams'],
   ['/captain', '/teams'],
+  ['/captains', '/teams'],
   ['/lineups', '/lineup'],
   ['/sandbox', '/demo'],
   ['/try', '/demo'],
   ['/testdrive', '/demo'],
   ['/test-drive', '/demo'],
   ['/home', '/'],
+  ['/dashboard', '/'],
+  ['/app', '/'],
 ]);
 
 function htmlPage(render, pathname, request, env) {
