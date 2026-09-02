@@ -1,4 +1,6 @@
 import baseRouterEntry from './routerEntry.js';
+import { decorateHtmlWithShell } from './appShell.js';
+import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { routeJflSeasonPublicReads } from './jflSeasonPublicReadsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
@@ -8,6 +10,8 @@ import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
 import { testPersonaEnabled } from './testPersona.js';
 
+const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free-agent', '/freeagent']);
+
 export default {
   ...baseRouterEntry,
 
@@ -16,10 +20,12 @@ export default {
     if (personaResponse) return personaResponse;
 
     const url = new URL(request.url);
-    if ((url.pathname === '/free-agents' || url.pathname === '/free-agents/') && request.method === 'GET') {
-      return new Response(renderFreeAgentsPage(), {
+    if (FREE_AGENT_PAGES.has(url.pathname) && request.method === 'GET') {
+      const html = decorateHtmlWithShell(renderFreeAgentsPage(), '/free-agents');
+      const response = new Response(html, {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       });
+      return decorateJflModernShell(response, request, env);
     }
 
     const scheduleResponse = await routeJflSeasonSchedule(request, env);
