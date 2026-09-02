@@ -23,7 +23,7 @@ test('shared product shell uses the canonical Test Drive the App label', async (
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(html, /<title>Test Drive the App · Fremont Derby<\/title>/);
+  assert.match(html, /<title>Test Drive · Fremont Derby<\/title>/);
   assert.match(html, /<h1>Test Drive the App<\/h1>/);
   assert.match(html, />Test Drive the App<\/a>/);
   assert.doesNotMatch(html, />Demo<\/a>/);
