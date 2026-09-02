@@ -4,6 +4,7 @@ import {
   injectJflRegistrationCheckin,
   injectJflRegistrationHome,
   injectJflRegistrationNav,
+  injectJflRegistrationProfile,
   injectJflRegistrationSchedule,
   injectJflRegistrationTeams,
 } from '../src/jflRegistrationNav.js';
@@ -46,6 +47,12 @@ test('registration callout lands on Check in', () => {
   const html = injectJflRegistrationCheckin('<main class="app"><header class="intro"><h1>Check in</h1></header></main>');
   assert.match(html, /data-fd-registration-checkin/);
   assert.match(html, /href="\/free-agents"/);
+});
+
+test('registration callout lands on Profile', () => {
+  const html = injectJflRegistrationProfile('<main class="app" data-fd-modern-profile="true"><header class="topbar"></header></main>');
+  assert.match(html, /data-fd-registration-profile/);
+  assert.match(html, /href="\/teams"/);
 });
 
 test('JFL home includes registration shortcuts after shell decoration', async () => {
@@ -93,6 +100,17 @@ test('JFL Check in includes the registration callout', async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /data-fd-registration-checkin/);
+  assert.match(html, /href="\/teams"/);
+});
+
+test('JFL Profile includes the registration callout', async () => {
+  const response = await worker.fetch(
+    new Request('https://jfl.fremontderby.test/profile'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /data-fd-registration-profile/);
   assert.match(html, /href="\/teams"/);
 });
 
