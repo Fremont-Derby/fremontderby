@@ -7,6 +7,7 @@ const INVITE_PATHS = new Set(['/api/me/invitations', '/api/me/team-invitations']
 const PRIZE_PATHS = new Set(['/api/prizes', '/api/prize-pool']);
 const READY_CHECK_PATHS = new Set(['/api/me/ready-checks', '/api/me/ready-check']);
 const LINEUP_PATHS = new Set(['/api/me/lineups', '/api/me/lineup']);
+const TRADE_PATHS = new Set(['/api/me/trades']);
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -54,6 +55,14 @@ export async function routeJflMeNotifications(request, env = {}) {
     return { rewrite: rewritten };
   }
 
+  if (path === '/api/me/membership-requests') {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    const rewritten = new Request(new URL('/api/me/team-membership-requests', request.url), request);
+    return { rewrite: rewritten };
+  }
+
   if (INVITE_PATHS.has(path)) {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -80,6 +89,13 @@ export async function routeJflMeNotifications(request, env = {}) {
       return jsonResponse({ error: 'Method not allowed' }, 405);
     }
     return jsonResponse({ lineups: [] });
+  }
+
+  if (TRADE_PATHS.has(path)) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    return jsonResponse({ tradeManagement: { trades: [] } });
   }
 
   if (path !== LIST_PATH && !READ_ALL_PATHS.has(path)) return null;
