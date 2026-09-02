@@ -14,6 +14,8 @@ import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
+import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderTradesPage } from './tradesPage.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
@@ -139,11 +141,16 @@ const baseRouterEntry = {
     if (modernUiCatalogResponse) {
       return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
     }
-    if (isRetiredTradePath(url.pathname)) {
-      const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
-        ? jflNotFoundResponse(url.pathname)
-        : retiredTradeResponse(request, url.pathname);
-      return finalizeBrowserResponse(response, url.pathname);
+    if ((url.pathname === '/playoffs' || url.pathname === '/trades') && request.method === 'GET') {
+      const html = url.pathname === '/playoffs' ? renderPlayoffsPage() : renderTradesPage();
+      return finalizeBrowserResponse(new Response(html, {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+    // HTML /trades is a public-surface page again (#2135).
+    // Retired API trade paths still 404 so clients use the restored handlers in index/router.
+    if (isRetiredTradePath(url.pathname) && url.pathname.startsWith('/api/')) {
+      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
     }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
