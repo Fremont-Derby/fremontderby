@@ -40,6 +40,7 @@ test('HTML page aliases rewrite to canonical routes', () => {
   assert.equal(normalizePagePathname('/chat'), '/messages');
   assert.equal(normalizePagePathname('/roster'), '/teams');
   assert.equal(normalizePagePathname('/score'), '/scorecard');
+  assert.equal(normalizePagePathname('/scoring'), '/scorecard');
   assert.equal(normalizePagePathname('/scorecards'), '/scorecard');
   assert.equal(normalizePagePathname('/inbox'), '/messages');
   assert.equal(normalizePagePathname('/lineups'), '/lineup');
@@ -47,5 +48,11 @@ test('HTML page aliases rewrite to canonical routes', () => {
   assert.equal(normalizePagePathname('/notify'), '/notifications');
   assert.equal(normalizePagePathname('/home'), '/');
   assert.equal(normalizePagePathname('/score/'), '/scorecard');
+  assert.equal(normalizePagePathname('/practice'), '/schedule');
+  assert.equal(normalizePagePathname('/practices'), '/schedule');
+  assert.equal(normalizePagePathname('/subs'), '/teams');
+  assert.equal(normalizePagePathname('/account'), '/profile');
+  assert.equal(normalizePagePathname('/venues'), '/rules');
+  assert.equal(normalizePagePathname('/stats'), '/standings');
   assert.equal(normalizeApiPathname('/check-in'), '/availability');
 });
