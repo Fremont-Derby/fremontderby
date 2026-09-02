@@ -18,6 +18,7 @@ import { chatHttpHandlers } from './chatHttp.js';
 import { renderChatModerationPage } from './chatModerationPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
 import { renderChatPage } from './chatPage.js';
+import { PAGE_PATH_REDIRECTS } from './pathAliases.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { playoffHttpHandlers } from './playoffHttp.js';
@@ -151,6 +152,12 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/') {
       return htmlResponse(stripLegacyPublicNav(renderIntroPage()), url.pathname);
+    }
+
+    const pageRedirect = PAGE_PATH_REDIRECTS[url.pathname];
+    if (pageRedirect) {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return Response.redirect(new URL(pageRedirect, url).toString(), 302);
     }
 
     if (request.method === 'GET' && url.pathname === '/rules') {
