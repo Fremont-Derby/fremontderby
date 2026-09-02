@@ -5,6 +5,8 @@ const READ_ALL_PATHS = new Set([
 ]);
 const INVITE_PATHS = new Set(['/api/me/invitations', '/api/me/team-invitations']);
 const PRIZE_PATHS = new Set(['/api/prizes', '/api/prize-pool']);
+const READY_CHECK_PATHS = new Set(['/api/me/ready-checks', '/api/me/ready-check']);
+const LINEUP_PATHS = new Set(['/api/me/lineups', '/api/me/lineup']);
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -64,6 +66,20 @@ export async function routeJflMeNotifications(request, env = {}) {
       return jsonResponse({ error: 'Method not allowed' }, 405);
     }
     return jsonResponse(emptyPrizeSummary());
+  }
+
+  if (READY_CHECK_PATHS.has(path)) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    return jsonResponse({ readyChecks: [] });
+  }
+
+  if (LINEUP_PATHS.has(path)) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    return jsonResponse({ lineups: [] });
   }
 
   if (path !== LIST_PATH && !READ_ALL_PATHS.has(path)) return null;

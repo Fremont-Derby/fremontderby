@@ -47,3 +47,15 @@ test('JFL GET /api/me/matches rewrites to scorable-matches', async () => {
   const body = await response.json().catch(() => ({}));
   assert.ok(body.matches || body.error || response.status === 200);
 });
+
+test('JFL GET /api/me/ready-checks is an empty list instead of 404', async () => {
+  const response = await get('/api/me/ready-checks');
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { readyChecks: [] });
+});
+
+test('JFL GET /api/me/lineups is an empty list instead of 404', async () => {
+  const response = await get('/api/me/lineups');
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { lineups: [] });
+});
