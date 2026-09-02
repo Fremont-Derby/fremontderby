@@ -67,6 +67,15 @@ export const EXACT_PAGE_ALIASES = {
   '/brackets': '/playoffs',
   '/notify': '/notifications',
   '/home': '/',
+  '/login': '/profile',
+  '/signin': '/profile',
+  '/sign-in': '/profile',
+  '/register': '/profile',
+  '/registration': '/profile',
+  '/help': '/rules',
+  '/faq': '/rules',
+  '/support': '/rules',
+  '/contact': '/rules',
 };
 
 export const SEGMENT_ALIAS_RULES = [
