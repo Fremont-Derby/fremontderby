@@ -3,6 +3,8 @@
  * normalizeApiPathname() rewrites convenience paths before routing.
  */
 
+import { stripTrailingSlashes } from './stripTrailingSlashes.js';
+
 /** @type {Record<string, string>} exact path rewrites */
 export const EXACT_PATH_ALIASES = {
   '/api/me/matches': '/api/me/scorable-matches',
@@ -41,6 +43,30 @@ export const EXACT_PATH_ALIASES = {
   '/api/score/matches': '/api/me/scorable-matches',
   '/api/me/free-agent': '/api/me/teams',
   '/api/me/fa': '/api/me/teams',
+};
+
+/** HTML bookmarks that should land on an existing canonical page. */
+export const EXACT_PAGE_ALIASES = {
+  '/player': '/players',
+  '/check-in': '/availability',
+  '/checkin': '/availability',
+  '/schedules': '/schedule',
+  '/playoff': '/playoffs',
+  '/prize': '/prizes',
+  '/trade': '/trades',
+  '/chat': '/messages',
+  '/roster': '/teams',
+  '/score': '/scorecard',
+  '/scores': '/scorecard',
+  '/scorecards': '/scorecard',
+  '/msg': '/messages',
+  '/msgs': '/messages',
+  '/inbox': '/messages',
+  '/lineups': '/lineup',
+  '/bracket': '/playoffs',
+  '/brackets': '/playoffs',
+  '/notify': '/notifications',
+  '/home': '/',
 };
 
 /**
@@ -97,8 +123,6 @@ export const SEGMENT_ALIAS_RULES = [
     apply: (p) => `/api/teams/${p[3]}/membership-request`,
   },
   {
-    // POST body still supplies roundId; team comes from path (handled in router startForTeam).
-    // Alias keeps /ready-check singular form discoverable for clients that only rewrite paths.
     test: (p) => p.length === 5 && p[1] === 'api' && p[2] === 'teams' && p[4] === 'ready-check',
     apply: (p) => `/api/teams/${p[3]}/ready-checks`,
   },
@@ -136,8 +160,19 @@ export const SEGMENT_ALIAS_RULES = [
  * @param {string} pathname
  * @returns {string}
  */
+export function normalizePagePathname(pathname) {
+  if (typeof pathname !== 'string' || pathname.startsWith('/api/')) return pathname;
+  const path = pathname === '/' ? '/' : (stripTrailingSlashes(pathname) || '/');
+  return EXACT_PAGE_ALIASES[path] || path;
+}
+
+/**
+ * @param {string} pathname
+ * @returns {string}
+ */
 export function normalizeApiPathname(pathname) {
-  if (typeof pathname !== 'string' || !pathname.startsWith('/api/')) return pathname;
+  if (typeof pathname !== 'string') return pathname;
+  if (!pathname.startsWith('/api/')) return normalizePagePathname(pathname);
   if (EXACT_PATH_ALIASES[pathname]) return EXACT_PATH_ALIASES[pathname];
   const parts = pathname.split('/');
   for (const rule of SEGMENT_ALIAS_RULES) {

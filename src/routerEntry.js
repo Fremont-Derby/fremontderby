@@ -39,6 +39,7 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { normalizeApiPathname } from './pathAliases.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -133,6 +134,11 @@ export default {
     }
 
     const url = new URL(request.url);
+    const canonicalPath = normalizeApiPathname(url.pathname);
+    if (canonicalPath !== url.pathname) {
+      url.pathname = canonicalPath;
+      request = new Request(url, request);
+    }
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
