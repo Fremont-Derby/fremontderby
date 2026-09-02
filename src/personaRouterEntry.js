@@ -17,7 +17,11 @@ export default {
     if (scheduleResponse) return scheduleResponse;
 
     const notificationsResponse = await routeJflMeNotifications(request, env);
-    if (notificationsResponse) return notificationsResponse;
+    if (notificationsResponse?.rewrite) {
+      request = notificationsResponse.rewrite;
+    } else if (notificationsResponse) {
+      return notificationsResponse;
+    }
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
     response = await enhanceFinishedScheduleBreakdown(response);
