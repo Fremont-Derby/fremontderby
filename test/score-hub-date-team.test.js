@@ -11,7 +11,7 @@ test('Score starts from today and offers human-readable date and team context wi
   assert.match(html, /data-team/);
   assert.match(html, /Today ·/);
   assert.match(html, /localDateKey\(\)/);
-  assert.match(html, /match\.scheduled_on\|\|'tbd'/);
+  assert.match(html, /function playDate\(/);
   assert.match(html, /match\.scoring_team_id/);
   assert.match(html, /match\.scoring_team_name/);
   assert.match(html, /All my teams/);
@@ -27,9 +27,9 @@ test('Score filters only the already-authorized scorable options returned by the
   const html = renderScorePickerPage();
 
   assert.match(html, /function baseMatches\(\)/);
-  assert.match(html, /matches\.filter\(match=>\(match\.scheduled_on\|\|'tbd'\)===selectedDate\)/);
+  assert.match(html, /matches\.filter\(match=>playDate\(match\)===selectedDate\)/);
   assert.match(html, /selectedTeam==='all'\|\|text\(match\.scoring_team_id\)===selectedTeam/);
   assert.match(html, /filtersEl\.hidden=false/);
-  assert.match(html, /dateSelect\.addEventListener\('change',populateMatchups\)/);
-  assert.match(html, /teamSelect\.addEventListener\('change',populateMatchups\)/);
+  assert.match(html, /dateSelect\.addEventListener\('change',\(\)=>\{localStorage\.setItem\('fd\.scoreDate',dateSelect\.value\);populateMatchups\(\)\}\)/);
+  assert.match(html, /teamSelect\.addEventListener\('change',\(\)=>\{localStorage\.setItem\('fd\.scoreTeam',teamSelect\.value\);populateMatchups\(\)\}\)/);
 });
