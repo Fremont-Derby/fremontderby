@@ -4,8 +4,8 @@ Operational checklist to clear the cross-lane isolation regression and land the
 prepared PR stack. Complements `docs/GITHUB_ACTIONS.md`,
 `docs/cloudflare-builds-isolation.md`, and `docs/ENVIRONMENTS.md`.
 
-**Tracking card:** #1193  
-**DRU/JFL binding recovery:** #1761 (PR #1760 for DRU)  
+**Tracking card:** #1193
+**DRU/JFL binding recovery:** #1761 (PR #1760 for DRU)
 **Security companion:** #1231 (gamma must not share jfl/dru open-auth)
 
 ---
