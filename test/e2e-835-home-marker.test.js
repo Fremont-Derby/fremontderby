@@ -12,4 +12,6 @@ test('public home intro does not show an internal E2E deploy badge', () => {
   assert.doesNotMatch(html, /E2E gamma/);
   assert.match(html, /Fremont Derby/);
   assert.match(html, /Join \/ sign in/);
+  assert.match(html, /<strong>Check in:<\/strong>/);
+  assert.doesNotMatch(html, /<strong>Availability:<\/strong>/);
 });
