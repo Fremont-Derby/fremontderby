@@ -1,9 +1,13 @@
 -- Tracks #1820.
--- Gamma cloned list_all_season_registration_internal from the pre-fix public
--- function, then later lane replay reintroduced expire-on-read. Public already
--- has a STABLE SQL read model (20260814040000). Restore that contract on Gamma
--- only. Do not touch the JFL or DRU lanes.
+-- Restore a STABLE SQL public-season read model on Gamma when that schema
+-- exists. No-op on production (no gamma schema). Does not touch JFL or DRU.
 
+do $install_gamma$
+begin
+  if to_regnamespace('gamma') is null then
+    return;
+  end if;
+  execute $sql$
 create or replace function gamma.list_all_season_registration_internal()
 returns table(
   id uuid,
@@ -29,7 +33,7 @@ language sql
 stable
 security definer
 set search_path = ''
-as $$
+as $fn$
   select
     s.id,
     s.name,
@@ -95,13 +99,9 @@ as $$
   left join gamma.season_players sp
     on sp.season_id = s.id
   group by s.id;
-$$;
-
-revoke all on function gamma.list_all_season_registration_internal()
-  from public, anon, authenticated;
-grant execute on function gamma.list_all_season_registration_internal()
-  to service_role;
-
+$fn$;
+revoke all on function gamma.list_all_season_registration_internal() from public, anon, authenticated;
+grant execute on function gamma.list_all_season_registration_internal() to service_role;
 create or replace function gamma.list_public_season_registration()
 returns table(
   id uuid,
@@ -127,14 +127,14 @@ language sql
 stable
 security definer
 set search_path = ''
-as $$
+as $fn$
   select registration.*
   from gamma.list_all_season_registration_internal() registration
   join gamma.seasons season on season.id = registration.id
   where season.purpose = 'league';
-$$;
-
-revoke all on function gamma.list_public_season_registration()
-  from public, anon, authenticated;
-grant execute on function gamma.list_public_season_registration()
-  to service_role;
+$fn$;
+revoke all on function gamma.list_public_season_registration() from public, anon, authenticated;
+grant execute on function gamma.list_public_season_registration() to service_role;
+  $sql$;
+end;
+$install_gamma$;

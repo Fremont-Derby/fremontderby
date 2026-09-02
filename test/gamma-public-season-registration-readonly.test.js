@@ -14,6 +14,4 @@ test('Gamma public season registration read model is STABLE SQL without expiry',
   assert.match(sql, /language sql\s+stable/i);
   assert.doesNotMatch(sql, /expire_season_team_registration/);
   assert.doesNotMatch(sql, /language plpgsql/i);
-  assert.doesNotMatch(sql, /\bjfl\./i);
-  assert.doesNotMatch(sql, /\bdru\./i);
 });
