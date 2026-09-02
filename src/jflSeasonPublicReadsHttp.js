@@ -7,6 +7,7 @@ const POSTGRES_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 const TEAM_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/team-standings$/;
 const INDIVIDUAL_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/individual-standings$/;
 const PRIZES_RE = /^\/api\/seasons\/([^/]+)\/prizes$/;
+const FREE_AGENTS_RE = /^\/api\/seasons\/([^/]+)\/free-agents$/;
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -30,15 +31,21 @@ export async function routeJflSeasonPublicReads(
   const teamMatch = url.pathname.match(TEAM_STANDINGS_RE);
   const individualMatch = url.pathname.match(INDIVIDUAL_STANDINGS_RE);
   const prizesMatch = url.pathname.match(PRIZES_RE);
-  if (!teamMatch && !individualMatch && !prizesMatch) return null;
+  const freeAgentsMatch = url.pathname.match(FREE_AGENTS_RE);
+  if (!teamMatch && !individualMatch && !prizesMatch && !freeAgentsMatch) return null;
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
-  const seasonId = decodeURIComponent((teamMatch || individualMatch || prizesMatch)[1]);
+  const seasonId = decodeURIComponent(
+    (teamMatch || individualMatch || prizesMatch || freeAgentsMatch)[1],
+  );
   if (!POSTGRES_UUID_RE.test(seasonId)) return invalidSeasonLink();
 
   try {
+    if (freeAgentsMatch) {
+      return jsonResponse({ freeAgents: [] });
+    }
     if (prizesMatch) {
       const repository = createPrizeRepository(env, { fetch: fetchImpl });
       const summary = await getSeasonPrizeSummaryCommand({ seasonId }, repository);
