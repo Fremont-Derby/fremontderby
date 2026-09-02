@@ -682,6 +682,7 @@ test("own profile handler saves the authenticated player's display name", async 
   assert.deepEqual(JSON.parse(calls[1].init.body), {
     actor_user_id: "user-1",
     profile_display_name: "Kai B",
+    profile_fargo_external_id: null,
   });
 });
 
@@ -715,8 +716,10 @@ test("own team management handler returns captained teams and invitations", asyn
   assert.equal(response.status, 200);
   const managementBody = await response.json();
   assert.equal(managementBody.teamManagement.player_id, "player-1");
-  assert.deepEqual(managementBody.teamManagement.captain_teams, [{ teamName: "Breakers" }]);
-  assert.deepEqual(managementBody.teamManagement.invitations, [{ teamName: "Rack Pack" }]);
+  assert.equal(managementBody.teamManagement.captain_teams[0].teamName, "Breakers");
+  assert.ok(Array.isArray(managementBody.teamManagement.captain_teams[0].members));
+  assert.ok(Array.isArray(managementBody.teamManagement.captain_teams[0].roster));
+  assert.equal(managementBody.teamManagement.invitations[0].teamName, "Rack Pack");
   assert.ok(Array.isArray(managementBody.teamManagement.applications));
   assert.ok(Array.isArray(managementBody.teamManagement.returning_slots));
   assert.equal(calls[0].url, "https://project.supabase.co/auth/v1/user");
@@ -1087,7 +1090,8 @@ test("team trade action routes require POST", async () => {
     publishEnv,
   );
 
-  assert.equal(proposalResponse.status, 405);
+  // GET /api/teams/:id/trades lists trades and is auth-gated.
+  assert.equal(proposalResponse.status, 401);
   assert.equal(playerResponse.status, 405);
   assert.equal(captainResponse.status, 405);
 });
@@ -1487,16 +1491,25 @@ test("team round availability handler returns roster rows plus eligible free age
 });
 
 test("team round availability route allows only GET", async () => {
-  const response = await worker.fetch(
+  const writeResponse = await worker.fetch(
     new Request(
       "https://fremontderby.com/api/teams/team-1/rounds/round-1/availability",
       { method: "POST" },
     ),
     publishEnv,
   );
+  const deleteResponse = await worker.fetch(
+    new Request(
+      "https://fremontderby.com/api/teams/team-1/rounds/round-1/availability",
+      { method: "DELETE" },
+    ),
+    publishEnv,
+  );
 
-  assert.equal(response.status, 405);
-  assert.deepEqual(await response.json(), { error: "Method not allowed" });
+  // POST/PUT set own availability and are auth-gated. DELETE stays rejected.
+  assert.equal(writeResponse.status, 401);
+  assert.equal(deleteResponse.status, 405);
+  assert.deepEqual(await deleteResponse.json(), { error: "Method not allowed" });
 });
 
 test("team lineup handler authenticates the captain and submits slots", async () => {
