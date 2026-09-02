@@ -1,5 +1,6 @@
 import baseRouterEntry from './routerEntry.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
+import { routeJflMeNotifications } from './jflMeNotificationsHttp.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
@@ -14,6 +15,9 @@ export default {
 
     const scheduleResponse = await routeJflSeasonSchedule(request, env);
     if (scheduleResponse) return scheduleResponse;
+
+    const notificationsResponse = await routeJflMeNotifications(request, env);
+    if (notificationsResponse) return notificationsResponse;
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
     response = await enhanceFinishedScheduleBreakdown(response);
