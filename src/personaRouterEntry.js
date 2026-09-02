@@ -3,6 +3,7 @@ import { decorateHtmlWithShell } from './appShell.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { routeJflSeasonPublicReads } from './jflSeasonPublicReadsHttp.js';
+import { routeJflMeNotifications } from './jflMeNotificationsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
 import { applyJflRegistrationNav } from './jflRegistrationNav.js';
@@ -42,6 +43,13 @@ export default {
 
     const publicReadResponse = await routeJflSeasonPublicReads(request, env);
     if (publicReadResponse) return publicReadResponse;
+
+    const notificationsResponse = await routeJflMeNotifications(request, env);
+    if (notificationsResponse?.rewrite) {
+      request = notificationsResponse.rewrite;
+    } else if (notificationsResponse) {
+      return notificationsResponse;
+    }
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
     response = await enhanceFinishedScheduleBreakdown(response);
