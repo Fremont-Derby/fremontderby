@@ -50,15 +50,15 @@ export function renderChatPage(env = {}) {
     .state-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 3px; }
     .state-action { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 15px; border: 1px solid var(--green); border-radius: 11px; background: var(--green); color: #06120d; text-decoration: none; font-weight: 900; }
     .state-action.secondary { border-color: var(--line); background: #10291d; color: #e8f1eb; }
-    .layout { min-height: min(720px, calc(100vh - 160px)); display: grid; grid-template-columns: 310px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: rgba(8, 27, 18, .94); box-shadow: 0 24px 70px rgba(0,0,0,.28); }
-    .threads { border-right: 1px solid var(--line); background: #081a12; }
+    .layout { height: min(720px, calc(100vh - 160px)); max-height: calc(100vh - 160px); min-height: 0; display: grid; grid-template-columns: 310px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: rgba(8, 27, 18, .94); box-shadow: 0 24px 70px rgba(0,0,0,.28); }
+    .threads { min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto auto minmax(0, 1fr); border-right: 1px solid var(--line); background: #081a12; }
     .panel-title { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 900; }
     .panel-actions { display: flex; gap: 6px; }
     .panel-actions button { min-height: 36px; padding: 0 10px; background: transparent; color: #f4f7f5; }
     .new-direct { display: grid; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line); background: #10251a; }
     .new-direct button { background: var(--green); color: #06120d; }
     .candidate-help { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.4; }
-    .thread-list { display: grid; gap: 4px; padding: 8px; }
+    .thread-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 4px; padding: 8px; }
     .section-label { padding: 10px 10px 4px; color: var(--gold); font-size: .72rem; font-weight: 950; letter-spacing: .09em; text-transform: uppercase; }
     .thread { width: 100%; min-height: 70px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; gap: 5px 10px; padding: 10px; text-align: left; color: #f4f7f5; background: transparent; border-color: transparent; }
     .thread:hover, .thread[data-active="true"] { background: var(--panel-soft); border-color: var(--line); }
@@ -67,12 +67,12 @@ export function renderChatPage(env = {}) {
     .unread { min-width: 24px; height: 24px; display: grid; place-items: center; padding: 0 7px; border-radius: 999px; background: var(--gold); color: #171307; font-size: .75rem; font-weight: 950; }
     .mobile-picker { display: none; padding: 10px; border-bottom: 1px solid var(--line); }
     select { width: 100%; min-height: 46px; padding: 0 10px; background: #0b2418; color: #f4f7f5; }
-    .chat { min-width: 0; display: grid; grid-template-rows: auto minmax(260px, 1fr) auto; }
+    .chat { min-width: 0; min-height: 0; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
     .chat-title { display: grid; gap: 2px; min-width: 0; }
     .chat-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chat-title small { color: var(--muted); font-weight: 650; }
     .block { min-height: 36px; padding: 0 10px; background: transparent; color: var(--danger); border-color: #7c413b; }
-    .message-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+    .message-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; display: flex; flex-direction: column; gap: 10px; padding: 16px; }
     .older { align-self: center; min-height: 36px; padding: 0 12px; background: transparent; color: #cde3d5; }
     .message { max-width: min(78%, 600px); align-self: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; background: #10291d; overflow-wrap: anywhere; }
     .message.mine { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: #1f5f40; border-color: #3c8a60; }
@@ -104,11 +104,11 @@ export function renderChatPage(env = {}) {
       .heading { align-items: start; display: grid; }
       .state-card { padding: 18px 16px; }
       .state-actions, .state-actions a, .state-actions button { width: 100%; }
-      .layout { min-height: calc(100dvh - 175px); grid-template-columns: 1fr; }
+      .layout { height: calc(100dvh - 175px); max-height: calc(100dvh - 175px); min-height: 0; grid-template-columns: 1fr; }
       .threads { display: none; }
       .mobile-picker { display: grid; gap: 8px; }
       .mobile-picker .new-direct { padding: 0; border: 0; }
-      .chat { grid-template-rows: auto auto minmax(260px, 1fr) auto; }
+      .chat { grid-template-rows: auto auto minmax(0, 1fr) auto; }
       .message-list { padding: 12px 10px; }
       .message { max-width: 88%; }
       .composer { position: sticky; bottom: 0; padding: 9px; grid-template-columns: minmax(0, 1fr) auto;  padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px)); }
