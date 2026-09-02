@@ -29,6 +29,11 @@ const CHECKIN_CALLOUT = `<aside class="fd-card" data-fd-registration-checkin>
       <p><a href="/teams">Find a team</a> · <a href="/free-agents">Free agents</a> · <a href="/practice">Practice</a></p>
     </aside>`;
 
+const PROFILE_CALLOUT = `<aside class="fd-card" data-fd-registration-profile>
+      <p><strong>Registration week.</strong> After you sign in, join a team or stay listed as a free agent.</p>
+      <p><a href="/teams">Find a team</a> · <a href="/free-agents">Free agents</a> · <a href="/availability">Check in</a></p>
+    </aside>`;
+
 function injectAfterFirstHeader(source, marker, html, already) {
   if (!source.includes(marker)) return source;
   if (source.includes(already)) return source;
@@ -68,6 +73,10 @@ export function injectJflRegistrationCheckin(html) {
   return injectAfterFirstHeader(source, '<h1>Check in</h1>', CHECKIN_CALLOUT, 'data-fd-registration-checkin');
 }
 
+export function injectJflRegistrationProfile(html) {
+  return injectAfterFirstHeader(String(html || ''), 'data-fd-modern-profile', PROFILE_CALLOUT, 'data-fd-registration-profile');
+}
+
 export async function applyJflRegistrationNav(response) {
   if (!response || !(response.headers.get('content-type') || '').includes('text/html')) {
     return response;
@@ -78,6 +87,7 @@ export async function applyJflRegistrationNav(response) {
   html = injectJflRegistrationTeams(html);
   html = injectJflRegistrationSchedule(html);
   html = injectJflRegistrationCheckin(html);
+  html = injectJflRegistrationProfile(html);
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,
