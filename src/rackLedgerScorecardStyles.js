@@ -40,7 +40,7 @@ export const sharedRackLedgerScorecardStyles = `
   .submission{font-size:1.08rem;font-weight:1000}.submission[data-value=W]{font-weight:1000}.submission[data-value=L]{font-weight:1000}
   .submission[data-state=matched]{box-shadow:inset 0 -3px 0 #18864a}.submission[data-state=pending]{box-shadow:inset 0 -3px 0 #c99d15}.submission[data-state=mismatch]{box-shadow:inset 0 0 0 2px #d84d43}.submission[data-state=unplayed]{opacity:.6}
   .rack-head[data-state=mismatch],.rack-status[data-state=mismatch]{box-shadow:inset 0 0 0 2px #d84d43}.rack-head[data-state=pending],.rack-status[data-state=pending]{box-shadow:inset 0 -3px 0 #c99d15}
-  .rack-edit{width:100%;height:100%;min-height:40px;padding:3px;background:transparent;color:inherit;border-color:transparent;border-radius:8px;font-size:1.05rem}.rack-edit::after{content:'\270e';display:block;margin-top:1px;font-size:.48rem}.rack-edit[data-pending=true]::after{content:'answer';font-size:.45rem}
+  .rack-edit{width:100%;height:100%;min-height:40px;padding:3px;background:transparent;color:inherit;border-color:transparent;border-radius:8px;font-size:1.05rem}.rack-edit::after{content:'✎';display:block;margin-top:1px;font-size:.48rem}.rack-edit[data-pending=true]::after{content:'answer';font-size:.45rem}
   .rack-status{font-size:.82rem;font-weight:1000}
   .ledger-help{padding:7px 9px;text-align:center;font-size:.68rem;border-top:1px solid}
   .edit-panel{margin-top:8px;padding:10px;border:1px solid;border-radius:14px}.edit-panel[hidden]{display:none}.edit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.edit-head strong{font-size:.9rem}.edit-head span{display:block;margin-top:2px;font-size:.67rem}.edit-close{min-width:44px;min-height:44px;padding:4px;background:transparent}
