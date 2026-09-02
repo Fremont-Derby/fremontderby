@@ -4,6 +4,27 @@
  */
 
 /** @type {Record<string, string>} exact path rewrites */
+/** HTML convenience paths. Worker issues a 302 to the canonical page. */
+export const PAGE_PATH_REDIRECTS = {
+  '/check-in': '/availability',
+  '/checkin': '/availability',
+  '/score': '/scorecard',
+  '/scores': '/scorecard',
+  '/chat': '/messages',
+  '/message': '/messages',
+  '/notices': '/notifications',
+  '/alerts': '/notifications',
+  '/login': '/profile',
+  '/signin': '/profile',
+  '/sign-in': '/profile',
+  '/account': '/profile',
+  '/playoff': '/playoffs',
+  '/standing': '/standings',
+  '/prize': '/prizes',
+  '/purse': '/prizes',
+  '/lineups': '/lineup',
+};
+
 export const EXACT_PATH_ALIASES = {
   '/api/me/matches': '/api/me/scorable-matches',
   '/api/me/membership-requests': '/api/me/team-membership-requests',
