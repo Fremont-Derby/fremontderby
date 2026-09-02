@@ -119,3 +119,20 @@ test('JFL standings still reject malformed season ids', async () => {
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: 'That season or match link is invalid.' });
 });
+
+test('JFL free-agent list accepts the live season id instead of 404', async () => {
+  const response = await worker.fetch(
+    new Request(`https://jfl.fremontderby.com/api/seasons/${LIVE_JFL_SEASON_ID}/free-agents`),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { freeAgents: [] });
+});
+
+test('JFL free-agent list rejects malformed season ids', async () => {
+  const response = await worker.fetch(
+    new Request('https://jfl.fremontderby.com/api/seasons/not-a-uuid/free-agents'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 400);
+});
