@@ -10,7 +10,7 @@ test('Worker routes the messages page and authenticated team chat APIs', () => {
   assert.match(router, /url\.pathname === '\/messages\/moderation'/);
   assert.match(router, /url\.pathname === '\/api\/me\/chat-threads'/);
   assert.match(router, /url\.pathname === '\/api\/me\/message-notification-summary'/);
-  assert.match(router, /api\\\/teams\\\/\(\[\^\/\]\+\)\\\/messages\$/);
+  assert.match(router, /teamPath\?\.kind === 'messages'/);
   assert.match(router, /chatHttpHandlers\.listTeamMessages/);
   assert.match(router, /chatHttpHandlers\.sendTeamMessage/);
   assert.match(router, /chatHttpHandlers\.markTeamChatRead/);
@@ -29,8 +29,8 @@ test('Worker routes authenticated direct messages, reads, and player blocks', ()
 
 test('Worker routes league rooms, message reports, and admin moderation', () => {
   assert.match(router, /url\.pathname === '\/api\/me\/league-chat-threads'/);
-  assert.match(router, /leagueMessagesMatch/);
-  assert.match(router, /leagueReadMatch/);
+  assert.match(router, /seasonMessagesPath\?\.kind === 'messages'/);
+  assert.match(router, /seasonMessagesPath\?\.kind === 'messages-read'/);
   assert.match(router, /url\.pathname === '\/api\/chat-reports'/);
   assert.match(router, /url\.pathname === '\/api\/admin\/chat-reports'/);
   assert.match(router, /moderateChatReportMatch/);
@@ -38,8 +38,8 @@ test('Worker routes league rooms, message reports, and admin moderation', () => 
 
 test('Worker routes authenticated matchup chat threads', () => {
   assert.match(router, /url\.pathname === '\/api\/me\/matchup-chat-threads'/);
-  assert.match(router, /matchupMessagesMatch/);
-  assert.match(router, /matchupReadMatch/);
+  assert.match(router, /teamMatchPath\?\.kind === 'messages'/);
+  assert.match(router, /teamMatchPath\?\.kind === 'messages-read'/);
   assert.match(router, /chatHttpHandlers\.sendMatchupMessage/);
 });
 
