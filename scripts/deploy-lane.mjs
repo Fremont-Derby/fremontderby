@@ -62,7 +62,7 @@ export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
 }
 
 export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
-  // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell.
+  // Windows: spawning npx without shell often returns EINVAL.
   const isWin = process.platform === 'win32';
   const args = laneDeployArgs(lane, env, spawn);
   const result = spawn(isWin ? 'npx' : 'npx', args, {
