@@ -6,6 +6,10 @@ import { routeJflSeasonPublicReads } from './jflSeasonPublicReadsHttp.js';
 import { routeJflMeNotifications } from './jflMeNotificationsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
+import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderTradesPage } from './tradesPage.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
+import { renderNotificationsPage } from './notificationsPage.js';
 import { applyJflRegistrationNav } from './jflRegistrationNav.js';
 import { applyJflPrizesAutoloadFix } from './jflPrizesAutoloadFix.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
@@ -15,6 +19,11 @@ import { testPersonaEnabled } from './testPersona.js';
 
 const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free-agent', '/freeagent', '/substitutes', '/subs']);
 const PRACTICE_PAGES = new Set(['/practice', '/practice/', '/practices']);
+const PLAYOFF_PAGES = new Set(['/playoffs', '/playoffs/', '/playoff', '/bracket', '/brackets']);
+const TRADE_PAGES = new Set(['/trades', '/trades/', '/trade']);
+const PLAYER_PAGES = new Set(['/players', '/players/', '/player']);
+const NOTIFICATION_PAGES = new Set(['/notifications', '/notifications/', '/notify']);
+const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight']);
 const AUTOLOAD_PAGES = new Set(['/prizes', '/prizes/', '/standings', '/standings/']);
 
 function htmlPage(render, pathname, request, env) {
@@ -38,6 +47,23 @@ export default {
     }
     if (PRACTICE_PAGES.has(url.pathname) && request.method === 'GET') {
       return htmlPage(renderPracticePage, '/practice', request, env);
+    }
+    if (PLAYOFF_PAGES.has(url.pathname) && request.method === 'GET') {
+      return htmlPage(renderPlayoffsPage, '/playoffs', request, env);
+    }
+    if (TRADE_PAGES.has(url.pathname) && request.method === 'GET') {
+      return htmlPage(renderTradesPage, '/trades', request, env);
+    }
+    if (PLAYER_PAGES.has(url.pathname) && request.method === 'GET') {
+      return htmlPage(renderPlayersDirectoryPage, '/players', request, env);
+    }
+    if (NOTIFICATION_PAGES.has(url.pathname) && request.method === 'GET') {
+      return htmlPage(renderNotificationsPage, '/notifications', request, env);
+    }
+    if (CHECKIN_PAGES.has(url.pathname) && request.method === 'GET') {
+      const rewritten = new URL(request.url);
+      rewritten.pathname = '/availability';
+      request = new Request(rewritten, request);
     }
 
     const scheduleResponse = await routeJflSeasonSchedule(request, env);
