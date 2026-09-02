@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import worker from '../src/personaRouterEntry.js';
 
 const LEGACY_SEASON_ID = '8a38a413-0359-a95a-4dc8-383123c7e092';
+const LIVE_JFL_SEASON_ID = '207abd00-3899-1ef2-d251-2a15efe5edc2';
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -12,15 +13,19 @@ function json(body, status = 200) {
   });
 }
 
-test('JFL schedule accepts PostgreSQL UUID text even when it is not RFC version/variant tagged', async () => {
-  const originalFetch = globalThis.fetch;
-  const seen = [];
-  globalThis.fetch = async (input) => {
+const jflEnv = {
+  ENVIRONMENT: 'jfl',
+  SUPABASE_SCHEMA: 'jfl',
+  SUPABASE_URL: 'https://example.supabase.co',
+  SUPABASE_SERVICE_ROLE_KEY: 'test-key',
+};
+
+function mockSeasonFetch(seasonId) {
+  return async (input) => {
     const url = new URL(typeof input === 'string' ? input : input.url);
-    seen.push(url.pathname + url.search);
     if (url.pathname.endsWith('/rest/v1/rpc/list_public_season_registration')) {
       return json([{
-        id: LEGACY_SEASON_ID,
+        id: seasonId,
         name: 'Legacy Season',
         status: 'complete',
         first_round_date: '2026-02-05',
@@ -45,18 +50,25 @@ test('JFL schedule accepts PostgreSQL UUID text even when it is not RFC version/
     }
     if (url.pathname.endsWith('/rest/v1/team_matches')) return json([]);
     if (url.pathname.endsWith('/rest/v1/teams')) return json([]);
-    return json({ message: `Unexpected request: ${url}` }, 500);
+    if (url.pathname.includes('team_standings') || url.pathname.includes('individual_standings')) return json([]);
+    if (url.pathname.includes('prize')) return json([]);
+    return json([]);
+  };
+}
+
+test('JFL schedule accepts PostgreSQL UUID text even when it is not RFC version/variant tagged', async () => {
+  const originalFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(typeof input === 'string' ? input : input.url);
+    seen.push(url.pathname + url.search);
+    return mockSeasonFetch(LEGACY_SEASON_ID)(input);
   };
 
   try {
     const response = await worker.fetch(
       new Request(`https://jfl.fremontderby.com/api/seasons/${LEGACY_SEASON_ID}/schedule`),
-      {
-        ENVIRONMENT: 'jfl',
-        SUPABASE_SCHEMA: 'jfl',
-        SUPABASE_URL: 'https://example.supabase.co',
-        SUPABASE_SERVICE_ROLE_KEY: 'test-key',
-      },
+      jflEnv,
     );
     assert.equal(response.status, 200);
     const body = await response.json();
@@ -70,6 +82,38 @@ test('JFL schedule accepts PostgreSQL UUID text even when it is not RFC version/
 test('JFL schedule still rejects malformed UUID text before touching Supabase', async () => {
   const response = await worker.fetch(
     new Request('https://jfl.fremontderby.com/api/seasons/not-a-uuid/schedule'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: 'That season or match link is invalid.' });
+});
+
+test('JFL standings and prizes accept Postgres uuid text used by the live JFL season', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    for (const seasonId of [LEGACY_SEASON_ID, LIVE_JFL_SEASON_ID]) {
+      globalThis.fetch = mockSeasonFetch(seasonId);
+      for (const suffix of ['team-standings', 'individual-standings', 'prizes']) {
+        const response = await worker.fetch(
+          new Request(`https://jfl.fremontderby.com/api/seasons/${seasonId}/${suffix}`),
+          jflEnv,
+        );
+        const body = await response.json().catch(() => ({}));
+        assert.notEqual(
+          body.error,
+          'That season or match link is invalid.',
+          `${suffix} ${seasonId} still hit the RFC UUID gate (${response.status})`,
+        );
+      }
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('JFL standings still reject malformed season ids', async () => {
+  const response = await worker.fetch(
+    new Request('https://jfl.fremontderby.com/api/seasons/not-a-uuid/individual-standings'),
     { ENVIRONMENT: 'jfl' },
   );
   assert.equal(response.status, 400);
