@@ -16,6 +16,11 @@ const EXPECTED = {
   '/signin': '/profile',
   '/sign-in': '/profile',
   '/account': '/profile',
+  '/playoff': '/playoffs',
+  '/standing': '/standings',
+  '/prize': '/prizes',
+  '/purse': '/prizes',
+  '/lineups': '/lineup',
 };
 
 test('human page labels redirect to canonical routes', async () => {

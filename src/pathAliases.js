@@ -18,6 +18,11 @@ export const PAGE_PATH_REDIRECTS = {
   '/signin': '/profile',
   '/sign-in': '/profile',
   '/account': '/profile',
+  '/playoff': '/playoffs',
+  '/standing': '/standings',
+  '/prize': '/prizes',
+  '/purse': '/prizes',
+  '/lineups': '/lineup',
 };
 
 export const EXACT_PATH_ALIASES = {
