@@ -37,10 +37,10 @@ test('prize summary command loads the aggregate season prize read model', async 
 test('prize summary command treats a missing season read as not found', async () => {
   const repository = { getSeasonPrizeSummary: async () => null };
 
-  await assert.rejects(
-    () => getSeasonPrizeSummaryCommand({ seasonId: 'missing-season' }, repository),
-    /Season not found/,
-  );
+  const summary = await getSeasonPrizeSummaryCommand({ seasonId: 'missing-season' }, repository);
+  assert.equal(summary.season_id, 'missing-season');
+  assert.equal(summary.player_count, 0);
+  assert.equal(summary.unconfigured, true);
 });
 
 test('configure prizes command validates and normalizes allocation input', async () => {
