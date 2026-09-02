@@ -101,6 +101,10 @@ export const EXACT_PAGE_ALIASES = {
   '/league-night': '/availability',
   '/leaguenight': '/availability',
   '/ready-check': '/availability',
+  '/sandbox': '/demo',
+  '/try': '/demo',
+  '/testdrive': '/demo',
+  '/test-drive': '/demo',
 };
 
 export const SEGMENT_ALIAS_RULES = [
