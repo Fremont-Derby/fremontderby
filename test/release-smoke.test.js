@@ -10,6 +10,10 @@ function json(body, status = 200) {
   });
 }
 
+function seasonsOk() {
+  return json({ seasons: [{ id: 'season-1', name: 'Test Season', status: 'active' }] });
+}
+
 function successfulFetch(versionTag = 'abc123') {
   return async (url) => {
     if (url.endsWith('/health')) {
@@ -28,6 +32,9 @@ function successfulFetch(versionTag = 'abc123') {
     if (url.endsWith('/demo')) {
       return new Response('<h1>Try a League Night</h1>', { status: 200 });
     }
+    if (url.endsWith('/api/seasons')) {
+      return seasonsOk();
+    }
     throw new Error(`Unexpected URL ${url}`);
   };
 }
@@ -43,6 +50,7 @@ test('release smoke accepts the exact deployed Git tag and production environmen
   assert.equal(result.ready, true);
   assert.equal(result.versionTag, 'abc123');
   assert.equal(result.environment, 'production');
+  assert.equal(result.seasonCount, 1);
 });
 
 test('release smoke sends the optional bypass token to every public proof request', async () => {
@@ -65,6 +73,9 @@ test('release smoke sends the optional bypass token to every public proof reques
     if (url.endsWith('/demo')) {
       return new Response('<h1>Try a League Night</h1>', { status: 200 });
     }
+    if (url.endsWith('/api/seasons')) {
+      return seasonsOk();
+    }
     throw new Error(`Unexpected URL ${url}`);
   };
 
@@ -76,7 +87,7 @@ test('release smoke sends the optional bypass token to every public proof reques
     fetchImpl,
   });
 
-  assert.equal(seen.length, 3);
+  assert.equal(seen.length, 4);
   for (const request of seen) {
     assert.equal(request.headers.get('x-fremont-release-smoke'), 'secret-smoke-value');
   }
@@ -153,6 +164,88 @@ test('release smoke reports safe HTTP routing details when health is not JSON', 
   );
 });
 
+test('release smoke fails when public season bootstrap is not readable', async () => {
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/health')) {
+      return json({ ok: true, service: 'fremontderby', version: 'worker-version', versionTag: 'abc123' });
+    }
+    if (url.endsWith('/health/environment')) {
+      return json({
+        ok: true,
+        service: 'fremontderby',
+        environment: 'jfl',
+        version: 'worker-version',
+        versionTag: 'abc123',
+        checks: [],
+      });
+    }
+    if (url.endsWith('/demo')) {
+      return new Response('<h1>Try a League Night</h1>', { status: 200 });
+    }
+    if (url.endsWith('/api/seasons')) {
+      return json({ error: 'Method not allowed' }, 405);
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+
+  await assert.rejects(
+    () => checkReleaseOnce({
+      baseUrl: 'https://jfl.fremontderby.com',
+      expectedEnvironment: 'jfl',
+      expectedVersionTag: 'abc123',
+      fetchImpl,
+    }),
+    /season bootstrap failed with HTTP 405/,
+  );
+});
+
+test('release smoke fails closed when season bootstrap omits the seasons array', async () => {
+  await assert.rejects(
+    () => checkReleaseOnce({
+      baseUrl: 'https://jfl.fremontderby.com',
+      expectedEnvironment: 'production',
+      expectedVersionTag: 'abc123',
+      fetchImpl: async (url) => {
+        if (url.endsWith('/api/seasons')) {
+          return json({ ok: true });
+        }
+        return successfulFetch('abc123')(url);
+      },
+    }),
+    /did not return a seasons array/,
+  );
+});
+
+test('release smoke does not retry a tagged deploy whose season bootstrap is broken', async () => {
+  let fetchCalls = 0;
+  let sleepCalls = 0;
+
+  await assert.rejects(
+    () => smokeRelease({
+      baseUrl: 'https://jfl.fremontderby.com',
+      expectedEnvironment: 'production',
+      expectedVersionTag: 'abc123',
+      attempts: 5,
+      delayMs: 0,
+      sleep: async () => {
+        sleepCalls += 1;
+      },
+      log: () => {},
+      fetchImpl: async (url) => {
+        fetchCalls += 1;
+        if (url.endsWith('/api/seasons')) {
+          return json({ error: 'Method Not Allowed' }, 405);
+        }
+        return successfulFetch('abc123')(url);
+      },
+    }),
+    /season bootstrap failed with HTTP 405/,
+  );
+
+  assert.equal(sleepCalls, 0);
+  assert.ok(fetchCalls >= 3);
+});
+
 test('release smoke fails fast when Cloudflare challenges a run with no bypass secret', async () => {
   let fetchCalls = 0;
   let sleepCalls = 0;
@@ -209,6 +302,9 @@ test('release smoke retries old deployments and then accepts the target release'
       }
       if (url.endsWith('/demo')) {
         return new Response('Try a League Night', { status: 200 });
+      }
+      if (url.endsWith('/api/seasons')) {
+        return seasonsOk();
       }
       throw new Error(`Unexpected URL ${url}`);
     },
