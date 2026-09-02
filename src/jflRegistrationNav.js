@@ -14,6 +14,11 @@ const HOME_SHORTCUTS = `<nav class="fd-home__facts" data-fd-registration-links a
         <a class="fd-home__fact" href="/availability">Check in</a>
       </nav>`;
 
+const TEAMS_CALLOUT = `<aside class="fd-card" data-fd-registration-teams>
+      <p><strong>Registration week.</strong> Request a roster below, or stay listed as a free agent if you can fill in.</p>
+      <p><a href="/free-agents">See free agents</a> · <a href="/practice">Practice windows</a> · <a href="/availability">Check in</a></p>
+    </aside>`;
+
 export function injectJflRegistrationNav(html) {
   const source = String(html || '');
   if (!source.includes('data-nav-key="standings"')) return source;
@@ -32,6 +37,14 @@ export function injectJflRegistrationHome(html) {
   return source.replace('</header>', `${HOME_SHORTCUTS}\n    </header>`);
 }
 
+export function injectJflRegistrationTeams(html) {
+  const source = String(html || '');
+  if (!source.includes('data-fd-modern-teams')) return source;
+  if (source.includes('data-fd-registration-teams')) return source;
+  if (!source.includes('</header>')) return source;
+  return source.replace('</header>', `</header>\n    ${TEAMS_CALLOUT}`);
+}
+
 export async function applyJflRegistrationNav(response) {
   if (!response || !(response.headers.get('content-type') || '').includes('text/html')) {
     return response;
@@ -39,6 +52,7 @@ export async function applyJflRegistrationNav(response) {
   let html = await response.text();
   html = injectJflRegistrationNav(html);
   html = injectJflRegistrationHome(html);
+  html = injectJflRegistrationTeams(html);
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,

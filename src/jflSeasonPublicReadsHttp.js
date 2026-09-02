@@ -6,10 +6,10 @@ import { listSeasonFreeAgentsCommand } from './freeAgentCommands.js';
 import { createFreeAgentRepository } from './freeAgentRepository.js';
 
 const POSTGRES_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const TEAM_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/team-standings$/;
-const INDIVIDUAL_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/individual-standings$/;
-const PRIZES_RE = /^\/api\/seasons\/([^/]+)\/prizes$/;
-const FREE_AGENTS_RE = /^\/api\/seasons\/([^/]+)\/free-agents$/;
+const TEAM_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/(?:team-standings|standings)$/;
+const INDIVIDUAL_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/(?:individual-standings|player-standings)$/;
+const PRIZES_RE = /^\/api\/seasons\/([^/]+)\/(?:prizes|awards|prize-summary)$/;
+const FREE_AGENTS_RE = /^\/api\/seasons\/([^/]+)\/(?:free-agents|fa|free_agents|eligible-free-agents)$/;
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {

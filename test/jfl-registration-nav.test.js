@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { injectJflRegistrationHome, injectJflRegistrationNav } from '../src/jflRegistrationNav.js';
+import {
+  injectJflRegistrationHome,
+  injectJflRegistrationNav,
+  injectJflRegistrationTeams,
+} from '../src/jflRegistrationNav.js';
+import { routeJflSeasonPublicReads } from '../src/jflSeasonPublicReadsHttp.js';
+import { routeJflSeasonSchedule } from '../src/jflSeasonScheduleHttp.js';
 import worker from '../src/personaRouterEntry.js';
 
 test('registration destinations are inserted before Standings in the more menu', () => {
@@ -21,6 +27,13 @@ test('registration shortcuts land on the modern home header', () => {
   assert.match(html, /href="\/availability"/);
 });
 
+test('registration callout lands on modern Teams', () => {
+  const html = injectJflRegistrationTeams('<main class="fd-teams" data-fd-modern-teams="true"><header><h1>Teams</h1></header></main>');
+  assert.match(html, /data-fd-registration-teams/);
+  assert.match(html, /href="\/free-agents"/);
+  assert.match(html, /free agent/i);
+});
+
 test('JFL home includes registration shortcuts after shell decoration', async () => {
   const response = await worker.fetch(
     new Request('https://jfl.fremontderby.test/'),
@@ -34,4 +47,42 @@ test('JFL home includes registration shortcuts after shell decoration', async ()
   assert.match(html, /href="\/playoffs"/);
   assert.match(html, /href="\/trades"/);
   assert.match(html, /href="\/notifications"/);
+});
+
+test('JFL Teams includes the registration callout', async () => {
+  const response = await worker.fetch(
+    new Request('https://jfl.fremontderby.test/teams'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /data-fd-registration-teams/);
+  assert.match(html, /href="\/free-agents"/);
+});
+
+test('season /fa and /awards aliases are public reads', async () => {
+  const seasonId = '207abd00-3899-1ef2-d251-2a15efe5edc2';
+  const fa = await routeJflSeasonPublicReads(
+    new Request(`https://jfl.fremontderby.test/api/seasons/${seasonId}/fa`),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(fa.status, 200);
+  assert.deepEqual(await fa.json(), { freeAgents: [] });
+
+  const awards = await routeJflSeasonPublicReads(
+    new Request(`https://jfl.fremontderby.test/api/seasons/${seasonId}/awards`),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.ok(awards);
+  assert.notEqual(awards.status, 404);
+});
+
+test('season /rounds aliases the schedule handler', async () => {
+  const seasonId = '207abd00-3899-1ef2-d251-2a15efe5edc2';
+  const response = await routeJflSeasonSchedule(
+    new Request(`https://jfl.fremontderby.test/api/seasons/${seasonId}/rounds`),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.ok(response);
+  assert.notEqual(response.status, 404);
 });
