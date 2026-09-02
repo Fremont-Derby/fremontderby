@@ -23,8 +23,11 @@ export const RPC_ERROR_CODES = {
  */
 export const RPC_ERROR_PHRASE_RULES = [
   { status: 401, re: /Supabase request failed with 401/i },
+  { status: 401, re: /HTTP 401/i },
   { status: 403, re: /Supabase request failed with 403/i },
   { status: 400, re: /invalid input syntax for type uuid/i },
+  { status: 400, re: /must be valid/i },
+  { status: 400, re: /reason required/i },
 
   { status: 403, re: /Actor is not a league admin/i },
   { status: 403, re: /League admin access/i },
@@ -46,9 +49,9 @@ export const RPC_ERROR_PHRASE_RULES = [
   { status: 404, re: /Player match not found/i },
   { status: 404, re: /Team not found/i },
   { status: 404, re: /Player not found|Invited player not found/i },
-  { status: 404, re: /Direct conversation not found|Chat message not found|Chat report not found/i },
+  { status: 404, re: /Direct conversation not found|Chat message not found|Chat report not found|Report not found/i },
   { status: 404, re: /Team matchup not found/i },
-  { status: 404, re: /Invitation not found|Membership request not found/i },
+  { status: 404, re: /Invitation not found|Membership request not found|request not found/i },
   { status: 404, re: /Returning team slot not found/i },
   { status: 404, re: /Active team membership not found/i },
   { status: 409, re: /Player is already scheduled/i },
@@ -103,6 +106,7 @@ export const RPC_ERROR_PHRASE_RULES = [
   { status: 409, re: /Player profile is required/i },
   { status: 409, re: /Teams can only be added before season publication/i },
   { status: 409, re: /No team slots are currently available/i },
+  { status: 409, re: /No team slots remaining/i },
   { status: 409, re: /Active team membership is required/i },
   { status: 409, re: /Rostered players cannot register as free agents/i },
   { status: 409, re: /Active season registration is required/i },
@@ -150,5 +154,5 @@ export function rpcErrorStatus(error, options = {}) {
   for (const rule of RPC_ERROR_PHRASE_RULES) {
     if (rule.re.test(message)) return rule.status;
   }
-  return 400;
+  return options.fallback ?? 400;
 }

@@ -251,7 +251,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
 }
 
 export function adminOperationsStatusForError(error) {
-  return rpcErrorStatus(error);
+  return rpcErrorStatus(error, { fallback: 502 });
 }
 
 export async function handleAdminOperationsRequest(
