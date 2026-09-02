@@ -251,7 +251,9 @@ export function buildAdminOperationsOverview(raw, readiness) {
 }
 
 export function adminOperationsStatusForError(error) {
-  return rpcErrorStatus(error);
+  const status = rpcErrorStatus(error);
+  if (status !== 400) return status;
+  return 502;
 }
 
 export async function handleAdminOperationsRequest(
