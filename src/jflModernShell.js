@@ -12,6 +12,7 @@ export const MODERN_SECONDARY_DESTINATIONS = Object.freeze([
   Object.freeze({ href: '/scorecard', label: 'Score', key: 'score' }),
   Object.freeze({ href: '/availability', label: 'Check in', key: 'availability' }),
   Object.freeze({ href: '/lineup', label: 'Lineup', key: 'lineup' }),
+  Object.freeze({ href: '/players', label: 'Players', key: 'players' }),
   Object.freeze({ href: '/standings', label: 'Standings', key: 'standings' }),
   Object.freeze({ href: '/prizes', label: 'Prizes', key: 'prizes' }),
   Object.freeze({ href: '/rules', label: 'Rules', key: 'rules' }),
@@ -28,6 +29,7 @@ function routeKey(pathname) {
   if (pathname === '/') return 'home';
   if (pathname === '/availability') return 'availability';
   if (pathname === '/lineup') return 'lineup';
+  if (pathname === '/players' || pathname.startsWith('/players/')) return 'players';
   if (pathname === '/season-setup') return 'season-setup';
   if (pathname === '/rules') return 'rules';
   if (pathname === '/prizes') return 'prizes';
@@ -87,10 +89,10 @@ function renderMobileDock(pathname) {
 
 function escapeAttribute(value) {
   return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+    .replaceAll('&', '&')
+    .replaceAll('"', '"')
+    .replaceAll('<', '<')
+    .replaceAll('>', '>');
 }
 
 export function formatJflDeployTimestamp(value) {
@@ -135,7 +137,7 @@ function renderEnvironmentBadge(env = {}) {
   if (versionId) titleParts.push(`version ${versionId}`);
   if (fullSha) titleParts.push(`git ${fullSha}`);
   const timestampAttr = deployedAt ? ` data-deploy-timestamp="${escapeAttribute(deployedAt)}"` : '';
-  return `<span class="fd-env-badge" data-fd-jfl-environment${timestampAttr} title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><span data-fd-jfl-deploy-time>${escapeAttribute(badgeValue)}</span></span>`;
+  return `<span class="fd-env-badge" data-fd-jfl-environment${timestampAttr} title="${escapeAttribute(titleParts.join(' \u00b7 '))}"><strong>JFL</strong><span data-fd-jfl-deploy-time>${escapeAttribute(badgeValue)}</span></span>`;
 }
 
 function injectEnvironmentBadge(html, env) {

@@ -14,6 +14,7 @@ import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import legacyRouter from './router.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
@@ -138,6 +139,11 @@ const baseRouterEntry = {
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
       return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
+    }
+    if (url.pathname === '/players' && request.method === 'GET') {
+      return finalizeBrowserResponse(new Response(renderPlayersDirectoryPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
     }
     if (isRetiredTradePath(url.pathname)) {
       const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
