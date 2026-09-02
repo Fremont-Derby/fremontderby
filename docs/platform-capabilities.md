@@ -21,6 +21,7 @@ Secret **values** are never readable via the GitHub API. Agents may only exercis
 | Deploy lane from matching branch | CI `deploy-nonproduction` on `fremontderby-{jfl,dru,gamma}` | Requires Worker secrets already provisioned |
 | Deploy lane from main (controlled) | Workflow **Deploy release lanes** (`workflow_dispatch`) | Requires Worker secrets already provisioned |
 | Lane identity monitor | Workflow **Lane health monitor** (hourly) | Fails if public host `environment` mismatches |
+| Clear stale DRU URL/key/ref secrets | `scripts/clear-dru-override-secrets.mjs` + **Clear stale DRU override secrets** | `workflow_dispatch` only. Deletes three override names on `fremontderby-dru`. Does not deploy. Tracks #2124 / #1761 |
 
 ## Cloudflare / data (human or provisioned secrets required)
 
@@ -30,6 +31,7 @@ Secret **values** are never readable via the GitHub API. Agents may only exercis
 | Provision isolated Supabase projects + `BETA_ACTOR_USER_ID` | Values not in git |
 | Apply SQL migrations to **DRU/JFL/gamma** databases | No Supabase management token in Actions today |
 | Grant `dru_private` (or lane schemas) to `service_role` | SQL on target project |
+| Redeploy `fremontderby-dru` after secret clearance | Merge #2123, then deploy from that permanent branch. `ctf-gooo-002` cannot `workflow_dispatch` |
 
 ## Live verification (always)
 
@@ -55,6 +57,7 @@ Same pattern for `jfl` / `gamma` (gamma must **not** open-auth).
 ## Related cards
 
 Human DRU finish: search issues for `[HUMAN]` DRU open-auth. DNS durability: platform cards on wrangler-owned domains. Migration apply: DRU data cards referencing migrations `20260814031843_shared_staging_lane_schemas.sql` and `20260814093000_expose_lane_private_postgrest_schemas.sql`.
+DRU secret override clearance: #2124. Parent recovery: #1761. Binding pin PR: #2123.
 
 ## Product surfaces added 2026-08-14
 

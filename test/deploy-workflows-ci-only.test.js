@@ -11,6 +11,7 @@ const DEPLOY_TOUCHING = [
   'restore-lane-custom-domains.yml',
   'fix-jfl-supabase-bindings.yml',
   'gamma-prod-refresh.yml',
+  'clear-dru-override-secrets.yml',
 ];
 
 test('deploy-touching workflows never trigger on pull_request', () => {

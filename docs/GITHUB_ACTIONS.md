@@ -48,6 +48,7 @@ Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl
 |------|------|---------|-------|
 | `ci.yml` | CI | `workflow_dispatch` + `pull_request`/`push` on integration branches | Lint/check/tests only — no CF secrets, no deploy (#872) |
 | `deploy-release-lanes.yml` | Deploy release lanes | `workflow_dispatch` | **`needs: test` gate restored** (#725); probe still `continue-on-error` until #713 |
+| `clear-dru-override-secrets.yml` | Clear stale DRU override secrets | `workflow_dispatch` | Deletes URL/publishable/ref secrets on `fremontderby-dru` only (#2124). Does not deploy |
 | `diagnose-worker-domains.yml` | Diagnose worker domains | `workflow_dispatch` | Cloudflare domain diagnostics |
 | `lane-health-monitor.yml` | Lane health monitor | `workflow_dispatch` | Probe `/health/environment` |
 | `release-source-policy.yml` | Release source policy | `pull_request` to main/gamma | Fail-closed source branch topology (#889) |
@@ -56,7 +57,7 @@ Evidence from JFL-only work showed **one PR commit starting builds on prod + jfl
 | `sync-collaboration-labels.yml` | Sync collaboration labels | `workflow_dispatch` | Labels |
 | `enforce-workers-dev-disabled.yml` | Enforce workers.dev disabled | `workflow_dispatch` | Preview URL policy |
 
-All use `runs-on: ubuntu-latest` and need healthy hosted runners (#723).
+All use `runs-on: ubuntu-latest` and need healthy hosted runners (`runner_id: 0` is the broken self-hosted default from #723). First-time contributor accounts may still see `Actions has been disabled for this user`.
 
 ## Branch lag warning
 
