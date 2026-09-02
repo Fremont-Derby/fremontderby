@@ -80,19 +80,19 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
 });
 
 test('non-production lane credentials are declared as required secrets, not placeholders', () => {
-  const common = [
+  const vars = [
     'SUPABASE_URL',
     'SUPABASE_PUBLISHABLE_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
     'EXPECTED_SUPABASE_PROJECT_REF',
   ];
   for (const lane of ['jfl', 'dru', 'gamma']) {
     const target = config.env[lane];
-    for (const name of common) assert.ok(target.secrets.required.includes(name));
+    assert.deepEqual(target.secrets.required, ['SUPABASE_SERVICE_ROLE_KEY']);
+    for (const name of vars) assert.ok(Object.hasOwn(target.vars, name));
     assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
   }
-  assert.ok(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'));
-  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
+  assert.equal(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
   assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
 });
 
