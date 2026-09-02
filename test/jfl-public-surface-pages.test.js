@@ -43,3 +43,12 @@ test('JFL /check-in aliases the live availability page', async () => {
     assert.doesNotMatch(html, /This dog lost the rack/);
   }
 });
+
+test('JFL /trades uses the Profile session instead of an access-token field', async () => {
+  const html = await (await get('/trades')).text();
+  assert.match(html, /Fremont Derby Trades/);
+  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
+  assert.match(html, /href="\/profile"/);
+  assert.doesNotMatch(html, /Access token/i);
+  assert.doesNotMatch(html, /data-token/);
+});
