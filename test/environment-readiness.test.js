@@ -73,10 +73,10 @@ for (const environment of ['jfl', 'dru', 'gamma']) {
   });
 }
 
-test('gamma allows test auth bypass like dru/jfl', () => {
+test('gamma treats BETA_AUTH_BYPASS as invalid', () => {
   const readiness = environmentReadiness(laneEnv('gamma', { BETA_AUTH_BYPASS: '1' }));
-  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, true);
-  assert.equal(readiness.checks.find((c) => c.name === 'testAuthBypassFlag')?.ok, true);
+  assert.equal(readiness.ok, false);
+  assert.equal(readiness.checks.find((c) => c.name === 'authBypassRestrictedToTestLane')?.ok, false);
 });
 
 test('readiness never exposes secret values', () => {
