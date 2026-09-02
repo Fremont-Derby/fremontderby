@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs';
 
 test('secret put prefers versions API and does not fail deploy', () => {
   const src = readFileSync(new URL('../scripts/put-wrangler-secret.mjs', import.meta.url), 'utf8');
-  assert.match(src, /versions.*secret.*put/);
-  assert.match(src, /Continuing/);
+  assert.match(src, /classic secret put only/);
+  assert.match(src, /not falling back to versions secret put/);
 });
 
 test('deploy workflow secret steps are non-blocking', () => {
   const src = readFileSync(new URL('../.github/workflows/deploy-release-lanes.yml', import.meta.url), 'utf8');
-  assert.match(src, /Put lane service role secret after deploy[\s\S]*continue-on-error: true/);
+  assert.match(src, /Put lane service role secret before deploy[\s\S]*continue-on-error: true/);
 });
 
 test('schedule renderRound uses signature short-circuit', () => {
