@@ -4,7 +4,11 @@ import { rpcErrorStatus } from './rpcErrorStatus.js';
 import { safeClientErrorMessage } from './requestSanitize.js';
 
 export function adminCreatePlayerStatusFor(error) {
-  return rpcErrorStatus(error);
+  const status = rpcErrorStatus(error);
+  if (status !== 400) return status;
+  const message = String(error?.message || '');
+  if (/Player name is required|Name exceeds/i.test(message)) return 400;
+  return 502;
 }
 
 export async function handleCreateAdminPlayerRequest(
