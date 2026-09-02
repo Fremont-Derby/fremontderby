@@ -12,7 +12,7 @@ import { safeClientErrorMessage } from './requestSanitize.js';
 const json = (body, status = 200) => jsonNoStore(body, status, { pragma: 'no-cache', vary: 'Authorization' });
 
 export function playerContactErrorStatus(error) {
-  return rpcErrorStatus(error);
+  return rpcErrorStatus(error, { fallback: 502 });
 }
 
 /** Mask to last 4 digits only — never echo full phone unless explicitly revealed. */
