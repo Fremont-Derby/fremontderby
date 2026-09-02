@@ -86,7 +86,7 @@ export const RPC_ERROR_PHRASE_RULES = [
   { status: 409, re: /Transfer player already captains a team in this season/i },
   { status: 409, re: /already captains another team/i },
   { status: 409, re: /already has an active captain/i },
-  { status: 409, re: /(?:You )?already have a team application/i },
+  { status: 409, re: /You already have a team application/i },
   { status: 409, re: /Season is not open for team applications/i },
   { status: 409, re: /Cannot regenerate player matches after scoring/i },
   { status: 409, re: /Cannot regenerate player matches after racks have been recorded/i },
