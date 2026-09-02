@@ -9,7 +9,7 @@ test('schedule page makes the current league night obvious without technical inp
   assert.match(html, /data-season-select/);
   assert.match(html, /data-round-select/);
   assert.match(html, /Next league night/);
-  assert.match(html, /stageRank/);
+  assert.match(html, /stageLabel/);
   assert.match(html, /championship/);
   assert.match(html, /semifinal/);
   assert.match(html, /tiebreaker/);
@@ -18,7 +18,7 @@ test('schedule page makes the current league night obvious without technical inp
   assert.match(html, /teamBName/);
   assert.match(html, /Table /);
   assert.match(html, /\/scorecard\?match=/);
-  assert.match(html, /score\.textContent=finalized\?'View':'Score'/);
+  assert.match(html, /score\.textContent=finalized\?'View final':\(live\?'Score live':'Score'\)/);
   assert.match(html, /\/messages\?matchup=/);
   assert.match(html, /\/api\/seasons/);
   assert.match(html, /\/standings/);
