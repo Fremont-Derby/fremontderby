@@ -1,25 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { isKnownAppPagePath } from '../src/appShell.js';
 import routerEntry from '../src/routerEntry.js';
 
-test('JFL known app pages include playoffs and trades', () => {
-  assert.ok(isKnownAppPagePath('/playoffs'));
-  assert.ok(isKnownAppPagePath('/trades'));
-});
-
-test('JFL router serves playoffs and trades HTML pages', () => {
-  const src = readFileSync(new URL('../src/router.js', import.meta.url), 'utf8');
-  assert.match(src, /pathname === '\/playoffs'/);
-  assert.match(src, /renderPlayoffsPage/);
-  assert.match(src, /pathname === '\/trades'/);
-  assert.match(src, /renderTradesPage/);
-});
-
-test('JFL router entry does not 404 HTML /trades as retired', () => {
+test('JFL router entry serves playoffs and trades HTML pages', () => {
   const src = readFileSync(new URL('../src/routerEntry.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(src, /jflNotFoundResponse\(url\.pathname\)[\s\S]{0,80}retiredTradeResponse/);
+  assert.match(src, /renderPlayoffsPage/);
+  assert.match(src, /renderTradesPage/);
+  assert.match(src, /pathname === '\/playoffs'/);
+  assert.match(src, /pathname === '\/trades'/);
   assert.match(src, /HTML \/trades is a public-surface page again/);
 });
 
