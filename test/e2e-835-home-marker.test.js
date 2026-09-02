@@ -1,9 +1,15 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import { renderIntroPage } from '../src/publicPages.js';
 
-test('home intro includes e2e deploy marker for #835', () => {
+test('public home intro does not show an internal E2E deploy badge', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
-  assert.match(src, /data-e2e-deploy="835"/);
-  assert.match(src, /E2E deploy · #835/);
+  const html = renderIntroPage();
+  assert.doesNotMatch(src, /data-e2e-deploy/);
+  assert.doesNotMatch(src, /E2E gamma/);
+  assert.doesNotMatch(html, /data-e2e-deploy/);
+  assert.doesNotMatch(html, /E2E gamma/);
+  assert.match(html, /Fremont Derby/);
+  assert.match(html, /Join \/ sign in/);
 });
