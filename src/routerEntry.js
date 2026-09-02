@@ -139,11 +139,10 @@ const baseRouterEntry = {
     if (modernUiCatalogResponse) {
       return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
     }
-    if (isRetiredTradePath(url.pathname)) {
-      const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
-        ? jflNotFoundResponse(url.pathname)
-        : retiredTradeResponse(request, url.pathname);
-      return finalizeBrowserResponse(response, url.pathname);
+    // HTML /trades is a public-surface page again (#2135).
+    // Retired API trade paths still 404 so clients use the restored handlers in index/router.
+    if (isRetiredTradePath(url.pathname) && url.pathname.startsWith('/api/')) {
+      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
     }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
