@@ -1,9 +1,13 @@
 const REPLACEMENTS = [
   ['<button class="load" data-load type="submit" disabled>Load prizes</button>', ''],
+  ['<button class="load" data-load type="submit" disabled>Load standings</button>', ''],
   ["const loadButton = document.querySelector('[data-load]');\n", ''],
+  ["const loadButton=document.querySelector('[data-load]');", ''],
   ['      loadButton.disabled = true;\n', ''],
   ['      loadButton.disabled = false;\n', ''],
   ['        loadButton.disabled = seasonInput.disabled;\n', ''],
+  ['loadButton.disabled=true;', ''],
+  ['loadButton.disabled=seasons.length===0', 'void 0'],
 ];
 
 export function applyJflPrizesAutoloadHtml(html) {

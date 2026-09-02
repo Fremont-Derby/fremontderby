@@ -18,7 +18,12 @@ export default {
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
     const url = new URL(request.url);
-    if (url.pathname === '/prizes' || url.pathname === '/prizes/') {
+    if (
+      url.pathname === '/prizes'
+      || url.pathname === '/prizes/'
+      || url.pathname === '/standings'
+      || url.pathname === '/standings/'
+    ) {
       response = await applyJflPrizesAutoloadFix(response);
     }
     response = await enhanceFinishedScheduleBreakdown(response);
