@@ -22,6 +22,10 @@ function createRepository(profile = { id: 'player-1', user_id: 'user-1', display
         display_name: payload.displayName,
       };
     },
+    async saveStandingAvailability(payload) {
+      calls.push(['saveStandingAvailability', payload]);
+      return payload;
+    },
   };
 }
 
@@ -47,7 +51,7 @@ test('profile save command trims and saves allowed profile fields', async () => 
 
   assert.deepEqual(profile, { id: 'player-1', user_id: 'user-1', display_name: 'Kai B' });
   assert.deepEqual(repository.calls, [
-    ['saveProfile', { actorUserId: 'user-1', displayName: 'Kai B' }],
+    ['saveProfile', { actorUserId: 'user-1', displayName: 'Kai B', fargoExternalId: undefined }],
   ]);
 });
 
