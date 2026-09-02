@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  injectJflRegistrationCheckin,
   injectJflRegistrationHome,
   injectJflRegistrationNav,
+  injectJflRegistrationSchedule,
   injectJflRegistrationTeams,
 } from '../src/jflRegistrationNav.js';
 import { routeJflSeasonPublicReads } from '../src/jflSeasonPublicReadsHttp.js';
@@ -34,6 +36,18 @@ test('registration callout lands on modern Teams', () => {
   assert.match(html, /free agent/i);
 });
 
+test('registration callout lands on modern Schedule', () => {
+  const html = injectJflRegistrationSchedule('<main class="fd-schedule" data-fd-modern-schedule="true"><header><h1>Schedule</h1></header></main>');
+  assert.match(html, /data-fd-registration-schedule/);
+  assert.match(html, /href="\/practice"/);
+});
+
+test('registration callout lands on Check in', () => {
+  const html = injectJflRegistrationCheckin('<main class="app"><header class="intro"><h1>Check in</h1></header></main>');
+  assert.match(html, /data-fd-registration-checkin/);
+  assert.match(html, /href="\/free-agents"/);
+});
+
 test('JFL home includes registration shortcuts after shell decoration', async () => {
   const response = await worker.fetch(
     new Request('https://jfl.fremontderby.test/'),
@@ -58,6 +72,28 @@ test('JFL Teams includes the registration callout', async () => {
   const html = await response.text();
   assert.match(html, /data-fd-registration-teams/);
   assert.match(html, /href="\/free-agents"/);
+});
+
+test('JFL Schedule includes the registration callout', async () => {
+  const response = await worker.fetch(
+    new Request('https://jfl.fremontderby.test/schedule'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /data-fd-registration-schedule/);
+  assert.match(html, /href="\/practice"/);
+});
+
+test('JFL Check in includes the registration callout', async () => {
+  const response = await worker.fetch(
+    new Request('https://jfl.fremontderby.test/availability'),
+    { ENVIRONMENT: 'jfl' },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /data-fd-registration-checkin/);
+  assert.match(html, /href="\/teams"/);
 });
 
 test('season /fa and /awards aliases are public reads', async () => {

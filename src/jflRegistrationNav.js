@@ -19,6 +19,23 @@ const TEAMS_CALLOUT = `<aside class="fd-card" data-fd-registration-teams>
       <p><a href="/free-agents">See free agents</a> · <a href="/practice">Practice windows</a> · <a href="/availability">Check in</a></p>
     </aside>`;
 
+const SCHEDULE_CALLOUT = `<aside class="fd-card" data-fd-registration-schedule>
+      <p><strong>Registration week.</strong> League nights will appear here as they publish. Practice windows are listed separately until then.</p>
+      <p><a href="/practice">Practice windows</a> · <a href="/teams">Find a team</a> · <a href="/availability">Check in</a></p>
+    </aside>`;
+
+const CHECKIN_CALLOUT = `<aside class="fd-card" data-fd-registration-checkin>
+      <p><strong>Registration week.</strong> Mark the weeks you can play so captains can roster you.</p>
+      <p><a href="/teams">Find a team</a> · <a href="/free-agents">Free agents</a> · <a href="/practice">Practice</a></p>
+    </aside>`;
+
+function injectAfterFirstHeader(source, marker, html, already) {
+  if (!source.includes(marker)) return source;
+  if (source.includes(already)) return source;
+  if (!source.includes('</header>')) return source;
+  return source.replace('</header>', `</header>\n    ${html}`);
+}
+
 export function injectJflRegistrationNav(html) {
   const source = String(html || '');
   if (!source.includes('data-nav-key="standings"')) return source;
@@ -38,11 +55,17 @@ export function injectJflRegistrationHome(html) {
 }
 
 export function injectJflRegistrationTeams(html) {
+  return injectAfterFirstHeader(String(html || ''), 'data-fd-modern-teams', TEAMS_CALLOUT, 'data-fd-registration-teams');
+}
+
+export function injectJflRegistrationSchedule(html) {
+  return injectAfterFirstHeader(String(html || ''), 'data-fd-modern-schedule', SCHEDULE_CALLOUT, 'data-fd-registration-schedule');
+}
+
+export function injectJflRegistrationCheckin(html) {
   const source = String(html || '');
-  if (!source.includes('data-fd-modern-teams')) return source;
-  if (source.includes('data-fd-registration-teams')) return source;
-  if (!source.includes('</header>')) return source;
-  return source.replace('</header>', `</header>\n    ${TEAMS_CALLOUT}`);
+  if (!source.includes('<h1>Check in</h1>')) return source;
+  return injectAfterFirstHeader(source, '<h1>Check in</h1>', CHECKIN_CALLOUT, 'data-fd-registration-checkin');
 }
 
 export async function applyJflRegistrationNav(response) {
@@ -53,6 +76,8 @@ export async function applyJflRegistrationNav(response) {
   html = injectJflRegistrationNav(html);
   html = injectJflRegistrationHome(html);
   html = injectJflRegistrationTeams(html);
+  html = injectJflRegistrationSchedule(html);
+  html = injectJflRegistrationCheckin(html);
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,
