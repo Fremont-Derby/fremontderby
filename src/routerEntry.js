@@ -10,6 +10,7 @@ import { routeJflModernHome } from './jflModernHome.js';
 import { routeJflModernSchedule } from './jflModernSchedule.js';
 import { routeJflModernStandings } from './jflModernStandings.js';
 import { routeJflModernTeams } from './jflModernTeams.js';
+import { renderNotificationsPage } from './notificationsPage.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
@@ -138,6 +139,11 @@ const baseRouterEntry = {
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
       return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
+    }
+    if (url.pathname === '/notifications' && request.method === 'GET') {
+      return finalizeBrowserResponse(new Response(renderNotificationsPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
     }
     if (isRetiredTradePath(url.pathname)) {
       const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
