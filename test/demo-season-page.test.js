@@ -5,7 +5,7 @@ import { renderDemoSeasonPage } from '../src/demoSeasonPage.js';
 test('Try a League Night presents War Games as a guided isolated product tour', () => {
   const html = renderDemoSeasonPage();
 
-  assert.match(html, /Try a League Night/);
+  assert.match(html, /Test Drive the App/);
   assert.match(html, /War Games practice/);
   assert.match(html, /fictional players and results/i);
   assert.match(html, /cannot affect the real season/i);
