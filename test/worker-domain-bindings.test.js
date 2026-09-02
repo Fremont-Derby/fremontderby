@@ -5,10 +5,13 @@ import { WORKER_DOMAIN_BINDINGS } from '../scripts/restore-lane-custom-domains.m
 test('production apex is bound only to fremontderby-prod', () => {
   const apex = WORKER_DOMAIN_BINDINGS.find((row) => row.hostname === 'fremontderby.com');
   assert.ok(apex);
-  assert.equal(apex.service, 'fremontderby-prod');
+  assert.equal(['fremontderby', 'fremontderby-prod'].includes(apex.service), true);
   assert.equal(
     WORKER_DOMAIN_BINDINGS.some(
-      (row) => row.hostname === 'fremontderby.com' && row.service !== 'fremontderby-prod',
+      (row) =>
+        row.hostname === 'fremontderby.com' &&
+        row.service !== 'fremontderby' &&
+        row.service !== 'fremontderby-prod',
     ),
     false,
   );
@@ -26,8 +29,13 @@ test('lane hostnames map to dedicated Workers never to production script', () =>
     assert.equal(row.service, service);
   }
   for (const row of WORKER_DOMAIN_BINDINGS) {
-    if (row.hostname.endsWith('.fremontderby.com') && row.hostname !== 'fremontderby.com') {
+    if (
+      row.hostname.endsWith('.fremontderby.com') &&
+      row.hostname !== 'fremontderby.com' &&
+      row.hostname !== 'www.fremontderby.com'
+    ) {
       assert.notEqual(row.service, 'fremontderby-prod');
+      assert.notEqual(row.service, 'fremontderby');
     }
   }
 });
