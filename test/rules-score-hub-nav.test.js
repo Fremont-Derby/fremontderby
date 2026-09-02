@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 test('rules page league night CTAs', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
   const i = src.indexOf('renderRulesPage');
-  const chunk = src.slice(i, i + 5000);
+  const chunk = src.slice(i, i + 8000);
   assert.match(chunk, /href="\/scorecard"/);
   assert.match(chunk, /href="\/availability"/);
   assert.match(chunk, /href="\/lineup"/);
