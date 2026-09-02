@@ -8,6 +8,16 @@
 export const PAGE_PATH_REDIRECTS = {
   '/check-in': '/availability',
   '/checkin': '/availability',
+  '/score': '/scorecard',
+  '/scores': '/scorecard',
+  '/chat': '/messages',
+  '/message': '/messages',
+  '/notices': '/notifications',
+  '/alerts': '/notifications',
+  '/login': '/profile',
+  '/signin': '/profile',
+  '/sign-in': '/profile',
+  '/account': '/profile',
 };
 
 export const EXACT_PATH_ALIASES = {
