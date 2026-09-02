@@ -136,10 +136,10 @@ export async function checkReleaseOnce({
   });
   const { body: seasonsBody } = await readJson(seasonsResult, '/api/seasons');
   if (!seasonsResult.ok) {
-    throw new Error(`/api/seasons failed with HTTP ${seasonsResult.status}`);
+    throw new Error(`/api/seasons season bootstrap failed with HTTP ${seasonsResult.status}`);
   }
   if (!Array.isArray(seasonsBody?.seasons)) {
-    throw new Error('/api/seasons did not return a seasons array');
+    throw new Error('/api/seasons season bootstrap did not return a seasons array');
   }
 
   return {
@@ -183,7 +183,7 @@ export async function smokeRelease({
           'Cloudflare challenged the release smoke before the Worker and RELEASE_SMOKE_BYPASS_TOKEN is not configured. Configure the matching GitHub Actions secret and narrow Cloudflare x-fremont-release-smoke skip rule, then rerun.',
         );
       }
-      if (/environment mismatch|readiness failed|wrong service|unexpected release surface/i.test(lastReason)) {
+      if (/environment mismatch|readiness failed|wrong service|unexpected release surface|season bootstrap/i.test(lastReason)) {
         throw error;
       }
     }
