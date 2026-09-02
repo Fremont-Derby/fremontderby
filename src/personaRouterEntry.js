@@ -22,11 +22,53 @@ const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free
 const PRACTICE_PAGES = new Set(['/practice', '/practice/', '/practices']);
 const PLAYOFF_PAGES = new Set(['/playoffs', '/playoffs/', '/playoff', '/bracket', '/brackets']);
 const TRADE_PAGES = new Set(['/trades', '/trades/', '/trade']);
-const PLAYER_PAGES = new Set(['/players', '/players/', '/player']);
+const PLAYER_PAGES = new Set(['/players', '/players/', '/player', '/directory']);
 const NOTIFICATION_PAGES = new Set(['/notifications', '/notifications/', '/notify']);
-const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight']);
+const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight', '/ready-check']);
 const AUTOLOAD_PAGES = new Set(['/prizes', '/prizes/', '/standings', '/standings/']);
-const MESSAGE_PAGES = new Set(['/messages', '/messages/', '/inbox', '/chat']);
+const MESSAGE_PAGES = new Set(['/messages', '/messages/']);
+
+const LIVE_PAGE_REWRITES = new Map([
+  ['/inbox', '/messages'],
+  ['/chat', '/messages'],
+  ['/msg', '/messages'],
+  ['/msgs', '/messages'],
+  ['/venues', '/rules'],
+  ['/help', '/rules'],
+  ['/faq', '/rules'],
+  ['/support', '/rules'],
+  ['/contact', '/rules'],
+  ['/account', '/profile'],
+  ['/settings', '/profile'],
+  ['/me', '/profile'],
+  ['/login', '/profile'],
+  ['/signin', '/profile'],
+  ['/sign-in', '/profile'],
+  ['/register', '/profile'],
+  ['/registration', '/profile'],
+  ['/scoring', '/scorecard'],
+  ['/score', '/scorecard'],
+  ['/scores', '/scorecard'],
+  ['/scorecards', '/scorecard'],
+  ['/awards', '/prizes'],
+  ['/prize', '/prizes'],
+  ['/stats', '/standings'],
+  ['/history', '/standings'],
+  ['/tonight', '/schedule'],
+  ['/week', '/schedule'],
+  ['/this-week', '/schedule'],
+  ['/schedules', '/schedule'],
+  ['/roster', '/teams'],
+  ['/join', '/teams'],
+  ['/apply', '/teams'],
+  ['/captain', '/teams'],
+  ['/lineups', '/lineup'],
+  ['/sandbox', '/demo'],
+  ['/try', '/demo'],
+  ['/testdrive', '/demo'],
+  ['/test-drive', '/demo'],
+  ['/home', '/'],
+]);
 
 function htmlPage(render, pathname, request, env) {
   const html = decorateHtmlWithShell(render(), pathname);
@@ -36,6 +78,10 @@ function htmlPage(render, pathname, request, env) {
   return decorateJflModernShell(response, request, env);
 }
 
+function stripTrailingSlash(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
 export default {
   ...baseRouterEntry,
 
@@ -43,7 +89,7 @@ export default {
     const personaResponse = await routeTestPersona(request, env);
     if (personaResponse) return personaResponse;
 
-    const url = new URL(request.url);
+    let url = new URL(request.url);
     if (FREE_AGENT_PAGES.has(url.pathname) && request.method === 'GET') {
       return htmlPage(renderFreeAgentsPage, '/free-agents', request, env);
     }
@@ -66,6 +112,15 @@ export default {
       const rewritten = new URL(request.url);
       rewritten.pathname = '/availability';
       request = new Request(rewritten, request);
+      url = rewritten;
+    } else {
+      const canonical = LIVE_PAGE_REWRITES.get(stripTrailingSlash(url.pathname));
+      if (canonical && request.method === 'GET') {
+        const rewritten = new URL(request.url);
+        rewritten.pathname = canonical;
+        request = new Request(rewritten, request);
+        url = rewritten;
+      }
     }
 
     const scheduleResponse = await routeJflSeasonSchedule(request, env);
