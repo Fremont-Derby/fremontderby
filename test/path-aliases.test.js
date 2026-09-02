@@ -54,5 +54,7 @@ test('HTML page aliases rewrite to canonical routes', () => {
   assert.equal(normalizePagePathname('/account'), '/profile');
   assert.equal(normalizePagePathname('/venues'), '/rules');
   assert.equal(normalizePagePathname('/stats'), '/standings');
+  assert.equal(normalizePagePathname('/sandbox'), '/demo');
+  assert.equal(normalizePagePathname('/try'), '/demo');
   assert.equal(normalizeApiPathname('/check-in'), '/availability');
 });
