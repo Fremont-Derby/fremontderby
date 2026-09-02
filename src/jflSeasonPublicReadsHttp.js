@@ -2,6 +2,8 @@ import { listIndividualStandingsCommand, listTeamStandingsCommand } from './stan
 import { createStandingsRepository } from './standingsRepository.js';
 import { getSeasonPrizeSummaryCommand } from './prizeCommands.js';
 import { createPrizeRepository } from './prizeRepository.js';
+import { listSeasonFreeAgentsCommand } from './freeAgentCommands.js';
+import { createFreeAgentRepository } from './freeAgentRepository.js';
 
 const POSTGRES_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEAM_STANDINGS_RE = /^\/api\/seasons\/([^/]+)\/team-standings$/;
@@ -18,6 +20,10 @@ function jsonResponse(body, status = 200) {
 
 function invalidSeasonLink() {
   return jsonResponse({ error: 'That season or match link is invalid.' }, 400);
+}
+
+function canQuerySupabase(env) {
+  return Boolean(env?.SUPABASE_URL && env?.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 export async function routeJflSeasonPublicReads(
@@ -44,7 +50,10 @@ export async function routeJflSeasonPublicReads(
 
   try {
     if (freeAgentsMatch) {
-      return jsonResponse({ freeAgents: [] });
+      if (!canQuerySupabase(env)) return jsonResponse({ freeAgents: [] });
+      const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
+      const freeAgents = await listSeasonFreeAgentsCommand({ seasonId }, repository);
+      return jsonResponse({ freeAgents: Array.isArray(freeAgents) ? freeAgents : [] });
     }
     if (prizesMatch) {
       const repository = createPrizeRepository(env, { fetch: fetchImpl });

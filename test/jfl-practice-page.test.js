@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import worker from '../src/personaRouterEntry.js';
+import { practiceMatchLabel } from '../src/practicePage.js';
 
 async function get(path) {
   return worker.fetch(
@@ -17,6 +18,7 @@ test('JFL /practice is a public HTML page instead of the 404 hound', async () =>
   assert.match(html, /Practice · Fremont Derby/);
   assert.match(html, /\/api\/seasons\//);
   assert.match(html, /schedule/);
+  assert.match(html, /teamAName/);
   assert.match(html, /data-fd-shell/);
   assert.doesNotMatch(html, /This dog lost the rack/);
 });
@@ -35,4 +37,14 @@ test('JFL /substitutes and /subs serve the free-agents directory', async () => {
     assert.match(html, /Free agents · Fremont Derby/);
     assert.doesNotMatch(html, /This dog lost the rack/);
   }
+});
+
+test('practice windows label live JFL teamAName/teamBName pairs', () => {
+  assert.equal(
+    practiceMatchLabel({
+      teamAName: 'JFL QA Bank Shots',
+      teamBName: 'JFL QA Table Testers',
+    }),
+    'JFL QA Bank Shots vs JFL QA Table Testers',
+  );
 });

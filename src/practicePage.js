@@ -1,3 +1,14 @@
+export function practiceMatchLabel(match = {}) {
+  const home = String(
+    match.teamAName || match.homeTeamName || match.homeTeam?.name || match.home?.name || '',
+  ).trim();
+  const away = String(
+    match.teamBName || match.awayTeamName || match.awayTeam?.name || match.away?.name || '',
+  ).trim();
+  if (home && away) return `${home} vs ${away}`;
+  return String(match.label || match.title || 'Matchup');
+}
+
 export function renderPracticePage() {
   return `<!doctype html>
 <html lang="en">
@@ -48,12 +59,9 @@ export function renderPracticePage() {
     const listEl=document.querySelector('[data-list]');
     const emptyEl=document.querySelector('[data-empty]');
     function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted';}
-    function teamName(team){
-      return String(team?.name||team?.teamName||team?.displayName||'').trim();
-    }
     function matchLabel(match){
-      const home=teamName(match.homeTeam||match.home||{});
-      const away=teamName(match.awayTeam||match.away||{});
+      const home=String(match.teamAName||match.homeTeamName||match.homeTeam&&match.homeTeam.name||match.home&&match.home.name||'').trim();
+      const away=String(match.teamBName||match.awayTeamName||match.awayTeam&&match.awayTeam.name||match.away&&match.away.name||'').trim();
       if(home&&away) return home+' vs '+away;
       return String(match.label||match.title||'Matchup');
     }

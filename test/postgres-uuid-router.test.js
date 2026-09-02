@@ -50,6 +50,13 @@ function mockSeasonFetch(seasonId) {
     }
     if (url.pathname.endsWith('/rest/v1/team_matches')) return json([]);
     if (url.pathname.endsWith('/rest/v1/teams')) return json([]);
+    if (url.pathname.includes('/rest/v1/season_players')) {
+      return json([{
+        player_id: '11111111-1111-1111-1111-111111111111',
+        status: 'active',
+        players: { id: '11111111-1111-1111-1111-111111111111', display_name: 'JFL QA Free Agent' },
+      }]);
+    }
     if (url.pathname.includes('team_standings') || url.pathname.includes('individual_standings')) return json([]);
     if (url.pathname.includes('prize')) return json([]);
     return json([]);
@@ -127,6 +134,28 @@ test('JFL free-agent list accepts the live season id instead of 404', async () =
   );
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { freeAgents: [] });
+});
+
+test('JFL free-agent list reads season_players when bindings exist', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = mockSeasonFetch(LIVE_JFL_SEASON_ID);
+  try {
+    const response = await worker.fetch(
+      new Request(`https://jfl.fremontderby.com/api/seasons/${LIVE_JFL_SEASON_ID}/free-agents`),
+      jflEnv,
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      freeAgents: [{
+        playerId: '11111111-1111-1111-1111-111111111111',
+        displayName: 'JFL QA Free Agent',
+        status: 'active',
+        source: 'season_players',
+      }],
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('JFL free-agent list rejects malformed season ids', async () => {
