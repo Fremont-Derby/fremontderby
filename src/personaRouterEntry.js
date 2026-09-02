@@ -7,6 +7,7 @@ import { routeJflMeNotifications } from './jflMeNotificationsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
 import { applyJflRegistrationNav } from './jflRegistrationNav.js';
+import { applyJflPrizesAutoloadFix } from './jflPrizesAutoloadFix.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
@@ -14,6 +15,7 @@ import { testPersonaEnabled } from './testPersona.js';
 
 const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free-agent', '/freeagent', '/substitutes', '/subs']);
 const PRACTICE_PAGES = new Set(['/practice', '/practice/', '/practices']);
+const AUTOLOAD_PAGES = new Set(['/prizes', '/prizes/', '/standings', '/standings/']);
 
 function htmlPage(render, pathname, request, env) {
   const html = decorateHtmlWithShell(render(), pathname);
@@ -54,6 +56,9 @@ export default {
     let response = await baseRouterEntry.fetch(request, env, ctx);
     response = await enhanceFinishedScheduleBreakdown(response);
     response = await applyJflRegistrationNav(response);
+    if (AUTOLOAD_PAGES.has(url.pathname)) {
+      response = await applyJflPrizesAutoloadFix(response);
+    }
     if (!testPersonaEnabled(env)) return response;
     return injectTestPersonaControls(response);
   },
