@@ -9,8 +9,7 @@ test('JFL router entry serves the public players directory', () => {
   assert.match(src, /pathname === '\/players'/);
   const shell = readFileSync(new URL('../src/jflModernShell.js', import.meta.url), 'utf8');
   assert.match(shell, /href: '\/players'/);
-  const appShell = readFileSync(new URL('../src/appShell.js', import.meta.url), 'utf8');
-  assert.match(appShell, /'\/players'/);
+  assert.match(shell, /key: 'players'/);
 });
 
 test('JFL worker serves /players as HTML 200', async () => {
