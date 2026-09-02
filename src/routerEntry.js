@@ -34,6 +34,7 @@ import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
+import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -66,15 +67,37 @@ const LIVE_PAGE_REWRITES = new Map([
   ['/check-in', '/availability'],
   ['/checkin', '/availability'],
   ['/league-night', '/availability'],
+  ['/leaguenight', '/availability'],
+  ['/ready-check', '/availability'],
+  ['/readycheck', '/availability'],
   ['/inbox', '/messages'],
   ['/chat', '/messages'],
+  ['/msg', '/messages'],
+  ['/msgs', '/messages'],
   ['/account', '/profile'],
   ['/settings', '/profile'],
+  ['/me', '/profile'],
+  ['/login', '/profile'],
+  ['/signin', '/profile'],
+  ['/sign-in', '/profile'],
   ['/scoring', '/scorecard'],
+  ['/score', '/scorecard'],
+  ['/scores', '/scorecard'],
   ['/awards', '/prizes'],
+  ['/prize', '/prizes'],
   ['/stats', '/standings'],
+  ['/history', '/standings'],
   ['/tonight', '/schedule'],
+  ['/week', '/schedule'],
+  ['/schedules', '/schedule'],
+  ['/matches', '/schedule'],
   ['/roster', '/teams'],
+  ['/join', '/teams'],
+  ['/captain', '/teams'],
+  ['/lineups', '/lineup'],
+  ['/sandbox', '/demo'],
+  ['/try', '/demo'],
+  ['/home', '/'],
 ]);
 
 function stripTrailingSlash(pathname) {
@@ -149,6 +172,11 @@ export default {
 
     if (isRetiredTradePath(url.pathname)) {
       return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    }
+
+    const emptyReadResponse = routeDruPublicEmptyReads(request, env);
+    if (emptyReadResponse) {
+      return finalizeBrowserResponse(emptyReadResponse, url.pathname);
     }
 
     if (request.method === 'GET') {
