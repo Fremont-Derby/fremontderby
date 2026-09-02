@@ -2,6 +2,7 @@ import baseRouterEntry from './routerEntry.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { routeJflSeasonPublicReads } from './jflSeasonPublicReadsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
+import { applyJflRegistrationNav } from './jflRegistrationNav.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
@@ -29,6 +30,7 @@ export default {
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
     response = await enhanceFinishedScheduleBreakdown(response);
+    response = await applyJflRegistrationNav(response);
     if (!testPersonaEnabled(env)) return response;
     return injectTestPersonaControls(response);
   },
