@@ -66,8 +66,8 @@ export function deriveAdminSeasonTeamEntry(row, registration) {
   }
 
   if (slotsOpen <= 0) {
-    const position = candidate?.waitlistPosition ?? candidate?.waitlist_position ?? candidate?.position;
-    const qualifiedAt = candidate?.firstQualifiedAt ?? candidate?.first_qualified_at;
+    const position = row?.waitlistPosition ?? row?.waitlist_position ?? row?.position;
+    const qualifiedAt = row?.firstQualifiedAt ?? row?.first_qualified_at;
     const positionBit = position ? ` · #${position} on waitlist` : '';
     const whenBit = qualifiedAt ? ` · qualified ${String(qualifiedAt).slice(0, 10)}` : '';
     return {
