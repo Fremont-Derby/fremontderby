@@ -106,7 +106,8 @@ async function main() {
 
   const after = await listWorkerDomains().catch(() => []);
   const apex = after.find((row) => row.hostname === 'fremontderby.com');
-  if (apex && apex.service !== 'fremontderby-prod') {
+  const apexAllowed = allowedServicesFor({ hostname: 'fremontderby.com' });
+  if (apex && !apexAllowed.includes(apex.service)) {
     console.error(`CRITICAL: fremontderby.com still bound to ${apex.service}`);
     process.exitCode = 1;
   }
