@@ -37,12 +37,16 @@ export function assertLaneDeployContext(lane, env = process.env, spawn = spawnSy
   const config = laneDeployments[lane];
   if (!config) throw new Error(`Unknown release lane "${lane}".`);
 
-  // Controlled deploys from main (Actions or operator laptop) after explicit review.
-  if (env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1') {
+  const branch = resolveDeployBranch(env, spawn);
+  const isCi = env.GITHUB_ACTIONS === 'true' || env.WORKERS_CI === '1';
+  const allowFromMain = env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1';
+
+  // Official lane-release workflow may deploy from main with an explicit flag.
+  // CI must never use that flag to ship one lane from a different lane branch.
+  if (allowFromMain && (!isCi || branch === 'main')) {
     return config;
   }
 
-  const branch = resolveDeployBranch(env, spawn);
   if (branch !== config.branch) {
     throw new Error(
       `Refusing ${lane} deploy from branch "${branch}"; expected "${config.branch}".`,

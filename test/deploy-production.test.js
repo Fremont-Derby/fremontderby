@@ -23,7 +23,7 @@ test('Workers Builds production deploy tags the Worker version with the exact Gi
       WORKERS_CI_BRANCH: 'main',
       WORKERS_CI_COMMIT_SHA: commitSha,
     }),
-    ['wrangler', 'deploy', '--tag', commitSha, '--message', `git:${commitSha}`],
+    ['wrangler', 'deploy', '--tag', commitSha, '--message', `git:${commitSha}`, '--var', `DEPLOY_GIT_SHA:${commitSha}`],
   );
 });
 
