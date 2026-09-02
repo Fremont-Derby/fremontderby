@@ -10,6 +10,7 @@ import { routeJflModernHome } from './jflModernHome.js';
 import { routeJflModernSchedule } from './jflModernSchedule.js';
 import { routeJflModernStandings } from './jflModernStandings.js';
 import { routeJflModernTeams } from './jflModernTeams.js';
+import { normalizeApiPathname } from './pathAliases.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
@@ -116,6 +117,11 @@ async function finalizeBrowserResponse(response, pathname) {
 const baseRouterEntry = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const canonicalPath = normalizeApiPathname(url.pathname);
+    if (canonicalPath !== url.pathname) {
+      url.pathname = canonicalPath;
+      request = new Request(url, request);
+    }
     const jflSeasonScheduleResponse = await routeJflSeasonSchedule(request, env);
     if (jflSeasonScheduleResponse) return jflSeasonScheduleResponse;
     const modernHomeResponse = routeJflModernHome(request, env);
