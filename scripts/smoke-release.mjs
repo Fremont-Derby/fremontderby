@@ -131,12 +131,24 @@ export async function checkReleaseOnce({
     throw new Error('/demo is serving an unexpected release surface');
   }
 
+  const seasonsResult = await fetchImpl(`${base}/api/seasons`, {
+    headers: requestHeaders('application/json', bypassToken),
+  });
+  const { body: seasonsBody } = await readJson(seasonsResult, '/api/seasons');
+  if (!seasonsResult.ok) {
+    throw new Error(`/api/seasons failed with HTTP ${seasonsResult.status}`);
+  }
+  if (!Array.isArray(seasonsBody?.seasons)) {
+    throw new Error('/api/seasons did not return a seasons array');
+  }
+
   return {
     ready: true,
     version: health.version,
     versionTag: health.versionTag,
     deployedAt: health.deployedAt,
     environment: environment.environment,
+    seasonCount: seasonsBody.seasons.length,
   };
 }
 
