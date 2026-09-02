@@ -34,7 +34,6 @@ function pageShell(title, body) {
 export function renderIntroPage() {
   return pageShell('Welcome', `
     <div class="eyebrow">Cash league · 8 teams · 12 weeks · flexible calendar</div>
-    <div data-e2e-deploy="835-gamma" class="e2e-deploy-marker" style="display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;padding:6px 12px;border-radius:999px;border:1px solid #7ec8a3;background:linear-gradient(90deg,#0f2a1c,#1a2818);color:#b8f0d0;font-size:.78rem;font-weight:800;letter-spacing:.04em">E2E gamma→main · #835</div>
     <h1>Fremont Derby</h1>
     <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
     <ul>
@@ -42,7 +41,7 @@ export function renderIntroPage() {
       <li><strong>Where:</strong> Fremont venue — four tables, one house.</li>
       <li><strong>Cost:</strong> Team + individual cash stakes (see Rules for current season amounts).</li>
       <li><strong>How to join:</strong> Sign in on Profile, register for the open season, then join or form a team.</li>
-      <li><strong>Availability:</strong> Before each league night, mark <em>I'll be there</em>, <em>Not sure</em>, or <em>Can't make it</em> (roster or free agent) so captains can set lineups.</li>
+      <li><strong>Check in:</strong> Before each league night, mark <em>I'll be there</em>, <em>Not sure yet</em>, or <em>Can't make it</em> so captains can set lineups.</li>
     </ul>
     <p>The 12-week calendar is built around a <strong>seven-match single round robin</strong>: every team plays every other team once, with the remaining calendar space reserved for flexibility, makeup dates, and postseason play.</p>
     <p>Teams put up <strong>3 players</strong> for each regular-season matchup and lock <strong>4-player postseason rosters</strong>.</p>
