@@ -39,6 +39,7 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { normalizeApiPathname } from './pathAliases.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -133,6 +134,11 @@ export default {
     }
 
     const url = new URL(request.url);
+    const canonicalPath = normalizeApiPathname(url.pathname);
+    if (canonicalPath !== url.pathname) {
+      url.pathname = canonicalPath;
+      request = new Request(url, request);
+    }
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
@@ -191,7 +197,7 @@ export default {
 if (url.pathname === '/admin/rating-health') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+        headers: { 'content-type': 'text-html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
 if (url.pathname === '/admin/support') {
