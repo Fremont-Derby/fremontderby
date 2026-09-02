@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { LANE_CUSTOM_DOMAINS } from './lane-custom-domains.mjs';
 
 function requireEnv(name) {
   const value = String(process.env[name] || '').trim();
@@ -17,15 +18,19 @@ async function cf(path) {
   return { response, payload };
 }
 
-// Production apex may be attached to either the top-level Worker name
-// (`fremontderby`) or the historical `fremontderby-prod` script — both are live-safe.
-export const EXPECTED_WORKER_DOMAIN_BINDINGS = new Map([
-  ['fremontderby.com', Object.freeze(['fremontderby', 'fremontderby-prod'])],
-  ['www.fremontderby.com', Object.freeze(['fremontderby', 'fremontderby-prod'])],
-  ['dru.fremontderby.com', Object.freeze(['fremontderby-dru'])],
-  ['jfl.fremontderby.com', Object.freeze(['fremontderby-jfl'])],
-  ['gamma.fremontderby.com', Object.freeze(['fremontderby-gamma'])],
-]);
+function allowedServicesForDomain(row) {
+  // Production apex may be attached to either the top-level Worker name
+  // (`fremontderby`) or the historical `fremontderby-prod` script — both are live-safe.
+  if (row.env === 'production') {
+    return Object.freeze(['fremontderby', 'fremontderby-prod']);
+  }
+  return Object.freeze([row.service]);
+}
+
+// Derived from LANE_CUSTOM_DOMAINS so diagnose hosts cannot drift from domain inventory.
+export const EXPECTED_WORKER_DOMAIN_BINDINGS = new Map(
+  LANE_CUSTOM_DOMAINS.map((row) => [row.hostname, allowedServicesForDomain(row)]),
+);
 
 export async function diagnoseWorkerDomains() {
   const expected = EXPECTED_WORKER_DOMAIN_BINDINGS;
@@ -39,7 +44,11 @@ export async function diagnoseWorkerDomains() {
 
   console.log(JSON.stringify({ status: response.status, success: payload.success, domains, errors: payload.errors }, null, 2));
 
-  for (const script of ['fremontderby', 'fremontderby-prod', 'fremontderby-dru', 'fremontderby-jfl', 'fremontderby-gamma']) {
+  const scripts = new Set();
+  for (const services of expected.values()) {
+    for (const service of services) scripts.add(service);
+  }
+  for (const script of scripts) {
     const r = await cf(`/workers/scripts/${encodeURIComponent(script)}`);
     console.log(JSON.stringify({
       script,

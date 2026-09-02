@@ -10,6 +10,18 @@ function requireWorkersBuildValue(env, name) {
 }
 
 export function assertProductionDeployContext(env = process.env) {
+  if (env.GITHUB_ACTIONS === 'true') {
+    const branch = String(env.GITHUB_REF_NAME || '').trim();
+    if (!branch) {
+      throw new Error('Refusing production deploy: GitHub Actions did not provide GITHUB_REF_NAME.');
+    }
+    if (branch !== 'main') {
+      throw new Error(
+        `Refusing production deploy from non-production branch "${branch}"; expected "main".`,
+      );
+    }
+  }
+
   if (env.WORKERS_CI !== '1') return;
 
   const branch = requireWorkersBuildValue(env, 'WORKERS_CI_BRANCH');
