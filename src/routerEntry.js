@@ -197,7 +197,7 @@ export default {
 if (url.pathname === '/admin/rating-health') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
-        headers: { 'content-type': 'text-html; charset=utf-8', 'cache-control': 'no-store' },
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
 if (url.pathname === '/admin/support') {
