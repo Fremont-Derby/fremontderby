@@ -4,7 +4,10 @@ import { readFileSync } from 'node:fs';
 
 test('home has exactly one Score CTA', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
-  assert.equal((src.match(/href="\/scorecard"/g) || []).length, 1);
-  assert.match(src, /href="\/availability"/);
-  assert.match(src, /href="\/schedule"/);
+  const intro = src.slice(src.indexOf('export function renderIntroPage'), src.indexOf('export function renderRulesPage'));
+  const rules = src.slice(src.indexOf('export function renderRulesPage'));
+  assert.equal((intro.match(/href="\/scorecard"/g) || []).length, 1);
+  assert.equal((rules.match(/href="\/scorecard"/g) || []).length, 1);
+  assert.match(intro, /href="\/availability"/);
+  assert.match(intro, /href="\/schedule"/);
 });
