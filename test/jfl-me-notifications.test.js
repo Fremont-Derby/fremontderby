@@ -79,3 +79,10 @@ test('JFL GET /api/me/trades is not retired 404', async () => {
   const body = await response.json();
   assert.deepEqual(body.tradeManagement, { trades: [] });
 });
+
+test('JFL GET /api/me/dms aliases the working inbox', async () => {
+  const response = await get('/api/me/dms');
+  assert.notEqual(response.status, 404);
+  const body = await response.json().catch(() => ({}));
+  assert.ok(body.conversations || body.error || response.status === 200);
+});

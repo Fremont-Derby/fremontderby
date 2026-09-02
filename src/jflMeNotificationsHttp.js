@@ -8,6 +8,7 @@ const PRIZE_PATHS = new Set(['/api/prizes', '/api/prize-pool']);
 const READY_CHECK_PATHS = new Set(['/api/me/ready-checks', '/api/me/ready-check']);
 const LINEUP_PATHS = new Set(['/api/me/lineups', '/api/me/lineup']);
 const TRADE_PATHS = new Set(['/api/me/trades']);
+const DM_PATHS = new Set(['/api/me/dms', '/api/me/dm-inbox']);
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -60,6 +61,14 @@ export async function routeJflMeNotifications(request, env = {}) {
       return jsonResponse({ error: 'Method not allowed' }, 405);
     }
     const rewritten = new Request(new URL('/api/me/team-membership-requests', request.url), request);
+    return { rewrite: rewritten };
+  }
+
+  if (DM_PATHS.has(path)) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+    const rewritten = new Request(new URL('/api/me/direct-message-inbox', request.url), request);
     return { rewrite: rewritten };
   }
 
