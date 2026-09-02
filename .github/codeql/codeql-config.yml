@@ -3,5 +3,6 @@ paths-ignore:
   - test/**
   - scripts/**
   - node_modules/**
-queries:
-  - uses: security
+# Default suite comes from the bundled javascript query pack.
+# A queries list that names a pack called "security" fails init.
+# security-extended is intentionally omitted so Analyze stays short.

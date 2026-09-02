@@ -39,10 +39,11 @@ jobs:
           fetch-depth: 1
       # Default security queries only (skip security-extended pack — much slower).
       # Pure JS Worker: no autobuild needed.
+      # Query suite is only in codeql-config.yml (default JS security pack).
+      # Do not pass `queries: security` — that is not a pack/suite name.
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript
-          queries: security
           config-file: ./.github/codeql/codeql-config.yml
       - uses: github/codeql-action/analyze@v3
         with:
