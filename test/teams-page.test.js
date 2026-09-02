@@ -13,10 +13,10 @@ test('teams page uses the signed-in session and human-readable team setup contro
   assert.match(html, /data-hub-score/);
   assert.match(html, /data-hub-chat/);
   assert.match(html, /data-hub-manage/);
-  assert.match(html, /Mark availability/);
+  assert.match(html, /Weekly check-in/);
   assert.match(html, /Score a match/);
-  assert.match(html, /Roster & trades/);
-  assert.match(html, /href="\/availability"/);
+  assert.match(html, /Roster management/);
+  assert.match(html, /href="\/schedule"/);
   assert.match(html, /href="\/scorecard"/);
   assert.match(html, /lineupRounds/);
   assert.match(html, /round\.opponentName/);
