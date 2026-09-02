@@ -44,7 +44,7 @@ test('Admin access failure has direct accessible recovery without exposing privi
   assert.match(html, /data-access-error[^>]*role="alert"[^>]*aria-live="assertive"/);
   assert.match(html, /data-retry[^>]*>Try again<\/button>/);
   assert.match(html, /retryButton\.addEventListener\('click',resolveAccess\)/);
-  assert.match(html, /showLoading\(\)/);
+  assert.match(html, /showLoading\(quiet\)/);
   assert.match(html, /href="\/profile">Open Profile<\/a>/);
   assert.match(html, /\.action\{min-height:48px/);
   assert.match(html, /\.recovery-actions\{display:flex/);
