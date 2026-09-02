@@ -57,8 +57,10 @@ test('team repository loads team management with open seasons and player directo
 
   assert.deepEqual(teamManagement, {
     player_id: 'player-1',
-    captain_teams: [{ teamName: 'Breakers' }],
+    captain_teams: [{ teamName: 'Breakers', roster: [], members: [] }],
     invitations: [{ teamName: 'Rack Pack' }],
+    applications: [],
+    returning_slots: [],
     open_seasons: [{
       id: 'season-1',
       name: 'Season 1',
