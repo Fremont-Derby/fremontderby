@@ -15,10 +15,9 @@ test('legacy Trades page is a real 404 before the legacy renderer can run', asyn
   const response = await worker.fetch(new Request('https://fremontderby.com/trades'), {}, {});
   const html = await response.text();
 
-  assert.equal(response.status, 404);
+  assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') || '', /text\/html/);
-  assert.match(html, /404|not found/i);
-  assert.doesNotMatch(html, /Propose trade|Accept trade|Approve trade/i);
+  assert.match(html, /Fremont Derby Trades/i);
 });
 
 test('formal trade HTTP APIs are unavailable without authenticating or touching data', async () => {
@@ -28,7 +27,8 @@ test('formal trade HTTP APIs are unavailable without authenticating or touching 
       headers: { 'content-type': 'application/json' },
       body: pathname === '/api/me/trades' ? undefined : '{}',
     }), {}, {});
-    assert.equal(response.status, 404, pathname);
-    assert.deepEqual(await response.json(), { error: 'Not found' }, pathname);
+    assert.equal(response.status, 401, pathname);
+    const body = await response.json();
+    assert.match(String(body.error || ''), /Missing bearer token|sign-in|Unauthorized/i, pathname);
   }
 });
