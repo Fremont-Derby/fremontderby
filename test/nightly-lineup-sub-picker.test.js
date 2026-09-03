@@ -41,7 +41,7 @@ test('lineup page is a mobile one-tap roster and substitute picker', () => {
   assert.match(html, /eligibility_reason/);
   assert.match(html, /Forfeit slot/);
   assert.match(html, /Submit this lineup\?/);
-  assert.match(html, /You can keep editing it until the opponent captain submits/);
+  assert.match(html, /Any later change will withdraw it and require another submit/);
   assert.match(html, /Score the three matches/);
   assert.match(html, /selectedSlots\.findIndex/);
   assert.match(html, /index<3/);
