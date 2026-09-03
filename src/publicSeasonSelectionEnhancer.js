@@ -9,6 +9,34 @@ function replaceRequired(html, current, replacement, label) {
   return html.replace(current, replacement);
 }
 
+function enhanceModernSchedule(html) {
+  html = replaceRequired(
+    html,
+    "const current = seasons.find((season) => ['active', 'playoffs'].includes(season.status)) || seasons[0];",
+    "const current = seasons.find((season) => ['active', 'playoffs'].includes(season.status)) || seasons.find((season) => season.status === 'complete') || seasons.find((season) => season.status === 'registration') || seasons[0];",
+    'modern schedule default',
+  );
+  html = replaceRequired(
+    html,
+    "if (!seasonSelect.value) return;\n        setStatus('Loading schedule…');",
+    "if (!seasonSelect.value) return;\n        rounds = []; groups.replaceChildren(); emptyEl.hidden = true; roundSelect.replaceChildren(); roundSelect.disabled = true;\n        setStatus('Loading schedule…');",
+    'modern schedule loading state',
+  );
+  html = replaceRequired(
+    html,
+    "renderRoundSelect(); renderGroups(); focusRound(); setStatus(rounds.length ? 'Schedule ready' : 'Schedule not published', rounds.length ? 'ok' : 'muted');",
+    "renderRoundSelect(); renderGroups(); focusRound(); if (!rounds.length) { const selectedSeason = seasons.find((season) => season.id === seasonSelect.value); emptyEl.textContent = (selectedSeason?.name || 'This season') + ' schedule has not been published yet.'; } setStatus(rounds.length ? 'Schedule ready' : 'Schedule not published yet', rounds.length ? 'ok' : 'muted');",
+    'modern schedule unpublished state',
+  );
+  html = replaceRequired(
+    html,
+    "seasonSelect.addEventListener('change', () => loadSchedule().catch((error) => setStatus(error.message, 'error')));",
+    "seasonSelect.addEventListener('change', () => loadSchedule().catch((error) => { rounds = []; groups.replaceChildren(); roundSelect.replaceChildren(); roundSelect.disabled = true; emptyEl.hidden = false; emptyEl.textContent = 'We could not load this schedule. Try this season again.'; setStatus(error.message || 'We could not load the schedule.', 'error'); }));",
+    'modern schedule load failure',
+  );
+  return html;
+}
+
 export async function enhancePublicSeasonSelection(response, pathname) {
   if (!ROUTES.has(pathname)) return response;
   const contentType = response.headers.get('content-type') || '';
@@ -21,6 +49,7 @@ export async function enhancePublicSeasonSelection(response, pathname) {
 
   if (pathname === '/schedule') {
     if (html.includes('data-fd-modern-schedule="true"')) {
+      html = enhanceModernSchedule(html);
       return new Response(html, { status: response.status, statusText: response.statusText, headers });
     }
     html = replaceRequired(

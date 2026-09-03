@@ -124,20 +124,18 @@ test('availability first render and recovery states are task-oriented', () => {
   assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
 });
 
-test('JFL check-in theme uses Fremont Open style layered psychedelic gradients', () => {
+test('JFL check-in theme uses readable light surfaces without blur or glow', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /data-checkin-trippy-theme/);
-  assert.match(html, /radial-gradient\(circle at 7% 12%/);
-  assert.match(html, /conic-gradient\(from 35deg at 52% 48%/);
-  assert.match(html, /repeating-linear-gradient\(115deg/);
-  assert.match(html, /repeating-radial-gradient\(circle at 50% 50%/);
-  assert.match(html, /linear-gradient\(135deg, #07050f 0%, #1c0b3e 28%, #3b0d48 54%, #062a36 78%, #07050f 100%\)/);
-  assert.match(html, /\.date-card\[data-state="available"\][\s\S]*#35ff84/);
-  assert.match(html, /\.date-card\[data-state="unsure"\][\s\S]*#ffe156/);
-  assert.match(html, /\.date-card\[data-state="unavailable"\][\s\S]*#ff5b8a/);
-  assert.match(html, /\.quick-actions button\[aria-pressed="true"\][\s\S]*brightness\(1\.22\)/);
-  assert.match(html, /background: linear-gradient\(145deg, #d7ff4f 0%, #35ff84 32%, #00c76a 68%, #00a3a8 100%\) !important/);
-  assert.match(html, /background: linear-gradient\(145deg, #fff99b 0%, #ffe156 34%, #ffb000 70%, #ff7a00 100%\) !important/);
-  assert.match(html, /background: linear-gradient\(145deg, #ff9db4 0%, #ff5b8a 34%, #ff1744 68%, #c70083 100%\) !important/);
+  assert.match(html, /data-checkin-readable-theme/);
+  assert.match(html, /body \{[\s\S]*background: #f7f7f4 !important/);
+  assert.match(html, /\.intro h1 \{[\s\S]*color: #0a4f31 !important/);
+  assert.match(html, /\.intro p \{[\s\S]*color: #171b18 !important/);
+  assert.match(html, /\.date-card\[data-state="available"\][\s\S]*background: #b9e5ad !important/);
+  assert.match(html, /\.date-card\[data-state="unsure"\][\s\S]*background: #ffe7a0 !important/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\][\s\S]*background: #f6ada6 !important/);
+  assert.match(html, /\.quick-actions button\[aria-pressed="true"\][\s\S]*box-shadow: 0 0 0 4px #111713 !important/);
+  assert.doesNotMatch(html, /data-checkin-trippy-theme/);
+  assert.doesNotMatch(html, /drop-shadow/);
+  assert.doesNotMatch(html, /backdrop-filter: blur\(3px\)/);
 });

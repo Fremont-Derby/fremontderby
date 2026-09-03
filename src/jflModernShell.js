@@ -1,3 +1,5 @@
+import { jflScheduleRaceClientScript, jflScheduleRaceStyles } from './jflScheduleRaceClient.js';
+
 export const MODERN_PRIMARY_DESTINATIONS = Object.freeze([
   Object.freeze({ href: '/', label: 'Home', key: 'home', ball: 'H' }),
   Object.freeze({ href: '/teams', label: 'Teams', key: 'teams', ball: 'T' }),
@@ -91,11 +93,49 @@ function escapeAttribute(value) {
     .replaceAll('>', '&gt;');
 }
 
+export function formatJflDeployTimestamp(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const date = new Date(raw);
+  return Number.isNaN(date.valueOf()) ? '' : '…';
+}
+
+export const jflDeployTimeClientScript = String.raw`
+  (() => {
+    function localizeDeployTime() {
+      const badge = document.querySelector('[data-fd-jfl-environment][data-deploy-timestamp]');
+      const value = badge?.querySelector('[data-fd-jfl-deploy-time]');
+      const raw = badge?.dataset.deployTimestamp || '';
+      if (!value || !raw) return;
+      const date = new Date(raw);
+      if (Number.isNaN(date.valueOf())) return;
+      value.textContent = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }).format(date);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', localizeDeployTime, { once: true });
+    } else {
+      localizeDeployTime();
+    }
+  })();
+`;
+
 function renderEnvironmentBadge(env = {}) {
   const fullSha = String(env.DEPLOY_GIT_SHA || '').trim();
-  const shortSha = fullSha ? fullSha.slice(0, 7) : 'local';
-  const title = fullSha ? `JFL deploy ${fullSha}` : 'JFL environment';
-  return `<span class="fd-env-badge" data-fd-jfl-environment title="${escapeAttribute(title)}"><strong>JFL</strong><span>${escapeAttribute(shortSha)}</span></span>`;
+  const metadata = env.CF_VERSION_METADATA || {};
+  const deployedAt = String(metadata.timestamp || '').trim();
+  const versionId = String(metadata.id || '').trim();
+  const badgeValue = formatJflDeployTimestamp(deployedAt);
+  const titleParts = ['JFL deployment'];
+  if (versionId) titleParts.push(`version ${versionId}`);
+  if (fullSha) titleParts.push(`git ${fullSha}`);
+  const timestampAttr = deployedAt ? ` data-deploy-timestamp="${escapeAttribute(deployedAt)}"` : '';
+  return `<span class="fd-env-badge" data-fd-jfl-environment${timestampAttr} title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><span data-fd-jfl-deploy-time>${escapeAttribute(badgeValue)}</span></span>`;
 }
 
 function injectEnvironmentBadge(html, env) {
@@ -143,7 +183,7 @@ export const jflModernShellStyles = `
     border-radius: 999px;
     background: rgba(0,0,0,.18);
     color: #fff;
-    font: 800 .68rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+    font: 800 .68rem/1 Inter, ui-sans-serif,system-ui,sans-serif;
     letter-spacing: .02em;
     white-space: nowrap;
   }
@@ -213,18 +253,16 @@ export const jflModernShellStyles = `
       padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
     }
     .fd-shell[data-fd-modern-shell="true"] .fd-shell__inner {
-      padding-inline: 10px !important;
-      gap: 8px !important;
+      padding-inline: 8px !important;
+      gap: 6px !important;
     }
     .fd-shell[data-fd-modern-shell="true"] .fd-brand > span:last-child { display: none; }
-    .fd-env-badge { margin-right: auto; }
+    .fd-env-badge { margin-right: auto; gap: 4px; padding-inline: 7px; font-size: .62rem; }
+    .fd-env-badge span { display: inline !important; }
     .fd-nav--modern-primary { display: none !important; }
     .fd-message-notifications { margin-left: 0 !important; }
     .fd-more-menu { margin-left: 0 !important; }
     .fd-more-menu summary { min-width: 52px; padding-inline: 9px !important; }
-  }
-  @media (max-width: 380px) {
-    .fd-env-badge span { display: none; }
   }
   @media (forced-colors: active) {
     .fd-env-badge,
@@ -275,6 +313,18 @@ export async function decorateJflModernShell(response, request, env = {}) {
     html = html.replace(
       /<\/head>/i,
       `<style data-fd-modern-shell-styles>${jflModernShellStyles}</style>\n</head>`,
+    );
+  }
+  if (!html.includes('data-fd-jfl-local-deploy-time')) {
+    html = html.replace(
+      /<\/head>/i,
+      `<script data-fd-jfl-local-deploy-time>${jflDeployTimeClientScript}</script>\n</head>`,
+    );
+  }
+  if (url.pathname === '/schedule' && !html.includes('data-fd-jfl-schedule-races')) {
+    html = html.replace(
+      /<\/head>/i,
+      `<style data-fd-jfl-schedule-race-styles>${jflScheduleRaceStyles}</style>\n<script data-fd-jfl-schedule-races>${jflScheduleRaceClientScript}</script>\n</head>`,
     );
   }
 

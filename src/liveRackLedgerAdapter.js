@@ -4,6 +4,7 @@ export const liveRackLedgerAdapterSource = String.raw`
     const matchId=params.get('match')||'';
     const scoringTeamId=params.get('team')||'';
     const scoringTeamName=params.get('teamName')||'your team';
+    let expectedOwnRacks=[];
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
     function showSignInRecovery(){
@@ -43,18 +44,19 @@ export const liveRackLedgerAdapterSource = String.raw`
           api('/api/player-matches/:id/scorecard',{method:'GET'}),
           api('/api/player-matches/:id/score-comparison',{method:'GET'}),
         ]);
+        expectedOwnRacks=Array.isArray(comparisonBody.comparison?.own_racks)?comparisonBody.comparison.own_racks:[];
         return{scorecard:scoreBody.scorecard,context:comparisonBody.context,comparison:comparisonBody.comparison};
       },
       async setOpeningDiscipline({openingDiscipline}){
         return api('/api/player-matches/:id/score-racks',{method:'POST',body:JSON.stringify({openingDiscipline,scoringTeamId})});
       },
       async saveRack(input){
-        const body={scoringTeamId,winnerSide:input.winnerSide};
+        const body={scoringTeamId,winnerSide:input.winnerSide,expectedRacks:expectedOwnRacks};
         if(input.rackNumber!=null)body.rackNumber=input.rackNumber;
         return api('/api/player-matches/:id/score-racks',{method:'POST',body:JSON.stringify(body)});
       },
-      async undo(){return api('/api/player-matches/:id/score-racks/undo',{method:'POST',body:JSON.stringify({scoringTeamId})})},
-      async confirm(){return api('/api/player-matches/:id/score-confirm',{method:'POST',body:JSON.stringify({scoringTeamId})})},
+      async undo(){return api('/api/player-matches/:id/score-racks/undo',{method:'POST',body:JSON.stringify({scoringTeamId,expectedRacks:expectedOwnRacks})})},
+      async confirm(){return api('/api/player-matches/:id/score-confirm',{method:'POST',body:JSON.stringify({scoringTeamId,expectedRacks:expectedOwnRacks})})},
       async finalize(){return api('/api/player-matches/:id/finalize-reconciled',{method:'POST',body:JSON.stringify({scoringTeamId})})},
     };
   })();
