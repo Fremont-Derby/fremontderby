@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { liveRackLedgerAdapterSource } from '../src/liveRackLedgerAdapter.js';
 import { renderScorecardPage } from '../src/scorecardPage.js';
 
+// Human-validation regression for #2165.
 test('live scorecard keeps chosen opening and rack-edit result visibly selected', () => {
   const html = renderScorecardPage();
 
