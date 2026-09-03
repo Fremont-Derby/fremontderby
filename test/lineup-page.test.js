@@ -73,7 +73,7 @@ test('lineup does not render a second committed-lineups copy', () => {
   assert.match(html, /data-opponent-body/);
 });
 
-test('lineup page keeps the three selected slots and submit action visible on mobile', () => {
+test('mobile selections scroll normally instead of covering the player list', () => {
   const html = renderLineupPage();
 
   assert.match(html, /data-mobile-lineup-summary/);
@@ -81,7 +81,11 @@ test('lineup page keeps the three selected slots and submit action visible on mo
   assert.match(html, /data-mobile-slot-count/);
   assert.match(html, /data-mobile-submit/);
   assert.match(html, /data-mobile-opponent-status/);
-  assert.match(html, /\.mobile-lineup-summary\{position:sticky;top:70px/);
+  assert.match(html, /\.mobile-lineup-summary\{display:grid/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{position:sticky/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*top:70px/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*z-index:20/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*backdrop-filter/);
   assert.match(html, /\.lineup-panel \.slots,\.lineup-panel \.panel-head,\.lineup-panel \.hint,\.lineup-panel \.actions\{display:none\}/);
   assert.match(html, /function renderMobileSummary\(\)/);
   assert.match(html, /label\.textContent='Slot '\+\(index\+1\)/);
