@@ -100,6 +100,23 @@ jobs:
             echo 'Legacy fallback unexpectedly contains the modern UI marker.' >&2
             exit 1
           fi
+      - name: Verify JFL schedule race enhancement is live
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+
+          curl --fail --silent --show-error \
+            --output "$body" \
+            https://jfl.fremontderby.com/schedule
+
+          grep -Fq 'data-fd-jfl-schedule-races' "$body"
+          grep -Fq 'fd-schedule-race__discipline' "$body"
+          grep -Fq 'openingDiscipline' "$body"
+          grep -Fq '8 first' "$body"
+          grep -Fq '9 first' "$body"
       - name: Record JFL deployment proof
         if: github.ref == 'refs/heads/fremontderby-jfl'
         uses: actions/github-script@v7
@@ -115,7 +132,8 @@ jobs:
               '- obsolete JFL Supabase binding secrets were cleared if present before deploy;',
               '- the JFL Worker deployed from `fremontderby-jfl` and passed the exact-SHA environment smoke;',
               '- `/rules` returned the modern UI marker and `x-fremont-ui-mode: modern`;',
-              '- `/rules?ui=legacy` returned without the modern UI marker.'
+              '- `/rules?ui=legacy` returned without the modern UI marker;',
+              '- `/schedule` contains the deployed race enhancer, opening-discipline renderer, and 8/9-first labels.'
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner,

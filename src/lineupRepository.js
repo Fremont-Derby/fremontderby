@@ -31,13 +31,35 @@ async function parseResponse(response) {
   }
 }
 
+function participantFacingError(body, status) {
+  const message = typeof body === 'string' ? body : body?.message;
+  const normalized = String(message || '').toLowerCase();
+
+  if (normalized.includes('lineup player is not eligible')) {
+    return 'That player is no longer eligible for this matchup. Refresh the lineup and choose another player.';
+  }
+  if (
+    normalized.includes('both captains have submitted') ||
+    normalized.includes('lineup is locked after submission')
+  ) {
+    return 'Both captains have submitted. This lineup is locked.';
+  }
+  if (normalized.includes('player is already scheduled for another team')) {
+    return `Supabase request failed with ${status}: Player is already scheduled for another team in this round`;
+  }
+  if (normalized.includes('lineup deadline has passed')) {
+    return 'The lineup deadline has passed.';
+  }
+
+  return `Fremont Derby could not save the lineup${status ? ` (${status})` : ''}. Refresh and try again.`;
+}
+
 async function requestJson(fetchImpl, url, init) {
   const response = await fetchImpl(url, init);
   const body = await parseResponse(response);
 
   if (!response.ok) {
-    const message = typeof body === 'string' ? body : body?.message;
-    throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+    throw new Error(participantFacingError(body, response.status));
   }
 
   return body;

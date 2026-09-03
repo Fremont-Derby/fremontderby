@@ -37,7 +37,7 @@ test('Lineup theme is scoped to the canonical captain route and idempotent', asy
   assert.doesNotMatch(await unrelated.text(), /data-fd-lineup-theme-styles/);
 });
 
-test('runtime captain Lineup keeps the sticky low-scroll workflow while receiving light theme', async () => {
+test('runtime captain Lineup keeps the mobile workspace in normal document flow', async () => {
   const response = await routerEntry.fetch(new Request('https://example.test/lineup'), {}, {});
   assert.equal(response.status, 200);
   const html = await response.text();
@@ -49,5 +49,6 @@ test('runtime captain Lineup keeps the sticky low-scroll workflow while receivin
   assert.match(html, /data-submit/);
   assert.match(html, /data-refresh/);
   assert.match(html, /data-score-link/);
-  assert.match(html, /position:sticky/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{position:sticky/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*backdrop-filter/);
 });
