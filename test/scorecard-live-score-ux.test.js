@@ -14,3 +14,5 @@ test('live scorecard promotes the captain submission score and removes redundant
   assert.match(html, /document\.querySelector\('\.quick-actions \.details'\)\?\.remove\(\)/);
   assert.match(html, /Undo last rack/);
 });
+
+// This contract intentionally stays page-local so shared sandbox reconciliation remains unchanged.
