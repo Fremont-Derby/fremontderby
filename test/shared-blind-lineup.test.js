@@ -23,7 +23,7 @@ test('production lineup and Captain War Games render the exact shared blind-line
     assert.match(html, /Forfeit slot/);
     assert.match(html, /function renderMobileSummary\(\)/);
     assert.match(html, /function moveSlot\(from,to\)/);
-    assert.match(html, /You can keep editing it until the opponent captain submits/);
+    assert.match(html, /Changing any slot will withdraw it and require you to submit again/);
   }
 });
 
@@ -32,11 +32,13 @@ test('score action stays centered on desktop and mobile', () => {
   assert.doesNotMatch(sharedBlindLineupStyles, /\.lineup-panel \.score-link\{margin-left:0;margin-right:0\}/);
 });
 
-test('mobile lineup uses readable stacked slots with direct removal', () => {
+test('mobile lineup uses readable stacked slots with direct removal and reorder', () => {
   assert.match(sharedBlindLineupStyles, /\.mobile-lineup-summary-slots\{display:grid;grid-template-columns:1fr/);
   assert.match(sharedBlindLineupStyles, /\.mobile-slot\{min-width:0;display:grid;grid-template-columns:52px minmax\(0,1fr\) auto/);
   assert.doesNotMatch(sharedBlindLineupStyles, /text-overflow:ellipsis/);
   assert.match(sharedBlindLineupControllerSource, /dataset\.mobileRemoveSlot/);
+  assert.match(sharedBlindLineupControllerSource, /dataset\.mobileMoveUp/);
+  assert.match(sharedBlindLineupControllerSource, /dataset\.mobileMoveDown/);
   assert.match(sharedBlindLineupControllerSource, /remove\.textContent='Remove'/);
   assert.doesNotMatch(sharedBlindLineupStyles, /\.mobile-lineup-summary\{position:sticky/);
 });
@@ -59,7 +61,7 @@ test('live and sandbox pages are adapters instead of duplicate lineup controller
   assert.doesNotMatch(sandboxSource, /fd\.accessToken/);
 });
 
-test('shared controller locks only at the both-submitted boundary', () => {
+test('shared controller locks only at the both-submitted boundary and withdraws before editable changes', () => {
   const source = sharedBlindLineupControllerSource;
   assert.match(source, /selectedSlots=\[null,null,null\]/);
   assert.match(source, /new Set\(players\)\.size!==players\.length/);
@@ -69,6 +71,8 @@ test('shared controller locks only at the both-submitted boundary', () => {
   assert.match(source, /lineupLocked=ownSubmitted&&opponentSubmitted/);
   assert.match(source, /Opponent/);
   assert.match(source, /submitted\?'Submitted':'Not submitted'/);
-  assert.match(source, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
+  assert.match(source, /mobileSubmitButton\.disabled=lineupLocked\|\|ownSubmitted\|\|filled!==3/);
+  assert.match(source, /async function beginEdit\(\)/);
+  assert.match(source, /await adapter\.submit\(\[\]\)/);
   assert.match(source, /togglePlayer/);
 });
