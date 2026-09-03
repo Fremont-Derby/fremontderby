@@ -2,68 +2,60 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderLineupPage } from '../src/lineupPage.js';
 
-test('lineup makes the two concrete matchup sides the visual anchor', () => {
+test('top context keeps only the useful concrete opponent status', () => {
   const html = renderLineupPage();
 
-  assert.match(html, /aria-label="Matchup lineup status"/);
-  assert.match(html, /class="matchup-side matchup-side-own"/);
-  assert.match(html, /class="side-kicker">Your team<\/p>/);
-  assert.match(html, /data-own-lineup-label>Your team<\/h2>/);
-  assert.match(html, /class="versus" aria-hidden="true">VS<\/div>/);
+  assert.match(html, /aria-label="Opponent lineup status"/);
   assert.match(html, /class="matchup-side matchup-side-opponent"/);
   assert.match(html, /class="side-kicker">Opponent<\/p>/);
   assert.match(html, /data-opponent-lineup-label>Opponent team<\/h2>/);
-  assert.doesNotMatch(html, /data-lineup-next-step/);
-  assert.doesNotMatch(html, />Next:<\/strong>/);
-});
-
-test('captain and opponent states are explicit words attached to the named teams', () => {
-  const html = renderLineupPage();
-
-  assert.match(html, /data-own-lineup-status data-state="missing">Not submitted<\/div>/);
   assert.match(html, /data-opponent-lineup-status data-state="missing">Not submitted<\/div>/);
-  assert.match(html, /ownLineupStatus\.textContent='Submitted · editable'/);
-  assert.match(html, /ownLineupStatus\.textContent='Locked'/);
-  assert.match(html, /opponentLineupStatus\.textContent='Submitted'/);
-  assert.match(html, /opponentLineupStatus\.textContent='Locked'/);
-  assert.match(html, /ownLineupLabel\.textContent=ownName/);
-  assert.match(html, /opponentLineupLabel\.textContent=opponentName/);
-  assert.match(html, /ownLineupStatus\.setAttribute\('aria-label',ownName\+' lineup: '/);
-  assert.match(html, /opponentLineupStatus\.setAttribute\('aria-label',opponentName\+' lineup: '/);
+  assert.doesNotMatch(html, /class="matchup-side matchup-side-own"/);
+  assert.doesNotMatch(html, /data-own-lineup-label/);
+  assert.doesNotMatch(html, /data-matchup-primary/);
+  assert.doesNotMatch(html, /class="versus"/);
 });
 
-test('the captain side owns the obvious action instead of a detached instruction', () => {
+test('the selected-player panels are the single home for own lineup state', () => {
   const html = renderLineupPage();
 
-  assert.match(html, /data-matchup-primary data-action="submit"[^>]*>Choose 3 &amp; submit<\/button>/);
-  assert.match(html, /data-matchup-secondary[^>]*hidden>Withdraw submission<\/button>/);
-  assert.match(html, /matchupPrimary\.textContent='Edit submitted lineup'/);
-  assert.match(html, /matchupPrimary\.textContent='Score matches'/);
-  assert.match(html, /matchupSecondary\.textContent='Withdraw '\+ownName\+' submission'/);
-  assert.match(html, /if\(action==='submit'&&slotCountReady\(\)\)\{document\.querySelector\('\[data-submit\]'\)\?\.click\(\)/);
-  assert.match(html, /if\(action==='score'\)\{location\.href='\/scorecard'/);
-  assert.match(html, /matchupSecondary\.addEventListener\('click',\(\)=>document\.querySelector\('\[data-unlock\]'\)\?\.click\(\)\)/);
+  assert.equal((html.match(/data-own-selection-label/g) || []).length, 3);
+  assert.equal((html.match(/data-own-selection-status/g) || []).length, 3);
+  assert.match(html, /Not submitted · editable/);
+  assert.match(html, /Submitted · editable/);
+  assert.match(html, /Not submitted · will lock/);
+  assert.match(html, /data-state="locked"/);
+  assert.match(html, /ownName\+' selections'/);
+  assert.match(html, /ownName\+' lineup: '\+label/);
 });
 
-test('plain language explains what each side means without icon or badge decoding', () => {
+test('selection copy names both teams and explains the lock boundary', () => {
   const html = renderLineupPage();
 
-  assert.match(html, /Choose 3 players\. '\+ownName\+' stays editable until '\+opponentName\+' submits\./);
-  assert.match(html, /ownName\+' is submitted\. You can still change these 3 players until '\+opponentName\+' submits\.'/);
-  assert.match(html, /opponentName\+' already submitted\. Submit '\+ownName\+' to lock and reveal both lineups\.'/);
-  assert.match(html, /Their players stay hidden until '\+ownName\+' submits\.'/);
-  assert.match(html, /Both lineups are revealed\. Scoring is ready\./);
-  assert.match(html, /Waiting for the captain of '\+opponentName\+'\.'/);
+  assert.match(html, /opponentName\+' has submitted\. Submitting '\+ownName\+' now locks and reveals both lineups\.'/);
+  assert.match(html, /'Submitting '\+ownName\+' will stay editable until '\+opponentName\+' submits\.'/);
+  assert.match(html, /ownName\+' is submitted\. You can change these players until '\+opponentName\+' submits\.'/);
+  assert.match(html, /ownName\+' and '\+opponentName\+' are locked and revealed\.'/);
+  assert.match(html, /ownTeamName:\(\)=>activeTeam\(\)\?\.teamName/);
+  assert.match(html, /opponentTeamName:\(\)=>activeRound\(\)\?\.opponentName/);
 });
 
-test('one-team captains lose the redundant team picker and phone layout stacks the matchup', () => {
+test('submit controls state whether the action stays editable or locks both lineups', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /return'Submit & lock both lineups'/);
+  assert.match(html, /return ownSubmitted\?'Update lineup · stays editable':'Submit lineup · stays editable'/);
+  assert.match(html, /mobileSubmitButton\.textContent=submissionActionLabel\(\)/);
+  assert.match(html, /submitButton\.textContent=submissionActionLabel\(\)/);
+  assert.match(html, /Submitting now will lock and reveal both lineups\. Continue\?/);
+});
+
+test('one-team captains keep the compact opponent card and mobile selection workspace', () => {
   const html = renderLineupPage();
 
   assert.match(html, /teamField\.hidden=captainTeams\.length===1/);
-  assert.match(html, /@media\(max-width:800px\)/);
-  assert.match(html, /\.matchup-stage\{grid-template-columns:1fr;padding:14px;gap:0\}/);
-  assert.match(html, /\.matchup-side-own\{border-top:6px solid var\(--green\)/);
-  assert.match(html, /\.matchup-side-opponent\{border-top:6px solid var\(--gold\)/);
+  assert.match(html, /\.matchup-stage\{padding:12px\}/);
+  assert.match(html, /\.matchup-side-opponent\{border-left:6px solid var\(--gold\)/);
   assert.match(html, /\.side-name\{[^}]*overflow-wrap:anywhere/);
   assert.match(html, /\.lineup-panel \.submission-state,\.mobile-lineup-summary \.submission-state\{display:none\}/);
   assert.match(html, /\.mobile-lineup-summary\{[^}]*background:rgba\(255,255,255,\.98\)!important/);
