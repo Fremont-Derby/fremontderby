@@ -38,6 +38,7 @@ test('mobile lineup uses readable stacked slots with direct removal', () => {
   assert.doesNotMatch(sharedBlindLineupStyles, /text-overflow:ellipsis/);
   assert.match(sharedBlindLineupControllerSource, /dataset\.mobileRemoveSlot/);
   assert.match(sharedBlindLineupControllerSource, /remove\.textContent='Remove'/);
+  assert.doesNotMatch(sharedBlindLineupStyles, /\.mobile-lineup-summary\{position:sticky/);
 });
 
 test('live and sandbox pages are adapters instead of duplicate lineup controllers', async () => {
