@@ -21,24 +21,24 @@ function rootCustomDomain() {
   return config.routes?.find((route) => route.custom_domain === true)?.pattern;
 }
 
-test('DRU root Workers Build profile is isolated and secret-backed', () => {
+test('DRU root Workers Build profile pins durable public bindings and keeps service role secret', () => {
   assert.equal(config.name, 'fremontderby-dru');
   assert.equal(config.vars.ENVIRONMENT, 'dru');
   assert.equal(config.vars.SUPABASE_SCHEMA, 'dru');
   assert.equal(rootCustomDomain(), 'dru.fremontderby.com');
-  assert.equal(config.vars.SUPABASE_URL, undefined);
-  assert.equal(config.vars.SUPABASE_PUBLISHABLE_KEY, undefined);
-  assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, undefined);
+  assert.equal(config.vars.SUPABASE_URL, 'https://oqkkvqkerusepyokzbmt.supabase.co');
+  assert.match(config.vars.SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_/);
+  assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, 'oqkkvqkerusepyokzbmt');
   assert.equal('SUPABASE_SERVICE_ROLE_KEY' in config.vars, false);
+  assert.ok(config.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+  assert.ok(config.secrets.required.includes('BETA_ACTOR_USER_ID'));
 
   for (const name of [
     'SUPABASE_URL',
     'SUPABASE_PUBLISHABLE_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
     'EXPECTED_SUPABASE_PROJECT_REF',
-    'BETA_ACTOR_USER_ID',
   ]) {
-    assert.ok(config.secrets.required.includes(name));
+    assert.equal(config.secrets.required.includes(name), false);
   }
 });
 
@@ -47,8 +47,20 @@ test('DRU root Workers Build profile matches the explicit dru environment', () =
   assert.equal(customDomainFor('dru'), rootCustomDomain());
   assert.equal(config.env.dru.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
   assert.equal(config.env.dru.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
+  assert.equal(config.env.dru.vars.SUPABASE_URL, config.vars.SUPABASE_URL);
+  assert.equal(config.env.dru.vars.SUPABASE_PUBLISHABLE_KEY, config.vars.SUPABASE_PUBLISHABLE_KEY);
+  assert.equal(config.env.dru.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
   assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
   assert.equal(config.env.dru.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
+  assert.ok(config.env.dru.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
+  for (const name of [
+    'SUPABASE_URL',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'EXPECTED_SUPABASE_PROJECT_REF',
+  ]) {
+    assert.equal(config.env.dru.secrets.required.includes(name), false);
+  }
 });
 
 test('Wrangler retains explicit custom-domain identities for each named lane', () => {
@@ -95,14 +107,14 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
   assert.equal(config.env.gamma.vars.ENVIRONMENT, 'gamma');
 });
 
-test('non-production Supabase credentials remain required secrets', () => {
+test('unrecovered JFL and Gamma Supabase credentials remain required secrets', () => {
   const common = [
     'SUPABASE_URL',
     'SUPABASE_PUBLISHABLE_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
     'EXPECTED_SUPABASE_PROJECT_REF',
   ];
-  for (const lane of ['jfl', 'dru', 'gamma']) {
+  for (const lane of ['jfl', 'gamma']) {
     const target = config.env[lane];
     for (const name of common) assert.ok(target.secrets.required.includes(name));
     assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
