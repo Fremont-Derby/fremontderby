@@ -1,0 +1,55 @@
+name: Break-glass restore DRU actor secret and prove isolation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restore-dru-actor-and-prove-isolation.yml'
+      - 'scripts/restore-dru-beta-actor-secret.mjs'
+
+concurrency:
+  group: restore-dru-actor-and-prove-isolation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  repair-and-verify:
+    if: startsWith(github.event.head_commit.message, '[BREAK-GLASS][P0][JFL] Restore DRU beta actor secret and rerun proof')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repair/proof tooling
+        uses: actions/checkout@v4
+
+      - name: Checkout DRU branch read-only as deployment source
+        uses: actions/checkout@v4
+        with:
+          ref: fremontderby-dru
+          path: dru-source
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore missing DRU beta actor runtime secret atomically
+        env:
+          DRU_SOURCE_DIR: ${{ github.workspace }}/dru-source
+          LANE_SUPABASE_URL: 'https://oqkkvqkerusepyokzbmt.supabase.co'
+          LANE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LANE_SUPABASE_SERVICE_ROLE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/restore-dru-beta-actor-secret.mjs
+
+      - name: Rerun full hosted lane-isolation proof
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PRODUCTION_PROBE_SHA: ${{ github.sha }}
+          JFL_FEATURE_PROBE_SHA: '1e10506c38064e88e8934522b9b02bce998804ca'
+          JFL_PROBE_SHA: '215447a53a5d2595e6df73aff567e15848390cb0'
+        run: node scripts/cloudflare-hosted-isolation-proof.mjs
