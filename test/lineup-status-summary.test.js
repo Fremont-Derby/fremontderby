@@ -29,22 +29,24 @@ test('the selected-player panels are the single home for own lineup state', () =
   assert.match(html, /ownName\+' lineup: '\+label/);
 });
 
-test('selection copy names both teams and explains the lock boundary', () => {
+test('selection copy names both teams and explains edit withdrawal and lock boundary', () => {
   const html = renderLineupPage();
 
   assert.match(html, /opponentName\+' has submitted\. Submitting '\+ownName\+' now locks and reveals both lineups\.'/);
-  assert.match(html, /'Submitting '\+ownName\+' will stay editable until '\+opponentName\+' submits\.'/);
-  assert.match(html, /ownName\+' is submitted\. You can change these players until '\+opponentName\+' submits\.'/);
+  assert.match(html, /'Choose all three slots, then submit '\+ownName\+'\.'/);
+  assert.match(html, /ownName\+' is submitted\. Changing any slot will withdraw it and require you to submit again\.'/);
   assert.match(html, /ownName\+' and '\+opponentName\+' are locked and revealed\.'/);
   assert.match(html, /ownTeamName:\(\)=>activeTeam\(\)\?\.teamName/);
   assert.match(html, /opponentTeamName:\(\)=>activeRound\(\)\?\.opponentName/);
 });
 
-test('submit controls state whether the action stays editable or locks both lineups', () => {
+test('submit controls require a fresh submit or warn when it will lock both lineups', () => {
   const html = renderLineupPage();
 
   assert.match(html, /return'Submit & lock both lineups'/);
-  assert.match(html, /return ownSubmitted\?'Update lineup · stays editable':'Submit lineup · stays editable'/);
+  assert.match(html, /return ownSubmitted\?'Submitted · edit to change':'Submit lineup'/);
+  assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|ownSubmitted\|\|filled!==3/);
+  assert.match(html, /submitButton\.disabled=lineupLocked\|\|ownSubmitted\|\|filled!==3/);
   assert.match(html, /mobileSubmitButton\.textContent=submissionActionLabel\(\)/);
   assert.match(html, /submitButton\.textContent=submissionActionLabel\(\)/);
   assert.match(html, /Submitting now will lock and reveal both lineups\. Continue\?/);

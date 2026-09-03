@@ -73,7 +73,7 @@ test('lineup does not render a second committed-lineups copy', () => {
   assert.match(html, /data-opponent-body/);
 });
 
-test('mobile selections scroll normally instead of covering the player list', () => {
+test('mobile selections scroll normally and support direct reorder', () => {
   const html = renderLineupPage();
 
   assert.match(html, /data-mobile-lineup-summary/);
@@ -90,33 +90,35 @@ test('mobile selections scroll normally instead of covering the player list', ()
   assert.match(html, /function renderMobileSummary\(\)/);
   assert.match(html, /label\.textContent='Slot '\+\(index\+1\)/);
   assert.match(html, /data-mobile-forfeit-slot/);
+  assert.match(html, /data-mobile-move-up|mobileMoveUp/);
+  assert.match(html, /data-mobile-move-down|mobileMoveDown/);
   assert.match(html, /forfeit\.textContent='Forfeit'/);
   assert.match(html, /button\.dataset\.mobileForfeitSlot!=null/);
-  assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
+  assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|ownSubmitted\|\|filled!==3/);
   assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
 });
 
 test('opponent state and lineup mark stay clear on narrow screens', () => {
   const html = renderLineupPage();
 
-  assert.match(html, /Opponent has not submitted, so you can still edit it/);
+  assert.match(html, /Opponent submitted\. Your submission will lock and reveal both lineups/);
   assert.match(html, /submitted\?'Submitted':'Not submitted'/);
   assert.match(html, /data-mobile-opponent-status>Not submitted</);
   assert.match(html, /\.topbar \.mark\{flex:0 0 34px;min-width:34px\}/);
 });
 
-test('submitted lineup can be explicitly unlocked while opponent is waiting', () => {
+test('editing a submitted lineup automatically withdraws it while opponent is waiting', () => {
   const html = renderLineupPage();
 
   assert.match(html, /data-unlock/);
   assert.match(html, /data-mobile-unlock/);
-  assert.match(html, />Unlock lineup</);
-  assert.match(html, /unlockButton\.hidden=!\(ownSubmitted&&!opponentSubmitted\)/);
-  assert.match(html, /mobileUnlockButton\.hidden=!\(ownSubmitted&&!opponentSubmitted\)/);
-  assert.match(html, /async function unlockLineup\(\)/);
+  assert.match(html, /async function beginEdit\(\)/);
   assert.match(html, /await adapter\.submit\(\[\]\)/);
-  assert.match(html, /It will no longer count as submitted until you submit three slots again/);
-  assert.match(html, /Lineup unlocked\. Make your changes, then submit three slots when ready\./);
+  assert.match(html, /ownSubmitted=false/);
+  assert.match(html, /mobileUnlockButton\.hidden=true;mobileUnlockButton\.disabled=true/);
+  assert.match(html, /unlockButton\.hidden=true;unlockButton\.disabled=true/);
+  assert.match(html, /Changing any slot will withdraw it and require you to submit again/);
+  assert.match(html, /Lineup changed to not submitted\. Submit again when your order is ready/);
 });
 
 test('lineup correction controls meet the phone touch and focus contract', () => {
