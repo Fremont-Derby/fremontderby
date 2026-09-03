@@ -25,3 +25,15 @@ test('live rack mutations send the loaded own-rack snapshot explicitly', () => {
   assert.match(liveRackLedgerAdapterSource, /score-racks\/undo[\s\S]*expectedRacks:expectedOwnRacks/);
   assert.match(liveRackLedgerAdapterSource, /score-confirm[\s\S]*expectedRacks:expectedOwnRacks/);
 });
+
+// Human-validation regression for #2168.
+test('live scorecard surfaces undo directly beside the add-rack flow', () => {
+  const html = renderScorecardPage();
+
+  assert.match(html, /undoButton\.textContent = 'Undo last rack'/);
+  assert.match(html, /nextRack\.appendChild\(undoButton\)/);
+  assert.match(html, /Undo the last rack you entered\?/);
+  assert.match(html, /This removes only your team/);
+  assert.match(html, /\.next-rack \[data-undo\]/);
+  assert.match(html, /\.next-rack \[data-undo\]:disabled\{\s*display:none/);
+});

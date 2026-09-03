@@ -23,11 +23,44 @@ const liveScorecardSelectionStyles = `
     outline:3px solid #d6a900;
     outline-offset:2px;
   }
+  .next-rack [data-undo]{
+    width:100%;
+    margin-top:8px;
+    min-height:50px;
+    background:#fff;
+    border-color:#c8cfca;
+    color:#075f36;
+  }
+  .next-rack [data-undo]:disabled{
+    display:none;
+  }
+`;
+
+const liveScorecardUndoPlacementScript = `
+  <script>
+    (() => {
+      const undoButton = document.querySelector('[data-undo]');
+      const nextRack = document.querySelector('.next-rack');
+      if (!undoButton || !nextRack) return;
+      undoButton.textContent = 'Undo last rack';
+      undoButton.classList.remove('ghost');
+      nextRack.appendChild(undoButton);
+      undoButton.addEventListener('click', (event) => {
+        if (undoButton.disabled) return;
+        if (!window.confirm('Undo the last rack you entered? This removes only your team\\'s most recent rack.')) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+    })();
+  </script>
 `;
 
 export function renderScorecardPage() {
   return renderRackLedgerScorecardPage({
     title: 'Fremont Derby Scorecard',
     adapterSource: liveRackLedgerAdapterSource,
-  }).replace('</head>', `<style>${liveScorecardSelectionStyles}</style></head>`);
+  })
+    .replace('</head>', `<style>${liveScorecardSelectionStyles}</style></head>`)
+    .replace('</body>', `${liveScorecardUndoPlacementScript}</body>`);
 }
