@@ -66,9 +66,14 @@ export async function seedDruKidLeague({
   );
 
   const teams = [];
+  let createdThisCall = 0;
   for (const recipe of KID_LEAGUE_TEAMS) {
     if (existingNames.has(recipe.teamName)) {
       teams.push({ teamName: recipe.teamName, created: false });
+      continue;
+    }
+    if (createdThisCall >= 1) {
+      teams.push({ teamName: recipe.teamName, created: false, pending: true });
       continue;
     }
 
@@ -120,26 +125,30 @@ export async function seedDruKidLeague({
       roster.push({ displayName, role: 'player', playerId });
     }
 
+    let slotError = null;
     try {
       await addTeamToSeason({ actorUserId, seasonId, teamId });
     } catch (error) {
-      teams.push({
-        teamName: recipe.teamName,
-        teamId,
-        created: true,
-        roster,
-        slotError: error.message,
-      });
-      continue;
+      slotError = error.message;
     }
 
-    teams.push({ teamName: recipe.teamName, teamId, created: true, roster });
+    teams.push({
+      teamName: recipe.teamName,
+      teamId,
+      created: true,
+      roster,
+      ...(slotError ? { slotError } : {}),
+    });
+    createdThisCall += 1;
   }
 
   return {
     seasonName: KID_LEAGUE_SEASON_NAME,
     seasonId,
     createdSeason,
+    createdThisCall,
+    pendingCount: teams.filter((team) => team.pending).length,
+    complete: teams.every((team) => team.created === false ? existingNames.has(team.teamName) || team.pending !== true : true) && teams.filter((team) => team.pending).length === 0,
     teams,
   };
 }

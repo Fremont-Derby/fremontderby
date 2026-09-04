@@ -11,7 +11,7 @@ test('kid league catalog stays child-appropriate and obviously fake', () => {
   assert.match(blob, /penny eightball/);
 });
 
-test('seed creates the demo season and eight teams once', async () => {
+test('seed creates one team per call to stay under Worker subrequest limits', async () => {
   const created = [];
   const result = await seedDruKidLeague({
     actorUserId: 'actor-1',
@@ -33,8 +33,9 @@ test('seed creates the demo season and eight teams once', async () => {
 
   assert.equal(result.seasonId, 'season-kids');
   assert.equal(result.createdSeason, true);
-  assert.equal(created.length, 8);
-  assert.deepEqual(created, KID_LEAGUE_TEAMS.map((team) => team.teamName));
+  assert.equal(created.length, 1);
+  assert.equal(created[0], 'Maple Cue Cats');
+  assert.equal(result.pendingCount, 7);
 });
 
 test('seed is idempotent when the season and teams already exist', async () => {
@@ -60,7 +61,7 @@ test('seed is idempotent when the season and teams already exist', async () => {
   assert.equal(result.createdSeason, false);
   assert.equal(setups, 0);
   assert.equal(prepared, 0);
-  assert.equal(result.teams.every((team) => team.created === false), true);
+  assert.equal(result.createdThisCall, 0);
 });
 
 test('seed HTTP is missing outside DRU', async () => {
