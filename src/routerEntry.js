@@ -29,7 +29,6 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
 import { renderPlayoffsPage } from './playoffsPage.js';
-import { renderTradesPage } from './tradesPage.js';
 import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
@@ -42,6 +41,8 @@ const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/teams\/[^/]+\/trades$/,
   /^\/api\/team-trades\/[^/]+\/(player-response|captain-approval)$/,
   /^\/api\/admin\/teams\/[^/]+\/trades$/,
+  /^\/trades\/?$/,
+  /^\/trade\/?$/,
 ];
 
 const PUBLIC_HTML_PAGES = new Map([
@@ -49,8 +50,6 @@ const PUBLIC_HTML_PAGES = new Map([
   ['/playoff', renderPlayoffsPage],
   ['/bracket', renderPlayoffsPage],
   ['/brackets', renderPlayoffsPage],
-  ['/trades', renderTradesPage],
-  ['/trade', renderTradesPage],
   ['/players', renderPlayersDirectoryPage],
   ['/player', renderPlayersDirectoryPage],
   ['/directory', renderPlayersDirectoryPage],
