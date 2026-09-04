@@ -9,8 +9,8 @@ export function renderFreeAgentsPage() {
 <body>
   <main class="app" data-fd-dru-free-agents="true">
     <header><h1>Free agents</h1></header>
-    <p>Players looking for a roster. Captains can open Teams to invite someone.</p>
-    <p data-status>Public list loads from the published season when bindings are healthy.</p>
+    <p>Players looking for a roster. Captains invite from Teams. Published names stay on Player directory.</p>
+    <p data-status>No open roster list is published yet. Open Teams to ask a captain, or browse Player directory.</p>
     <p><a href="/teams">Teams</a> · <a href="/players">Player directory</a> · <a href="/schedule">Schedule</a></p>
   </main>
 </body>
