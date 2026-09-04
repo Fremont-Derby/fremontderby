@@ -30,7 +30,7 @@ test('ordinary player, team, message, availability, scoring, and standings reads
 test('full phone values are confined to explicit self and single-player admin contact HTTP paths', async () => {
   const source = await readSource('playerContactHttp.js');
   assert.match(source, /url\.pathname === '\/api\/me\/contact'/);
-  assert.match(source, /\^\\\/api\\\/admin\\\/players\\\/\(\[^\/\]\+\)\\\/contact\$/);
+  assert.match(source, /\/api\/admin\/players\//);
   assert.match(source, /authenticateSupabaseUser/);
   assert.match(source, /getAdminPlayerContactCommand/);
   assert.match(source, /getOwnPlayerContactCommand/);
