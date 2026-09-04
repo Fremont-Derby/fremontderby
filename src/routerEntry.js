@@ -3,6 +3,7 @@ import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { repairAdminPlayersScript } from './adminPlayersScriptRepair.js';
 import { repairAvailabilityScript } from './availabilityScriptRepair.js';
+import { repairAdminSeasonTeamsScript } from './adminSeasonTeamsScriptRepair.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
@@ -178,7 +179,14 @@ async function finalizeBrowserResponse(response, pathname, env = {}) {
         headers: adminScriptRepaired.headers,
       })
     : adminScriptRepaired;
-  const accessible = await injectAccessibilityLayer(availabilityRepaired);
+  const seasonTeamsRepaired = pathname === '/admin/season-teams'
+    ? new Response(repairAdminSeasonTeamsScript(await availabilityRepaired.clone().text()), {
+        status: availabilityRepaired.status,
+        statusText: availabilityRepaired.statusText,
+        headers: availabilityRepaired.headers,
+      })
+    : availabilityRepaired;
+  const accessible = await injectAccessibilityLayer(seasonTeamsRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const persistent = await injectPersistentAuthSession(mobileMenuAccessible);
   return injectDruAgentSession(persistent, env);
