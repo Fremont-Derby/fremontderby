@@ -3,6 +3,7 @@
  * Live canary: public HTML + JSON surfaces across production and lanes.
  * Predicts breakage when routes move, shells regress, or a lane deploy goes sideways.
  */
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   PUBLIC_HTML_PATHS,
@@ -10,6 +11,9 @@ import {
   HTML_SHELL_MARKERS,
   CANARY_HOSTS,
 } from './public-surface-contract.mjs';
+import { formatCanaryIncidentComment } from './canary-incident-comment.mjs';
+
+export const CANARY_FAILURE_ARTIFACT = 'canary-failure.md';
 
 function envHosts() {
   const raw = process.env.CANARY_HOSTS_JSON;
@@ -20,7 +24,6 @@ function envHosts() {
       /* fall through */
     }
   }
-  // Optional: CANARY_ONLY=production,www
   const only = String(process.env.CANARY_ONLY || '')
     .split(',')
     .map((s) => s.trim())
@@ -55,7 +58,6 @@ export async function probeJson(base, path, expectEnv, fetchImpl = fetch) {
     return { ok, url, status: response.status, error: ok ? null : `health not ok` };
   }
   if (path === '/health/environment') {
-    // Lanes may 503 when readiness fails; still require matching environment label when present
     const env = body?.environment;
     const envOk = !expectEnv || env === expectEnv;
     const ok = envOk && typeof env === 'string';
@@ -91,12 +93,23 @@ export async function probeHtml(base, path, fetchImpl = fetch) {
     };
   };
   let result = await attempt();
-  // One retry: lane deploys can briefly 404 while versions swap
   if (!result.ok && result.status >= 400) {
     await new Promise((r) => setTimeout(r, 1500));
     result = await attempt();
   }
   return result;
+}
+
+export function writeCanaryFailureArtifact(summary, {
+  runUrl = process.env.CANARY_RUN_URL || '',
+  artifactPath = CANARY_FAILURE_ARTIFACT,
+} = {}) {
+  const body = formatCanaryIncidentComment({
+    runUrl,
+    failed: summary?.failed || [],
+  });
+  writeFileSync(artifactPath, body);
+  return body;
 }
 
 export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetch } = {}) {
@@ -137,7 +150,6 @@ export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetc
       }
     }
   }
-  // HEAD must match GET status for CDN/monitor probes (empty body).
   try {
     const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
     const homeUrl = prod.base.replace(/\/+$/, '') + '/';
@@ -164,7 +176,6 @@ export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetc
     });
   }
 
-  // Baseline browser security headers on production HTML shell.
   try {
     const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
     const homeUrl = prod.base.replace(/\/+$/, '') + '/';
@@ -201,7 +212,6 @@ export async function assertPublicSurface({ hosts = envHosts(), fetchImpl = fetc
     });
   }
 
-  // Production deploy identity — versionTag must be present (git stamp, env, or CF version id).
   try {
     const prod = envHosts().find((h) => h.name === 'production') || { base: 'https://fremontderby.com' };
     const healthUrl = prod.base.replace(/\/+$/, '') + '/health';
@@ -241,6 +251,9 @@ if (isDirect) {
     console.log(flag, row.host, row.kind, row.status ?? '', row.url || '', row.error || '');
   }
   if (!summary.ok) {
+    const runUrl = process.env.CANARY_RUN_URL || '';
+    const comment = writeCanaryFailureArtifact(summary, { runUrl });
+    console.error(comment);
     console.error(`Public surface canary failed: ${summary.failed.length}/${summary.results.length}`);
     process.exit(1);
   }
