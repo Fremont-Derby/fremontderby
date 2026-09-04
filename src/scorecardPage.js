@@ -39,20 +39,40 @@ const liveScorecardSelectionStyles = `
 const liveScorecardEnhancementsScript = `
   <script>
     (() => {
-      let scoringRowIndex = null;
+      let fallbackScoringRowIndex = null;
+
+      function liveState() {
+        return window.fdRackLedgerState || {};
+      }
+
+      function scoringRowIndex(rows) {
+        const state = liveState();
+        if (state.ownSide === 'A') return 0;
+        if (state.ownSide === 'B') return 1;
+        const editableIndex = rows.findIndex((row) => row.querySelector('.rack-edit'));
+        if (editableIndex >= 0) fallbackScoringRowIndex = editableIndex;
+        return fallbackScoringRowIndex;
+      }
 
       function placeUndoButton() {
         const undoButton = document.querySelector('[data-undo]');
         const nextRack = document.querySelector('.next-rack');
         if (!undoButton || !nextRack) return;
-        undoButton.textContent = 'Undo last rack';
+        const state = liveState();
+        const canUndo = Number(state.ownRackCount || 0) > 0 && !state.locked;
+        if (canUndo) undoButton.disabled = false;
+        undoButton.textContent = state.ownConfirmed ? 'Undo last rack & unlock' : 'Undo last rack';
         undoButton.classList.remove('ghost');
         if (undoButton.parentElement !== nextRack) nextRack.appendChild(undoButton);
         if (undoButton.dataset.confirmBound === 'true') return;
         undoButton.dataset.confirmBound = 'true';
         undoButton.addEventListener('click', (event) => {
           if (undoButton.disabled) return;
-          if (!window.confirm('Undo the last rack you entered? This removes only your team\\'s most recent rack.')) {
+          const confirmed = Boolean(liveState().ownConfirmed);
+          const message = confirmed
+            ? 'Undo your last rack? This also unlocks your submitted score so you can correct it.'
+            : 'Undo the last rack you entered? This removes only your team\\'s most recent rack.';
+          if (!window.confirm(message)) {
             event.preventDefault();
             event.stopImmediatePropagation();
           }
@@ -69,18 +89,17 @@ const liveScorecardEnhancementsScript = `
       function syncLiveScore() {
         const rows = Array.from(document.querySelectorAll('[data-ledger] tbody tr')).slice(0, 2);
         if (rows.length < 2) return;
-        const editableIndex = rows.findIndex((row) => row.querySelector('.rack-edit'));
-        if (editableIndex >= 0) scoringRowIndex = editableIndex;
-        if (scoringRowIndex === null || !rows[scoringRowIndex]) return;
+        const rowIndex = scoringRowIndex(rows);
+        if (rowIndex === null || rowIndex === undefined || !rows[rowIndex]) return;
 
-        const ownRow = rows[scoringRowIndex];
+        const ownRow = rows[rowIndex];
         const wins = ownRow.querySelectorAll('.submission[data-value="W"]').length;
         const losses = ownRow.querySelectorAll('.submission[data-value="L"]').length;
         const scoreA = document.querySelector('[data-score-a]');
         const scoreB = document.querySelector('[data-score-b]');
         if (!scoreA || !scoreB) return;
 
-        if (scoringRowIndex === 0) {
+        if (rowIndex === 0) {
           scoreA.textContent = String(wins);
           scoreB.textContent = String(losses);
         } else {
