@@ -6,6 +6,8 @@ export class AuthError extends Error {
   }
 }
 
+export const DRU_AGENT_SENTINEL = 'dru-bypass';
+
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -43,6 +45,14 @@ export function betaAuthBypassEnabled(env = {}) {
   return testAuthEnvironments.has(environment) && bypass === '1';
 }
 
+export function druAgentSentinelEnabled(env = {}) {
+  return String(env.ENVIRONMENT || '').trim() === 'dru' && betaAuthBypassEnabled(env);
+}
+
+export function isDruAgentSentinel(token, env = {}) {
+  return druAgentSentinelEnabled(env) && token === DRU_AGENT_SENTINEL;
+}
+
 export function resolveBetaBypassActor(env = {}) {
   const id = String(env.BETA_ACTOR_USER_ID || '').trim();
   if (!id) {
@@ -68,6 +78,10 @@ export async function authenticateSupabaseUser(
   }
 
   const token = bearerToken(request);
+
+  if (isDruAgentSentinel(token, env)) {
+    return resolveBetaBypassActor(env);
+  }
 
   // Test-lane bypass is only for deliberately unauthenticated automation.
   // Once a caller supplies a bearer token, validate it normally rather than
