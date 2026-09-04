@@ -28,6 +28,13 @@ import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderTradesPage } from './tradesPage.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
+import { renderNotificationsPage } from './notificationsPage.js';
+import { renderFreeAgentsPage } from './freeAgentsPage.js';
+import { renderPracticePage } from './practicePage.js';
+import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -36,9 +43,69 @@ const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/admin\/teams\/[^/]+\/trades$/,
 ];
 
+const PUBLIC_HTML_PAGES = new Map([
+  ['/playoffs', renderPlayoffsPage],
+  ['/playoff', renderPlayoffsPage],
+  ['/bracket', renderPlayoffsPage],
+  ['/brackets', renderPlayoffsPage],
+  ['/trades', renderTradesPage],
+  ['/trade', renderTradesPage],
+  ['/players', renderPlayersDirectoryPage],
+  ['/player', renderPlayersDirectoryPage],
+  ['/directory', renderPlayersDirectoryPage],
+  ['/notifications', renderNotificationsPage],
+  ['/notify', renderNotificationsPage],
+  ['/free-agents', renderFreeAgentsPage],
+  ['/fa', renderFreeAgentsPage],
+  ['/subs', renderFreeAgentsPage],
+  ['/substitutes', renderFreeAgentsPage],
+  ['/practice', renderPracticePage],
+  ['/practices', renderPracticePage],
+]);
+
+const LIVE_PAGE_REWRITES = new Map([
+  ['/check-in', '/availability'],
+  ['/checkin', '/availability'],
+  ['/league-night', '/availability'],
+  ['/leaguenight', '/availability'],
+  ['/ready-check', '/availability'],
+  ['/readycheck', '/availability'],
+  ['/inbox', '/messages'],
+  ['/chat', '/messages'],
+  ['/msg', '/messages'],
+  ['/msgs', '/messages'],
+  ['/account', '/profile'],
+  ['/settings', '/profile'],
+  ['/me', '/profile'],
+  ['/login', '/profile'],
+  ['/signin', '/profile'],
+  ['/sign-in', '/profile'],
+  ['/scoring', '/scorecard'],
+  ['/score', '/scorecard'],
+  ['/scores', '/scorecard'],
+  ['/awards', '/prizes'],
+  ['/prize', '/prizes'],
+  ['/stats', '/standings'],
+  ['/history', '/standings'],
+  ['/tonight', '/schedule'],
+  ['/week', '/schedule'],
+  ['/schedules', '/schedule'],
+  ['/matches', '/schedule'],
+  ['/roster', '/teams'],
+  ['/join', '/teams'],
+  ['/captain', '/teams'],
+  ['/lineups', '/lineup'],
+  ['/sandbox', '/demo'],
+  ['/try', '/demo'],
+  ['/home', '/'],
+]);
+
+function stripTrailingSlash(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
 function isRetiredTradePath(pathname) {
-  return pathname === '/trades'
-    || RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
+  return RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
 function retiredTradeResponse(request, pathname) {
@@ -46,6 +113,12 @@ function retiredTradeResponse(request, pathname) {
   if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
   return new Response(decorateHtmlWithShell(renderNotFoundPage(pathname), pathname), {
     status: 404,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
+
+function htmlPageResponse(render, pathname) {
+  return new Response(decorateHtmlWithShell(render(), pathname), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
@@ -95,7 +168,31 @@ async function finalizeBrowserResponse(response, pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (isRetiredTradePath(url.pathname)) return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    const pathname = stripTrailingSlash(url.pathname);
+
+    if (isRetiredTradePath(url.pathname)) {
+      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+    }
+
+    const emptyReadResponse = routeDruPublicEmptyReads(request, env);
+    if (emptyReadResponse) {
+      return finalizeBrowserResponse(emptyReadResponse, url.pathname);
+    }
+
+    if (request.method === 'GET') {
+      const render = PUBLIC_HTML_PAGES.get(pathname);
+      if (render) {
+        return finalizeBrowserResponse(htmlPageResponse(render, pathname), pathname);
+      }
+      const rewritten = LIVE_PAGE_REWRITES.get(pathname);
+      if (rewritten) {
+        const next = new URL(request.url);
+        next.pathname = rewritten;
+        request = new Request(next, request);
+        url.pathname = rewritten;
+      }
+    }
+
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);

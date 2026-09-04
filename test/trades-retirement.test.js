@@ -11,14 +11,17 @@ const retiredApiPaths = [
   '/api/admin/teams/team-1/trades',
 ];
 
-test('legacy Trades page is a real 404 before the legacy renderer can run', async () => {
-  const response = await worker.fetch(new Request('https://fremontderby.com/trades'), {}, {});
+test('public /trades page is a session-backed HTML shell, not a 404 hound', async () => {
+  const response = await worker.fetch(new Request('https://dru.fremontderby.com/trades'), { ENVIRONMENT: 'dru' }, {});
   const html = await response.text();
 
-  assert.equal(response.status, 404);
+  assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') || '', /text\/html/);
-  assert.match(html, /404|not found/i);
-  assert.doesNotMatch(html, /Propose trade|Accept trade|Approve trade/i);
+  assert.match(html, /Fremont Derby Trades/);
+  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
+  assert.doesNotMatch(html, /This dog lost the rack/);
+  assert.doesNotMatch(html, /Access token/i);
+  assert.doesNotMatch(html, /data-token/);
 });
 
 test('formal trade HTTP APIs are unavailable without authenticating or touching data', async () => {
