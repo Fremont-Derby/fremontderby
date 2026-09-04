@@ -10,7 +10,7 @@ export function renderNotificationsPage() {
   <main class="app" data-fd-dru-notifications="true">
     <header><h1>Notifications</h1></header>
     <p>League alerts and unread message counts. Open Messages for the conversation itself.</p>
-    <p><a href="/messages">Messages</a> · <a href="/profile">Sign in</a> · <a href="/teams">Teams</a></p>
+    <p><a href="/messages">Messages</a> · <a href="/profile">Profile</a> · <a href="/teams">Teams</a></p>
   </main>
 </body>
 </html>`;

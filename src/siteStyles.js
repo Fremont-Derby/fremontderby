@@ -18,6 +18,7 @@ export const siteStyles = `${designSystemStyles}
     border: 1px solid transparent !important;
     background: transparent !important;
     color: #eff8f2 !important;
+    white-space: nowrap !important;
   }
   .fd-shell .fd-nav a:hover,
   .fd-shell .fd-nav a:focus-visible {
