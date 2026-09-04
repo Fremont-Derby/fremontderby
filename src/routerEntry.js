@@ -8,6 +8,11 @@ import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
+import { repairAdminPlayersScript } from './adminPlayersScriptRepair.js';
+import { repairAvailabilityScript } from './availabilityScriptRepair.js';
+import { repairAdminSeasonTeamsScript } from './adminSeasonTeamsScriptRepair.js';
+import { repairScorecardScript } from './scorecardScriptRepair.js';
+import { repairLineupScript } from './lineupScriptRepair.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
@@ -81,7 +86,7 @@ async function reconcileProductShell(response, pathname) {
   }
   if (pathname === '/demo') {
     html = html
-      .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
+      .replace('<title>Try a League Night \u00b7 Fremont Derby</title>', '<title>Test Drive the App \u00b7 Fremont Derby</title>')
       .replace('<h1>Try a League Night</h1>', '<h1>Test Drive the App</h1>');
   }
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
@@ -98,7 +103,42 @@ async function finalizeBrowserResponse(response, pathname) {
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
-  const accessible = await injectAccessibilityLayer(adminThemed);
+  const adminScriptRepaired = pathname === '/admin/players'
+    ? new Response(repairAdminPlayersScript(await adminThemed.clone().text()), {
+        status: adminThemed.status,
+        statusText: adminThemed.statusText,
+        headers: adminThemed.headers,
+      })
+    : adminThemed;
+  const availabilityRepaired = pathname === '/availability'
+    ? new Response(repairAvailabilityScript(await adminScriptRepaired.clone().text()), {
+        status: adminScriptRepaired.status,
+        statusText: adminScriptRepaired.statusText,
+        headers: adminScriptRepaired.headers,
+      })
+    : adminScriptRepaired;
+  const seasonTeamsRepaired = pathname === '/admin/season-teams'
+    ? new Response(repairAdminSeasonTeamsScript(await availabilityRepaired.clone().text()), {
+        status: availabilityRepaired.status,
+        statusText: availabilityRepaired.statusText,
+        headers: availabilityRepaired.headers,
+      })
+    : availabilityRepaired;
+  const scorecardRepaired = pathname === '/scorecard'
+    ? new Response(repairScorecardScript(await seasonTeamsRepaired.clone().text()), {
+        status: seasonTeamsRepaired.status,
+        statusText: seasonTeamsRepaired.statusText,
+        headers: seasonTeamsRepaired.headers,
+      })
+    : seasonTeamsRepaired;
+  const lineupRepaired = pathname === '/lineup'
+    ? new Response(repairLineupScript(await scorecardRepaired.clone().text()), {
+        status: scorecardRepaired.status,
+        statusText: scorecardRepaired.statusText,
+        headers: scorecardRepaired.headers,
+      })
+    : scorecardRepaired;
+  const accessible = await injectAccessibilityLayer(lineupRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
   return injectPublicSeo(withAuth, pathname);
@@ -132,45 +172,41 @@ export default {
     }
 
     // Trades restored — paths served by legacy router / index handlers.
-    
-    
-    
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/rating-health') {
+    if (url.pathname === '/admin/rating-health') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/support') {
+    if (url.pathname === '/admin/support') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/player-contact') {
+    if (url.pathname === '/admin/player-contact') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-    
+
     {
-      
-    {
-      const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
-      if (recompute && request.method === 'POST') {
-        return finalizeBrowserResponse(
-          await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
-          url.pathname,
-        );
+      {
+        const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
+        if (recompute && request.method === 'POST') {
+          return finalizeBrowserResponse(
+            await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
+            url.pathname,
+          );
+        }
       }
-    }
 
       const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
       if (ratingObs && request.method === 'POST') {
@@ -187,7 +223,7 @@ if (url.pathname === '/admin/player-contact') {
         url.pathname,
       );
     }
-if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const adminSupportResponse = await routeAdminSupport(request, env);
