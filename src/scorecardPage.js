@@ -1,6 +1,21 @@
 import { liveRackLedgerAdapterSource } from './liveRackLedgerAdapter.js';
 import { renderRackLedgerScorecardPage } from './rackLedgerScorecard.js';
 
+export function resolveRaceCompletion({ scoreA, scoreB, targetA, targetB }) {
+  const a = Number(scoreA);
+  const b = Number(scoreB);
+  const ta = Number(targetA);
+  const tb = Number(targetB);
+  if (![a, b, ta, tb].every(Number.isFinite) || ta <= 0 || tb <= 0) return null;
+
+  const aComplete = a >= ta;
+  const bComplete = b >= tb;
+  if (!aComplete && !bComplete) return null;
+  if (aComplete && !bComplete) return { winnerSide: 'A', scoreA: a, scoreB: b };
+  if (bComplete && !aComplete) return { winnerSide: 'B', scoreA: a, scoreB: b };
+  return { winnerSide: null, scoreA: a, scoreB: b };
+}
+
 const liveScorecardSelectionStyles = `
   .opening-option[aria-pressed="true"],
   .edit-result[aria-pressed="true"]{
@@ -34,11 +49,30 @@ const liveScorecardSelectionStyles = `
   .next-rack [data-undo]:disabled{
     display:none;
   }
+  .race-complete{
+    padding:14px 16px;
+    border:2px solid #08783f;
+    border-radius:14px;
+    background:#f3faf6;
+    color:#123d2b;
+  }
+  .race-complete strong{
+    display:block;
+    font-size:1.08rem;
+    line-height:1.25;
+  }
+  .race-complete span{
+    display:block;
+    margin-top:6px;
+    font-size:.76rem;
+    line-height:1.4;
+  }
 `;
 
 const liveScorecardEnhancementsScript = `
   <script>
     (() => {
+      ${resolveRaceCompletion.toString()}
       let fallbackScoringRowIndex = null;
 
       function liveState() {
@@ -111,10 +145,66 @@ const liveScorecardEnhancementsScript = `
         if (label) label.textContent = 'Live individual score';
       }
 
+      function syncRaceCompletion() {
+        const nextRack = document.querySelector('.next-rack');
+        const addRack = document.querySelector('[data-add-rack]');
+        const winnerPicker = document.querySelector('[data-winner-picker]');
+        const scoreA = document.querySelector('[data-score-a]');
+        const scoreB = document.querySelector('[data-score-b]');
+        const targetA = document.querySelector('[data-target-a]');
+        const targetB = document.querySelector('[data-target-b]');
+        if (!nextRack || !addRack || !scoreA || !scoreB || !targetA || !targetB) return;
+
+        const completion = resolveRaceCompletion({
+          scoreA: scoreA.textContent,
+          scoreB: scoreB.textContent,
+          targetA: targetA.textContent,
+          targetB: targetB.textContent,
+        });
+        let completeCard = nextRack.querySelector('[data-race-complete]');
+
+        if (!completion) {
+          addRack.hidden = false;
+          if (completeCard) completeCard.remove();
+          return;
+        }
+
+        addRack.hidden = true;
+        if (winnerPicker) {
+          winnerPicker.dataset.open = 'false';
+          winnerPicker.hidden = true;
+        }
+
+        if (!completeCard) {
+          completeCard = document.createElement('div');
+          completeCard.className = 'race-complete';
+          completeCard.dataset.raceComplete = 'true';
+          completeCard.setAttribute('role', 'status');
+          nextRack.prepend(completeCard);
+        }
+
+        const playerA = document.querySelector('[data-player-a-name]')?.textContent?.trim() || 'Player A';
+        const playerB = document.querySelector('[data-player-b-name]')?.textContent?.trim() || 'Player B';
+        const winnerName = completion.winnerSide === 'A' ? playerA : completion.winnerSide === 'B' ? playerB : null;
+        const headline = winnerName
+          ? 'Race complete — ' + winnerName + ' wins ' + completion.scoreA + '–' + completion.scoreB
+          : 'Race complete — target reached';
+        const state = liveState();
+        const guidance = state.locked
+          ? 'This race is finalized.'
+          : state.ownConfirmed
+            ? 'Your side is submitted. Waiting for the other side to agree. If this is wrong, edit a rack or undo the last rack to unlock your score.'
+            : 'Review the racks, then confirm your side below. If something is wrong, edit a rack or undo the last rack.';
+        completeCard.innerHTML = '<strong></strong><span></span>';
+        completeCard.querySelector('strong').textContent = headline;
+        completeCard.querySelector('span').textContent = guidance;
+      }
+
       function syncEnhancements() {
         placeUndoButton();
         removeRedundantCards();
         syncLiveScore();
+        syncRaceCompletion();
       }
 
       requestAnimationFrame(syncEnhancements);
