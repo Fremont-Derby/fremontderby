@@ -11,16 +11,15 @@ const retiredApiPaths = [
   '/api/admin/teams/team-1/trades',
 ];
 
-test('public /trades page is a session-backed HTML shell, not a 404 hound', async () => {
+test('public /trades is retired, not a player-trade shell', async () => {
   const response = await worker.fetch(new Request('https://dru.fremontderby.com/trades'), { ENVIRONMENT: 'dru' }, {});
   const html = await response.text();
 
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 404);
   assert.match(response.headers.get('content-type') || '', /text\/html/);
-  assert.match(html, /Fremont Derby Trades/);
-  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
-  assert.doesNotMatch(html, /This dog lost the rack/);
-  assert.doesNotMatch(html, /Access token/i);
+  assert.doesNotMatch(html, /Fremont Derby Trades/);
+  assert.doesNotMatch(html, /Propose trade/);
+  assert.doesNotMatch(html, /data-trade-form/);
   assert.doesNotMatch(html, /data-token/);
 });
 

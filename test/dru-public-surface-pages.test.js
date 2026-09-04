@@ -12,8 +12,6 @@ async function get(path) {
 const CASES = [
   ['/playoffs', /Fremont Derby Playoffs/],
   ['/playoff', /Fremont Derby Playoffs/],
-  ['/trades', /Fremont Derby Trades/],
-  ['/trade', /Fremont Derby Trades/],
   ['/players', /Player directory · Fremont Derby/],
   ['/player', /Player directory · Fremont Derby/],
   ['/notifications', /Notifications · Fremont Derby/],
@@ -50,13 +48,19 @@ test('DRU leftover bookmarks rewrite onto live pages', async () => {
   }
 });
 
-test('DRU /trades uses the Profile session instead of an access-token field', async () => {
-  const html = await (await get('/trades')).text();
-  assert.match(html, /Fremont Derby Trades/);
-  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
-  assert.match(html, /href="\/profile"/);
-  assert.doesNotMatch(html, /Access token/i);
-  assert.doesNotMatch(html, /data-token/);
+test('DRU /trades is retired HTML 404', async () => {
+  const response = await get('/trades');
+  const html = await response.text();
+  assert.equal(response.status, 404);
+  assert.doesNotMatch(html, /Fremont Derby Trades/);
+  assert.doesNotMatch(html, /Propose trade/);
+  assert.match(html, /no Fremont Derby page/);
+});
+
+test('DRU playoffs copy does not advertise a trade form page', async () => {
+  const html = await (await get('/playoffs')).text();
+  assert.doesNotMatch(html, /Fremont Derby Trades/);
+  assert.doesNotMatch(html, /Propose trade/);
 });
 
 test('DRU retired trade APIs stay 404', async () => {
