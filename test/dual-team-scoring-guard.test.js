@@ -18,7 +18,6 @@ test('migration rejects dual-team score tracker resolution', () => {
 
 test('HTTP maps dual-team scoring rejection to 403', async () => {
   const handlers = dualScoringHttpHandlers;
-  // smoke: status mapper source includes both-teams phrase
   const src = readFileSync(join(root, 'src/dualScoringHttp.js'), 'utf8');
-  assert.match(src, /active on both teams in the matchup/);
+  assert.match(src, /dualScoringStatusForError/);
 });
