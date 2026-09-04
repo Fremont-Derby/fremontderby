@@ -163,17 +163,21 @@ export function createAdminOperationsRepository(
 
   return {
     async getOverview({ actorUserId }) {
-      // Reuse the existing trusted admin-only RPC as the authorization boundary
-      // before any service-role aggregate is returned to the caller.
       await rpc('list_chat_message_reports', {
         actor_user_id: actorUserId,
         result_limit: 1,
       });
 
-      const seasons = await table(
+      const activeSeasons = await table(
         'seasons',
-        'select=id,name,status,updated_at&order=updated_at.desc&limit=1',
+        'select=id,name,status,updated_at&status=eq.active&order=updated_at.desc&limit=1',
       );
+      const seasons = activeSeasons.rows.length
+        ? activeSeasons
+        : await table(
+          'seasons',
+          'select=id,name,status,updated_at&order=updated_at.desc&limit=1',
+        );
       const season = seasons.rows[0] ?? null;
       const seasonFilter = season ? `season_id=eq.${encodeURIComponent(season.id)}&` : null;
       let currentRound = null;
@@ -192,9 +196,6 @@ export function createAdminOperationsRepository(
       ];
 
       if (seasonFilter) {
-        // Team-scoped dual scoring does not mutate player_matches.status when the first
-        // rack is recorded. Reuse the private score-submission read once so Operations
-        // can derive both a true live-match start and mismatch age server-side.
         const unresolvedMatchesPromise = tableRows(
           'player_matches',
           `${seasonFilter}status=not.in.(finalized,corrected)&select=id`,
