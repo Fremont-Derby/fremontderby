@@ -22,38 +22,37 @@ function createRepository(profile = { id: 'player-1', user_id: 'user-1', display
         display_name: payload.displayName,
       };
     },
+    async saveStandingAvailability(payload) {
+      calls.push(['saveStandingAvailability', payload]);
+      return payload;
+    },
   };
 }
 
 test('profile read command loads only the authenticated actor profile', async () => {
   const repository = createRepository();
-
   const profile = await getOwnPlayerProfileCommand(
     { actorUserId: 'user-1' },
     repository,
   );
-
   assert.deepEqual(profile, { id: 'player-1', user_id: 'user-1', display_name: 'Kai' });
   assert.deepEqual(repository.calls, [['getProfileByUserId', 'user-1']]);
 });
 
 test('profile save command trims and saves allowed profile fields', async () => {
   const repository = createRepository();
-
   const profile = await saveOwnPlayerProfileCommand(
     { actorUserId: 'user-1', displayName: '  Kai B  ' },
     repository,
   );
-
   assert.deepEqual(profile, { id: 'player-1', user_id: 'user-1', display_name: 'Kai B' });
   assert.deepEqual(repository.calls, [
-    ['saveProfile', { actorUserId: 'user-1', displayName: 'Kai B' }],
+    ['saveProfile', { actorUserId: 'user-1', displayName: 'Kai B', fargoExternalId: undefined }],
   ]);
 });
 
 test('profile save command rejects invalid display names before writing', async () => {
   const repository = createRepository();
-
   await assert.rejects(
     () => saveOwnPlayerProfileCommand(
       { actorUserId: 'user-1', displayName: '   ' },
@@ -68,6 +67,5 @@ test('profile save command rejects invalid display names before writing', async 
     ),
     /80 characters or fewer/,
   );
-
   assert.deepEqual(repository.calls, []);
 });
