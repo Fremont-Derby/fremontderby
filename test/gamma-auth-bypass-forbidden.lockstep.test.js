@@ -15,7 +15,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 function parseJsonc(text) {
   const stripped = text
     .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/.*$/gm, '');
+    .replace(/(^|\s)\/\/.*$/gm, '$1');
   return JSON.parse(stripped);
 }
 

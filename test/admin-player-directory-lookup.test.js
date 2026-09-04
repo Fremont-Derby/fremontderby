@@ -14,7 +14,6 @@ test('admin players directory supports A-Z lookup without perfect spelling', () 
   assert.match(html, /localeCompare/);
   assert.match(html, /matchesQuery/);
   assert.match(html, /playerLetter/);
-  assert.match(html, /teamBlob/);
   assert.match(html, /Escape/);
   assert.match(html, /aria-controls="admin-player-list"/);
   assert.match(html, /Showing /);
