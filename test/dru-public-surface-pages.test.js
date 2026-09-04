@@ -54,7 +54,7 @@ test('DRU /trades is retired HTML 404', async () => {
   assert.equal(response.status, 404);
   assert.doesNotMatch(html, /Fremont Derby Trades/);
   assert.doesNotMatch(html, /Propose trade/);
-  assert.doesNotMatch(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
+  assert.match(html, /no Fremont Derby page/);
 });
 
 test('DRU playoffs copy does not advertise a trade form page', async () => {
