@@ -35,6 +35,7 @@ import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
 import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
 import { routeDruEnvironmentHealth } from './druEnvironmentHttp.js';
+import { routeDruKidLeagueSeed } from './druKidLeagueSeedHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -173,6 +174,11 @@ export default {
     const environmentResponse = routeDruEnvironmentHealth(request, env);
     if (environmentResponse) {
       return finalizeBrowserResponse(environmentResponse, url.pathname);
+    }
+
+    const kidLeagueSeedResponse = await routeDruKidLeagueSeed(request, env);
+    if (kidLeagueSeedResponse) {
+      return finalizeBrowserResponse(kidLeagueSeedResponse, url.pathname);
     }
 
     if (isRetiredTradePath(url.pathname)) {
