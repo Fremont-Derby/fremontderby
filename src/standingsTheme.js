@@ -110,12 +110,24 @@ export const standingsThemeStyles = `
   }
 `;
 
+export function repairStandingsPageScript(html) {
+  return String(html || '')
+    .replace(
+      "stat('Forfeits',row.forfeits_won+'-'+row.forfeits_lost)]))})\n    function renderPlayers",
+      "stat('Forfeits',row.forfeits_won+'-'+row.forfeits_lost)]))})}\n    function renderPlayers",
+    )
+    .replace(
+      "stat('Prize status',prizeBadge,'prize')]))})\n    async function loadStandings",
+      "stat('Prize status',prizeBadge,'prize')]))})}\n    async function loadStandings",
+    );
+}
+
 export async function injectStandingsTheme(response, pathname) {
   if (pathname !== '/standings') return response;
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
   const headers = new Headers(response.headers);
-  let html = await response.text();
+  let html = repairStandingsPageScript(await response.text());
   if (html.includes('data-fd-standings-theme')) {
     return new Response(html, { status: response.status, statusText: response.statusText, headers });
   }
