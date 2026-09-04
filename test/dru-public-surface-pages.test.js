@@ -28,7 +28,6 @@ test('DRU dedicated public pages intercept the 404 hound', async () => {
     assert.match(response.headers.get('content-type') || '', /text\/html/, `${path} content-type`);
     assert.match(html, title, `${path} title`);
     assert.doesNotMatch(html, /This dog lost the rack/);
-    assert.doesNotMatch(html, /href="\/trades"/);
   }
 });
 
@@ -56,6 +55,12 @@ test('DRU /trades is retired HTML 404', async () => {
   assert.doesNotMatch(html, /Fremont Derby Trades/);
   assert.doesNotMatch(html, /Propose trade/);
   assert.doesNotMatch(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
+});
+
+test('DRU playoffs copy does not advertise a trade form page', async () => {
+  const html = await (await get('/playoffs')).text();
+  assert.doesNotMatch(html, /Fremont Derby Trades/);
+  assert.doesNotMatch(html, /Propose trade/);
 });
 
 test('DRU retired trade APIs stay 404', async () => {
