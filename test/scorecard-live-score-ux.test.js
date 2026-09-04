@@ -43,7 +43,7 @@ test('finished races replace Add Rack with a clear completion state', () => {
   assert.match(html, /Review the racks, then confirm your side below/);
   assert.match(html, /Waiting for the other side to agree/);
   assert.match(html, /edit a rack or undo the last rack/);
-  assert.match(html, /dataRaceComplete/);
+  assert.match(html, /dataset\.raceComplete = 'true'/);
 });
 
 // This contract intentionally stays page-local so shared sandbox reconciliation remains unchanged.
