@@ -132,6 +132,8 @@ export default {
       return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
     }
 
+    // Trades restored — paths served by legacy router / index handlers.
+
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
