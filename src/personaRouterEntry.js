@@ -7,7 +7,6 @@ import { routeJflMeNotifications } from './jflMeNotificationsHttp.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
 import { renderPlayoffsPage } from './playoffsPage.js';
-import { renderTradesPage } from './tradesPage.js';
 import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
 import { applyJflRegistrationNav } from './jflRegistrationNav.js';
@@ -21,7 +20,6 @@ import { testPersonaEnabled } from './testPersona.js';
 const FREE_AGENT_PAGES = new Set(['/free-agents', '/free-agents/', '/fa', '/free-agent', '/freeagent', '/substitutes', '/subs']);
 const PRACTICE_PAGES = new Set(['/practice', '/practice/', '/practices']);
 const PLAYOFF_PAGES = new Set(['/playoffs', '/playoffs/', '/playoff', '/bracket', '/brackets']);
-const TRADE_PAGES = new Set(['/trades', '/trades/', '/trade']);
 const PLAYER_PAGES = new Set(['/players', '/players/', '/player', '/directory']);
 const NOTIFICATION_PAGES = new Set(['/notifications', '/notifications/', '/notify']);
 const CHECKIN_PAGES = new Set(['/check-in', '/check-in/', '/checkin', '/league-night', '/leaguenight', '/ready-check', '/readycheck']);
@@ -109,9 +107,6 @@ export default {
     }
     if (PLAYOFF_PAGES.has(url.pathname) && request.method === 'GET') {
       return htmlPage(renderPlayoffsPage, '/playoffs', request, env);
-    }
-    if (TRADE_PAGES.has(url.pathname) && request.method === 'GET') {
-      return htmlPage(renderTradesPage, '/trades', request, env);
     }
     if (PLAYER_PAGES.has(url.pathname) && request.method === 'GET') {
       return htmlPage(renderPlayersDirectoryPage, '/players', request, env);
