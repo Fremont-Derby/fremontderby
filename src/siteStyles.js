@@ -54,6 +54,13 @@ export const siteStyles = `${designSystemStyles}
 
   /* #521: the dock owns all of its geometry and cannot inherit page nav rules. */
   @media (max-width: 760px) {
+    html {
+      padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+    }
+    .fd-mobile-dock-spacer {
+      display: block !important;
+      height: calc(96px + env(safe-area-inset-bottom)) !important;
+    }
     .fd-mobile-dock {
       position: fixed !important;
       right: 8px !important;
