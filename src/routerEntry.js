@@ -35,6 +35,7 @@ import { renderNotificationsPage } from './notificationsPage.js';
 import { renderFreeAgentsPage } from './freeAgentsPage.js';
 import { renderPracticePage } from './practicePage.js';
 import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
+import { routeDruEnvironmentHealth } from './druEnvironmentHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -169,6 +170,11 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = stripTrailingSlash(url.pathname);
+
+    const environmentResponse = routeDruEnvironmentHealth(request, env);
+    if (environmentResponse) {
+      return finalizeBrowserResponse(environmentResponse, url.pathname);
+    }
 
     if (isRetiredTradePath(url.pathname)) {
       return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
