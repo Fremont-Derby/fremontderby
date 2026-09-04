@@ -4,7 +4,7 @@ import { repairAdminPlayersScript } from '../src/adminPlayersScriptRepair.js';
 import { repairAvailabilityScript } from '../src/availabilityScriptRepair.js';
 import { repairAdminSeasonTeamsScript } from '../src/adminSeasonTeamsScriptRepair.js';
 import { repairLineupScript } from '../src/lineupScriptRepair.js';
-import { repairStandingsPageScript } from '../src/standingsTheme.js';
+import { repairStandingsPageScript } from '../src/standingsScriptRepair.js';
 
 test('admin players confirm keeps a real newline', () => {
   const repaired = repairAdminPlayersScript("confirm(error.message+'Create a separate player with the same name anyway?')");
