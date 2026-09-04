@@ -17,8 +17,8 @@ test('registration destinations are inserted before Standings in the more menu',
   assert.match(html, /data-nav-key="free-agents"/);
   assert.match(html, /data-nav-key="practice"/);
   assert.match(html, /data-nav-key="playoffs"/);
-  assert.match(html, /data-nav-key="trades"/);
   assert.match(html, /data-nav-key="notifications"/);
+  assert.doesNotMatch(html, /data-nav-key="trades"/);
   assert.ok(html.indexOf('practice') < html.indexOf('standings'));
 });
 
@@ -66,7 +66,7 @@ test('JFL home includes registration shortcuts after shell decoration', async ()
   assert.match(html, /href="\/practice"/);
   assert.match(html, /data-fd-registration-links/);
   assert.match(html, /href="\/playoffs"/);
-  assert.match(html, /href="\/trades"/);
+  assert.doesNotMatch(html, /href="\/trades"/);
   assert.match(html, /href="\/notifications"/);
 });
 

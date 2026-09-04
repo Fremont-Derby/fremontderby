@@ -15,8 +15,6 @@ const CASES = [
   ['/playoffs', /Fremont Derby Playoffs/],
   ['/playoff', /Fremont Derby Playoffs/],
   ['/bracket', /Fremont Derby Playoffs/],
-  ['/trades', /Fremont Derby Trades/],
-  ['/trade', /Fremont Derby Trades/],
   ['/notifications', /Notifications · Fremont Derby/],
   ['/notify', /Notifications · Fremont Derby/],
 ];
@@ -44,11 +42,9 @@ test('JFL /check-in aliases the live availability page', async () => {
   }
 });
 
-test('JFL /trades uses the Profile session instead of an access-token field', async () => {
+test('JFL /trades is not a player-trade shell', async () => {
   const html = await (await get('/trades')).text();
-  assert.match(html, /Fremont Derby Trades/);
-  assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
-  assert.match(html, /href="\/profile"/);
-  assert.doesNotMatch(html, /Access token/i);
+  assert.doesNotMatch(html, /Fremont Derby Trades/);
+  assert.doesNotMatch(html, /Propose trade/);
   assert.doesNotMatch(html, /data-token/);
 });

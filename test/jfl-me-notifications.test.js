@@ -73,11 +73,10 @@ test('JFL GET /api/me/membership-requests aliases the working team path', async 
   assert.ok(body.requests || body.error || response.status === 200);
 });
 
-test('JFL GET /api/me/trades is not retired 404', async () => {
+test('JFL GET /api/me/trades is not a player-trade API', async () => {
   const response = await get('/api/me/trades');
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.deepEqual(body.tradeManagement, { trades: [] });
+  const body = await response.json().catch(() => ({}));
+  assert.ok(!body.tradeManagement);
 });
 
 test('JFL GET /api/me/dms aliases the working inbox', async () => {
