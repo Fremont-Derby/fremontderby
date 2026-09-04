@@ -11,6 +11,7 @@ import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
+import { injectDruAgentSession } from './druAgentSession.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
@@ -144,13 +145,13 @@ async function reconcileProductShell(response, pathname) {
   }
   if (pathname === '/demo') {
     html = html
-      .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
+      .replace('<title>Try a League Night \u00b7 Fremont Derby</title>', '<title>Test Drive the App \u00b7 Fremont Derby</title>')
       .replace('<h1>Try a League Night</h1>', '<h1>Test Drive the App</h1>');
   }
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
-async function finalizeBrowserResponse(response, pathname) {
+async function finalizeBrowserResponse(response, pathname, env = {}) {
   const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
   const designed = await injectSiteStyles(seasonSelected);
   const publicThemed = await injectPublicSurfaceTheme(designed, pathname);
@@ -163,37 +164,39 @@ async function finalizeBrowserResponse(response, pathname) {
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
   const accessible = await injectAccessibilityLayer(adminThemed);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
-  return injectPersistentAuthSession(mobileMenuAccessible);
+  const persistent = await injectPersistentAuthSession(mobileMenuAccessible);
+  return injectDruAgentSession(persistent, env);
 }
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = stripTrailingSlash(url.pathname);
+    const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
 
     const environmentResponse = routeDruEnvironmentHealth(request, env);
     if (environmentResponse) {
-      return finalizeBrowserResponse(environmentResponse, url.pathname);
+      return page(environmentResponse);
     }
 
     const kidLeagueSeedResponse = await routeDruKidLeagueSeed(request, env);
     if (kidLeagueSeedResponse) {
-      return finalizeBrowserResponse(kidLeagueSeedResponse, url.pathname);
+      return page(kidLeagueSeedResponse);
     }
 
     if (isRetiredTradePath(url.pathname)) {
-      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
+      return page(retiredTradeResponse(request, url.pathname));
     }
 
     const emptyReadResponse = routeDruPublicEmptyReads(request, env);
     if (emptyReadResponse) {
-      return finalizeBrowserResponse(emptyReadResponse, url.pathname);
+      return page(emptyReadResponse);
     }
 
     if (request.method === 'GET') {
       const render = PUBLIC_HTML_PAGES.get(pathname);
       if (render) {
-        return finalizeBrowserResponse(htmlPageResponse(render, pathname), pathname);
+        return page(htmlPageResponse(render, pathname), pathname);
       }
       const rewritten = LIVE_PAGE_REWRITES.get(pathname);
       if (rewritten) {
@@ -204,34 +207,34 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') return page(await handleCreateAdminPlayerRequest(request, env));
     const playerClaimResponse = await routePlayerClaim(request, env);
-    if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
+    if (playerClaimResponse) return page(playerClaimResponse);
     const playerContactResponse = await routePlayerContact(request, env);
-    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
+    if (playerContactResponse) return page(playerContactResponse);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
+    if (playerSeasonRegistrationResponse) return page(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
-    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
+    if (dateAvailabilityResponse) return page(dateAvailabilityResponse);
     const seasonCloseResponse = await routeSeasonClose(request, env);
-    if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
+    if (seasonCloseResponse) return page(seasonCloseResponse);
     const adminGatewayResponse = routeAdminGateway(request);
-    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse, url.pathname);
+    if (adminGatewayResponse) return page(adminGatewayResponse);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
-    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
+    if (adminSeasonTeamsResponse) return page(adminSeasonTeamsResponse);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
-    if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
-    if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
+    if (url.pathname === '/schedule' && request.method === 'GET') return page(await enhanceScheduleAvailability(reconciled));
+    if (url.pathname === '/teams' && request.method === 'GET') return page(await enhanceTeamsCanonicalActions(reconciled));
     if (url.pathname === '/season-setup' && request.method === 'GET') {
       const withPublishReadiness = await enhanceSeasonPublishReadiness(reconciled);
-      return finalizeBrowserResponse(await enhanceSeasonClose(withPublishReadiness), url.pathname);
+      return page(await enhanceSeasonClose(withPublishReadiness));
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
-      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact), url.pathname);
+      return page(await enhanceProfilePlayerClaim(withContact));
     }
-    return finalizeBrowserResponse(reconciled, url.pathname);
+    return page(reconciled);
   },
 };
