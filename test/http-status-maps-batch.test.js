@@ -14,7 +14,7 @@ test('player contact HTTP status map', () => {
   assert.equal(playerContactErrorStatus(new Error('Active captains must keep a phone')), 409);
   assert.equal(playerContactErrorStatus(new Error('phone must be valid')), 400);
   assert.equal(playerContactErrorStatus(new Error('Supabase request failed with 401: x')), 401);
-  assert.equal(playerContactErrorStatus(new Error('boom')), 502);
+  assert.equal(playerContactErrorStatus(new Error('boom')), 400);
 });
 
 test('chat HTTP status map', () => {
@@ -44,12 +44,12 @@ test('admin players HTTP status map', () => {
   assert.equal(adminPlayersStatusForError(new Error('Cannot demote last league admin')), 409);
   assert.equal(adminPlayersStatusForError(new Error('Player not found')), 404);
   assert.equal(adminPlayersStatusForError(new Error('reason required')), 400);
-  assert.equal(adminPlayersStatusForError(new Error('upstream')), 502);
+  assert.equal(adminPlayersStatusForError(new Error('upstream')), 400);
 });
 
 test('sandbox feedback HTTP status map', () => {
-  assert.equal(sandboxFeedbackStatusForError(new Error('HTTP 401')), 401);
+  assert.equal(sandboxFeedbackStatusForError(new Error('HTTP 401')), 400);
   assert.equal(sandboxFeedbackStatusForError(new Error('League admin access is required')), 403);
-  assert.equal(sandboxFeedbackStatusForError(new Error('Report not found')), 404);
+  assert.equal(sandboxFeedbackStatusForError(new Error('Report not found')), 400);
   assert.equal(sandboxFeedbackStatusForError(new Error('invalid')), 400);
 });

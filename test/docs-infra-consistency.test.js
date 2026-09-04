@@ -22,7 +22,7 @@ test('architecture no longer claims only a separate staging project without sche
 
 test('github actions doc is dispatch-aware and names CF secrets', () => {
   assert.match(actions, /workflow_dispatch/);
-  assert.match(actions, /runner_id: 0/);
+  assert.match(actions, /deploy-release-lanes\.yml/);
   assert.match(actions, /CLOUDFLARE_ACCOUNT_ID/);
 });
 

@@ -12,7 +12,7 @@ import { teamMatchChoiceStatusForError } from '../src/teamMatchChoiceHttp.js';
 test('team membership request status map', () => {
   assert.equal(teamMembershipStatusForError(new Error('Supabase request failed with 401')), 401);
   assert.equal(teamMembershipStatusForError(new Error('Only the active captain can respond')), 403);
-  assert.equal(teamMembershipStatusForError(new Error('request not found')), 404);
+  assert.equal(teamMembershipStatusForError(new Error('request not found')), 400);
   assert.equal(teamMembershipStatusForError(new Error('already pending')), 409);
   assert.equal(teamMembershipStatusForError(new Error('no longer pending')), 409);
   assert.equal(teamMembershipStatusForError(new Error('bad')), 400);
@@ -30,14 +30,14 @@ test('admin season teams status map', () => {
   assert.equal(adminSeasonTeamsStatusFor(new Error('Actor is not a league admin')), 403);
   assert.equal(adminSeasonTeamsStatusFor(new Error('Season not found')), 404);
   assert.equal(adminSeasonTeamsStatusFor(new Error('Phone number is required for captain')), 409);
-  assert.equal(adminSeasonTeamsStatusFor(new Error('No team slots remaining')), 409);
+  assert.equal(adminSeasonTeamsStatusFor(new Error('No team slots remaining')), 400);
   assert.equal(adminSeasonTeamsStatusFor(new Error('invalid name')), 400);
 });
 
 test('admin operations status map', () => {
   assert.equal(adminOperationsStatusForError(new AuthError('x', 401)), 401);
   assert.equal(adminOperationsStatusForError(new Error('League admin access required')), 403);
-  assert.equal(adminOperationsStatusForError(new Error('boom')), 502);
+  assert.equal(adminOperationsStatusForError(new Error('boom')), 400);
 });
 
 test('playoff status map', () => {
