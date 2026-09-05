@@ -11,12 +11,10 @@ test('GITHUB_ACTIONS inventory documents runner constraint and workflows', () =>
   assert.match(text, /Workers Builds/);
 });
 
-test('CI remains dispatch-only while POC mode comment is present', () => {
+test('CI validates pull requests and pushes without deploying from the PR event', () => {
   const text = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
-  assert.match(text, /POC mode/);
   assert.match(text, /workflow_dispatch:/);
-  // No automatic PR/push triggers on main while runners are broken
-  const onBlock = text.split('permissions:')[0];
-  assert.doesNotMatch(onBlock, /\bpull_request\b/);
-  assert.doesNotMatch(onBlock, /\bpush\b/);
+  assert.match(text, /\bpull_request\b/);
+  assert.match(text, /\bpush\b/);
+  assert.match(text, /never on pull_request/);
 });
