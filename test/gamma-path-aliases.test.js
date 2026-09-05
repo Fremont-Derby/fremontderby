@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PUBLIC_PATH_ALIASES, aliasRedirect } from '../src/publicPathAliases.js';
 
+// Tracks #2229. Out of scope: main promotion, DRU bypass, kid seed, UI restyle.
+
 test('aliases map the live Gamma 404 paths to real product pages', () => {
   assert.equal(PUBLIC_PATH_ALIASES['/home'], '/');
   assert.equal(PUBLIC_PATH_ALIASES['/register'], '/profile');
