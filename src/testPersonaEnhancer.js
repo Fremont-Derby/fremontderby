@@ -39,14 +39,14 @@ const script = `<script data-test-persona-script>
     if(state.environment==='jfl'){
       const qa=document.createElement('div');qa.style.cssText='display:grid;gap:7px;margin-top:8px;padding-top:10px;border-top:1px solid #6f5b1d';
       const qaCopy=document.createElement('div');qaCopy.className='hint';qaCopy.textContent='Dual-team scorecard QA: Admin Captain scores JFL QA Bank Shots; Regular Captain scores JFL QA Table Testers.';
-      const reset=document.createElement('button');reset.type='button';reset.dataset.dualScorecardReset='';reset.textContent='Reset dual-team scorecard test';reset.style.cssText='min-height:46px;border:1px solid #d8ad3f;border-radius:8px;background:#d8ad3f;color:#17120a;font:900 .9rem/1 Inter,ui-sans-serif,system-ui,sans-serif;padding:10px 12px';
-      const resetStatus=document.createElement('div');resetStatus.className='hint';resetStatus.setAttribute('role','status');resetStatus.setAttribute('aria-live','polite');resetStatus.textContent='Clears both teams’ score submissions for the JFL QA matchup; lineups stay intact.';
+      const reset=document.createElement('button');reset.type='button';reset.dataset.dualScorecardReset='';reset.textContent='Erase QA scores & reset test';reset.style.cssText='min-height:46px;border:1px solid #d8ad3f;border-radius:8px;background:#d8ad3f;color:#17120a;font:900 .9rem/1 Inter,ui-sans-serif,system-ui,sans-serif;padding:10px 12px';
+      const resetStatus=document.createElement('div');resetStatus.className='hint';resetStatus.setAttribute('role','status');resetStatus.setAttribute('aria-live','polite');resetStatus.textContent='Destructive: erases both teams’ JFL QA score submissions and finalized rack state. Lineups stay intact. Persona switching by itself never resets scores.';
       reset.addEventListener('click',async()=>{
-        if(!window.confirm('Reset both teams’ scorecard submissions for the JFL QA matchup?'))return;
-        reset.disabled=true;resetStatus.textContent='Resetting scorecard…';
+        if(!window.confirm('ERASE both teams’ JFL QA score submissions and start this scorecard test over? Persona switching alone does NOT require a reset.'))return;
+        reset.disabled=true;resetStatus.textContent='Erasing QA scores and resetting test…';
         try{
           const result=await request('POST',{},RESET_ENDPOINT);if(!result?.ok)throw new Error('Reset is unavailable.');
-          resetStatus.textContent='Reset complete. Switch to Admin Captain or Regular Captain and open Score.';
+          resetStatus.textContent='Reset complete. All QA scores for this fixture were erased. Switch persona and open Score.';
         }catch(error){resetStatus.textContent=error.message||'Could not reset scorecard.'}finally{reset.disabled=false}
       });
       qa.append(qaCopy,reset,resetStatus);body.append(qa);
