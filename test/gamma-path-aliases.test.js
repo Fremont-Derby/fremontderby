@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PUBLIC_PATH_ALIASES, aliasRedirect } from '../src/publicPathAliases.js';
 
-// Tracks #2229. Out of scope: main promotion, DRU bypass, kid seed, UI restyle.
+// Tracks #2229 and #2232. Out of scope: main promotion, DRU bypass, kid seed, UI restyle.
 
 test('aliases map the live Gamma 404 paths to real product pages', () => {
   assert.equal(PUBLIC_PATH_ALIASES['/home'], '/');
@@ -12,10 +12,16 @@ test('aliases map the live Gamma 404 paths to real product pages', () => {
   assert.equal(PUBLIC_PATH_ALIASES['/check-in'], '/availability');
   assert.equal(PUBLIC_PATH_ALIASES['/checkin'], '/availability');
   assert.equal(PUBLIC_PATH_ALIASES['/ready'], '/availability');
+  assert.equal(PUBLIC_PATH_ALIASES['/login'], '/profile');
+  assert.equal(PUBLIC_PATH_ALIASES['/signin'], '/profile');
+  assert.equal(PUBLIC_PATH_ALIASES['/score'], '/scorecard');
+  assert.equal(PUBLIC_PATH_ALIASES['/roster'], '/teams');
+  assert.equal(PUBLIC_PATH_ALIASES['/trade'], '/trades');
+  assert.equal(PUBLIC_PATH_ALIASES['/help'], '/rules');
 });
 
 test('aliasRedirect issues a 302 to the product page', () => {
-  const url = new URL('https://gamma.fremontderby.com/register');
+  const url = new URL('https://gamma.fremontderby.com/login');
   const response = aliasRedirect(new Request(url), url);
   assert.equal(response.status, 302);
   assert.equal(response.headers.get('location'), 'https://gamma.fremontderby.com/profile');

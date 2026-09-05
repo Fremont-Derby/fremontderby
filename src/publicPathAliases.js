@@ -4,7 +4,20 @@ export const PUBLIC_PATH_ALIASES = {
   '/tonight': '/availability',
   '/check-in': '/availability',
   '/checkin': '/availability',
+  '/check_in': '/availability',
   '/ready': '/availability',
+  '/login': '/profile',
+  '/signin': '/profile',
+  '/sign-in': '/profile',
+  '/signup': '/profile',
+  '/sign-up': '/profile',
+  '/join': '/profile',
+  '/score': '/scorecard',
+  '/scores': '/scorecard',
+  '/roster': '/teams',
+  '/trade': '/trades',
+  '/help': '/rules',
+  '/faq': '/rules',
 };
 
 export function aliasRedirect(request, url) {
