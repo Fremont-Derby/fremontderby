@@ -1,36 +1,26 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import process from 'node:process';
 
 const host = '127.0.0.1';
 const port = 8787;
 const baseUrl = `http://${host}:${port}`;
-const serverTimeoutMs = 20_000;
-const scanTimeoutMs = 45_000;
-const overallTimeoutMs = 3 * 60_000;
+const serverTimeoutMs = 25_000;
+const overallTimeoutMs = 4 * 60_000;
 
 const scans = [
-  { name: 'home desktop', path: '/', width: 1280, height: 900 },
-  { name: 'home phone', path: '/', width: 320, height: 800 },
-  { name: 'standings truthful loading/recovery', path: '/standings', width: 320, height: 800, wait: 250 },
+  { name: 'home desktop', path: '/', viewport: { width: 1280, height: 900 } },
+  { name: 'home phone', path: '/', viewport: { width: 320, height: 800 } },
+  { name: 'standings truthful loading/recovery', path: '/standings', viewport: { width: 320, height: 800 }, wait: 250 },
 ];
 
-function run(command, args, options = {}, timeoutMs = scanTimeoutMs) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit', ...options });
-    const timer = setTimeout(() => {
-      try { child.kill('SIGKILL'); } catch {}
-      reject(new Error(`${command} timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-    child.once('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.once('exit', (code, signal) => {
-      clearTimeout(timer);
-      if (code === 0) resolve();
-      else reject(new Error(`${command} exited ${code ?? signal ?? 'unknown'}`));
-    });
+function installPa11y() {
+  const result = spawnSync('npm', ['install', '--no-save', '--no-fund', '--no-audit', 'pa11y@9.0.1'], {
+    stdio: 'inherit',
+    env: process.env,
   });
+  if (result.status !== 0) {
+    throw new Error(`npm install pa11y@9.0.1 failed (${result.status})`);
+  }
 }
 
 async function waitForServer() {
@@ -49,29 +39,13 @@ async function waitForServer() {
   throw new Error(`Local Worker did not become ready within ${serverTimeoutMs}ms: ${lastError?.message || 'unknown error'}`);
 }
 
-function pa11yArgs(scan, runner) {
-  const chrome = JSON.stringify({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    defaultViewport: { width: scan.width, height: scan.height },
-  });
-  const args = [
-    '-y', 'pa11y@9.0.1',
-    `${baseUrl}${scan.path}`,
-    '--standard', 'WCAG2AA',
-    '--runner', runner,
-    '--threshold', '0',
-    '--timeout', '20000',
-    '--reporter', 'cli',
-    '--chrome-launch-config', chrome,
-  ];
-  if (scan.wait) args.push('--wait', String(scan.wait));
-  return args;
-}
-
 const overallTimer = setTimeout(() => {
   console.error('[a11y] overall deadline reached; exiting');
   process.exit(1);
 }, overallTimeoutMs);
+
+installPa11y();
+const pa11y = (await import('pa11y')).default;
 
 const server = spawn(
   'npx',
@@ -84,12 +58,29 @@ try {
   await waitForServer();
   for (const scan of scans) {
     for (const runner of ['htmlcs', 'axe']) {
-      console.log(`\n[a11y] ${scan.name} | ${scan.width}x${scan.height} | ${runner}`);
+      console.log(`\n[a11y] ${scan.name} | ${scan.viewport.width}x${scan.viewport.height} | ${runner}`);
       try {
-        await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } });
+        const results = await pa11y(`${baseUrl}${scan.path}`, {
+          standard: 'WCAG2AA',
+          runners: [runner],
+          timeout: 20000,
+          wait: scan.wait || 0,
+          viewport: scan.viewport,
+          chromeLaunchConfig: {
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          },
+        });
+        const issues = results?.issues || [];
+        if (issues.length) {
+          failed = true;
+          console.error(`[a11y] FAILED: ${scan.name} | ${runner}: ${issues.length} issue(s)`);
+          for (const issue of issues.slice(0, 12)) {
+            console.error(`  - ${issue.code || issue.type}: ${issue.message} (${issue.selector || ''})`);
+          }
+        }
       } catch (error) {
         failed = true;
-        console.error(`[a11y] FAILED: ${scan.name} | ${scan.width}x${scan.height} | ${runner}: ${error.message}`);
+        console.error(`[a11y] FAILED: ${scan.name} | ${runner}: ${error.message}`);
       }
     }
   }
