@@ -6,7 +6,8 @@ import { renderChatPage } from '../src/chatPage.js';
 test('Messages starts in an honest loading state with accessible status semantics', () => {
   const html = renderChatPage();
 
-  assert.match(html, /role="status" aria-live="polite" aria-atomic="true">Checking your messages…/);
+  assert.match(html, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(html, /Loading messages…/);
   assert.doesNotMatch(html, /data-status>Ready</);
 });
 
@@ -14,8 +15,8 @@ test('Messages gives signed-out and expired-session users a prominent recovery a
   const html = renderChatPage();
 
   assert.match(html, /Coordinate league night in one place/);
-  assert.match(html, /Sign in to message/);
-  assert.match(html, /href="\/profile"/);
+  assert.match(html, /Sign in to read league/);
+  assert.match(html, /href="\/profile\?next=/);
   assert.match(html, /Your sign-in expired/);
   assert.match(html, /Your messages were not changed/);
 });

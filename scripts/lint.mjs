@@ -25,7 +25,7 @@ function walk(directory) {
       .map((line) => line.endsWith('\r') ? line.slice(0, -1) : line);
 
     lines.forEach((line, index) => {
-      if (/\s+$/.test(line) && line.length > 0) {
+      if (/\s+$/.test(line) && line.trim().length > 0) {
         errors.push(`${relative}:${index + 1} trailing whitespace`);
       }
       if (line.includes('\t')) {

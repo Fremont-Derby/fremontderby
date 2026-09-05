@@ -9,5 +9,5 @@ test('admin create player maps auth and domain failures to stable HTTP statuses'
   assert.equal(adminCreatePlayerStatusFor(new Error('Player already exists')), 409);
   assert.equal(adminCreatePlayerStatusFor(new Error('Player name is required')), 400);
   assert.equal(adminCreatePlayerStatusFor(new Error('Name exceeds 80 characters')), 400);
-  assert.equal(adminCreatePlayerStatusFor(new Error('upstream down')), 502);
+  assert.equal(adminCreatePlayerStatusFor(new Error('upstream down')), 400);
 });

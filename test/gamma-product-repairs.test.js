@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { repairAdminPlayersScript } from '../src/adminPlayersScriptRepair.js';
+import { repairAvailabilityScript } from '../src/availabilityScriptRepair.js';
+import { repairAdminSeasonTeamsScript } from '../src/adminSeasonTeamsScriptRepair.js';
+import { repairLineupScript } from '../src/lineupScriptRepair.js';
+import { repairStandingsPageScript } from '../src/standingsScriptRepair.js';
+
+test('admin players confirm keeps a real newline', () => {
+  const repaired = repairAdminPlayersScript("confirm(error.message+'Create a separate player with the same name anyway?')");
+  assert.match(repaired, /\\n\\nCreate a separate player/);
+});
+
+test('availability repair prefers an upcoming night', () => {
+  const source = "const requestedContext=contexts.find((context)=>context.roundId===requested);if(requestedContext)contextSelect.value=contextKey(requestedContext);else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;";
+  assert.match(repairAvailabilityScript(source), /upcoming/);
+});
+
+test('season teams repair prefers the active season', () => {
+  const source = "const requested=new URLSearchParams(location.search).get('season');if(requested&&seasons.some(item=>item.id===requested))seasonSelect.value=requested;";
+  assert.match(repairAdminSeasonTeamsScript(source), /status==='active'/);
+});
+
+test('lineup repair skips a finalized remembered night', () => {
+  const source = "requestedRound&&rounds.some((round)=>round.roundId===requestedRound))return requestedRound;";
+  assert.match(repairLineupScript(source), /finalized/);
+});
+
+test('standings repair is a no-op when braces already exist', () => {
+  assert.equal(repairStandingsPageScript('already valid'), 'already valid');
+});

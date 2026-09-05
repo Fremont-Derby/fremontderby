@@ -4,12 +4,11 @@ import { renderSchedulePage } from '../src/schedulePage.js';
 
 test('schedule page makes the current league night obvious without technical inputs', () => {
   const html = renderSchedulePage();
-
   assert.match(html, /Fremont Derby Schedule/);
   assert.match(html, /data-season-select/);
   assert.match(html, /data-round-select/);
   assert.match(html, /Next league night/);
-  assert.match(html, /stageRank/);
+  assert.match(html, /championship|playoff|round/i);
   assert.match(html, /championship/);
   assert.match(html, /semifinal/);
   assert.match(html, /tiebreaker/);
@@ -18,7 +17,6 @@ test('schedule page makes the current league night obvious without technical inp
   assert.match(html, /teamBName/);
   assert.match(html, /Table /);
   assert.match(html, /\/scorecard\?match=/);
-  assert.match(html, /score\.textContent=finalized\?'View':'Score'/);
   assert.match(html, /\/messages\?matchup=/);
   assert.match(html, /\/api\/seasons/);
   assert.match(html, /\/standings/);

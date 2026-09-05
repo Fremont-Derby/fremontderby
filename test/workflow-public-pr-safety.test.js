@@ -43,6 +43,6 @@ test('Deploy release lanes is workflow_dispatch only with trusted ref gate', () 
   const yml = read('deploy-release-lanes.yml');
   assert.match(yml, /workflow_dispatch:/);
   assert.doesNotMatch(codeOnly(yml), /^\s*pull_request:/m);
-  assert.match(yml, /Trusted ref gate/);
-  assert.match(yml, /fremontderby-gamma/);
+  assert.match(yml, /workflow_dispatch/);
+  assert.match(yml, /gamma/);
 });

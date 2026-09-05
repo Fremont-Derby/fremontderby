@@ -16,6 +16,7 @@ test('availability page is framed as league night check-in', () => {
 test('teams hub promotes weekly check-in', () => {
   const html = renderTeamsPage();
   assert.match(html, /Weekly check-in/);
-  assert.match(html, /href="\/availability"/);
+  assert.match(html, /data-hub-availability/);
+  assert.match(html, /href="\/schedule"/);
   assert.match(html, /Check in/);
 });
