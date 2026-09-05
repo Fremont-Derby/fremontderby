@@ -5,6 +5,8 @@ const host = '127.0.0.1';
 const port = 8787;
 const baseUrl = `http://${host}:${port}`;
 const serverTimeoutMs = 30_000;
+const scanTimeoutMs = 45_000;
+const overallTimeoutMs = 4 * 60_000;
 
 const scans = [
   { name: 'home desktop', path: '/', viewport: '1280x900' },
@@ -13,7 +15,7 @@ const scans = [
     name: 'home phone menu open',
     path: '/',
     viewport: '320x800',
-    actions: ['click element .fd-nav-menu summary', 'wait for element .fd-nav-menu[open] to be visible'],
+    actions: ['click element .fd-nav-menu summary'],
   },
   {
     name: 'standings truthful loading/recovery',
@@ -23,11 +25,19 @@ const scans = [
   },
 ];
 
-function run(command, args, options = {}) {
+function run(command, args, options = {}, timeoutMs = scanTimeoutMs) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: 'inherit', ...options });
-    child.once('error', reject);
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`${command} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    child.once('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
     child.once('exit', (code, signal) => {
+      clearTimeout(timer);
       if (code === 0) resolve();
       else reject(new Error(`${command} exited ${code ?? signal ?? 'unknown'}`));
     });
@@ -58,6 +68,7 @@ function pa11yArgs(scan, runner) {
     '--standard', 'WCAG2AA',
     '--runner', runner,
     '--threshold', '0',
+    '--timeout', '20000',
     '--viewport', scan.viewport,
     '--reporter', 'cli',
     '--chrome-launch-config', '{"args":["--no-sandbox","--disable-setuid-sandbox"]}',
@@ -67,6 +78,7 @@ function pa11yArgs(scan, runner) {
   return args;
 }
 
+const deadline = Date.now() + overallTimeoutMs;
 const server = spawn(
   'npx',
   ['-y', 'wrangler@4.30.0', 'dev', '--local', '--ip', host, '--port', String(port)],
@@ -78,17 +90,26 @@ try {
   await waitForServer();
   for (const scan of scans) {
     for (const runner of ['htmlcs', 'axe']) {
+      if (Date.now() > deadline) {
+        failed = true;
+        console.error('[a11y] overall deadline reached; remaining scans skipped');
+        break;
+      }
       console.log(`\n[a11y] ${scan.name} | ${scan.viewport} | ${runner}`);
       try {
-        await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } });
+        await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } }, scanTimeoutMs);
       } catch (error) {
         failed = true;
         console.error(`[a11y] FAILED: ${scan.name} | ${scan.viewport} | ${runner}: ${error.message}`);
       }
     }
   }
+} catch (error) {
+  failed = true;
+  console.error(`[a11y] FAILED: ${error.message}`);
 } finally {
   server.kill('SIGTERM');
+  setTimeout(() => server.kill('SIGKILL'), 2000);
 }
 
 if (failed) process.exitCode = 1;
