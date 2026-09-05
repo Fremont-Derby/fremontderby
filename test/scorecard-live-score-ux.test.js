@@ -46,4 +46,21 @@ test('finished races replace Add Rack with a clear completion state', () => {
   assert.match(html, /dataset\.raceComplete = 'true'/);
 });
 
+test('terminal mismatches stop overrun scoring and keep completed-side submission available', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('opponentRackCount:opponentRacks.length'));
+  assert.ok(html.includes('historiesMatch:Boolean(comparison?.histories_match)'));
+  assert.ok(html.includes('mismatchRackNumber:Number(comparison?.mismatch_rack_number||0)||null'));
+  assert.match(html, /terminalMismatch = Boolean\(completion\) && !state\.historiesMatch/);
+  assert.match(html, /button\.dataset\.terminalTrailing = String\(trailing\)/);
+  assert.match(html, /Rack .* is after your completed race/);
+  assert.match(html, /Submit my completed side/);
+  assert.match(html, /You do not need to answer more racks/);
+  assert.match(html, /Opponent has trailing racks/);
+  assert.match(html, /Your side already reached the race target\. Submit it now/);
+  assert.match(html, /nextRack\.after\(completionActions\)/);
+  assert.match(html, /terminal-mismatch-active/);
+});
+
 // This contract intentionally stays page-local so shared sandbox reconciliation remains unchanged.

@@ -27,7 +27,13 @@ export const liveRackLedgerAdapterSource = String.raw`
       let body={};
       try{body=await response.json()}catch{}
       if(response.status===401){sessionStorage.removeItem('fd.accessToken');showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
-      if(!response.ok)throw new Error(body.error||'Request failed');
+      if(!response.ok){
+        const message=body.error||'Request failed';
+        if(message==='Score record is already complete'){
+          throw new Error('Your side already reached the race target. Submit it now, or edit/undo a rack if your score is wrong.');
+        }
+        throw new Error(message);
+      }
       return body;
     }
 
@@ -47,11 +53,15 @@ export const liveRackLedgerAdapterSource = String.raw`
         const scorecard=scoreBody.scorecard;
         const comparison=comparisonBody.comparison;
         expectedOwnRacks=Array.isArray(comparison?.own_racks)?comparison.own_racks:[];
+        const opponentRacks=Array.isArray(comparison?.opponent_racks)?comparison.opponent_racks:[];
         const ownSide=comparison?.tracker_player_id===scorecard?.player_a_id?'A':comparison?.tracker_player_id===scorecard?.player_b_id?'B':null;
         window.fdRackLedgerState={
           ownSide,
           ownConfirmed:Boolean(comparison?.own_confirmed_at),
           ownRackCount:expectedOwnRacks.length,
+          opponentRackCount:opponentRacks.length,
+          historiesMatch:Boolean(comparison?.histories_match),
+          mismatchRackNumber:Number(comparison?.mismatch_rack_number||0)||null,
           locked:['finalized','corrected'].includes(scorecard?.status),
         };
         return{scorecard,context:comparisonBody.context,comparison};
