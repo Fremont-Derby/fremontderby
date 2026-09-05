@@ -20,11 +20,20 @@ export const PUBLIC_PATH_ALIASES = {
   '/faq': '/rules',
 };
 
+function canonicalPath(pathname) {
+  if (pathname.length > 1 && pathname.endsWith('/')) {
+    return pathname.replace(/\/+$/, '') || '/';
+  }
+  return PUBLIC_PATH_ALIASES[pathname] || null;
+}
+
 export function aliasRedirect(request, url) {
-  const target = PUBLIC_PATH_ALIASES[url.pathname];
-  if (!target) return null;
+  const target = canonicalPath(url.pathname);
+  if (!target || target === url.pathname) return null;
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
-  return Response.redirect(new URL(target, url.origin), 302);
+  const next = new URL(url.origin + target);
+  next.search = url.search;
+  return Response.redirect(next, 302);
 }
