@@ -61,7 +61,7 @@ test('dual-team scorecard reset fails closed outside JFL', async () => {
   assert.equal(response.status, 404);
 });
 
-test('persona profile control documents both scoring sides and exposes the reset action', async () => {
+test('persona profile control documents both scoring sides and makes destructive reset unmistakable', async () => {
   const input = new Response('<html><body><div data-authenticated-content></div></body></html>', {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   });
@@ -70,7 +70,8 @@ test('persona profile control documents both scoring sides and exposes the reset
 
   assert.match(html, /Admin Captain scores JFL QA Bank Shots/);
   assert.match(html, /Regular Captain scores JFL QA Table Testers/);
-  assert.match(html, /Reset dual-team scorecard test/);
+  assert.match(html, /Erase QA scores & reset test/);
+  assert.match(html, /Persona switching by itself never resets scores/);
   assert.match(html, /\/api\/test-persona\/dual-scorecard-reset/);
 });
 
