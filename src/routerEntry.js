@@ -8,6 +8,8 @@ import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
+import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
+import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
@@ -81,7 +83,7 @@ async function reconcileProductShell(response, pathname) {
   }
   if (pathname === '/demo') {
     html = html
-      .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
+      .replace('<title>Try a League Night \u00b7 Fremont Derby</title>', '<title>Test Drive the App \u00b7 Fremont Derby</title>')
       .replace('<h1>Try a League Night</h1>', '<h1>Test Drive the App</h1>');
   }
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
@@ -180,7 +182,16 @@ export default {
 
     // Trades restored — paths served by legacy router / index handlers.
 
+    const aliased = aliasRedirect(request, url);
+    if (aliased) return aliased;
 
+    if (url.pathname === '/free-agents' || url.pathname === '/practice') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      const html = url.pathname === '/practice' ? renderPracticePage() : renderFreeAgentsPage();
+      return finalizeBrowserResponse(new Response(html, {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
 
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
@@ -188,26 +199,24 @@ export default {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/rating-health') {
+    if (url.pathname === '/admin/rating-health') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/support') {
+    if (url.pathname === '/admin/support') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/player-contact') {
+    if (url.pathname === '/admin/player-contact') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-
-    {
 
     {
       const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
@@ -219,6 +228,7 @@ if (url.pathname === '/admin/player-contact') {
       }
     }
 
+    {
       const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
       if (ratingObs && request.method === 'POST') {
         return finalizeBrowserResponse(
@@ -234,7 +244,7 @@ if (url.pathname === '/admin/player-contact') {
         url.pathname,
       );
     }
-if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const adminSupportResponse = await routeAdminSupport(request, env);
