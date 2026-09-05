@@ -170,9 +170,10 @@ const liveScorecardEnhancementsScript = `
           button.disabled = trailing;
           button.dataset.terminalTrailing = String(trailing);
           if (trailing) {
-            button.textContent = '—';
-            button.setAttribute('aria-label', 'Rack ' + rackNumber + ' is after your completed race. The other team must correct its score if this rack should not exist.');
-          } else {
+            if (button.textContent !== '—') button.textContent = '—';
+            const label = 'Rack ' + rackNumber + ' is after your completed race. The other team must correct its score if this rack should not exist.';
+            if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
+          } else if (button.textContent !== '+') {
             button.textContent = '+';
           }
         }
