@@ -63,4 +63,12 @@ test('terminal mismatches stop overrun scoring and keep completed-side submissio
   assert.match(html, /terminal-mismatch-active/);
 });
 
+test('terminal mismatch enhancement does not create an endless ledger mutation loop', () => {
+  const html = renderScorecardPage();
+
+  assert.match(html, /if \(button\.textContent !== '—'\) button\.textContent = '—'/);
+  assert.match(html, /else if \(button\.textContent !== '\+'\)/);
+  assert.match(html, /if \(button\.getAttribute\('aria-label'\) !== label\)/);
+});
+
 // This contract intentionally stays page-local so shared sandbox reconciliation remains unchanged.
