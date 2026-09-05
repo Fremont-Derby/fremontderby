@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { renderFreeAgentsPage, renderPracticePage } from '../src/publicShellPages.js';
 
+// Tracking card #2221 is labeled agent:dru stage:handoff handoff:review.
+
 test('free-agents shell is honest and does not invent players', () => {
   const html = renderFreeAgentsPage();
   assert.match(html, /Free agents/);
