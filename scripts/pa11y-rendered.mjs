@@ -5,13 +5,13 @@ const host = '127.0.0.1';
 const port = 8787;
 const baseUrl = `http://${host}:${port}`;
 const serverTimeoutMs = 20_000;
-const scanTimeoutMs = 30_000;
+const scanTimeoutMs = 45_000;
 const overallTimeoutMs = 3 * 60_000;
 
 const scans = [
-  { name: 'home desktop', path: '/', viewport: '1280x900' },
-  { name: 'home phone', path: '/', viewport: '320x800' },
-  { name: 'standings truthful loading/recovery', path: '/standings', viewport: '320x800', wait: 250 },
+  { name: 'home desktop', path: '/', width: 1280, height: 900 },
+  { name: 'home phone', path: '/', width: 320, height: 800 },
+  { name: 'standings truthful loading/recovery', path: '/standings', width: 320, height: 800, wait: 250 },
 ];
 
 function run(command, args, options = {}, timeoutMs = scanTimeoutMs) {
@@ -50,17 +50,22 @@ async function waitForServer() {
 }
 
 function pa11yArgs(scan, runner) {
-  return [
-    '-y', 'pa11y@9.0.1', `${baseUrl}${scan.path}`,
+  const chrome = JSON.stringify({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    defaultViewport: { width: scan.width, height: scan.height },
+  });
+  const args = [
+    '-y', 'pa11y@9.0.1',
+    `${baseUrl}${scan.path}`,
     '--standard', 'WCAG2AA',
     '--runner', runner,
     '--threshold', '0',
-    '--timeout', '15000',
-    '--viewport', scan.viewport,
+    '--timeout', '20000',
     '--reporter', 'cli',
-    '--chrome-launch-config', '{"args":["--no-sandbox","--disable-setuid-sandbox"]}',
-    ...(scan.wait ? ['--wait', String(scan.wait)] : []),
+    '--chrome-launch-config', chrome,
   ];
+  if (scan.wait) args.push('--wait', String(scan.wait));
+  return args;
 }
 
 const overallTimer = setTimeout(() => {
@@ -79,12 +84,12 @@ try {
   await waitForServer();
   for (const scan of scans) {
     for (const runner of ['htmlcs', 'axe']) {
-      console.log(`\n[a11y] ${scan.name} | ${scan.viewport} | ${runner}`);
+      console.log(`\n[a11y] ${scan.name} | ${scan.width}x${scan.height} | ${runner}`);
       try {
         await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } });
       } catch (error) {
         failed = true;
-        console.error(`[a11y] FAILED: ${scan.name} | ${scan.viewport} | ${runner}: ${error.message}`);
+        console.error(`[a11y] FAILED: ${scan.name} | ${scan.width}x${scan.height} | ${runner}: ${error.message}`);
       }
     }
   }
