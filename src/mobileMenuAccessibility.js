@@ -36,7 +36,7 @@ const mobileMenuStyles = `
   }
   .fd-shell:has(.fd-nav-menu[open]) { z-index: 1200; }
   .fd-shell:has(.fd-nav-menu[open]) + .fd-mobile-dock {
-    opacity: .2;
+    opacity: 1;
     pointer-events: none;
   }
 
@@ -67,6 +67,11 @@ const mobileMenuScript = `
   if (!menu || !summary || !drawer) return;
 
   let wasOpen = Boolean(menu.open);
+  const closeMenu = ({ restoreFocus = false } = {}) => {
+    if (!menu.open) return;
+    menu.open = false;
+    if (restoreFocus) summary.focus();
+  };
   const syncMenuState = () => {
     const open = Boolean(menu.open);
     if (dock) dock.inert = open;
@@ -82,9 +87,12 @@ const mobileMenuScript = `
   menu.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || !menu.open) return;
     event.preventDefault();
-    menu.open = false;
-    summary.focus();
+    closeMenu({ restoreFocus: true });
   });
+  document.addEventListener('pointerdown', event => {
+    if (!menu.open || menu.contains(event.target)) return;
+    closeMenu();
+  }, true);
   syncMenuState();
 })();
 `;
