@@ -67,6 +67,20 @@ const liveScorecardSelectionStyles = `
     font-size:.76rem;
     line-height:1.4;
   }
+  .rack-edit[data-terminal-trailing="true"]{
+    background:#f3f4f2!important;
+    color:#6b716d!important;
+    border-color:#d8dcd9!important;
+    opacity:1!important;
+  }
+  [data-shared-rack-ledger-scorecard].terminal-mismatch-active [data-reconcile]{
+    border-color:#c99d15;
+    background:#fff9df;
+  }
+  @media(max-width:520px){
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active{padding-bottom:112px!important}
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions{margin-bottom:10px}
+  }
 `;
 
 const liveScorecardEnhancementsScript = `
@@ -145,7 +159,27 @@ const liveScorecardEnhancementsScript = `
         if (label) label.textContent = 'Live individual score';
       }
 
+      function markTrailingOpponentRacks(completion) {
+        const rows = Array.from(document.querySelectorAll('[data-ledger] tbody tr')).slice(0, 2);
+        const rowIndex = scoringRowIndex(rows);
+        if (rowIndex == null || !rows[rowIndex]) return;
+        const ownRackCount = Number(liveState().ownRackCount || 0);
+        for (const button of rows[rowIndex].querySelectorAll('.rack-edit[data-pending="true"]')) {
+          const rackNumber = Number(button.dataset.editRack || 0);
+          const trailing = Boolean(completion) && rackNumber > ownRackCount;
+          button.disabled = trailing;
+          button.dataset.terminalTrailing = String(trailing);
+          if (trailing) {
+            button.textContent = '—';
+            button.setAttribute('aria-label', 'Rack ' + rackNumber + ' is after your completed race. The other team must correct its score if this rack should not exist.');
+          } else {
+            button.textContent = '+';
+          }
+        }
+      }
+
       function syncRaceCompletion() {
+        const app = document.querySelector('[data-shared-rack-ledger-scorecard]');
         const nextRack = document.querySelector('.next-rack');
         const addRack = document.querySelector('[data-add-rack]');
         const winnerPicker = document.querySelector('[data-winner-picker]');
@@ -153,6 +187,9 @@ const liveScorecardEnhancementsScript = `
         const scoreB = document.querySelector('[data-score-b]');
         const targetA = document.querySelector('[data-target-a]');
         const targetB = document.querySelector('[data-target-b]');
+        const confirmButton = document.querySelector('[data-confirm]');
+        const completionActions = document.querySelector('.completion-actions');
+        const reconcile = document.querySelector('[data-reconcile]');
         if (!nextRack || !addRack || !scoreA || !scoreB || !targetA || !targetB) return;
 
         const completion = resolveRaceCompletion({
@@ -162,10 +199,16 @@ const liveScorecardEnhancementsScript = `
           targetB: targetB.textContent,
         });
         let completeCard = nextRack.querySelector('[data-race-complete]');
+        const state = liveState();
+        const terminalMismatch = Boolean(completion) && !state.historiesMatch;
+
+        app?.classList.toggle('terminal-mismatch-active', terminalMismatch);
+        markTrailingOpponentRacks(completion);
 
         if (!completion) {
           addRack.hidden = false;
           if (completeCard) completeCard.remove();
+          if (confirmButton) confirmButton.textContent = 'Confirm this side';
           return;
         }
 
@@ -189,15 +232,44 @@ const liveScorecardEnhancementsScript = `
         const headline = winnerName
           ? 'Race complete — ' + winnerName + ' wins ' + completion.scoreA + '–' + completion.scoreB
           : 'Race complete — target reached';
-        const state = liveState();
-        const guidance = state.locked
-          ? 'This race is finalized.'
-          : state.ownConfirmed
-            ? 'Your side is submitted. Waiting for the other side to agree. If this is wrong, edit a rack or undo the last rack to unlock your score.'
-            : 'Review the racks, then confirm your side below. If something is wrong, edit a rack or undo the last rack.';
+        let guidance;
+        if (state.locked) {
+          guidance = 'This race is finalized.';
+        } else if (terminalMismatch && state.ownConfirmed) {
+          guidance = 'Your completed side is submitted. Do not add more racks. The other captain must correct the disagreement before finalization.';
+        } else if (terminalMismatch) {
+          guidance = 'Your side is complete. Submit it now even though the other score differs. Do not add more racks; edit or undo only if your own result is wrong.';
+        } else if (state.ownConfirmed) {
+          guidance = 'Your side is submitted. Waiting for the other side to agree. If this is wrong, edit a rack or undo the last rack to unlock your score.';
+        } else {
+          guidance = 'Review the racks, then confirm your side below. If something is wrong, edit a rack or undo the last rack.';
+        }
         completeCard.innerHTML = '<strong></strong><span></span>';
         completeCard.querySelector('strong').textContent = headline;
         completeCard.querySelector('span').textContent = guidance;
+
+        if (terminalMismatch) {
+          const ownRackCount = Number(state.ownRackCount || 0);
+          const opponentRackCount = Number(state.opponentRackCount || 0);
+          const mismatchRack = Number(state.mismatchRackNumber || 0);
+          if (confirmButton && !state.locked && !state.ownConfirmed) {
+            confirmButton.disabled = false;
+            confirmButton.textContent = 'Submit my completed side';
+          }
+          if (completionActions && completionActions.previousElementSibling !== nextRack) nextRack.after(completionActions);
+          if (reconcile) {
+            const title = reconcile.querySelector('[data-reconcile-title]');
+            const detail = reconcile.querySelector('[data-reconcile-detail]');
+            if (title) title.textContent = state.ownConfirmed ? 'Your side is submitted' : 'Your side is complete — submit it';
+            if (detail) {
+              const extra = opponentRackCount > ownRackCount ? ' Opponent has trailing racks ' + (ownRackCount + 1) + '–' + opponentRackCount + ' that require correction.' : '';
+              const mismatch = mismatchRack ? ' First disagreement: rack ' + mismatchRack + '.' : '';
+              detail.textContent = (state.ownConfirmed ? 'Waiting for the other captain to correct the score.' : 'You do not need to answer more racks.') + mismatch + extra;
+            }
+          }
+        } else if (confirmButton) {
+          confirmButton.textContent = 'Confirm this side';
+        }
       }
 
       function syncEnhancements() {
