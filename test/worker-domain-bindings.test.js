@@ -3,6 +3,7 @@ import test from 'node:test';
 import { WORKER_DOMAIN_BINDINGS } from '../scripts/restore-lane-custom-domains.mjs';
 
 const PRODUCTION_SERVICES = new Set(['fremontderby', 'fremontderby-prod']);
+const PRODUCTION_HOSTS = new Set(['fremontderby.com', 'www.fremontderby.com']);
 
 test('production apex is bound only to an allowed production Worker', () => {
   const apex = WORKER_DOMAIN_BINDINGS.find((row) => row.hostname === 'fremontderby.com');
@@ -28,7 +29,7 @@ test('lane hostnames map to dedicated Workers never to production script', () =>
     assert.equal(row.service, service);
   }
   for (const row of WORKER_DOMAIN_BINDINGS) {
-    if (row.hostname.endsWith('.fremontderby.com') && row.hostname !== 'fremontderby.com') {
+    if (row.hostname.endsWith('.fremontderby.com') && !PRODUCTION_HOSTS.has(row.hostname)) {
       assert.equal(PRODUCTION_SERVICES.has(row.service), false);
     }
   }
