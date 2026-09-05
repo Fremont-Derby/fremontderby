@@ -133,6 +133,8 @@ export default {
       return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
     }
 
+    // Trades restored — paths served by legacy router / index handlers.
+
     if (url.pathname === '/free-agents' || url.pathname === '/practice') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       const html = url.pathname === '/practice' ? renderPracticePage() : renderFreeAgentsPage();
