@@ -52,6 +52,7 @@ jobs:
   accessibility:
     name: accessibility
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,6 +60,7 @@ jobs:
           node-version: 22
       - name: Run rendered WCAG2AA gate
         id: accessibility
+        timeout-minutes: 6
         shell: bash
         run: |
           set +e
@@ -84,7 +86,6 @@ jobs:
       - run: npm run test:floor
 
   deploy-nonproduction:
-    # #872/#873: never on pull_request (fork or same-repo). Secrets only on trusted push refs.
     if: >-
       github.event_name == 'push' &&
       github.event.pull_request == null &&
@@ -120,7 +121,6 @@ jobs:
             "$GITHUB_SHA"
 
   production-smoke:
-    # #872/#873: production smoke only after push to main — never PR events.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pull_request == null
     needs: test
     runs-on: ubuntu-latest
@@ -184,62 +184,37 @@ jobs:
             } = await import(pathToFileURL(
               `${process.env.GITHUB_WORKSPACE}/scripts/production-smoke-incident.mjs`
             ).href);
-
             const title = '[RELEASE] Production smoke failed';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             let diagnostics = 'Smoke output was unavailable.';
-            try {
-              diagnostics = fs.readFileSync('smoke-output.txt', 'utf8');
-            } catch {}
-            const body = buildProductionSmokeFailureBody({
-              sha: context.sha,
-              runUrl,
-              diagnostics,
-            });
-
+            try { diagnostics = fs.readFileSync('smoke-output.txt', 'utf8'); } catch {}
+            const body = buildProductionSmokeFailureBody({ sha: context.sha, runUrl, diagnostics });
             const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100,
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100,
             });
             const existing = issues.find((issue) => !issue.pull_request && issue.title === title);
             let issueNumber = existing?.number;
             if (!issueNumber) {
               const { data: created } = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body: [
-                  'Production release validation is failing.',
-                  '',
-                  'The latest automated evidence is maintained in the marker-owned status comment below.',
-                  'Keep this incident open until an exact deployed-SHA production smoke passes.'
-                ].join('\n'),
+                owner: context.repo.owner, repo: context.repo.repo, title,
+                body: 'Production release validation is failing.\n\nKeep this incident open until an exact deployed-SHA production smoke passes.',
               });
               issueNumber = created.number;
             }
-
             const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              per_page: 100,
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, per_page: 100,
             });
+            const { findLatestProductionSmokeStatusComment: findStatus } = await import(pathToFileURL(
+              `${process.env.GITHUB_WORKSPACE}/scripts/production-smoke-incident.mjs`
+            ).href);
             const statusComment = findLatestProductionSmokeStatusComment(comments);
             if (statusComment) {
               await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: statusComment.id,
-                body,
+                owner: context.repo.owner, repo: context.repo.repo, comment_id: statusComment.id, body,
               });
             } else {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body,
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: issueNumber, body,
               });
             }
       - name: Fail release validation
