@@ -10,6 +10,7 @@ import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { applyProductScriptRepairs } from './productScriptRepairs.js';
 import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
+import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
@@ -134,6 +135,9 @@ export default {
     }
 
     // Trades restored — paths served by legacy router / index handlers.
+
+    const aliased = aliasRedirect(request, url);
+    if (aliased) return aliased;
 
     if (url.pathname === '/free-agents' || url.pathname === '/practice') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
