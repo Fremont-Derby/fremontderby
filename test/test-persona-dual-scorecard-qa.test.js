@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { injectTestPersonaControls } from '../src/testPersonaEnhancer.js';
 import { routeTestPersona } from '../src/testPersonaHttp.js';
@@ -71,4 +72,19 @@ test('persona profile control documents both scoring sides and exposes the reset
   assert.match(html, /Regular Captain scores JFL QA Table Testers/);
   assert.match(html, /Reset dual-team scorecard test/);
   assert.match(html, /\/api\/test-persona\/dual-scorecard-reset/);
+});
+
+test('JFL scorecard view gate explicitly admits only designated QA personas as rostered team members', async () => {
+  const sql = await readFile(
+    new URL('../supabase/migrations/20260904235900_jfl_dual_scorecard_persona_view_access.sql', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(sql, /create or replace function jfl_private\.can_score_player_match/);
+  assert.match(sql, /18580000-0000-4000-8000-000000000002/);
+  assert.match(sql, /18580000-0000-4000-8000-000000000003/);
+  assert.match(sql, /JFL QA Bank Shots/);
+  assert.match(sql, /JFL QA Table Testers/);
+  assert.match(sql, /tm\.ends_at is null/);
+  assert.match(sql, /tm\.role = 'captain'/);
 });
