@@ -107,6 +107,47 @@ export const messagesThemeStyles = `
   main.app:has([data-chat-layout]) .empty strong {
     color: var(--fd-text, #171b19) !important;
   }
+  main.app:has([data-chat-layout]) [data-thread-key^="matchup:"] {
+    display: none !important;
+  }
+  .fd-mobile-inbox {
+    display: none;
+  }
+
+  @media (max-width: 759px) {
+    main.app:has([data-chat-layout]) [data-thread-select] {
+      display: none !important;
+    }
+    main.app:has([data-chat-layout]) .mobile-picker {
+      display: grid;
+      gap: 10px;
+    }
+    main.app:has([data-chat-layout]) .fd-mobile-inbox {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+    }
+    main.app:has([data-chat-layout]) .fd-mobile-inbox .section-label {
+      margin: 10px 4px 2px;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    main.app:has([data-chat-layout]) .fd-mobile-inbox .thread {
+      display: grid;
+      width: 100%;
+      min-height: 64px;
+      padding: 10px 12px;
+      text-align: left;
+      border: 1px solid var(--fd-border, #d7d9d7) !important;
+      border-radius: 12px;
+      background: var(--fd-bg-surface, #ffffff) !important;
+    }
+    main.app:has([data-chat-layout]) .fd-mobile-inbox .thread[data-active="true"] {
+      background: var(--fd-bg-accent-soft, #e7f2eb) !important;
+    }
+  }
 
   @media (forced-colors: active) {
     main.app:has([data-chat-layout]) .layout,
@@ -116,6 +157,107 @@ export const messagesThemeStyles = `
       forced-color-adjust: auto !important;
     }
   }
+`;
+
+export const messagesSimplifierScript = `
+  <script data-fd-messages-simplifier>
+    (() => {
+      const labels = new Map([
+        ['League rooms', 'General'],
+        ['Player messages', 'Direct'],
+        ['Team chats', 'Team'],
+      ]);
+
+      function simplifyThreadList() {
+        const list = document.querySelector('[data-thread-list]');
+        if (!list) return;
+
+        for (const matchup of list.querySelectorAll('[data-thread-key^="matchup:"]')) matchup.hidden = true;
+        for (const heading of list.querySelectorAll('.section-label')) {
+          const text = heading.textContent.trim();
+          if (text === 'Matchup rooms') {
+            heading.hidden = true;
+          } else if (labels.has(text)) {
+            heading.textContent = labels.get(text);
+            heading.hidden = false;
+          }
+        }
+
+        for (const league of list.querySelectorAll('[data-thread-key^="league:"] strong')) {
+          const unreadSuffix = league.textContent.includes(' · ') ? league.textContent.slice(league.textContent.indexOf(' · ')) : '';
+          league.textContent = 'General' + unreadSuffix;
+        }
+      }
+
+      function simplifyNativePicker() {
+        const select = document.querySelector('[data-thread-select]');
+        if (!select) return;
+        for (const group of Array.from(select.querySelectorAll('optgroup'))) {
+          if (group.label === 'Matchup rooms') {
+            group.remove();
+            continue;
+          }
+          if (labels.has(group.label)) group.label = labels.get(group.label);
+          if (group.label === 'General') {
+            for (const option of group.querySelectorAll('option')) {
+              const unread = option.textContent.match(/\s\(\d+\)$/)?.[0] || '';
+              option.textContent = 'General' + unread;
+            }
+          }
+        }
+      }
+
+      function buildMobileInbox() {
+        const picker = document.querySelector('.mobile-picker');
+        const list = document.querySelector('[data-thread-list]');
+        if (!picker || !list) return;
+
+        let inbox = picker.querySelector('.fd-mobile-inbox');
+        if (!inbox) {
+          inbox = document.createElement('div');
+          inbox.className = 'fd-mobile-inbox';
+          inbox.setAttribute('aria-label', 'Conversations');
+          picker.prepend(inbox);
+        }
+
+        const fragment = document.createDocumentFragment();
+        let currentHeading = null;
+        for (const child of Array.from(list.children)) {
+          if (child.classList.contains('section-label')) {
+            if (!child.hidden) currentHeading = child.textContent.trim();
+            else currentHeading = null;
+            continue;
+          }
+          if (!child.matches('.thread') || child.hidden || child.dataset.threadKey?.startsWith('matchup:')) continue;
+          if (currentHeading) {
+            const heading = document.createElement('div');
+            heading.className = 'section-label';
+            heading.textContent = currentHeading;
+            fragment.appendChild(heading);
+            currentHeading = null;
+          }
+          const clone = child.cloneNode(true);
+          clone.removeAttribute('id');
+          clone.addEventListener('click', () => {
+            child.click();
+            document.querySelector('.conversation')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          });
+          fragment.appendChild(clone);
+        }
+        inbox.replaceChildren(fragment);
+      }
+
+      function simplifyMessages() {
+        simplifyThreadList();
+        simplifyNativePicker();
+        buildMobileInbox();
+      }
+
+      simplifyMessages();
+      const list = document.querySelector('[data-thread-list]');
+      if (list) new MutationObserver(simplifyMessages).observe(list, { childList: true, subtree: true });
+    })();
+  </script>
 `;
 
 export async function injectMessagesTheme(response) {
@@ -132,9 +274,10 @@ export async function injectMessagesTheme(response) {
     });
   }
 
-  const themed = /<\/head>/i.test(html)
+  let themed = /<\/head>/i.test(html)
     ? html.replace(/<\/head>/i, `<style data-fd-messages-theme>${messagesThemeStyles}</style>\n</head>`)
     : html;
+  if (/<\/body>/i.test(themed)) themed = themed.replace(/<\/body>/i, `${messagesSimplifierScript}\n</body>`);
 
   return new Response(themed, {
     status: response.status,
