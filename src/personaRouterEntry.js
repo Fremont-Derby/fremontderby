@@ -1,6 +1,7 @@
 import baseRouterEntry from './routerEntry.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
+import { routeQaScorecard } from './qaScorecardHttp.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
 import { testPersonaEnabled } from './testPersona.js';
@@ -9,6 +10,9 @@ export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const qaScorecardResponse = routeQaScorecard(request, env);
+    if (qaScorecardResponse) return qaScorecardResponse;
+
     const personaResponse = await routeTestPersona(request, env);
     if (personaResponse) return personaResponse;
 
