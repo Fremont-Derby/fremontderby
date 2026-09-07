@@ -21,6 +21,7 @@ test('live scorecard promotes the captain submission score and removes redundant
   assert.match(html, /document\.querySelector\('\.quick-actions \.details'\)\?\.remove\(\)/);
 });
 
+// Keep this contract page-local: mobile WebKit must not repaint selected score controls as white.
 test('opening selection and next action have unmistakable mobile states', () => {
   const html = renderScorecardPage();
 
