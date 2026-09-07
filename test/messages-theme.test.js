@@ -49,7 +49,7 @@ test('mobile Messages replaces the giant native picker with conversation rows', 
   assert.match(messagesSimplifierScript, /className = 'fd-mobile-inbox'/);
   assert.match(messagesSimplifierScript, /clone\.addEventListener\('click'/);
   assert.match(messagesSimplifierScript, /child\.click\(\)/);
-  assert.match(messagesSimplifierScript, /new MutationObserver\(simplifyMessages\)/);
+  assert.match(messagesSimplifierScript, /new MutationObserver\(\(\) => requestAnimationFrame\(simplifyMessages\)\)/);
 });
 
 test('runtime Messages page receives the light-theme convergence and simplification layers', async () => {
