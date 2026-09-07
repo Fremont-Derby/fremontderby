@@ -36,6 +36,28 @@ test('opening selection and next action have unmistakable mobile states', () => 
   assert.ok(html.includes('color:#5f6762!important'));
 });
 
+test('next-rack scoring stays open and tells the captain to choose a winner', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('function bindRackScoringFlow()'));
+  assert.ok(html.includes("winnerPicker.dataset.open !== 'true'"));
+  assert.ok(html.includes('event.stopImmediatePropagation()'));
+  assert.ok(html.includes("'Choose Rack ' + nextRack + ' winner below'"));
+  assert.ok(html.includes("'Score Rack ' + nextRack"));
+  assert.ok(html.includes("addRack.setAttribute('aria-expanded', String(open))"));
+  assert.ok(html.includes("winnerPicker.scrollIntoView({ block: 'nearest', behavior: 'smooth' })"));
+});
+
+test('pre-terminal confirmation is disabled with recovery guidance', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes("confirmButton.textContent = 'Keep scoring · race not finished'"));
+  assert.ok(html.includes('confirmButton.disabled = true'));
+  assert.ok(html.includes("Reach one player's race target before confirming."));
+  assert.ok(html.includes("confirmButton.textContent = 'Submit my completed side'"));
+  assert.ok(html.includes("confirmButton.textContent = 'Confirm this side'"));
+});
+
 test('race completion respects unequal targets on either side', () => {
   assert.deepEqual(
     resolveRaceCompletion({ scoreA: 4, scoreB: 3, targetA: 4, targetB: 7 }),
