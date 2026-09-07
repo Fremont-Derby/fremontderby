@@ -75,6 +75,17 @@ const liveScorecardSelectionStyles = `
     opacity:1!important;
     box-shadow:none!important;
   }
+  .winner-picker[data-open="true"]{
+    border:2px solid #08783f;
+    background:#f3faf6;
+  }
+  .completion-actions [data-confirm]:disabled{
+    background:#f0f1ef!important;
+    border-color:#d3d7d4!important;
+    color:#68706b!important;
+    -webkit-text-fill-color:#68706b!important;
+    opacity:1!important;
+  }
   .next-rack [data-undo]{
     width:100%;
     margin-top:8px;
@@ -175,6 +186,43 @@ const liveScorecardEnhancementsScript = `
         }, true);
       }
 
+      function syncRackScoringPrompt() {
+        const addRack = document.querySelector('[data-add-rack]');
+        const winnerPicker = document.querySelector('[data-winner-picker]');
+        const nextRack = document.querySelector('[data-next-rack]')?.textContent?.trim() || '';
+        const discipline = document.querySelector('[data-next-discipline]')?.textContent?.trim() || '';
+        if (!addRack || !winnerPicker || addRack.hidden) return;
+        const open = winnerPicker.dataset.open === 'true';
+        winnerPicker.id = winnerPicker.id || 'rack-winner-picker';
+        addRack.setAttribute('aria-controls', winnerPicker.id);
+        addRack.setAttribute('aria-expanded', String(open));
+        if (open) {
+          addRack.textContent = 'Choose Rack ' + nextRack + ' winner below';
+        } else {
+          addRack.textContent = 'Score Rack ' + nextRack + (discipline ? ' · ' + discipline : '');
+        }
+      }
+
+      function bindRackScoringFlow() {
+        const addRack = document.querySelector('[data-add-rack]');
+        const winnerPicker = document.querySelector('[data-winner-picker]');
+        if (!addRack || !winnerPicker) return;
+        if (addRack.dataset.guidedFlowBound !== 'true') {
+          addRack.dataset.guidedFlowBound = 'true';
+          addRack.addEventListener('click', (event) => {
+            if (winnerPicker.dataset.open !== 'true') {
+              requestAnimationFrame(syncRackScoringPrompt);
+              return;
+            }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            syncRackScoringPrompt();
+            winnerPicker.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }, true);
+        }
+        syncRackScoringPrompt();
+      }
+
       function removeRedundantCards() {
         document.querySelector('[data-edit-current]')?.remove();
         document.querySelector('.quick-actions .details')?.remove();
@@ -256,8 +304,14 @@ const liveScorecardEnhancementsScript = `
 
         if (!completion) {
           addRack.hidden = false;
+          if (winnerPicker) winnerPicker.hidden = false;
           if (completeCard) completeCard.remove();
-          if (confirmButton) confirmButton.textContent = 'Confirm this side';
+          if (confirmButton && !state.locked && !state.ownConfirmed) {
+            confirmButton.disabled = true;
+            confirmButton.textContent = 'Keep scoring · race not finished';
+            confirmButton.title = 'Reach one player\'s race target before confirming.';
+          }
+          syncRackScoringPrompt();
           return;
         }
 
@@ -310,6 +364,7 @@ const liveScorecardEnhancementsScript = `
           if (confirmButton && !state.locked && !state.ownConfirmed) {
             confirmButton.disabled = false;
             confirmButton.textContent = 'Submit my completed side';
+            confirmButton.removeAttribute('title');
           }
           if (completionActions && completionActions.previousElementSibling !== nextRack) nextRack.after(completionActions);
           if (reconcile) {
@@ -326,10 +381,12 @@ const liveScorecardEnhancementsScript = `
           }
         } else if (confirmButton) {
           confirmButton.textContent = 'Confirm this side';
+          confirmButton.removeAttribute('title');
         }
       }
 
       function syncEnhancements() {
+        bindRackScoringFlow();
         placeUndoButton();
         removeRedundantCards();
         syncLiveScore();
