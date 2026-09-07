@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { injectMessagesTheme, messagesThemeStyles } from '../src/messagesTheme.js';
+import { injectMessagesTheme, messagesSimplifierScript, messagesThemeStyles } from '../src/messagesTheme.js';
 import routerEntry from '../src/routerEntry.js';
 
 test('Messages theme explicitly replaces legacy dark content surfaces with light tokens', () => {
@@ -20,6 +20,7 @@ test('Messages theme injects only on chat HTML and only once', async () => {
   }));
   const firstHtml = await first.text();
   assert.equal((firstHtml.match(/data-fd-messages-theme/g) || []).length, 1);
+  assert.equal((firstHtml.match(/data-fd-messages-simplifier/g) || []).length, 1);
 
   const second = await injectMessagesTheme(new Response(firstHtml, {
     headers: { 'content-type': 'text/html; charset=utf-8' },
@@ -32,11 +33,31 @@ test('Messages theme injects only on chat HTML and only once', async () => {
   assert.doesNotMatch(await plain.text(), /data-fd-messages-theme/);
 });
 
-test('runtime Messages page receives the light-theme convergence layer', async () => {
+test('normal Messages navigation is limited to General, Direct, and Team', () => {
+  assert.match(messagesSimplifierScript, /\['League rooms', 'General'\]/);
+  assert.match(messagesSimplifierScript, /\['Player messages', 'Direct'\]/);
+  assert.match(messagesSimplifierScript, /\['Team chats', 'Team'\]/);
+  assert.match(messagesSimplifierScript, /text === 'Matchup rooms'/);
+  assert.match(messagesSimplifierScript, /data-thread-key\^="matchup:"/);
+  assert.match(messagesSimplifierScript, /group\.label === 'Matchup rooms'/);
+  assert.match(messagesSimplifierScript, /group\.remove\(\)/);
+});
+
+test('mobile Messages replaces the giant native picker with conversation rows', () => {
+  assert.match(messagesThemeStyles, /\[data-thread-select\][\s\S]*display: none !important/);
+  assert.match(messagesThemeStyles, /\.fd-mobile-inbox/);
+  assert.match(messagesSimplifierScript, /className = 'fd-mobile-inbox'/);
+  assert.match(messagesSimplifierScript, /clone\.addEventListener\('click'/);
+  assert.match(messagesSimplifierScript, /child\.click\(\)/);
+  assert.match(messagesSimplifierScript, /new MutationObserver\(\(\) => requestAnimationFrame\(simplifyMessages\)\)/);
+});
+
+test('runtime Messages page receives the light-theme convergence and simplification layers', async () => {
   const response = await routerEntry.fetch(new Request('https://example.test/messages'), {}, {});
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /data-fd-messages-theme/);
+  assert.match(html, /data-fd-messages-simplifier/);
   assert.match(html, /data-fd-design-system/);
   assert.match(html, /data-fd-accessibility-layer/);
 });
