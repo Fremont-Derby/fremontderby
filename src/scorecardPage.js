@@ -56,6 +56,11 @@ const liveScorecardSelectionStyles = `
     background:#f3faf6;
     color:#123d2b;
   }
+  .race-complete[data-disputed="true"]{
+    border-color:#c99d15;
+    background:#fff9df;
+    color:#4f3c00;
+  }
   .race-complete strong{
     display:block;
     font-size:1.08rem;
@@ -78,8 +83,12 @@ const liveScorecardSelectionStyles = `
     background:#fff9df;
   }
   @media(max-width:520px){
-    [data-shared-rack-ledger-scorecard].terminal-mismatch-active{padding-bottom:112px!important}
-    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions{margin-bottom:10px}
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active{
+      padding-bottom:calc(184px + env(safe-area-inset-bottom))!important;
+    }
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions{
+      margin-bottom:96px;
+    }
   }
 `;
 
@@ -227,19 +236,25 @@ const liveScorecardEnhancementsScript = `
           nextRack.prepend(completeCard);
         }
 
+        completeCard.dataset.disputed = String(terminalMismatch && !state.locked);
         const playerA = document.querySelector('[data-player-a-name]')?.textContent?.trim() || 'Player A';
         const playerB = document.querySelector('[data-player-b-name]')?.textContent?.trim() || 'Player B';
         const winnerName = completion.winnerSide === 'A' ? playerA : completion.winnerSide === 'B' ? playerB : null;
-        const headline = winnerName
-          ? 'Race complete — ' + winnerName + ' wins ' + completion.scoreA + '–' + completion.scoreB
-          : 'Race complete — target reached';
+        const scoreText = completion.scoreA + '–' + completion.scoreB;
+        const headline = terminalMismatch && !state.locked
+          ? (winnerName
+            ? 'Your submitted score: ' + winnerName + ' ' + scoreText + ' — score disputed'
+            : 'Your submitted score reached a target — score disputed')
+          : (winnerName
+            ? 'Race complete — ' + winnerName + ' wins ' + scoreText
+            : 'Race complete — target reached');
         let guidance;
         if (state.locked) {
           guidance = 'This race is finalized.';
         } else if (terminalMismatch && state.ownConfirmed) {
-          guidance = 'Your completed side is submitted. Do not add more racks. The other captain must correct the disagreement before finalization.';
+          guidance = 'Your side is submitted, but this is not the final match result. The other captain must correct the disagreement before finalization.';
         } else if (terminalMismatch) {
-          guidance = 'Your side is complete. Submit it now even though the other score differs. Do not add more racks; edit or undo only if your own result is wrong.';
+          guidance = 'Your side reached its target, but the score is disputed. Submit your side; do not add more racks unless you edit or undo your own score.';
         } else if (state.ownConfirmed) {
           guidance = 'Your side is submitted. Waiting for the other side to agree. If this is wrong, edit a rack or undo the last rack to unlock your score.';
         } else {
@@ -261,11 +276,13 @@ const liveScorecardEnhancementsScript = `
           if (reconcile) {
             const title = reconcile.querySelector('[data-reconcile-title]');
             const detail = reconcile.querySelector('[data-reconcile-detail]');
-            if (title) title.textContent = state.ownConfirmed ? 'Your side is submitted' : 'Your side is complete — submit it';
+            if (title) title.textContent = mismatchRack
+              ? 'Score disputed — fix rack ' + mismatchRack
+              : (state.ownConfirmed ? 'Your side is submitted — score disputed' : 'Your side reached target — score disputed');
             if (detail) {
-              const extra = opponentRackCount > ownRackCount ? ' Opponent has trailing racks ' + (ownRackCount + 1) + '–' + opponentRackCount + ' that require correction.' : '';
+              const extra = opponentRackCount > ownRackCount ? ' Opponent has trailing racks ' + (ownRackCount + 1) + '–' + opponentRackCount + ' that may disappear after the disagreement is corrected.' : '';
               const mismatch = mismatchRack ? ' First disagreement: rack ' + mismatchRack + '.' : '';
-              detail.textContent = (state.ownConfirmed ? 'Waiting for the other captain to correct the score.' : 'You do not need to answer more racks.') + mismatch + extra;
+              detail.textContent = (state.ownConfirmed ? 'Waiting for the other captain to correct the disputed score.' : 'You do not need to answer more racks.') + mismatch + extra;
             }
           }
         } else if (confirmButton) {
