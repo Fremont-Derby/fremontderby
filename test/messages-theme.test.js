@@ -61,3 +61,23 @@ test('runtime Messages page receives the light-theme convergence and simplificat
   assert.match(html, /data-fd-design-system/);
   assert.match(html, /data-fd-accessibility-layer/);
 });
+
+
+test('Messages polish keeps one obvious General conversation and removes QA clutter', () => {
+  assert.match(messagesSimplifierScript, /leagueThreads\.slice\(1\)/);
+  assert.match(messagesSimplifierScript, /options\.slice\(1\)/);
+  assert.match(messagesSimplifierScript, /qaFixtureName/);
+  assert.match(messagesSimplifierScript, /Persona Test/);
+  assert.match(messagesSimplifierScript, /group\.label === 'Team'/);
+});
+
+test('mobile Messages exposes the three product choices and clears the fixed dock', () => {
+  assert.match(messagesSimplifierScript, /sectionOrder = \['General', 'Direct', 'Team'\]/);
+  assert.match(messagesSimplifierScript, /Message a player/);
+  assert.match(messagesSimplifierScript, /Start a private conversation/);
+  assert.match(messagesSimplifierScript, /Message a person, talk to your team, or talk to the league\./);
+  assert.match(messagesSimplifierScript, /Admin: review reports/);
+  assert.match(messagesThemeStyles, /fd-moderation-link/);
+  assert.match(messagesThemeStyles, /padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(messagesThemeStyles, /\[data-mobile-new\][\s\S]*display: none !important/);
+});
