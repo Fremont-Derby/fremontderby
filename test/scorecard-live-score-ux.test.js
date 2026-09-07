@@ -67,7 +67,7 @@ test('disputed target-reaching submissions are not presented as final race resul
   const html = renderScorecardPage();
 
   assert.ok(html.includes("completeCard.dataset.disputed = String(terminalMismatch && !state.locked)"));
-  assert.ok(html.includes('Your submitted score:'));
+  assert.ok(html.includes('Your submitted score shows '));
   assert.ok(html.includes('score disputed'));
   assert.ok(html.includes('this is not the final match result'));
   assert.ok(html.includes('Score disputed — fix rack'));
