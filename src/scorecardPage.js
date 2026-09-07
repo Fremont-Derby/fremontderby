@@ -17,26 +17,63 @@ export function resolveRaceCompletion({ scoreA, scoreB, targetA, targetB }) {
 }
 
 const liveScorecardSelectionStyles = `
+  .opening-option,
+  .edit-result{
+    -webkit-appearance:none;
+    appearance:none;
+    background-image:none!important;
+  }
   .opening-option[aria-pressed="true"],
-  .edit-result[aria-pressed="true"]{
+  .opening-option[aria-pressed="true"]:active,
+  .opening-option[aria-pressed="true"]:focus,
+  .opening-option[aria-pressed="true"]:hover,
+  .edit-result[aria-pressed="true"],
+  .edit-result[aria-pressed="true"]:active,
+  .edit-result[aria-pressed="true"]:focus,
+  .edit-result[aria-pressed="true"]:hover{
     background:#08783f!important;
     border-color:#08783f!important;
     color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
     box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);
+  }
+  .opening-option[aria-pressed="true"]::before{
+    content:'✓';
+    display:inline-block;
+    margin-right:.42em;
+    font-weight:1000;
   }
   .opening-option[aria-pressed="true"]:disabled{
     opacity:1;
   }
   .opening-option[aria-pressed="false"],
+  .opening-option[aria-pressed="false"]:active,
+  .opening-option[aria-pressed="false"]:focus,
   .edit-result[aria-pressed="false"]{
     background:#fff!important;
     border-color:#c8cfca!important;
     color:#075f36!important;
+    -webkit-text-fill-color:#075f36!important;
   }
   .opening-option:focus-visible,
   .edit-result:focus-visible{
     outline:3px solid #d6a900;
     outline-offset:2px;
+  }
+  .add-rack.primary:not(:disabled){
+    background:#08783f!important;
+    border-color:#08783f!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    opacity:1!important;
+  }
+  .add-rack.primary:disabled{
+    background:#e7ebe8!important;
+    border-color:#c8cfca!important;
+    color:#5f6762!important;
+    -webkit-text-fill-color:#5f6762!important;
+    opacity:1!important;
+    box-shadow:none!important;
   }
   .next-rack [data-undo]{
     width:100%;
