@@ -86,8 +86,10 @@ const liveScorecardSelectionStyles = `
     [data-shared-rack-ledger-scorecard].terminal-mismatch-active{
       padding-bottom:calc(184px + env(safe-area-inset-bottom))!important;
     }
-    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions{
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions,
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active [data-reconcile]{
       margin-bottom:96px;
+      scroll-margin-bottom:calc(112px + env(safe-area-inset-bottom));
     }
   }
 `;
