@@ -21,6 +21,21 @@ test('live scorecard promotes the captain submission score and removes redundant
   assert.match(html, /document\.querySelector\('\.quick-actions \.details'\)\?\.remove\(\)/);
 });
 
+// Keep this contract page-local: mobile WebKit must not repaint selected score controls as white.
+test('opening selection and next action have unmistakable mobile states', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('.opening-option[aria-pressed="true"]:active'));
+  assert.ok(html.includes('.opening-option[aria-pressed="true"]:focus'));
+  assert.ok(html.includes('-webkit-text-fill-color:#fff!important'));
+  assert.ok(html.includes('-webkit-appearance:none'));
+  assert.ok(html.includes("content:'✓'"));
+  assert.ok(html.includes('.add-rack.primary:not(:disabled)'));
+  assert.ok(html.includes('.add-rack.primary:disabled'));
+  assert.ok(html.includes('background:#e7ebe8!important'));
+  assert.ok(html.includes('color:#5f6762!important'));
+});
+
 test('race completion respects unequal targets on either side', () => {
   assert.deepEqual(
     resolveRaceCompletion({ scoreA: 4, scoreB: 3, targetA: 4, targetB: 7 }),
