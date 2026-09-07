@@ -63,6 +63,28 @@ test('terminal mismatches stop overrun scoring and keep completed-side submissio
   assert.match(html, /terminal-mismatch-active/);
 });
 
+test('disputed target-reaching submissions are not presented as final race results', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes("completeCard.dataset.disputed = String(terminalMismatch && !state.locked)"));
+  assert.ok(html.includes('Your submitted score shows '));
+  assert.ok(html.includes('score disputed'));
+  assert.ok(html.includes('this is not the final match result'));
+  assert.ok(html.includes('Score disputed — fix rack'));
+  assert.ok(html.includes('First disagreement: rack'));
+  assert.ok(html.includes('Race complete — '));
+  assert.ok(html.includes(' wins '));
+});
+
+test('terminal mismatch actions and reconciliation clear the fixed mobile dock', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('padding-bottom:calc(184px + env(safe-area-inset-bottom))!important'));
+  assert.ok(html.includes('margin-bottom:96px'));
+  assert.ok(html.includes('scroll-margin-bottom:calc(112px + env(safe-area-inset-bottom))'));
+  assert.ok(html.includes('[data-reconcile]'));
+});
+
 test('terminal mismatch enhancement does not create an endless ledger mutation loop', () => {
   const html = renderScorecardPage();
 
