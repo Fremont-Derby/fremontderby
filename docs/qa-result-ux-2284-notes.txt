@@ -1,1 +1,0 @@
-FAIL answers are valid level outcomes and must not block finishing the level. Visible completion feedback must appear at the finish action on mobile.
