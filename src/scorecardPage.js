@@ -245,7 +245,7 @@ const liveScorecardEnhancementsScript = `
         const scoreText = completion.scoreA + '–' + completion.scoreB;
         const headline = terminalMismatch && !state.locked
           ? (winnerName
-            ? 'Your submitted score: ' + winnerName + ' ' + scoreText + ' — score disputed'
+            ? 'Your submitted score shows ' + winnerName + ' ' + scoreText + ' — score disputed'
             : 'Your submitted score reached a target — score disputed')
           : (winnerName
             ? 'Race complete — ' + winnerName + ' wins ' + scoreText
