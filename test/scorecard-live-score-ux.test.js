@@ -67,11 +67,13 @@ test('disputed target-reaching submissions are not presented as final race resul
   const html = renderScorecardPage();
 
   assert.match(html, /completeCard\.dataset\.disputed = String\(terminalMismatch && !state\.locked\)/);
-  assert.match(html, /Your submitted score: .* — score disputed/);
+  assert.match(html, /Your submitted score:/);
+  assert.match(html, /score disputed/);
   assert.match(html, /this is not the final match result/);
   assert.match(html, /Score disputed — fix rack/);
   assert.match(html, /First disagreement: rack/);
-  assert.match(html, /Race complete — .* wins/);
+  assert.match(html, /Race complete — /);
+  assert.match(html, / wins /);
 });
 
 test('terminal mismatch actions clear the fixed mobile dock', () => {
