@@ -76,11 +76,13 @@ test('disputed target-reaching submissions are not presented as final race resul
   assert.ok(html.includes(' wins '));
 });
 
-test('terminal mismatch actions clear the fixed mobile dock', () => {
+test('terminal mismatch actions and reconciliation clear the fixed mobile dock', () => {
   const html = renderScorecardPage();
 
   assert.ok(html.includes('padding-bottom:calc(184px + env(safe-area-inset-bottom))!important'));
   assert.ok(html.includes('margin-bottom:96px'));
+  assert.ok(html.includes('scroll-margin-bottom:calc(112px + env(safe-area-inset-bottom))'));
+  assert.ok(html.includes('[data-reconcile]'));
 });
 
 test('terminal mismatch enhancement does not create an endless ledger mutation loop', () => {
