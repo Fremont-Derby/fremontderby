@@ -185,7 +185,8 @@ export const messagesSimplifierScript = `
 
         for (const league of list.querySelectorAll('[data-thread-key^="league:"] strong')) {
           const unreadSuffix = league.textContent.includes(' · ') ? league.textContent.slice(league.textContent.indexOf(' · ')) : '';
-          league.textContent = 'General' + unreadSuffix;
+          const nextText = 'General' + unreadSuffix;
+          if (league.textContent !== nextText) league.textContent = nextText;
         }
       }
 
@@ -253,9 +254,9 @@ export const messagesSimplifierScript = `
         buildMobileInbox();
       }
 
-      simplifyMessages();
+      requestAnimationFrame(simplifyMessages);
       const list = document.querySelector('[data-thread-list]');
-      if (list) new MutationObserver(simplifyMessages).observe(list, { childList: true, subtree: true });
+      if (list) new MutationObserver(() => requestAnimationFrame(simplifyMessages)).observe(list, { childList: true });
     })();
   </script>
 `;
