@@ -66,21 +66,21 @@ test('terminal mismatches stop overrun scoring and keep completed-side submissio
 test('disputed target-reaching submissions are not presented as final race results', () => {
   const html = renderScorecardPage();
 
-  assert.match(html, /completeCard\.dataset\.disputed = String\(terminalMismatch && !state\.locked\)/);
-  assert.match(html, /Your submitted score:/);
-  assert.match(html, /score disputed/);
-  assert.match(html, /this is not the final match result/);
-  assert.match(html, /Score disputed — fix rack/);
-  assert.match(html, /First disagreement: rack/);
-  assert.match(html, /Race complete — /);
-  assert.match(html, / wins /);
+  assert.ok(html.includes("completeCard.dataset.disputed = String(terminalMismatch && !state.locked)"));
+  assert.ok(html.includes('Your submitted score:'));
+  assert.ok(html.includes('score disputed'));
+  assert.ok(html.includes('this is not the final match result'));
+  assert.ok(html.includes('Score disputed — fix rack'));
+  assert.ok(html.includes('First disagreement: rack'));
+  assert.ok(html.includes('Race complete — '));
+  assert.ok(html.includes(' wins '));
 });
 
 test('terminal mismatch actions clear the fixed mobile dock', () => {
   const html = renderScorecardPage();
 
-  assert.match(html, /padding-bottom:calc\(184px \+ env\(safe-area-inset-bottom\)\)!important/);
-  assert.match(html, /margin-bottom:96px/);
+  assert.ok(html.includes('padding-bottom:calc(184px + env(safe-area-inset-bottom))!important'));
+  assert.ok(html.includes('margin-bottom:96px'));
 });
 
 test('terminal mismatch enhancement does not create an endless ledger mutation loop', () => {
