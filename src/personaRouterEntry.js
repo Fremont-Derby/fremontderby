@@ -3,7 +3,7 @@ import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { routeQaMissionCampaign } from './qaMissionCampaign.js';
 import { enhanceQaMissionGameUx } from './qaMissionGameUxEnhancer.js';
-import { enhanceQaPlayerNextMatchMission, routeQaPlayerNextMatchMission } from './qaPlayerNextMatchMission.js';
+import { enhanceQaPlayerNextMatchMission, routeQaPlayerNextMatchMission } from './qaPlayerNextMatchMission2.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
 import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
