@@ -3,6 +3,7 @@ import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { routeQaMissionCampaign } from './qaMissionCampaign.js';
 import { enhanceQaMissionGameUx } from './qaMissionGameUxEnhancer.js';
+import { enhanceQaPlayerNextMatchMission, routeQaPlayerNextMatchMission } from './qaPlayerNextMatchMission2.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
 import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
@@ -13,6 +14,9 @@ export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const playerNextMatchResponse = routeQaPlayerNextMatchMission(request, env);
+    if (playerNextMatchResponse) return playerNextMatchResponse;
+
     const qaMissionResponse = routeQaMissionCampaign(request, env);
     if (qaMissionResponse) return enhanceQaMissionGameUx(qaMissionResponse, request, env);
 
@@ -26,6 +30,7 @@ export default {
     if (scheduleResponse) return scheduleResponse;
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
+    response = await enhanceQaPlayerNextMatchMission(response, request, env);
     response = await enhanceFinishedScheduleBreakdown(response);
     if (!testPersonaEnabled(env)) return response;
     return injectTestPersonaControls(response);
