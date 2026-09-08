@@ -4,6 +4,7 @@ import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js'
 import { routeQaMissionCampaign } from './qaMissionCampaign.js';
 import { enhanceQaMissionGameUx } from './qaMissionGameUxEnhancer.js';
 import { enhanceQaPlayerNextMatchMission, routeQaPlayerNextMatchMission } from './qaPlayerNextMatchMission2.js';
+import { enhanceQaPlayerAvailabilityMission, routeQaPlayerAvailabilityMission } from './qaPlayerAvailabilityMission.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
 import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
@@ -14,6 +15,9 @@ export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const playerAvailabilityResponse = routeQaPlayerAvailabilityMission(request, env);
+    if (playerAvailabilityResponse) return playerAvailabilityResponse;
+
     const playerNextMatchResponse = routeQaPlayerNextMatchMission(request, env);
     if (playerNextMatchResponse) return playerNextMatchResponse;
 
@@ -30,6 +34,7 @@ export default {
     if (scheduleResponse) return scheduleResponse;
 
     let response = await baseRouterEntry.fetch(request, env, ctx);
+    response = await enhanceQaPlayerAvailabilityMission(response, request, env);
     response = await enhanceQaPlayerNextMatchMission(response, request, env);
     response = await enhanceFinishedScheduleBreakdown(response);
     if (!testPersonaEnabled(env)) return response;
