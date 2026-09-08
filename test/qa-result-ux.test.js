@@ -22,7 +22,7 @@ test('JFL QA play response gains explicit completion and visible outcome UX', as
   const enhanced = await enhanceQaResultUx(response, request, { ENVIRONMENT: 'jfl' });
   const html = await enhanced.text();
 
-  assert.match(html, /data-qa-progress/);
+  assert.match(html, /progress\.dataset\.qaProgress = 'true'/);
   assert.match(html, /Answer ' \+ remaining \+ ' remaining check/);
   assert.match(html, /save\.disabled = !complete/);
   assert.match(html, /Finish level/);
