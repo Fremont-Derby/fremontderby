@@ -21,7 +21,7 @@ function promotePlayableCards(html) {
   return html.replace(/<article class="mission">[\s\S]*?<\/article>/g, (card) => {
     const playable = PLAYABLE_CARDS.find((item) => card.includes(item.marker));
     if (!playable) return card;
-    let updated = card.replace('COMING SOON', 'PLAYABLE');
+    let updated = card.replace(/COMING (?:SOON|NEXT)/, 'PLAYABLE');
     if (!updated.includes(playable.href)) {
       updated = updated.replace(
         /<button type="button" disabled[^>]*>Coming next<\/button>|<button type="button" disabled[^>]*>Coming soon<\/button>/,
