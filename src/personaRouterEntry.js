@@ -3,6 +3,7 @@ import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js';
 import { routeQaMissionCampaign } from './qaMissionCampaign.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
+import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
 import { testPersonaEnabled } from './testPersona.js';
@@ -15,7 +16,7 @@ export default {
     if (qaMissionResponse) return qaMissionResponse;
 
     const qaScorecardResponse = await routeQaScorecard(request, env);
-    if (qaScorecardResponse) return qaScorecardResponse;
+    if (qaScorecardResponse) return enhanceQaResultUx(qaScorecardResponse, request, env);
 
     const personaResponse = await routeTestPersona(request, env);
     if (personaResponse) return personaResponse;
