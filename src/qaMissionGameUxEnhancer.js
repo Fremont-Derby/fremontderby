@@ -1,7 +1,16 @@
+const PLAYER_NEXT_MATCH_PREVIEW = '<a class="secondary" href="/qa/mission/preview?mission=player.find-next-match">Preview randomized mission</a>';
+const PLAYER_NEXT_MATCH_START = '<a class="primary" href="/qa/mission/start?mission=player.find-next-match">Start mission</a>';
 const FIXTURE_PREVIEW_LINK = /<a class="secondary" href="\/qa\/mission\/preview\?mission=([^"]+)">Preview randomized mission<\/a>/g;
 
 function comingSoonButton() {
   return '<button type="button" disabled title="This mission is not playable yet">Coming soon</button>';
+}
+
+function promotePlayerNextMatch(html) {
+  return html.replace(/<article class="mission">[\s\S]*?<\/article>/g, (card) => {
+    if (!card.includes('/qa/mission/start?mission=player.find-next-match')) return card;
+    return card.replace('COMING SOON', 'PLAYABLE');
+  });
 }
 
 export async function enhanceQaMissionGameUx(response, request, env = {}) {
@@ -18,7 +27,8 @@ export async function enhanceQaMissionGameUx(response, request, env = {}) {
     return new Response(html, response);
   }
 
-  const enhanced = html
+  const cleaned = html
+    .replace(PLAYER_NEXT_MATCH_PREVIEW, PLAYER_NEXT_MATCH_START)
     .replaceAll('FIXTURE READY', 'COMING SOON')
     .replace(FIXTURE_PREVIEW_LINK, comingSoonButton())
     .replace(/<div class="build">Build <code>[^<]*<\/code><\/div>/, '')
@@ -27,5 +37,5 @@ export async function enhanceQaMissionGameUx(response, request, env = {}) {
       'Playable missions use fresh randomized test data and the real Fremont Derby experience. Missions that are not ready stay locked until they are genuinely playable.'
     );
 
-  return new Response(enhanced, response);
+  return new Response(promotePlayerNextMatch(cleaned), response);
 }
