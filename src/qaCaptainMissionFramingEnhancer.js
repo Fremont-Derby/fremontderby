@@ -27,7 +27,7 @@ export function routeQaCaptainMissionFrame(request, env = {}) {
     <header class="qa-head">
       <div class="qa-badge" aria-label="STAGED QA MISSION · TEST DATA ONLY">STAGED QA MISSION · CAPTAIN</div>
       <strong>Captain mission: invite ${esc(first.display_name)} and ${esc(second.display_name)}</strong>
-      <p>You are ${esc(fixture.captain.name)}, captain of ${esc(fixture.team.name)}. This staged scenario uses synthetic players and team data; you are not changing a real league or team. Finish when: both named players appear as pending invitations and nobody else does. Then use Check mission for 4 quick PASS/FAIL questions.</p>
+      <p>You are ${esc(fixture.captain.name)}, captain of ${esc(fixture.team.name)}. This staged scenario uses synthetic players and team data; you are not changing a real league or team, and this mission cannot change real league data. Finish when: both named players appear as pending invitations and nobody else does. Then use Check mission for 4 quick PASS/FAIL questions.</p>
     </header>
     <main class="qa-frame-wrap"><iframe class="qa-frame" title="Fremont Derby staged interaction" src="${esc(src)}"></iframe></main>
     <footer class="qa-controls" aria-label="Mission controls"><a class="qa-check" data-captain-finish href="/qa/captain-add-players/finish">Check mission</a><a class="qa-abort" href="/qa/captain-add-players/end">Abort mission</a></footer>
