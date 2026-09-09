@@ -8,6 +8,7 @@ import { enhanceQaPlayerAvailabilityMission, routeQaPlayerAvailabilityMission } 
 import { enhanceQaNextMatchRecovery, routeQaNextMatchRecovery } from './qaNextMatchRecoveryEnhancer.js';
 import { enhanceQaCaptainAddPlayersMission, routeQaCaptainAddPlayersMission } from './qaCaptainAddPlayersMission.js';
 import { enhanceQaCaptainMissionFraming, routeQaCaptainMissionFrame } from './qaCaptainMissionFramingEnhancer.js';
+import { enhanceQaPlayerMissionFraming, routeQaPlayerMissionFrame } from './qaPlayerMissionFramingEnhancer.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
 import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
@@ -18,6 +19,9 @@ export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const playerFrameResponse = routeQaPlayerMissionFrame(request, env);
+    if (playerFrameResponse) return playerFrameResponse;
+
     const captainFrameResponse = routeQaCaptainMissionFrame(request, env);
     if (captainFrameResponse) return captainFrameResponse;
 
@@ -51,6 +55,7 @@ export default {
     response = await enhanceQaPlayerAvailabilityMission(response, request, env);
     response = await enhanceQaPlayerNextMatchMission(response, request, env);
     response = await enhanceQaNextMatchRecovery(response, request, env);
+    response = await enhanceQaPlayerMissionFraming(response, request, env);
     response = await enhanceFinishedScheduleBreakdown(response);
     if (!testPersonaEnabled(env)) return response;
     return injectTestPersonaControls(response);
