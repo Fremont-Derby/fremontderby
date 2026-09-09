@@ -11,6 +11,10 @@ const PLAYABLE_CARDS = [
     marker: 'Mark whether you can play in the upcoming match.',
     href: '/qa/mission/start?mission=player.mark-availability',
   },
+  {
+    marker: 'Add the correct new players to your team.',
+    href: '/qa/captain-add-players/start',
+  },
 ];
 
 function comingSoonButton() {
