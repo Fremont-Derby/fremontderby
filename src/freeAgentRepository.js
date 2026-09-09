@@ -94,5 +94,45 @@ export function createFreeAgentRepository(env, { fetch: fetchImpl = globalThis.f
 
       return Array.isArray(result) ? result : [];
     },
+
+    async listSeasonFreeAgents({ seasonId }) {
+      const registered = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/season_players?select=player_id,status,players(id,display_name)&season_id=eq.${encodeURIComponent(seasonId)}&participation_type=eq.free_agent&status=eq.active&order=player_id`,
+        {
+          method: 'GET',
+          headers,
+        },
+      );
+      const fromSeasonPlayers = (Array.isArray(registered) ? registered : []).map((row) => ({
+        playerId: row.player_id ?? row.players?.id,
+        displayName: row.players?.display_name ?? null,
+        status: row.status || 'active',
+        source: 'season_players',
+      }));
+      if (fromSeasonPlayers.length) return fromSeasonPlayers;
+
+      const memberships = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/team_memberships?select=player_id&season_id=eq.${encodeURIComponent(seasonId)}&ends_at=is.null`,
+        { method: 'GET', headers },
+      );
+      const rostered = new Set(
+        (Array.isArray(memberships) ? memberships : []).map((row) => row.player_id).filter(Boolean),
+      );
+      const players = await requestJson(
+        fetchImpl,
+        `${supabaseUrl}/rest/v1/players?select=id,display_name&order=display_name`,
+        { method: 'GET', headers },
+      );
+      return (Array.isArray(players) ? players : [])
+        .filter((player) => player?.id && !rostered.has(player.id))
+        .map((player) => ({
+          playerId: player.id,
+          displayName: player.display_name ?? null,
+          status: 'active',
+          source: 'unrostered',
+        }));
+    },
   };
 }
