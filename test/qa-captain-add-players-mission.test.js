@@ -7,6 +7,7 @@ import {
   enhanceQaCaptainAddPlayersMission,
   routeQaCaptainAddPlayersMission,
 } from '../src/qaCaptainAddPlayersMission.js';
+import { routeQaCaptainMissionFrame } from '../src/qaCaptainMissionFramingEnhancer.js';
 import { enhanceQaMissionGameUx } from '../src/qaMissionGameUxEnhancer.js';
 
 const env = { ENVIRONMENT: 'jfl' };
@@ -42,6 +43,25 @@ test('captain mission start is JFL-only and establishes isolated mission state',
     ),
     null,
   );
+});
+
+test('captain mission runner makes test boundary obvious and keeps controls outside interaction frame', async () => {
+  const fixture = buildCaptainAddPlayersFixture(seed);
+  const request = new Request('https://jfl.example/qa/captain-add-players/play', { headers: { cookie: missionCookie } });
+  const response = routeQaCaptainMissionFrame(request, env);
+  assert.ok(response);
+  const html = await response.text();
+  assert.match(html, /STAGED QA MISSION · TEST DATA ONLY/);
+  assert.match(html, /cannot change real league data/);
+  assert.match(html, new RegExp(fixture.targets[0].display_name));
+  assert.match(html, new RegExp(fixture.targets[1].display_name));
+  assert.match(html, /<iframe[^>]+class="qa-frame"/);
+  assert.match(html, /<footer class="qa-controls"/);
+  assert.match(html, />Check mission</);
+  assert.match(html, />Abort mission</);
+  assert.match(html, /grid-template-rows:auto minmax\(0,1fr\) auto/);
+  assert.match(html, /overflow:hidden/);
+  assert.match(html, /min-height:48px/);
 });
 
 test('mission provides one captain-owned team and only mission candidates', async () => {
