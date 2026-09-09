@@ -22,17 +22,17 @@ function comingSoonButton() {
 }
 
 function promotePlayableCards(html) {
-  return html.replace(/<article class="mission">[\s\S]*?<\/article>/g, (card) => {
+  return html.replace(/<article\b[^>]*class="[^"]*\bmission\b[^"]*"[^>]*>[\s\S]*?<\/article>/gi, (card) => {
     const playable = PLAYABLE_CARDS.find((item) => card.includes(item.marker));
     if (!playable) return card;
-    let updated = card.replace(/COMING (?:SOON|NEXT)/, 'PLAYABLE');
-    if (!updated.includes(playable.href)) {
-      updated = updated.replace(
-        /<button type="button" disabled[^>]*>Coming next<\/button>|<button type="button" disabled[^>]*>Coming soon<\/button>/,
-        `<a class="primary" href="${playable.href}">Start mission</a>`,
-      );
-    }
-    return updated;
+
+    const withStatus = card.replace(/\bCOMING (?:SOON|NEXT)\b/gi, 'PLAYABLE');
+    if (withStatus.includes(playable.href)) return withStatus;
+
+    return withStatus.replace(
+      /<button\b[^>]*\bdisabled\b[^>]*>\s*Coming (?:next|soon)\s*<\/button>/i,
+      `<a class="primary" href="${playable.href}">Start mission</a>`,
+    );
   });
 }
 
