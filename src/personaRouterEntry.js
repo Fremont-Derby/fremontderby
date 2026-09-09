@@ -7,7 +7,7 @@ import { enhanceQaPlayerNextMatchMission, routeQaPlayerNextMatchMission } from '
 import { enhanceQaPlayerAvailabilityMission, routeQaPlayerAvailabilityMission } from './qaPlayerAvailabilityMission.js';
 import { enhanceQaNextMatchRecovery, routeQaNextMatchRecovery } from './qaNextMatchRecoveryEnhancer.js';
 import { enhanceQaCaptainAddPlayersMission, routeQaCaptainAddPlayersMission } from './qaCaptainAddPlayersMission.js';
-import { enhanceQaCaptainMissionFraming } from './qaCaptainMissionFramingEnhancer.js';
+import { enhanceQaCaptainMissionFraming, routeQaCaptainMissionFrame } from './qaCaptainMissionFramingEnhancer.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
 import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
@@ -18,6 +18,9 @@ export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const captainFrameResponse = routeQaCaptainMissionFrame(request, env);
+    if (captainFrameResponse) return captainFrameResponse;
+
     const captainAddPlayersResponse = await routeQaCaptainAddPlayersMission(request, env);
     if (captainAddPlayersResponse) return captainAddPlayersResponse;
 
