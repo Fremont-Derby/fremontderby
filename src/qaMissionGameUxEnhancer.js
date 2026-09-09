@@ -26,7 +26,7 @@ function promotePlayableCards(html) {
     const playable = PLAYABLE_CARDS.find((item) => card.includes(item.marker));
     if (!playable) return card;
 
-    const withStatus = card.replace(/\bCOMING (?:SOON|NEXT)\b/gi, 'PLAYABLE');
+    const withStatus = card.replace(/\bCOMING (?:SOON|NEXT)\b/i, 'PLAYABLE');
     if (withStatus.includes(playable.href)) return withStatus;
 
     return withStatus.replace(
