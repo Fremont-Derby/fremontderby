@@ -2,17 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildCaptainAddPlayersFixture, enhanceQaCaptainAddPlayersMission } from '../src/qaCaptainAddPlayersMission.js';
-import { enhanceQaCaptainMissionFraming } from '../src/qaCaptainMissionFramingEnhancer.js';
+import { enhanceQaCaptainMissionFraming, routeQaCaptainMissionFrame } from '../src/qaCaptainMissionFramingEnhancer.js';
 
 const env = { ENVIRONMENT: 'jfl' };
 const seed = 'captain-framing-42';
 const cookie = `fd_qa_mission=captain.add-players%3A${seed}`;
 
 async function framedProduct(path = '/') {
-  const request = new Request(`https://jfl.example${path}`, { headers: { cookie } });
-  const base = new Response('<!doctype html><html><head><style></style></head><body><main>Product</main></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
-  const withMission = await enhanceQaCaptainAddPlayersMission(base, request, env);
-  return enhanceQaCaptainMissionFraming(withMission, request, env);
+  const request = new Request(
+    `https://jfl.example/qa/captain-add-players/play?src=${encodeURIComponent(path)}`,
+    { headers: { cookie } },
+  );
+  return routeQaCaptainMissionFrame(request, env);
 }
 
 test('captain mission is explicitly presented as staged synthetic data', async () => {
