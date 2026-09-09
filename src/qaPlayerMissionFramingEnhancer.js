@@ -69,6 +69,9 @@ export function routeQaPlayerMissionFrame(request, env = {}) {
   const hint = stuck
     ? '<p class="qa-hint" role="status"><strong>Hint:</strong> Look for where league nights and matchups are listed. You can keep testing the rest of the mission.</p>'
     : '';
+  const recoveryScript = active.missionId === NEXT_MATCH_ID
+    ? `<script>(()=>{const stuck=document.querySelector('[data-qa-stuck]');if(stuck)stuck.addEventListener('click',()=>{try{localStorage.setItem('fd.qa.mission.${NEXT_MATCH_ID}.${esc(active.seed)}.discoverability','fail')}catch{}})})();</script>`
+    : '';
 
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Staged QA Mission · Fremont Derby</title><style>
     :root{font-family:Inter,system-ui,sans-serif;background:#0d1712;color:#fff}*{box-sizing:border-box}html,body{height:100%;margin:0}body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden}.qa-head{padding:10px 12px;background:#0d1712;border-bottom:2px solid #53e391;text-align:center}.qa-badge{font-size:.72rem;font-weight:950;letter-spacing:.13em;color:#86f5b4}.qa-head strong{display:block;margin-top:4px;font-size:.95rem}.qa-head p{margin:5px auto 0;max-width:760px;color:#d5e2da;font-size:.78rem;line-height:1.35}.qa-hint{padding:6px 9px;border-radius:8px;background:#fff8df!important;color:#5b4500!important}.qa-frame-wrap{min-height:0;padding:8px;background:#1a241f}.qa-frame{display:block;width:100%;height:100%;border:2px solid #86f5b4;border-radius:12px;background:#fff}.qa-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:9px 12px calc(9px + env(safe-area-inset-bottom));background:#0d1712;border-top:2px solid #53e391}.qa-controls a{min-height:48px;border-radius:11px;display:grid;place-items:center;justify-content:center;text-align:center;padding:8px 12px;font-weight:900;text-decoration:none}.qa-check{background:#08783f;color:#fff}.qa-stuck{background:#fff8df;color:#6a4a00;border:2px solid #b6952f}.qa-abort{background:#fff;color:#7b2020;border:2px solid #cf5555}@media(max-width:520px){.qa-head{padding:8px}.qa-head p{font-size:.74rem}.qa-frame-wrap{padding:6px}.qa-controls{grid-template-columns:1fr}.qa-controls a{min-height:44px}}
@@ -81,7 +84,7 @@ export function routeQaPlayerMissionFrame(request, env = {}) {
     </header>
     <main class="qa-frame-wrap"><iframe class="qa-frame" title="Fremont Derby staged interaction" src="${esc(src)}"></iframe></main>
     <footer class="qa-controls" aria-label="Mission controls"><a class="qa-check" data-player-finish href="${active.checkHref}">Check mission</a>${stuckControl}<a class="qa-abort" href="/qa/mission/end">Abort mission</a></footer>
-    <script>(()=>{const stuck=document.querySelector('[data-qa-stuck]');if(stuck)stuck.addEventListener('click',()=>{try{localStorage.setItem('fd.qa.mission.${NEXT_MATCH_ID}.${esc(active.seed)}.discoverability','fail')}catch{}})})();</script>
+    ${recoveryScript}
   </body></html>`, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
 
