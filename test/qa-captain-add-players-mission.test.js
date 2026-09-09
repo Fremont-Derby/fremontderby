@@ -35,7 +35,13 @@ test('captain mission start is JFL-only and establishes isolated mission state',
   assert.equal(response.status, 302);
   assert.equal(response.headers.get('location'), '/');
   assert.match(cookieValue(response, 'fd_qa_mission'), /captain\.add-players/);
-  assert.equal(routeQaCaptainAddPlayersMission(new Request('https://prod.example/qa/captain-add-players/start'), { ENVIRONMENT: 'production' }), null);
+  assert.equal(
+    await routeQaCaptainAddPlayersMission(
+      new Request('https://prod.example/qa/captain-add-players/start'),
+      { ENVIRONMENT: 'production' },
+    ),
+    null,
+  );
 });
 
 test('mission provides one captain-owned team and only mission candidates', async () => {
