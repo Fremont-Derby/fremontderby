@@ -2,7 +2,7 @@ import { createStandingsRepository } from './standingsRepository.js';
 import { enrichFinishedScheduleRounds } from './jflFinishedMatchResults.js';
 
 const POSTGRES_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SCHEDULE_PATH_RE = /^\/api\/seasons\/([^/]+)\/schedule$/;
+const SCHEDULE_PATH_RE = /^\/api\/seasons\/([^/]+)\/(?:schedule|rounds)$/;
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -39,8 +39,6 @@ export async function routeJflSeasonSchedule(
     try {
       rounds = await enrichFinishedScheduleRounds(scheduleRounds, env, { fetch: fetchImpl });
     } catch {
-      // Finished-result detail is additive. Never make the base schedule unavailable
-      // because optional result enrichment cannot be loaded.
       rounds = scheduleRounds;
     }
     return jsonResponse({ rounds });

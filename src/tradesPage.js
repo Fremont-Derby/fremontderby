@@ -112,6 +112,8 @@ export function renderTradesPage() {
     .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .action-row button { min-height: 36px; padding: 0 10px; }
     .empty { padding: 16px; color: var(--muted); }
+    .note { color: var(--muted); line-height: 1.5; margin: 0; }
+    .note a { color: #9ee5bd; }
     @media (max-width: 900px) {
       .app { padding: 12px; }
       .topbar { align-items: flex-start; }
@@ -131,9 +133,8 @@ export function renderTradesPage() {
     </header>
 
     <form class="setup" data-trade-form>
-      <label class="span-2">Access token
-        <input name="token" data-token type="password" autocomplete="current-password" />
-      </label>
+      <p class="note span-2">Uses the signed-in session from Profile. No token paste.</p>
+      <p class="note span-2"><a href="/profile">Sign in</a> · <a href="/teams">Teams</a> · <a href="/players">Players</a></p>
       <label>My team ID
         <input name="teamId" data-team-id autocomplete="off" />
       </label>
@@ -167,7 +168,6 @@ export function renderTradesPage() {
   <script>
     const form = document.querySelector('[data-trade-form]');
     const statusEl = document.querySelector('[data-status]');
-    const tokenInput = document.querySelector('[data-token]');
     const teamIdInput = document.querySelector('[data-team-id]');
     const offeredPlayerInput = document.querySelector('[data-offered-player-id]');
     const requestedTeamInput = document.querySelector('[data-requested-team-id]');
@@ -177,7 +177,6 @@ export function renderTradesPage() {
     const tradeCount = document.querySelector('[data-trade-count]');
 
     const params = new URLSearchParams(location.search);
-    tokenInput.value = sessionStorage.getItem('fd.accessToken') || '';
     teamIdInput.value = params.get('team') || localStorage.getItem('fd.tradesTeamId') || '';
 
     function setStatus(message, tone) {
@@ -186,9 +185,8 @@ export function renderTradesPage() {
     }
 
     function token() {
-      const value = tokenInput.value.trim();
-      if (!value) throw new Error('Access token is required');
-      sessionStorage.setItem('fd.accessToken', value);
+      const value = String(sessionStorage.getItem('fd.accessToken') || '').trim();
+      if (!value) throw new Error('Sign in on Profile first');
       return value;
     }
 
@@ -347,8 +345,10 @@ export function renderTradesPage() {
     });
 
     renderTrades([]);
-    if (tokenInput.value) {
+    if (sessionStorage.getItem('fd.accessToken')) {
       run(loadTrades);
+    } else {
+      setStatus('Sign in on Profile to load your trades.');
     }
   </script>
 </body>
