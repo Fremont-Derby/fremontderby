@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 export const QA_EVIDENCE_SCHEMA_VERSION = '1.0.0';
 
 export const QA_EVENT_FIELDS = Object.freeze({
@@ -41,7 +39,7 @@ function collectKeys(value, prefix = '', output = []) {
   return output;
 }
 
-export function normalizeQaError(error = {}) {
+export async function normalizeQaError(error = {}) {
   const route = String(error.route || '')
     .split('?')[0]
     .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ':id')
@@ -61,9 +59,13 @@ export function normalizeQaError(error = {}) {
     action: String(error.action || '').slice(0, 80),
     stack_location: stackLocation,
   };
-  const fingerprint = createHash('sha256')
-    .update(JSON.stringify(normalized))
-    .digest('hex');
+  const digest = await globalThis.crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(JSON.stringify(normalized)),
+  );
+  const fingerprint = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
   return { ...normalized, fingerprint: `sha256:${fingerprint}` };
 }
 

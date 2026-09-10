@@ -59,15 +59,15 @@ test('events accept allowlisted fields only', () => {
   assert.match(validateQaEvidence(unsafe).errors.join('\n'), /page_text is not allowlisted/);
 });
 
-test('error normalization removes volatile identifiers before fingerprinting', () => {
-  const first = normalizeQaError({
+test('error normalization removes volatile identifiers before fingerprinting', async () => {
+  const first = await normalizeQaError({
     name: 'TypeError',
     message: 'Failed run 123456 for 5c64f8a1-2c6e-4f8f-9dad-79f0303a7d0d?token=one',
     route: '/api/runs/123456?token=one',
     action: 'save_result',
     stack_location: 'qa.js:44:8',
   });
-  const second = normalizeQaError({
+  const second = await normalizeQaError({
     name: 'TypeError',
     message: 'Failed run 987654 for 2b657790-03a1-43cf-8aa2-9577e62bc418?token=two',
     route: '/api/runs/987654?token=two',

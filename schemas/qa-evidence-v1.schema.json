@@ -48,6 +48,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["event_id", "type", "occurred_at"],
         "properties": {
           "event_id": { "type": "string", "minLength": 1, "maxLength": 128 },
