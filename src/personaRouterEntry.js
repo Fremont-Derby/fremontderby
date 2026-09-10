@@ -4,6 +4,7 @@ import { enhanceFinishedScheduleBreakdown } from './finishedScheduleEnhancer.js'
 import { routeQaMissionCampaign } from './qaMissionCampaign.js';
 import { enhanceQaMissionGameUx } from './qaMissionGameUxEnhancer.js';
 import { enhanceQaPlayerNextMatchMission, routeQaPlayerNextMatchMission } from './qaPlayerNextMatchMission2.js';
+import { enhanceQaNextMatchHome, routeQaNextMatchMultiContext } from './qaNextMatchMultiContext.js';
 import { enhanceQaPlayerAvailabilityMission, routeQaPlayerAvailabilityMission } from './qaPlayerAvailabilityMission.js';
 import { enhanceQaNextMatchRecovery, routeQaNextMatchRecovery } from './qaNextMatchRecoveryEnhancer.js';
 import { enhanceQaCaptainAddPlayersMission, routeQaCaptainAddPlayersMission } from './qaCaptainAddPlayersMission.js';
@@ -27,6 +28,9 @@ export default {
 
     const captainAddPlayersResponse = await routeQaCaptainAddPlayersMission(request, env);
     if (captainAddPlayersResponse) return captainAddPlayersResponse;
+
+    const nextMatchMultiContextResponse = routeQaNextMatchMultiContext(request, env);
+    if (nextMatchMultiContextResponse) return nextMatchMultiContextResponse;
 
     const playerNextMatchRecoveryResponse = routeQaNextMatchRecovery(request, env);
     if (playerNextMatchRecoveryResponse) return playerNextMatchRecoveryResponse;
@@ -54,6 +58,7 @@ export default {
     response = await enhanceQaCaptainMissionFraming(response, request, env);
     response = await enhanceQaPlayerAvailabilityMission(response, request, env);
     response = await enhanceQaPlayerNextMatchMission(response, request, env);
+    response = await enhanceQaNextMatchHome(response, request, env);
     response = await enhanceQaNextMatchRecovery(response, request, env);
     response = await enhanceQaPlayerMissionFraming(response, request, env);
     response = await enhanceFinishedScheduleBreakdown(response);
