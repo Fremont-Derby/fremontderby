@@ -73,6 +73,71 @@ jobs:
             "https://${lane}.fremontderby.com" \
             "$lane" \
             "$GITHUB_SHA"
+      - name: Verify JFL QA evidence ingestion and idempotent retry
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          run_id="deploy-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          payload="$(jq -cn \
+            --arg run_id "$run_id" \
+            --arg sha "$EXPECTED_SHA" \
+            --arg completed_at "$completed_at" \
+            '{
+              schema_version: "1.0.0",
+              lane: "jfl",
+              run_id: $run_id,
+              replay_of_run_id: null,
+              level_id: "scorecard.deployment-smoke",
+              seed: "github-actions",
+              build_sha: $sha,
+              worker_version: $sha,
+              started_at: $completed_at,
+              completed_at: $completed_at,
+              duration_ms: 0,
+              tester_id: "github-actions",
+              session_id: null,
+              device: {
+                browser_family: "github-actions",
+                device_family: "ci",
+                viewport_width: 0,
+                viewport_height: 0
+              },
+              fixture_facts: {
+                world: "scorecard",
+                race_state: "deployment_smoke",
+                verification_probe: true
+              },
+              assertions: [{
+                assertion_id: "scorecard.deployment-smoke.persist",
+                result: "pass",
+                answered_at: $completed_at
+              }],
+              outcome: "pass",
+              note: null,
+              events: [{
+                event_id: ($run_id + "-save"),
+                type: "interaction",
+                action: "save_result",
+                component: "qa_assertions",
+                occurred_at: $completed_at,
+                sequence: 0
+              }]
+            }')"
+
+          for attempt in 1 2; do
+            response="$(curl --fail-with-body --silent --show-error \
+              --request POST \
+              --header 'content-type: application/json' \
+              --data "$payload" \
+              https://jfl.fremontderby.com/api/qa/evidence)"
+            jq -e --arg run_id "$run_id" \
+              '.saved == true and .runId == $run_id' <<<"$response"
+          done
+
       - name: Verify JFL modern UI proof route
         if: github.ref == 'refs/heads/fremontderby-jfl'
         shell: bash
