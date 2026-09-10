@@ -137,5 +137,6 @@ export async function enhanceQaNextMatchHome(response, request, env = {}) {
     .replace('<section class="fd-card fd-home-next"', `${visible}<section class="fd-card fd-home-next"`);
   const headers = new Headers(response.headers);
   headers.set('cache-control', 'no-store');
+  headers.append('set-cookie', `fd_qa_mission_reached=${encodeURIComponent(fixture.seed)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=14400`);
   return new Response(enhanced, { status: response.status, statusText: response.statusText, headers });
 }
