@@ -68,6 +68,7 @@ test('play route creates a seed when omitted and exact seed renders human assert
   assert.match(html, /fd\.qa\.evidence\.pending\.v1/);
   assert.match(html, /\/api\/qa\/evidence/);
   assert.match(html, /Evidence pending/);
+  assert.match(html, /row\.level_id==='scorecard\.'\+level/);
   assert.match(html, /replay_of/);
   assert.match(html, /Score Rack/);
   assert.match(html, /Keep scoring · race not finished/);
