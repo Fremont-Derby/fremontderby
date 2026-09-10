@@ -43,12 +43,17 @@ export function activePlayerNextMatchMission(request, env = {}) {
 
 export function buildPlayerNextMatchSchedule(fixture) {
   const { seed, team, nextMatch } = fixture;
-  const season = { id: `qa-next-match-${seed}`, name: 'QA Mission League', status: 'active' };
-  const rivals = [
-    ['Corner Pocket Crew', 'Rail Runners'],
-    ['Side Pocket Sharks', 'Hill Hill Bandits'],
-  ];
-  const matches = [{
+  const primarySeason = { id: `qa-next-match-${seed}-spring`, name: 'QA Spring Circuit', status: 'active' };
+  const secondarySeason = { id: `qa-next-match-${seed}-fall`, name: 'QA Fall Circuit', status: 'registration' };
+  const primaryRoundId = `qa-${seed}-round-${nextMatch.roundNumber}`;
+  const secondaryRoundId = `qa-${seed}-round-later`;
+  const laterDateValue = new Date(`${nextMatch.date}T12:00:00Z`);
+  laterDateValue.setUTCDate(laterDateValue.getUTCDate() + 7);
+  const laterDate = laterDateValue.toISOString().slice(0, 10);
+  const secondaryTeam = { id: `qa-${seed}-second-team`, name: 'Green Felt Owls' };
+  const secondaryOpponent = { id: `qa-${seed}-second-opponent`, name: 'Emerald Eight' };
+
+  const primaryMatches = [{
     teamMatchId: nextMatch.id,
     teamAId: team.id,
     teamAName: team.name,
@@ -58,21 +63,89 @@ export function buildPlayerNextMatchSchedule(fixture) {
     venueName: nextMatch.venue,
     tableNumber: 2,
     status: 'scheduled',
-  }];
-  rivals.forEach((names, index) => matches.push({
-    teamMatchId: `qa-${seed}-distractor-${index + 1}`,
-    teamAId: `qa-${seed}-d${index}a`,
-    teamAName: names[0],
-    teamBId: `qa-${seed}-d${index}b`,
-    teamBName: names[1],
+  }, {
+    teamMatchId: `qa-${seed}-spring-distractor`,
+    teamAId: `qa-${seed}-spring-a`,
+    teamAName: 'Corner Pocket Crew',
+    teamBId: `qa-${seed}-spring-b`,
+    teamBName: 'Rail Runners',
     scheduledTime: nextMatch.time,
     venueName: nextMatch.venue,
-    tableNumber: index === 0 ? 1 : 3,
+    tableNumber: 1,
     status: 'scheduled',
-  }));
+  }];
+
+  const secondaryMatches = [{
+    teamMatchId: `qa-${seed}-later-match`,
+    teamAId: secondaryTeam.id,
+    teamAName: secondaryTeam.name,
+    teamBId: secondaryOpponent.id,
+    teamBName: secondaryOpponent.name,
+    scheduledTime: '20:30',
+    venueName: 'Northside Billiards',
+    tableNumber: 4,
+    status: 'scheduled',
+  }, {
+    teamMatchId: `qa-${seed}-fall-distractor`,
+    teamAId: `qa-${seed}-fall-a`,
+    teamAName: 'Side Pocket Sharks',
+    teamBId: `qa-${seed}-fall-b`,
+    teamBName: 'Hill Hill Bandits',
+    scheduledTime: '19:00',
+    venueName: 'Ballard Break Room',
+    tableNumber: 3,
+    status: 'scheduled',
+  }];
+
+  const primaryRounds = [{
+    roundId: primaryRoundId,
+    roundNumber: nextMatch.roundNumber,
+    stage: 'regular',
+    scheduledOn: nextMatch.date,
+    status: 'scheduled',
+    matches: primaryMatches,
+  }];
+  const secondaryRounds = [{
+    roundId: secondaryRoundId,
+    roundNumber: Number(nextMatch.roundNumber || 0) + 1,
+    stage: 'regular',
+    scheduledOn: laterDate,
+    status: 'scheduled',
+    matches: secondaryMatches,
+  }];
+  const contexts = [{
+    seasonId: primarySeason.id,
+    seasonName: primarySeason.name,
+    teamId: team.id,
+    teamName: team.name,
+    participationType: 'roster',
+    roundId: primaryRoundId,
+    roundNumber: nextMatch.roundNumber,
+    scheduledOn: nextMatch.date,
+    roundStatus: 'scheduled',
+    teamMatchStatus: 'scheduled',
+  }, {
+    seasonId: secondarySeason.id,
+    seasonName: secondarySeason.name,
+    teamId: secondaryTeam.id,
+    teamName: secondaryTeam.name,
+    participationType: 'roster',
+    roundId: secondaryRoundId,
+    roundNumber: Number(nextMatch.roundNumber || 0) + 1,
+    scheduledOn: laterDate,
+    roundStatus: 'scheduled',
+    teamMatchStatus: 'scheduled',
+  }];
+
   return {
-    season,
-    rounds: [{ roundId: `qa-${seed}-round-${nextMatch.roundNumber}`, roundNumber: nextMatch.roundNumber, stage: 'regular', scheduledOn: nextMatch.date, status: 'scheduled', matches }],
+    season: primarySeason,
+    rounds: primaryRounds,
+    seasons: [primarySeason, secondarySeason],
+    schedules: {
+      [primarySeason.id]: { season: primarySeason, rounds: primaryRounds },
+      [secondarySeason.id]: { season: secondarySeason, rounds: secondaryRounds },
+    },
+    contexts,
   };
 }
 
@@ -144,9 +217,13 @@ export function routeQaPlayerNextMatchMission(request, env = {}) {
   const { fixture } = active;
   const schedule = buildPlayerNextMatchSchedule(fixture);
 
-  if (request.method === 'GET' && url.pathname === '/api/seasons') return Response.json({ seasons: [schedule.season] }, { headers: { 'cache-control': 'no-store' } });
-  if (request.method === 'GET' && url.pathname === `/api/seasons/${schedule.season.id}/schedule`) return Response.json({ season: schedule.season, rounds: schedule.rounds }, { headers: { 'cache-control': 'no-store' } });
-  if (request.method === 'GET' && url.pathname === '/api/me/teams') return Response.json({ teamManagement: { availability_contexts: [{ teamId: fixture.team.id, teamName: fixture.team.name }], captain_teams: [] } }, { headers: { 'cache-control': 'no-store' } });
+  if (request.method === 'GET' && url.pathname === '/api/seasons') return Response.json({ seasons: schedule.seasons }, { headers: { 'cache-control': 'no-store' } });
+  const scheduleMatch = url.pathname.match(/^\/api\/seasons\/([^/]+)\/schedule$/);
+  if (request.method === 'GET' && scheduleMatch) {
+    const selected = schedule.schedules[decodeURIComponent(scheduleMatch[1])];
+    if (selected) return Response.json(selected, { headers: { 'cache-control': 'no-store' } });
+  }
+  if (request.method === 'GET' && url.pathname === '/api/me/teams') return Response.json({ teamManagement: { availability_contexts: schedule.contexts, captain_teams: [] } }, { headers: { 'cache-control': 'no-store' } });
   if (request.method === 'GET' && url.pathname === '/qa/mission/finish') {
     const reached = cookies(request).get(REACHED_COOKIE) === fixture.seed;
     return new Response(checkpointPage(fixture, reached), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
@@ -162,6 +239,7 @@ export async function enhanceQaPlayerNextMatchMission(response, request, env = {
   if (!(response.headers.get('content-type') || '').includes('text/html')) return response;
 
   const { fixture } = active;
+  const schedule = buildPlayerNextMatchSchedule(fixture);
   const headers = new Headers(response.headers);
   headers.set('cache-control', 'no-store');
   if (url.pathname === '/schedule') headers.append('set-cookie', setCookie(REACHED_COOKIE, fixture.seed));
@@ -169,6 +247,9 @@ export async function enhanceQaPlayerNextMatchMission(response, request, env = {
   const hud = `<aside class="fd-qa-mission" aria-label="QA mission"><div class="fd-qa-mission__k">PLAYER MISSION</div><div class="fd-qa-mission__who">You are <strong>${esc(fixture.player.name)}</strong> on <strong>${esc(fixture.team.name)}</strong>.</div><div class="fd-qa-mission__goal"><strong>Your goal:</strong> Find when and where you play next, and who your team faces.</div>${action}<a class="fd-qa-mission__quit" href="/qa/mission/end">Quit</a></aside>`;
   const styles = '<style>.fd-qa-mission{box-sizing:border-box;width:min(100% - 24px,920px);margin:14px auto 0;padding:13px 14px;border:2px solid #08783f;border-radius:14px;background:#f3fbf6;color:#14231b;font-family:Inter,system-ui,sans-serif}.fd-qa-mission__k{font-size:.68rem;font-weight:950;letter-spacing:.08em;color:#08783f}.fd-qa-mission__who,.fd-qa-mission__goal{margin-top:5px;line-height:1.35}.fd-qa-mission__goal{font-size:.88rem}.fd-qa-mission__who{font-size:.78rem;color:#4e5d54}.fd-qa-mission__hint{display:inline-block;margin-top:9px;font-size:.72rem;color:#657169}.fd-qa-mission__finish{display:inline-flex;min-height:44px;align-items:center;justify-content:center;margin-top:10px;padding:0 14px;border-radius:10px;background:#08783f;color:#fff!important;font-weight:900;text-decoration:none}.fd-qa-mission__quit{display:inline-flex;min-height:44px;align-items:center;margin:8px 0 0 10px;color:#667269!important;font-size:.75rem;font-weight:800;text-decoration:underline}@media(max-width:560px){.fd-qa-mission{width:calc(100% - 16px);margin-top:8px}.fd-qa-mission__finish{width:100%}.fd-qa-mission__quit{margin-left:0;width:100%;justify-content:center}}</style>';
   const html = await response.text();
-  const enhanced = html.replace('</head>', `${styles}</head>`).replace(/<body([^>]*)>/, `<body$1>${hud}`);
+  const homeFixture = url.pathname === '/'
+    ? `<script type="application/json" data-home-fixture>${JSON.stringify({ seasons: schedule.seasons, schedules: schedule.schedules, teamManagement: { availability_contexts: schedule.contexts, captain_teams: [] }, scorableMatches: [] }).replaceAll('<', '\\u003c')}</script>`
+    : '';
+  const enhanced = html.replace('</head>', `${styles}</head>`).replace(/<body([^>]*)>/, `<body$1>${homeFixture}${hud}`);
   return new Response(enhanced, { status: response.status, statusText: response.statusText, headers });
 }
