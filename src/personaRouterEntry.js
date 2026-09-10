@@ -11,6 +11,7 @@ import { enhanceQaCaptainAddPlayersMission, routeQaCaptainAddPlayersMission } fr
 import { enhanceQaCaptainMissionFraming, routeQaCaptainMissionFrame } from './qaCaptainMissionFramingEnhancer.js';
 import { enhanceQaPlayerMissionFraming, routeQaPlayerMissionFrame } from './qaPlayerMissionFramingEnhancer.js';
 import { routeQaScorecard } from './qaScorecardRouteEnhancer.js';
+import { routeQaEvidence } from './qaEvidenceHttp.js';
 import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
@@ -20,6 +21,9 @@ export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const qaEvidenceResponse = await routeQaEvidence(request, env);
+    if (qaEvidenceResponse) return qaEvidenceResponse;
+
     const playerFrameResponse = routeQaPlayerMissionFrame(request, env);
     if (playerFrameResponse) return playerFrameResponse;
 

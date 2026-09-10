@@ -240,15 +240,23 @@ const qaFlowScript = String.raw`
 })();
 </script>`;
 
-function resultScript({ levelId, seed, buildSha, assertions, nextLevel }) {
+function resultScript({ levelId, seed, buildSha, assertions, fixtureFacts }) {
   return `<script>
 (() => {
-  const level=${JSON.stringify(levelId)},seed=${JSON.stringify(seed)},build=${JSON.stringify(buildSha)},assertions=${JSON.stringify(assertions)};
+  const level=${JSON.stringify(levelId)},seed=${JSON.stringify(seed)},build=${JSON.stringify(buildSha)},assertions=${JSON.stringify(assertions)},fixtureFacts=${JSON.stringify(fixtureFacts)};
+  const pendingKey='fd.qa.evidence.pending.v1',testerKey='fd.qa.evidence.tester.v1',replayKey='fd.qa.evidence.replay.'+level+'.'+seed;
   const values={};const started=Date.now();
+  function id(){return crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
+  function read(key,fallback){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}}
+  function tester(){let value=localStorage.getItem(testerKey);if(!value){value=id();localStorage.setItem(testerKey,value)}return value}
+  function device(){const ua=navigator.userAgent||'';return{browser_family:/Firefox/i.test(ua)?'firefox':/Edg/i.test(ua)?'edge':/Chrome/i.test(ua)?'chrome':/Safari/i.test(ua)?'safari':'other',device_family:/Android/i.test(ua)?'android':/iPhone|iPad/i.test(ua)?'ios':'desktop',viewport_width:window.innerWidth,viewport_height:window.innerHeight}}
+  function writePending(rows){localStorage.setItem(pendingKey,JSON.stringify(rows.slice(-100)))}
+  async function flush(){const rows=read(pendingKey,[]);for(const row of rows){try{const response=await fetch('/api/qa/evidence',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(row)});if(!response.ok)continue;writePending(read(pendingKey,[]).filter(item=>item.run_id!==row.run_id));if(row.level_id==='scorecard.'+level&&row.seed===seed){result.textContent=row.outcome==='pass'?'LEVEL BEATEN ✓ — evidence saved to JFL.':'LEVEL FAILED — evidence saved to JFL for replay.';result.dataset.saveState='saved'}}catch{}}}
   for(const button of document.querySelectorAll('[data-qa-assertion]'))button.addEventListener('click',()=>{const id=button.dataset.qaAssertion,value=button.dataset.value;values[id]=value;for(const peer of document.querySelectorAll('[data-qa-assertion="'+id+'"]'))peer.setAttribute('aria-pressed',String(peer===button))});
   const result=document.querySelector('[data-qa-result]');
-  document.querySelector('[data-qa-save]').addEventListener('click',()=>{if(Object.keys(values).length!==assertions.length){result.textContent='Mark PASS or FAIL for every assertion first.';return}const passed=assertions.every((_,index)=>values[String(index)]==='pass');const row={world:'scorecard',level,seed,buildSha:build,assertions:assertions.map((text,index)=>({text,result:values[String(index)]})),overall:passed?'pass':'fail',note:document.querySelector('[data-qa-note]').value.trim(),durationMs:Date.now()-started,timestamp:new Date().toISOString(),userAgent:navigator.userAgent};let history=[];try{history=JSON.parse(localStorage.getItem('fd.qa.scorecard.results.v1')||'[]')}catch{}history.push(row);try{localStorage.setItem('fd.qa.scorecard.results.v1',JSON.stringify(history.slice(-100)))}catch{}result.textContent=passed?'LEVEL BEATEN ✓ — result saved on this device.':'LEVEL FAILED — saved with this seed so it can be replayed.';result.dataset.outcome=row.overall});
-  document.querySelector('[data-qa-replay]').addEventListener('click',()=>{try{sessionStorage.removeItem(window.fdQaStorageKey)}catch{}location.reload()});
+  document.querySelector('[data-qa-save]').addEventListener('click',async()=>{if(Object.keys(values).length!==assertions.length){result.textContent='Mark PASS or FAIL for every assertion first.';return}const passed=assertions.every((_,index)=>values[String(index)]==='pass'),now=new Date().toISOString(),runId=id();const row={schema_version:'1.0.0',lane:'jfl',run_id:runId,replay_of_run_id:new URL(location.href).searchParams.get('replay_of')||null,level_id:'scorecard.'+level,seed,build_sha:build,worker_version:build,started_at:new Date(started).toISOString(),completed_at:now,duration_ms:Date.now()-started,tester_id:tester(),session_id:null,device:device(),fixture_facts:fixtureFacts,assertions:assertions.map((_,index)=>({assertion_id:'scorecard.'+level+'.'+index,result:values[String(index)],answered_at:now})),outcome:passed?'pass':'fail',note:document.querySelector('[data-qa-note]').value.trim()||null,events:[{event_id:id(),type:'interaction',action:'save_result',component:'qa_assertions',occurred_at:now,sequence:0}]};const queue=read(pendingKey,[]).filter(item=>item.run_id!==runId);queue.push(row);writePending(queue);localStorage.setItem(replayKey,runId);let history=read('fd.qa.scorecard.results.v1',[]);history.push({world:'scorecard',level,seed,buildSha:build,assertions:row.assertions,overall:row.outcome,note:row.note,durationMs:row.duration_ms,timestamp:now,runId});localStorage.setItem('fd.qa.scorecard.results.v1',JSON.stringify(history.slice(-100)));result.textContent='Evidence saved on this device · sending to JFL…';result.dataset.outcome=row.outcome;result.dataset.saveState='pending';await flush();if(result.dataset.saveState==='pending')result.textContent='Evidence pending · this device will retry automatically.'});
+  document.querySelector('[data-qa-replay]').addEventListener('click',()=>{try{sessionStorage.removeItem(window.fdQaStorageKey)}catch{}const url=new URL(location.href);const original=localStorage.getItem(replayKey);if(original)url.searchParams.set('replay_of',original);location.assign(url)});
+  if(read(pendingKey,[]).length){result.textContent='Retrying evidence saved on this device…';result.dataset.saveState='pending';flush()}
 })();
 </script>`;
 }
@@ -267,7 +275,8 @@ function renderPlay(levelId, seed, buildSha) {
   const order = Object.keys(LEVELS);const nextId = order[(order.indexOf(levelId) + 1) % order.length];
   const top = `<header class="qa-level-bar"><div class="qa-level-card"><div class="qa-kicker">Scorecard world · Level ${level.number} of 3</div><h1>${escapeHtml(level.title)}</h1><p>${escapeHtml(level.objective)}</p><div class="qa-meta"><span>Seed <code>${escapeHtml(seed)}</code></span><span>Build <code>${escapeHtml(buildSha)}</code></span></div></div></header>`;
   const bottom = `<section class="qa-assertions" aria-label="Human test assertions"><h2>Assertions</h2><p>Use the scorecard first. Then mark every statement PASS or FAIL.</p>${assertionMarkup}<textarea class="qa-note" data-qa-note placeholder="Short note if something felt wrong (optional)"></textarea><div class="qa-actions"><button class="qa-save" data-qa-save type="button">Save level result</button><a class="qa-secondary" href="/qa/scorecard/play?level=${levelId}">Play again · new data</a><button class="qa-secondary" data-qa-replay type="button">Replay exact seed</button><a class="qa-secondary qa-next" href="/qa/scorecard/play?level=${nextId}">Next level →</a></div><div class="qa-result" data-qa-result role="status" aria-live="polite"></div></section>`;
-  html = html.replace('<body>', `<body>${top}`).replace('</head>', `<style>${qaProductStyles}</style></head>`).replace('</body>', `${bottom}${qaFlowScript}${resultScript({ levelId, seed, buildSha, assertions: level.assertions, nextLevel: nextId })}</body>`);
+  const fixtureFacts = { world: 'scorecard', race_state: levelId, mismatch_present: levelId === 'mismatch', target_a: fixture.targetA, target_b: fixture.targetB, opening_discipline: fixture.openingDiscipline };
+  html = html.replace('<body>', `<body>${top}`).replace('</head>', `<style>${qaProductStyles}</style></head>`).replace('</body>', `${bottom}${qaFlowScript}${resultScript({ levelId, seed, buildSha, assertions: level.assertions, fixtureFacts })}</body>`);
   return html;
 }
 
@@ -281,7 +290,7 @@ export function routeQaScorecard(request, env = {}) {
   const url = new URL(request.url);
   if (url.pathname !== '/qa/scorecard' && url.pathname !== '/qa/scorecard/play') return null;
   if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-  const buildSha = env.CF_VERSION_METADATA?.id || 'local';
+  const buildSha = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || 'local';
   if (url.pathname === '/qa/scorecard') return new Response(renderLauncher(buildSha), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
   const levelId = url.searchParams.get('level') || 'fresh';
   if (!LEVELS[levelId]) return new Response('Unknown QA level', { status: 404 });
