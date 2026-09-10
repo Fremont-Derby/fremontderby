@@ -5,7 +5,7 @@ import { buildQaScorecardFixture, routeQaScorecard } from '../src/qaScorecardHtt
 
 const env = {
   ENVIRONMENT: 'jfl',
-  CF_VERSION_METADATA: { id: 'test-build-sha' },
+  CF_VERSION_METADATA: { id: 'worker-version', tag: 'b794a527bacb1347ecb89b1dd2931e1c787c8240' },
 };
 
 test('QA scorecard fixture is deterministic for exact seed replay', () => {
@@ -46,7 +46,7 @@ test('launcher is JFL-only and exposes three one-tap levels', async () => {
   assert.match(html, /Fresh race · first rack/);
   assert.match(html, /One rack from finish/);
   assert.match(html, /Mismatch · recovery/);
-  assert.match(html, /test-build-sha/);
+  assert.match(html, /b794a527bacb1347ecb89b1dd2931e1c787c8240/);
   assert.equal(routeQaScorecard(new Request('https://prod.example/qa/scorecard'), { ENVIRONMENT: 'production' }), null);
 });
 
@@ -59,12 +59,16 @@ test('play route creates a seed when omitted and exact seed renders human assert
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Seed <code>replay-42<\/code>/);
-  assert.match(html, /Build <code>test-build-sha<\/code>/);
+  assert.match(html, /Build <code>b794a527bacb1347ecb89b1dd2931e1c787c8240<\/code>/);
   assert.match(html, /data-qa-assertion="0"/);
   assert.match(html, /Save level result/);
   assert.match(html, /Play again · new data/);
   assert.match(html, /Replay exact seed/);
   assert.match(html, /fd\.qa\.scorecard\.results\.v1/);
+  assert.match(html, /fd\.qa\.evidence\.pending\.v1/);
+  assert.match(html, /\/api\/qa\/evidence/);
+  assert.match(html, /Evidence pending/);
+  assert.match(html, /replay_of/);
   assert.match(html, /Score Rack/);
   assert.match(html, /Keep scoring · race not finished/);
 });
@@ -72,10 +76,10 @@ test('play route creates a seed when omitted and exact seed renders human assert
 test('level result contract records build, seed, timing, assertions and device evidence', async () => {
   const response = routeQaScorecard(new Request('https://jfl.example/qa/scorecard/play?level=mismatch&seed=contract'), env);
   const html = await response.text();
-  assert.match(html, /buildSha:build/);
-  assert.match(html, /durationMs:Date\.now\(\)-started/);
-  assert.match(html, /userAgent:navigator\.userAgent/);
-  assert.match(html, /overall:passed\?'pass':'fail'/);
+  assert.match(html, /build_sha:build/);
+  assert.match(html, /duration_ms:Date\.now\(\)-started/);
+  assert.match(html, /device:device\(\)/);
+  assert.match(html, /outcome:passed\?'pass':'fail'/);
   assert.match(html, /LEVEL BEATEN/);
   assert.match(html, /LEVEL FAILED/);
 });
