@@ -12,14 +12,16 @@ function missionRequest(mission, seed, src = '/') {
   );
 }
 
-test('find-next-match uses staged chrome with goal, finish state, survey promise, and controls', async () => {
+test('find-next-match uses staged chrome with multi-context Home goal, finish state, survey promise, and controls', async () => {
   const response = routeQaPlayerMissionFrame(missionRequest('player.find-next-match', 'frame-next-42'), env);
   const html = await response.text();
   assert.match(html, /STAGED QA MISSION · PLAYER/);
   assert.match(html, /synthetic player, team, and match data/);
   assert.match(html, /not changing real league or team data/);
-  assert.match(html, /Your goal: Find the next scheduled league match/);
-  assert.match(html, /Finish when: the opponent, date, time, and location are all clear/);
+  assert.match(html, /You are [^.<]+\. This test gives you multiple teams and multiple active seasons\./);
+  assert.match(html, /Your goal: Without leaving Home, identify your soonest match across multiple teams and seasons/);
+  assert.match(html, /season, team, opponent, date, time, and location/);
+  assert.match(html, /Finish when: all six details are obvious on the first Home screen without choosing a team or season first/);
   assert.match(html, /4 quick PASS\/FAIL questions/);
   assert.match(html, /href="\/qa\/mission\/finish">Check mission<\/a>/);
   assert.match(html, /data-qa-stuck/);
