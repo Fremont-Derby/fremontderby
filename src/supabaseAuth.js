@@ -1,3 +1,4 @@
+import { resolveTestPersonaActor } from './testPersona.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 export class AuthError extends Error {
   constructor(message, status = 401) {
@@ -81,6 +82,10 @@ export function resolveBetaBypassActor(env = {}) {
   };
 }
 
+function maybeAssumeTestPersona(request, env, user) {
+  return resolveTestPersonaActor(request, env, user) || user;
+}
+
 export async function authenticateSupabaseUser(
   request,
   env,
@@ -123,8 +128,8 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Authenticated user is missing an id');
   }
 
-  return {
+  return maybeAssumeTestPersona(request, env, {
     id: user.id,
     email: user.email ?? null,
-  };
+  });
 }
