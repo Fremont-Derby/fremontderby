@@ -1,5 +1,6 @@
 import { buildQaMissionFixture } from './qaMissionCampaign.js';
 import { buildPlayerNextMatchSchedule } from './qaPlayerNextMatchMission.js';
+import { renderPersonaEvidenceScript } from './qaPersonaEvidenceClient.js';
 
 const MISSION_ID = 'player.mark-availability';
 const MISSION_COOKIE = 'fd_qa_mission';
@@ -92,44 +93,21 @@ function availabilityResponse(fixture, status) {
   };
 }
 
-function checkpointPage(fixture, completed) {
+function checkpointPage(fixture, completed, buildSha) {
   const questions = [
-    'I knew where to report my availability without being told which page to open.',
-    'I knew which league night I was answering for.',
-    'The selected availability state was unmistakable.',
-    'After changing it, I trusted that the saved state would persist.',
+    { id:'discover-availability', text:'I knew where to report my availability without being told which page to open.' },
+    { id:'league-night-clear', text:'I knew which league night I was answering for.' },
+    { id:'state-clear', text:'The selected availability state was unmistakable.' },
+    { id:'persist-clear', text:'After changing it, I trusted that the saved state would persist.' },
   ];
-  const checks = questions.map((question, index) => `<div class="check"><p>${esc(question)}</p><div class="choices"><button data-check="${index}" data-value="pass" aria-pressed="false">PASS</button><button data-check="${index}" data-value="fail" aria-pressed="false">FAIL</button></div></div>`).join('');
-  const replay = `/qa/mission/start?mission=${MISSION_ID}&seed=${encodeURIComponent(fixture.seed)}`;
-  const fresh = `/qa/mission/start?mission=${MISSION_ID}`;
-  const script = `(() => {
-    const buttons = [...document.querySelectorAll('[data-check]')];
-    const finish = document.querySelector('[data-finish]');
-    const outcome = document.querySelector('[data-outcome]');
-    const actions = document.querySelector('[data-actions]');
-    const complete = ${completed ? 'true' : 'false'};
-    const selected = (index) => buttons.find((button) => button.dataset.check === String(index) && button.getAttribute('aria-pressed') === 'true');
-    function sync() {
-      const remaining = [0,1,2,3].filter((index) => !selected(index)).length;
-      finish.disabled = !complete || remaining > 0;
-      finish.textContent = !complete ? 'Complete the availability change first' : (remaining ? 'Answer ' + remaining + ' check' + (remaining === 1 ? '' : 's') + ' to finish' : 'Finish mission');
-    }
-    buttons.forEach((button) => button.addEventListener('click', () => {
-      buttons.filter((peer) => peer.dataset.check === button.dataset.check).forEach((peer) => peer.setAttribute('aria-pressed', String(peer === button)));
-      sync();
-    }));
-    finish.addEventListener('click', () => {
-      const answers = [0,1,2,3].map((index) => selected(index)?.dataset.value || null);
-      const result = answers.includes('fail') ? 'fail' : 'pass';
-      outcome.dataset.show = 'true'; outcome.dataset.result = result;
-      outcome.textContent = result === 'pass' ? 'MISSION PASSED ✓' : 'MISSION FAILED — your feedback is a valid result.';
-      actions.dataset.show = 'true'; finish.disabled = true; finish.textContent = 'Result saved';
-      try { localStorage.setItem('fd.qa.mission.${MISSION_ID}.${esc(fixture.seed)}', JSON.stringify({ missionId: '${MISSION_ID}', seed: '${esc(fixture.seed)}', result, answers, savedAt: new Date().toISOString() })); } catch {}
-      outcome.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    });
-    sync();
-  })();`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mission check · Fremont Derby</title><style>:root{font-family:Inter,system-ui,sans-serif;background:#f4f7f5;color:#14231b}*{box-sizing:border-box}body{margin:0}.wrap{width:min(720px,calc(100% - 20px));margin:18px auto 44px}.card{background:#fff;border:1px solid #bdc7c1;border-radius:18px;padding:16px}.k{font-size:.7rem;font-weight:950;letter-spacing:.08em;color:#08783f}.card h1{font-size:1.65rem;margin:5px 0 8px}.goal{padding:12px;border-radius:12px;background:#eef5f1;margin:12px 0;font-size:.86rem}.check{border-top:1px solid #e1e5e2;padding-top:10px}.check p{font-weight:800;line-height:1.35}.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choices button,.actions a,.finish{min-height:48px;border-radius:11px;border:1px solid #08783f;font-weight:900}.choices button{background:#fff;color:#08783f}.choices button[aria-pressed=true][data-value=pass]{background:#08783f;color:#fff}.choices button[aria-pressed=true][data-value=fail]{background:#9b2c2c;border-color:#9b2c2c;color:#fff}.finish{width:100%;margin-top:14px;background:#e8ece9;color:#69716c;border-color:#ccd2ce}.finish:not(:disabled){background:#08783f;color:#fff}.outcome{display:none;margin-top:14px;padding:14px;border-radius:12px;font-weight:900}.outcome[data-show=true]{display:block}.outcome[data-result=pass]{background:#eaf7ef;color:#075f36}.outcome[data-result=fail]{background:#fff0f0;color:#842626}.actions{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.actions[data-show=true]{display:grid}.actions a{display:grid;place-items:center;text-decoration:none;color:#08783f;background:#fff;padding:8px}.actions a:first-child{background:#08783f;color:#fff}.back{display:inline-block;margin-top:14px;color:#08783f;font-weight:800}@media(max-width:540px){.actions{grid-template-columns:1fr}}</style></head><body><main class="wrap"><section class="card"><div class="k">PLAYER MISSION · CHECKPOINT</div><h1>Did your availability update make sense?</h1><div class="goal"><strong>Goal state:</strong> ${esc(fixture.targetStatus === 'available' ? 'Available' : 'Unavailable')} for ${esc(fixture.nextMatch.date)}.</div>${completed ? '' : '<p><strong>The mission goal is not complete yet.</strong> Return to the product and save the requested availability state.</p>'}<div>${checks}</div><button class="finish" data-finish disabled>Answer 4 checks to finish</button><div class="outcome" data-outcome></div><div class="actions" data-actions><a href="${replay}">Replay exact mission</a><a href="${fresh}">Play with new data</a><a href="/qa">Back to missions</a><a href="/qa/mission/end">End mission</a></div>${completed ? '' : '<a class="back" href="/">Return to mission</a>'}</section></main><script>${script}</script></body></html>`;
+  const checks=questions.map((question,index)=>`<div class="check"><p>${esc(question.text)}</p><div class="choices"><button data-check="${index}" data-value="pass" aria-pressed="false">PASS</button><button data-check="${index}" data-value="fail" aria-pressed="false">FAIL</button></div></div>`).join('');
+  const evidenceScript=renderPersonaEvidenceScript({
+    missionId:MISSION_ID,seed:fixture.seed,buildSha,
+    assertionIds:questions.map(question=>question.id),
+    fixtureFacts:{world:'player',mission:'mark-availability',target_status:fixture.targetStatus,starting_status:fixture.startingStatus},
+    reached:completed,
+  });
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mission check · Fremont Derby</title><style>:root{font-family:Inter,system-ui,sans-serif;background:#f4f7f5;color:#14231b}*{box-sizing:border-box}body{margin:0}.wrap{width:min(720px,calc(100% - 20px));margin:18px auto 44px}.card{background:#fff;border:1px solid #bdc7c1;border-radius:18px;padding:16px}.k{font-size:.7rem;font-weight:950;letter-spacing:.08em;color:#08783f}.card h1{font-size:1.65rem;margin:5px 0 8px}.goal{padding:12px;border-radius:12px;background:#eef5f1;margin:12px 0;font-size:.86rem}.check{border-top:1px solid #e1e5e2;padding-top:10px}.check p{font-weight:800;line-height:1.35}.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choices button,.finish{min-height:48px;border-radius:11px;border:1px solid #08783f;font-weight:900}.choices button{background:#fff;color:#08783f}.choices button[aria-pressed=true][data-value=pass]{background:#08783f;color:#fff}.choices button[aria-pressed=true][data-value=fail]{background:#9b2c2c;border-color:#9b2c2c;color:#fff}.finish{width:100%;margin-top:14px;background:#e8ece9;color:#69716c;border-color:#ccd2ce}.finish:not(:disabled){background:#08783f;color:#fff}.outcome{display:none;margin-top:14px;padding:14px;border-radius:12px;font-weight:900}.outcome[data-show=true]{display:block}.outcome[data-result=pass]{background:#eaf7ef;color:#075f36}.outcome[data-result=fail]{background:#fff0f0;color:#842626}.machine{font-size:.72rem;color:#6b756e;margin-top:12px}.back{display:inline-block;margin-top:14px;color:#08783f;font-weight:800}</style></head><body><main class="wrap"><section class="card"><div class="k">PLAYER MISSION · CHECKPOINT</div><h1>Did your availability update make sense?</h1><div class="goal"><strong>Goal state:</strong> ${esc(fixture.targetStatus==='available'?'Available':'Unavailable')} for ${esc(fixture.nextMatch.date)}.</div>${completed?'':'<p><strong>The mission goal is not complete yet.</strong> Return to the product and save the requested availability state.</p>'}<div>${checks}</div><button class="finish" data-finish disabled>Answer 4 checks to finish</button><div class="outcome" data-outcome role="status" aria-live="polite"></div><div class="machine">Your result is saved centrally when possible. If the network is unavailable, it is queued on this device and retried later.</div>${completed?'':'<a class="back" href="/">Return to mission</a>'}</section></main>${evidenceScript}</body></html>`;
 }
 
 export function routeQaPlayerAvailabilityMission(request, env = {}) {
@@ -168,7 +146,8 @@ export function routeQaPlayerAvailabilityMission(request, env = {}) {
   }
   if (request.method === 'GET' && url.pathname === '/qa/mission/availability-finish') {
     const completed = currentStatus(request, fixture) === fixture.targetStatus;
-    return new Response(checkpointPage(fixture, completed), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+    const buildSha=env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || 'local';
+    return new Response(checkpointPage(fixture, completed, buildSha), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
   }
   return null;
 }
