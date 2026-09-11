@@ -31,6 +31,10 @@ test('JFL campaign promotes real Player missions while keeping unfinished fixtur
   assert.match(html, /COMING SOON/);
   assert.match(html, /This mission is not playable yet/);
   assert.match(html, /genuinely playable/);
+  assert.match(html, /data-mission-id="player\.find-next-match"/);
+  assert.match(html, /fd\.qa\.persona\.results\.v1/);
+  assert.match(html, /fd\.qa\.evidence\.pending\.v1/);
+  assert.match(html, /Last run:/);
 });
 
 test('mission game enhancer is isolated from debug preview and non-JFL routes', async () => {
