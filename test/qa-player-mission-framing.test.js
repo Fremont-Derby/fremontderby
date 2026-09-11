@@ -15,7 +15,7 @@ function missionRequest(mission, seed, src = '/') {
 test('find-next-match uses staged chrome with multi-context Home goal, finish state, survey promise, and controls', async () => {
   const response = routeQaPlayerMissionFrame(missionRequest('player.find-next-match', 'frame-next-42'), env);
   const html = await response.text();
-  assert.match(html, /STAGED QA MISSION · PLAYER/);
+  assert.match(html, /STAGED QA MISSION · TEST DATA ONLY/);
   assert.match(html, /synthetic player, team, and match data/);
   assert.match(html, /not changing real league or team data/);
   assert.match(html, /You are [^.<]+\. This test gives you multiple teams and multiple active seasons\./);
@@ -31,7 +31,7 @@ test('find-next-match uses staged chrome with multi-context Home goal, finish st
 test('availability uses the same staged chrome and an exact saved-state criterion', async () => {
   const response = routeQaPlayerMissionFrame(missionRequest('player.mark-availability', 'frame-availability-42', '/schedule'), env);
   const html = await response.text();
-  assert.match(html, /STAGED QA MISSION · PLAYER/);
+  assert.match(html, /STAGED QA MISSION · TEST DATA ONLY/);
   assert.match(html, /Player mission: Report your availability/);
   assert.match(html, /Finish when: your (Available|Unavailable) choice is visibly saved/);
   assert.match(html, /href="\/qa\/mission\/availability-finish">Check mission<\/a>/);
@@ -43,7 +43,8 @@ test('player mission controls are centered and mobile safe', async () => {
   const html = await (routeQaPlayerMissionFrame(missionRequest('player.mark-availability', 'frame-mobile-42'), env)).text();
   assert.match(html, /justify-content:center/);
   assert.match(html, /min-height:44px/);
-  assert.match(html, /grid-template-columns:1fr/);
+  assert.match(html, /grid-template-columns:1\.35fr 1fr 1fr/);
+  assert.match(html, /fd\.qa\.persona\.started/);
   assert.match(html, /safe-area-inset-bottom/);
 });
 
