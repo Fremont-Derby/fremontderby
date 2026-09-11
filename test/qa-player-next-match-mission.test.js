@@ -9,7 +9,7 @@ import {
 } from '../src/qaPlayerNextMatchMission.js';
 import { buildQaMissionFixture } from '../src/qaMissionCampaign.js';
 
-const env = { ENVIRONMENT: 'jfl' };
+const env = { ENVIRONMENT: 'jfl', CF_VERSION_METADATA: { tag: 'a'.repeat(40) } };
 
 function cookieFrom(response, name = 'fd_qa_mission') {
   const values = response.headers.getSetCookie?.() || [response.headers.get('set-cookie') || ''];
@@ -124,9 +124,12 @@ test('reaching the real Schedule surface unlocks the human checkpoint', async ()
   );
   const checkpointHtml = await checkpoint.text();
   assert.match(checkpointHtml, /Did the product get you there\?/);
-  assert.match(checkpointHtml, /Replay exact mission/);
-  assert.match(checkpointHtml, /Play with new data/);
   assert.match(checkpointHtml, /Finish mission/);
+  assert.match(checkpointHtml, /\/api\/qa\/evidence/);
+  assert.match(checkpointHtml, /level_id:'persona\.'\+mission/);
+  assert.match(checkpointHtml, /fd\.qa\.persona\.results\.v1/);
+  assert.match(checkpointHtml, /\/qa\/mission\/end\?completed=1/);
+  assert.doesNotMatch(checkpointHtml, /Replay exact mission|Play with new data|>End mission</);
   assert.doesNotMatch(checkpointHtml, /Generated Arrange state|schemaVersion|machine —|mixed —/);
 });
 
