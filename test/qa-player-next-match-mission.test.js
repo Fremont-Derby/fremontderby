@@ -126,7 +126,7 @@ test('reaching the real Schedule surface unlocks the human checkpoint', async ()
   assert.match(checkpointHtml, /Did the product get you there\?/);
   assert.match(checkpointHtml, /Finish mission/);
   assert.match(checkpointHtml, /\/api\/qa\/evidence/);
-  assert.match(checkpointHtml, /persona\.player\.find-next-match/);
+  assert.match(checkpointHtml, /level_id:'persona\.'\+mission/);
   assert.match(checkpointHtml, /fd\.qa\.persona\.results\.v1/);
   assert.match(checkpointHtml, /\/qa\/mission\/end\?completed=1/);
   assert.doesNotMatch(checkpointHtml, /Replay exact mission|Play with new data|>End mission</);
