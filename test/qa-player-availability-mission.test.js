@@ -8,7 +8,7 @@ import {
   routeQaPlayerAvailabilityMission,
 } from '../src/qaPlayerAvailabilityMission.js';
 
-const env = { ENVIRONMENT: 'jfl' };
+const env = { ENVIRONMENT: 'jfl', CF_VERSION_METADATA: { tag: 'a'.repeat(40) } };
 
 function setCookies(response) {
   const values = response.headers.getSetCookie?.() || [response.headers.get('set-cookie') || ''];
@@ -117,7 +117,7 @@ test('Schedule keeps the real availability control and reveals checkpoint only a
   assert.match(html, /MutationObserver/);
 });
 
-test('checkpoint requires target status and supports exact replay plus fresh data', async () => {
+test('checkpoint requires target status and saves through shared central evidence loop', async () => {
   const start = routeQaPlayerAvailabilityMission(
     new Request('https://jfl.example/qa/mission/start?mission=player.mark-availability&seed=checkpoint-2'),
     env,
@@ -131,9 +131,11 @@ test('checkpoint requires target status and supports exact replay plus fresh dat
   const complete = routeQaPlayerAvailabilityMission(new Request('https://jfl.example/qa/mission/availability-finish', { headers: { cookie: `${missionCookie}; ${stateCookie}` } }), env);
   const html = await complete.text();
   assert.match(html, /Did your availability update make sense\?/);
-  assert.match(html, /Replay exact mission/);
-  assert.match(html, /Play with new data/);
   assert.match(html, /Finish mission/);
+  assert.match(html, /\/api\/qa\/evidence/);
+  assert.match(html, /fd\.qa\.persona\.results\.v1/);
+  assert.match(html, /\/qa\/mission\/end\?completed=1/);
+  assert.doesNotMatch(html, /Replay exact mission|Play with new data|>End mission</);
 });
 
 test('availability mission fails closed outside JFL', () => {
