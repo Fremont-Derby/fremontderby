@@ -35,7 +35,7 @@ export function createQaEvidenceHttp({
     if (env?.ENVIRONMENT !== 'jfl' || env?.SUPABASE_SCHEMA !== 'jfl') return null;
     const url = new URL(request.url);
 
-    if (url.pathname === '/api/qa/evidence/recent') {
+    if (url.pathname === '/api/admin/qa/evidence/recent') {
       if (request.method !== 'GET') return response({ error: 'Method not allowed' }, 405);
       if (!request.headers.get('authorization')) return response({ error: 'Missing bearer token' }, 401);
       try {
