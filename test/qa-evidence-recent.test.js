@@ -43,13 +43,26 @@ test('recent evidence API requires explicit bearer and clamps client limit to 50
     createAdminRepository:()=>({listPlayers:async({actorUserId})=>{calls.push(['admin',actorUserId]);return[];}}),
     createRepository:()=>({listRuns:async({limit})=>{calls.push(['list',limit]);return recent;}}),
   });
-  const missing=await route(new Request('https://jfl.example/api/qa/evidence/recent?limit=500'),env);
+  const missing=await route(new Request('https://jfl.example/api/admin/qa/evidence/recent?limit=500'),env);
   assert.equal(missing.status,401);
 
-  const response=await route(new Request('https://jfl.example/api/qa/evidence/recent?limit=500',{headers:{authorization:'Bearer x'}}),env);
+  const response=await route(new Request('https://jfl.example/api/admin/qa/evidence/recent?limit=500',{headers:{authorization:'Bearer x'}}),env);
   assert.equal(response.status,200);
   assert.equal(response.headers.get('cache-control'),'no-store');
-  assert.deepEqual(await response.json(),{runs:recent,count:1});
+  assert.deepEqual(await response.json(),{
+    results:[{
+      runId:'recent-1',
+      levelId:'persona.player.find-next-match',
+      seed:'seed-1',
+      buildSha:SHA,
+      completedAt:'2026-09-11T00:01:00.000Z',
+      durationMs:60000,
+      outcome:'pass',
+      assertions:recent[0].assertions,
+      fixtureFacts:{world:'player'},
+    }],
+    count:1,
+  });
   assert.deepEqual(calls,[['admin','admin-user'],['list',50]]);
 });
 
@@ -59,7 +72,7 @@ test('recent evidence API returns 403 for non-admin and fails closed outside JFL
     createAdminRepository:()=>({listPlayers:async()=>{throw new Error('Actor is not a league admin');}}),
     createRepository:()=>({listRuns:async()=>{throw new Error('must not read');}}),
   });
-  const request=new Request('https://jfl.example/api/qa/evidence/recent',{headers:{authorization:'Bearer x'}});
+  const request=new Request('https://jfl.example/api/admin/qa/evidence/recent',{headers:{authorization:'Bearer x'}});
   const denied=await route(request,env);
   assert.equal(denied.status,403);
   assert.deepEqual(await denied.json(),{error:'League admin access is required'});
