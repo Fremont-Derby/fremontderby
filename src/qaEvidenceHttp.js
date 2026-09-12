@@ -44,7 +44,18 @@ export function createQaEvidenceHttp({
         await adminRepository.listPlayers({ actorUserId: actor.id });
         const repository = createRepository(env, { fetch: fetchImpl });
         const runs = await repository.listRuns({ limit: recentLimit(url) });
-        return response({ runs, count: runs.length });
+        const results = runs.map((run) => ({
+          runId: run.run_id,
+          levelId: run.level_id,
+          seed: run.seed,
+          buildSha: run.build_sha,
+          completedAt: run.completed_at,
+          durationMs: run.duration_ms,
+          outcome: run.outcome,
+          assertions: run.assertions,
+          fixtureFacts: run.fixture_facts,
+        }));
+        return response({ results, count: results.length });
       } catch (error) {
         return recentErrorResponse(error);
       }
