@@ -1,5 +1,6 @@
 import { validateQaEvidence } from './qaEvidenceContract.js';
 import { createQaEvidenceRepository } from './qaEvidenceRepository.js';
+import { routeQaEvidenceSummary } from './qaEvidenceSummaryHttp.js';
 
 function response(body, status = 200) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
