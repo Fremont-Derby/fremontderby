@@ -244,6 +244,7 @@ export function buildAdminOperationsOverview(raw, readiness) {
     },
     rating: { latestUpdatedAt: raw.latestRatingUpdate },
     environment: readiness,
+    qaFeedback: raw.qaFeedback ?? null,
     actions,
   };
 }

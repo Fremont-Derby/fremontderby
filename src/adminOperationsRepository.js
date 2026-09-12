@@ -86,6 +86,40 @@ function liveMatchSummary(matchRows, submissionRows) {
   return { total: rows.length, rows };
 }
 
+function qaFeedbackSummary(runs) {
+  const outcomes = { pass: 0, fail: 0, incomplete: 0 };
+  const levels = new Map();
+  const assertions = new Map();
+
+  for (const run of runs) {
+    outcomes[run.outcome] = (outcomes[run.outcome] || 0) + 1;
+    const level = levels.get(run.level_id) || {
+      levelId: run.level_id, runs: 0, pass: 0, fail: 0, incomplete: 0,
+    };
+    level.runs += 1;
+    level[run.outcome] = (level[run.outcome] || 0) + 1;
+    levels.set(run.level_id, level);
+
+    for (const item of run.assertions || []) {
+      const aggregate = assertions.get(item.assertion_id) || {
+        assertionId: item.assertion_id, pass: 0, fail: 0, notAnswered: 0,
+      };
+      if (item.result === 'not_answered') aggregate.notAnswered += 1;
+      else aggregate[item.result] = (aggregate[item.result] || 0) + 1;
+      assertions.set(item.assertion_id, aggregate);
+    }
+  }
+
+  return {
+    sampleSize: runs.length,
+    latestCompletedAt: runs[0]?.completed_at || null,
+    latestBuildSha: runs[0]?.build_sha || null,
+    outcomes,
+    levels: [...levels.values()],
+    assertions: [...assertions.values()],
+  };
+}
+
 function selectedIneligibleSummary(slotRows, paymentRows) {
   const playablePlayerIds = new Set(
     paymentRows
@@ -275,6 +309,29 @@ export function createAdminOperationsRepository(
       const oldestScoreMismatchAt = metrics.scoreMismatches?.rows?.[0]?.mismatchSince ?? null;
       for (const metric of Object.values(metrics)) delete metric.rows;
 
+      let qaFeedback = null;
+      if (env.ENVIRONMENT === 'jfl' && env.SUPABASE_SCHEMA === 'jfl') {
+        try {
+          const rows = await tableRows(
+            'qa_evidence_runs',
+            'select=payload&order=created_at.desc&limit=50',
+            'private',
+          );
+          const runs = rows.map((row) => row.payload).filter(Boolean);
+          qaFeedback = { available: true, ...qaFeedbackSummary(runs) };
+        } catch {
+          qaFeedback = {
+            available: false,
+            sampleSize: 0,
+            latestCompletedAt: null,
+            latestBuildSha: null,
+            outcomes: { pass: 0, fail: 0, incomplete: 0 },
+            levels: [],
+            assertions: [],
+          };
+        }
+      }
+
       return {
         generatedAt: new Date().toISOString(),
         season,
@@ -283,6 +340,7 @@ export function createAdminOperationsRepository(
         latestRatingUpdate,
         oldestLiveMatchStartedAt,
         oldestScoreMismatchAt,
+        qaFeedback,
       };
     },
   };
