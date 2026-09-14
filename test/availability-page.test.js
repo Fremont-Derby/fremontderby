@@ -23,14 +23,26 @@ test('availability page uses signed-in human-readable league-night list', () => 
   assert.match(html, /No upcoming published regular-season rounds/);
 });
 
-test('check-in hides past weeks before rendering or loading saved state', () => {
+test('check-in hides past weeks and loads saved state sequentially', () => {
   const html = renderAvailabilityPage();
 
   assert.match(html, /function localDateKey\(date=new Date\(\)\)/);
   assert.match(html, /const today=localDateKey\(\)/);
   assert.match(html, /if\(context\.scheduledOn&&context\.scheduledOn<today\)continue/);
   assert.match(html, /const groups=groupContexts\(contexts\)/);
-  assert.match(html, /Promise\.all\(groups\.map/);
+  assert.doesNotMatch(html, /Promise\.all\(groups\.map/);
+  assert.match(html, /for\(const group of groups\)\{const card=dateList\.querySelector/);
+  assert.match(html, /await loadSavedAvailability\(group,card\)/);
+});
+
+test('check-in never exposes raw non-JSON upstream HTML', () => {
+  const html = renderAvailabilityPage();
+
+  assert.doesNotMatch(html, /catch\{return\{error:text\}\}/);
+  assert.match(html, /error\\s\*\(code/);
+  assert.match(html, /1015/);
+  assert.match(html, /Check-in is temporarily busy\. Wait a moment and try again\./);
+  assert.match(html, /Check-in service is temporarily unavailable\. Try again\./);
 });
 
 test('one-tap check-in restores saved date availability with fixed color bands', () => {
