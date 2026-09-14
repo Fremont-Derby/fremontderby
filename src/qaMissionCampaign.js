@@ -25,6 +25,25 @@ export const QA_MISSIONS = [
     invariants: ['exactly_one_next_match','match_is_future','persona_is_rostered_player'],
   },
   {
+    missionId: 'player.understand-team',
+    world: 'player',
+    persona: 'Player',
+    context: 'You play on more than one team this season and need to know who is on one specific roster.',
+    action: 'Find the captain, roster, and season for the requested team.',
+    entryMode: 'natural',
+    estimatedSeconds: 60,
+    status: 'fixture-ready',
+    productRoutes: ['/','/teams'],
+    assertions: [
+      { id: 'team-context-clear', type: 'human', text: 'I could tell which team and season I was viewing.' },
+      { id: 'captain-clear', type: 'human', text: 'The captain was easy to identify.' },
+      { id: 'roster-clear', type: 'human', text: 'The roster was easy to scan.' },
+      { id: 'multi-team-safe', type: 'mixed', text: 'I did not confuse another team or season with the requested one.' },
+    ],
+    randomizableFields: ['playerName','targetTeamName','otherTeamName','captainName','rosterNames','seasonNames'],
+    invariants: ['persona_has_multiple_team_contexts','target_team_has_one_captain','target_roster_is_unambiguous'],
+  },
+  {
     missionId: 'player.mark-availability',
     world: 'player',
     persona: 'Player',
@@ -148,6 +167,26 @@ export function buildQaMissionFixture(missionId, seed) {
   const mission = QA_MISSIONS.find((item) => item.missionId === missionId);
   if (!mission) return null;
   const random = seeded(seed);
+
+  if (missionId === 'player.understand-team') {
+    const playerName = personName(random);
+    const targetTeam = teamName(random);
+    let otherTeam = teamName(random);
+    if (otherTeam === targetTeam) otherTeam += ' II';
+    const captainName = personName(random);
+    const roster = [captainName, playerName];
+    while (roster.length < 5) {
+      const name = personName(random);
+      if (!roster.includes(name)) roster.push(name);
+    }
+    return {
+      schemaVersion: 1, missionId, seed, persona: 'player',
+      player: { id: `qa-${seed}-player`, name: playerName },
+      target: { teamId: `qa-${seed}-team-a`, teamName: targetTeam, seasonId: `qa-${seed}-season-a`, seasonName: 'QA Autumn ' + (2030 + Math.floor(random()*3)), captainName, roster },
+      distractor: { teamId: `qa-${seed}-team-b`, teamName: otherTeam, seasonId: `qa-${seed}-season-b`, seasonName: 'QA Spring ' + (2030 + Math.floor(random()*3)), captainName: personName(random), roster: [playerName, personName(random), personName(random)] },
+      semantic: { persona_has_multiple_team_contexts: true, target_team_has_one_captain: true, target_roster_is_unambiguous: true },
+    };
+  }
 
   if (missionId === 'player.find-next-match') {
     const playerName = personName(random);
