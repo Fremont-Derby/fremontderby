@@ -60,6 +60,8 @@ jobs:
           if errorlevel 1 exit /b 1
           call npm run check
           if errorlevel 1 exit /b 1
+          call npm run check:matrix
+          if errorlevel 1 exit /b 1
       - name: Unit tests
         if: ${{ github.event.inputs.skip_tests != 'true' }}
         continue-on-error: true
@@ -141,7 +143,6 @@ jobs:
         run: |
           node -e "const sleep=ms=>new Promise(r=>setTimeout(r,ms));(async()=>{for(let i=1;i<=10;i++){const r=await fetch('https://fremontderby.com/health');const b=await r.json();console.log(JSON.stringify(b));if(b.versionTag){console.log('versionTag ok via',b.versionTagSource||'unknown');process.exit(0)}await sleep(3000)}console.error('versionTag still null after deploy');process.exit(1)})()"
       - name: Probe host identity
-        continue-on-error: true
         env:
           HOST: ${{ matrix.lane == 'production' && 'fremontderby.com' || format('{0}.fremontderby.com', matrix.lane) }}
           EXPECT: ${{ matrix.lane == 'production' && 'production' || matrix.lane }}

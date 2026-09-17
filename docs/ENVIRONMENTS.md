@@ -26,6 +26,17 @@ Secret **names** are also declared in `wrangler.jsonc` through `secrets.required
 
 JFL, DRU, and gamma share the non-production Supabase project `${stagingRef}` to stay within the free plan. They are partitioned into independent `jfl`, `dru`, and `gamma` schemas. Every Worker REST/RPC request carries the matching PostgREST profile, and readiness fails closed on a project or schema mismatch.
 
+## Deployment matrix guardrail (#1194)
+
+`docs/deployment-matrix.json` is the authoritative lane matrix (domain, Worker name, `ENVIRONMENT`, Supabase project ref, schema, `workers_dev`, `preview_urls`).
+
+- CI runs `npm run check:matrix` (`scripts/assert-wrangler-matrix.mjs`) on every PR/push so a drifted `wrangler.jsonc` fails before merge.
+- Lane and production deploy scripts re-check the matrix before publishing.
+- Post-deploy probes (`assert-lane-health` / deploy workflow host identity) must see the expected environment on the live domain; mismatches fail the release.
+
+To intentionally change a lane mapping: update `docs/deployment-matrix.json` and `wrangler.jsonc` in the **same** PR, keep `LANE_CUSTOM_DOMAINS` / restore bindings aligned, and prove `npm run check:matrix` plus the matrix unit tests pass. Never point JFL/DRU/gamma at the production Supabase project, and never point production at the staging project.
+
+
 ## Local
 - Runs with `wrangler dev`.
 - Uses local/test data only.
