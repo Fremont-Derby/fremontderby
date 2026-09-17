@@ -97,6 +97,7 @@
     },
     "gamma": {
       "name": "fremontderby-gamma",
+      "main": "src/personaRouterEntry.js",
       "workers_dev": false,
       "preview_urls": false,
       "routes": [
@@ -110,6 +111,7 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
+        "TEST_PERSONA_OPERATOR_USER_IDS": "e0b7c076-106b-4160-bfab-6de69a4f5ded",
         "SUPABASE_SCHEMA": "gamma",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
         "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
