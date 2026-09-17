@@ -10,6 +10,18 @@ function replaceRequired(html, current, replacement, label) {
   return html.replace(current, replacement);
 }
 
+function injectNextMatch(html) {
+  if (html.includes('data-next-match')) return html;
+  html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
+  return html.replace(
+    '</body>',
+    `<script>
+      ${nextMatchSummaryBrowserSource}
+      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+    </script></body>`,
+  );
+}
+
 export async function enhancePublicSeasonSelection(response, pathname) {
   if (!ROUTES.has(pathname)) return response;
   const contentType = response.headers.get('content-type') || '';
@@ -42,6 +54,7 @@ export async function enhancePublicSeasonSelection(response, pathname) {
       "const selected=choosePublicSeason(seasons,{explicitId:requestedSeasonId,rememberedId:rememberedSeasonId});seasonInput.value=selected?.id||'';",
       'standings default',
     );
+    html = injectNextMatch(html);
   }
 
   if (pathname === '/prizes') {
@@ -51,16 +64,7 @@ export async function enhancePublicSeasonSelection(response, pathname) {
       "function preferredSeason(seasons) {\n      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });\n    }",
       'prizes default',
     );
-    if (!html.includes('data-next-match')) {
-      html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
-      html = html.replace(
-        '</body>',
-        `<script>
-          ${nextMatchSummaryBrowserSource}
-          (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
-        </script></body>`,
-      );
-    }
+    html = injectNextMatch(html);
   }
 
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
