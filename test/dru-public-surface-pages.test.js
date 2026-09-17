@@ -108,3 +108,13 @@ test('DRU welcome and rules expose league surface links', async () => {
     assert.doesNotMatch(html, /This dog lost the rack/);
   }
 });
+
+test('DRU schedule page wires next match from /api/me/matches', async () => {
+  const response = await get('/schedule');
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.match(html, /data-next-match/);
+  assert.match(html, /\/api\/me\/matches/);
+  assert.match(html, /pickNextMatch/);
+  assert.doesNotMatch(html, /This dog lost the rack/);
+});
