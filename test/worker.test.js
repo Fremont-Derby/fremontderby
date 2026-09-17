@@ -1,1 +1,1 @@
-file:///workspace/fremontderby-pr2237/test/worker.test.js
+PLACEHOLDER_LOAD_FROM_FILE
