@@ -10,16 +10,16 @@ import { STANDINGS_CONTEXT_MISSION, buildStandingsContextFixture } from './qaSta
 import { TEAM_CONTEXT_MISSION, buildTeamContextFixture } from './qaTeamContextContract.js';
 
 export const DRU_QA_MISSIONS = [
-  { mission: STANDINGS_CONTEXT_MISSION, build: buildStandingsContextFixture, jflCard: 2306 },
-  { mission: ELIGIBILITY_MISSION, build: buildEligibilityFixture, jflCard: 2307 },
-  { mission: MESSAGE_THREAD_MISSION, build: buildMessageThreadFixture, jflCard: 2308 },
-  { mission: TEAM_CONTEXT_MISSION, build: buildTeamContextFixture, jflCard: 2305 },
-  { mission: CAPTAIN_ADD_PLAYERS_MISSION, build: buildCaptainAddPlayersFixture, jflCard: 2276 },
-  { mission: CAPTAINCY_TRANSFER_MISSION, build: buildCaptaincyTransferFixture, jflCard: 2277 },
-  { mission: AVAILABILITY_MISSION, build: buildAvailabilityFixture, jflCard: 2275 },
-  { mission: NEXT_MATCH_MISSION, build: buildNextMatchFixture, jflCard: 2274 },
-  { mission: FIRST_RACK_MISSION, build: buildFirstRackFixture, jflCard: 2272 },
-  { mission: PLAYER_DIRECTORY_MISSION, build: buildPlayerDirectoryFixture, jflCard: 1781 },
+  { mission: STANDINGS_CONTEXT_MISSION, build: buildStandingsContextFixture },
+  { mission: ELIGIBILITY_MISSION, build: buildEligibilityFixture },
+  { mission: MESSAGE_THREAD_MISSION, build: buildMessageThreadFixture },
+  { mission: TEAM_CONTEXT_MISSION, build: buildTeamContextFixture },
+  { mission: CAPTAIN_ADD_PLAYERS_MISSION, build: buildCaptainAddPlayersFixture },
+  { mission: CAPTAINCY_TRANSFER_MISSION, build: buildCaptaincyTransferFixture },
+  { mission: AVAILABILITY_MISSION, build: buildAvailabilityFixture },
+  { mission: NEXT_MATCH_MISSION, build: buildNextMatchFixture },
+  { mission: FIRST_RACK_MISSION, build: buildFirstRackFixture },
+  { mission: PLAYER_DIRECTORY_MISSION, build: buildPlayerDirectoryFixture },
 ];
 
 export function listDruQaMissionIds() {
