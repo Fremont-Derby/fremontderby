@@ -42,6 +42,10 @@ export function renderIntroPage() {
     <p><strong>No team? No problem.</strong> Free agents and subs can still play, build their individual record, and compete for cash.</p>
     <div class="actions">
       <a class="button primary" href="/profile">Join / sign in</a>
+      <a class="button" href="/schedule">Schedule</a>
+      <a class="button" href="/standings">Standings</a>
+      <a class="button" href="/teams">Teams</a>
+      <a class="button" href="/players">Players</a>
       <a class="button demo" href="/demo">Test drive the app</a>
       <a class="button" href="/rules">Read the rules</a>
     </div>
@@ -102,7 +106,7 @@ export function renderRulesPage() {
       <li>Individual ranking uses win percentage, with total wins as the first tiebreaker.</li>
       <li>Singles qualification requires playing in at least five of the seven regular-season rounds anywhere in the league.</li>
       <li>Singles also award cash for regular-season performance, with a larger payout attached to the singles championship.</li>
-      <li>Exact season payouts are based on the available prize pool and are published separately.</li>
+      <li>Exact season payouts are published separately.</li>
     </ul>
 
     <h2>Playoffs</h2>
