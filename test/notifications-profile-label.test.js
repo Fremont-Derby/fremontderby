@@ -7,3 +7,11 @@ test('notifications links to Profile instead of Sign in', () => {
   assert.match(html, /href="\/profile">Profile</);
   assert.doesNotMatch(html, />Sign in</);
 });
+
+test('notifications loads next match from /api/me/matches', () => {
+  const html = renderNotificationsPage();
+  assert.match(html, /data-next-match/);
+  assert.match(html, /\/api\/me\/matches/);
+  assert.match(html, /pickNextMatch/);
+  assert.match(html, /href="\/schedule">Schedule</);
+});
