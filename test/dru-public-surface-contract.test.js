@@ -11,11 +11,18 @@ test('DRU public HTML shells that humans use are expected 200', () => {
     assert.equal(expectedPublicStatus(path), 200, path);
   }
   assert.equal(expectedPublicStatus('/health'), 200);
+  assert.equal(expectedPublicStatus('/prizes'), 200);
+  assert.equal(expectedPublicStatus('/'), 200);
 });
 
 test('retired player-trade surface is expected 404 on DRU', () => {
   assert.equal(expectedPublicStatus('/trades'), 404);
   assert.ok(!DRU_PUBLIC_SURFACE.html200.includes('/trades'));
+});
+
+test('unlisted paths stay unclassified so canary can ignore them', () => {
+  assert.equal(expectedPublicStatus('/seasons'), null);
+  assert.equal(expectedPublicStatus('/demo'), null);
 });
 
 test('canary failure copy names host, kind, status, url, and error', () => {
