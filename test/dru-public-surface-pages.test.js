@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import worker from '../src/routerEntry.js';
+import { DRU_PUBLIC_SURFACE } from '../src/druPublicSurfaceContract.js';
 
 async function get(path) {
   return worker.fetch(
@@ -80,4 +81,17 @@ test('DRU empty public /api/me reads do not 404', async () => {
   const lineups = await get('/api/me/lineups');
   assert.equal(lineups.status, 200);
   assert.deepEqual(await lineups.json(), { lineups: [] });
+
+  const matches = await get('/api/me/matches');
+  assert.equal(matches.status, 200);
+  assert.deepEqual(await matches.json(), { matches: [] });
+
+  const invitations = await get('/api/me/invitations');
+  assert.equal(invitations.status, 200);
+  assert.deepEqual(await invitations.json(), { invitations: [], playerId: null });
+
+  for (const path of DRU_PUBLIC_SURFACE.emptyRead200) {
+    const response = await get(path);
+    assert.equal(response.status, 200, path);
+  }
 });
