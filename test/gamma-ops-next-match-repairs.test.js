@@ -31,6 +31,7 @@ test('gamma product repair rewrites leftover trades nav to teams', async () => {
   assert.doesNotMatch(html, /href="\/trades"/);
 });
 
+// Tracks #2439 — free-agents invitations surface on Gamma.
 test('gamma free-agents product repair injects invitations read', async () => {
   const html = await repair('/free-agents', '<html><head></head><body><header></header><main><p>Shell copy</p></main></body></html>');
   assert.match(html, /data-invites/);
