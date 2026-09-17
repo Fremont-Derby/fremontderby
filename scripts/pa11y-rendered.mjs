@@ -1,12 +1,16 @@
 import { spawn } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import process from 'node:process';
 
 const host = '127.0.0.1';
 const port = 8787;
 const baseUrl = `http://${host}:${port}`;
 const serverTimeoutMs = 30_000;
-/** Per-scan hard kill — unbounded pa11y "wait for element" hangs CI otherwise. */
+/** Per-scan hard kill for hung Chromium/pa11y. */
 const scanTimeoutMs = 45_000;
+const configDir = mkdtempSync(join(tmpdir(), 'pa11y-config-'));
 
 const scans = [
   { name: 'home desktop', path: '/', viewport: '1280x900' },
@@ -27,18 +31,31 @@ const scans = [
   },
 ];
 
+function killTree(child) {
+  if (!child?.pid) return;
+  try {
+    process.kill(-child.pid, 'SIGKILL');
+  } catch {
+    try {
+      child.kill('SIGKILL');
+    } catch {
+      // ignore
+    }
+  }
+}
+
 function run(command, args, options = {}, timeoutMs = scanTimeoutMs) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit', ...options });
+    const child = spawn(command, args, {
+      stdio: 'inherit',
+      detached: true,
+      ...options,
+    });
     let settled = false;
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      try {
-        child.kill('SIGKILL');
-      } catch {
-        // ignore
-      }
+      killTree(child);
       reject(new Error(`${command} timed out after ${timeoutMs}ms`));
     }, timeoutMs);
     child.once('error', (error) => {
@@ -74,26 +91,35 @@ async function waitForServer() {
 }
 
 function pa11yArgs(scan, runner) {
-  const args = [
+  const [width, height] = scan.viewport.split('x').map(Number);
+  const configPath = join(configDir, `${scan.name.replace(/\W+/g, '_')}-${runner}.json`);
+  writeFileSync(configPath, `${JSON.stringify({
+    standard: 'WCAG2AA',
+    runners: [runner],
+    threshold: 0,
+    timeout: scanTimeoutMs,
+    wait: scan.wait || 0,
+    actions: scan.actions || [],
+    viewport: { width, height },
+    chromeLaunchConfig: {
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
+  }, null, 2)}\n`);
+
+  return [
     '-y',
     'pa11y@9.0.1',
     `${baseUrl}${scan.path}`,
-    '--standard', 'WCAG2AA',
-    '--runner', runner,
-    '--threshold', '0',
-    '--viewport', scan.viewport,
+    '--config', configPath,
     '--reporter', 'cli',
-    '--chrome-launch-config', '{"args":["--no-sandbox","--disable-setuid-sandbox"]}',
+    '--timeout', String(scanTimeoutMs),
   ];
-  if (scan.wait) args.push('--wait', String(scan.wait));
-  for (const action of scan.actions || []) args.push('--action', action);
-  return args;
 }
 
 const server = spawn(
   'npx',
   ['-y', 'wrangler@4.30.0', 'dev', '--local', '--ip', host, '--port', String(port)],
-  { stdio: 'inherit', env: { ...process.env, CI: '1' } },
+  { stdio: 'inherit', detached: true, env: { ...process.env, CI: '1' } },
 );
 
 let failed = false;
@@ -110,12 +136,12 @@ try {
       }
     }
   }
+} catch (error) {
+  failed = true;
+  console.error(`[a11y] FAILED: ${error.message}`);
 } finally {
-  try {
-    server.kill('SIGTERM');
-  } catch {
-    // ignore
-  }
+  killTree(server);
 }
 
-if (failed) process.exitCode = 1;
+// wrangler/workerd otherwise keeps the event loop alive past scan failures
+process.exit(failed ? 1 : 0);
