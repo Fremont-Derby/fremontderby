@@ -49,6 +49,15 @@ async function readJsonBody(request) {
   }
 }
 
+function expectedThreadId(body, keys) {
+  if (!body || typeof body !== 'object') return undefined;
+  for (const key of keys) {
+    const value = String(body[key] ?? '').trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
   if (/Team not found/i.test(error.message)) return 404;
@@ -204,6 +213,7 @@ export async function handleSendTeamMessageRequest(
     const message = await sendTeamMessageCommand({
       actorUserId: actor.id,
       teamId,
+      expectedTeamId: expectedThreadId(body, ['expectedTeamId', 'expectedThreadId']),
       body: body.body,
       clientMessageId: body.clientMessageId,
     }, repository);
@@ -328,6 +338,7 @@ export async function handleSendDirectMessageRequest(
     const message = await sendDirectMessageCommand({
       actorUserId: actor.id,
       conversationId,
+      expectedConversationId: expectedThreadId(body, ['expectedConversationId', 'expectedThreadId']),
       body: body.body,
       clientMessageId: body.clientMessageId,
     }, repository);
@@ -460,7 +471,9 @@ export async function handleSendLeagueMessageRequest(
     const { actor, repository } = await withActor(request, env, fetchImpl);
     const body = await readJsonBody(request);
     const message = await sendLeagueMessageCommand({
-      actorUserId: actor.id, seasonId, body: body.body,
+      actorUserId: actor.id, seasonId,
+      expectedSeasonId: expectedThreadId(body, ['expectedSeasonId', 'expectedThreadId']),
+      body: body.body,
       clientMessageId: body.clientMessageId,
     }, repository);
     return jsonResponse({ message }, 201);
@@ -585,7 +598,9 @@ export async function handleSendMatchupMessageRequest(
     const { actor, repository } = await withActor(request, env, fetchImpl);
     const body = await readJsonBody(request);
     const message = await sendMatchupMessageCommand({
-      actorUserId: actor.id, teamMatchId, body: body.body,
+      actorUserId: actor.id, teamMatchId,
+      expectedTeamMatchId: expectedThreadId(body, ['expectedTeamMatchId', 'expectedThreadId']),
+      body: body.body,
       clientMessageId: body.clientMessageId,
     }, repository);
     return jsonResponse({ message }, 201);
