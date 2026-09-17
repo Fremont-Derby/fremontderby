@@ -5,9 +5,13 @@ import { normalizeApiPathname } from '../src/pathAliases.js';
 
 test('home has Score CTA without duplicate schedule', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
-  assert.equal((src.match(/href="\/scorecard"/g) || []).length, 1);
-  assert.match(src, /href="\/availability"/);
-  assert.match(src, /href="\/schedule"/);
+  const introStart = src.indexOf('export function renderIntroPage');
+  const rulesStart = src.indexOf('export function renderRulesPage');
+  assert.ok(introStart >= 0 && rulesStart > introStart);
+  const intro = src.slice(introStart, rulesStart);
+  assert.equal((intro.match(/href="\/scorecard"/g) || []).length, 1);
+  assert.match(intro, /href="\/availability"/);
+  assert.match(intro, /href="\/schedule"/);
 });
 
 test('free-agent path aliases', () => {
