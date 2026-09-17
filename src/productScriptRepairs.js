@@ -13,6 +13,10 @@ const NEXT_MATCH_PATHS = new Set([
   '/teams',
   '/playoffs',
   '/schedule',
+  '/messages',
+  '/notifications',
+  '/practice',
+  '/players',
 ]);
 
 function nonceFromHtmlOrHeaders(html, headers) {
@@ -37,6 +41,12 @@ function injectNextMatch(html, headers) {
   );
 }
 
+function retireTradesNav(html) {
+  return String(html || '')
+    .replaceAll('href="/trades"', 'href="/teams"')
+    .replaceAll("href='/trades'", "href='/teams'");
+}
+
 export async function applyProductScriptRepairs(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
@@ -46,6 +56,7 @@ export async function applyProductScriptRepairs(response, pathname) {
   if (pathname === '/availability') html = repairAvailabilityScript(html);
   if (pathname === '/admin/season-teams') html = repairAdminSeasonTeamsScript(html);
   if (pathname === '/lineup') html = repairLineupScript(html);
+  html = retireTradesNav(html);
   if (NEXT_MATCH_PATHS.has(pathname)) html = injectNextMatch(html, response.headers);
   return new Response(html, {
     status: response.status,
