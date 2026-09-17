@@ -14,3 +14,14 @@ test('gamma prizes enhancer injects next match without dropping season helper', 
   assert.match(html, /\/api\/me\/matches/);
   assert.match(html, /pickNextMatch/);
 });
+
+test('gamma standings enhancer injects next match', async () => {
+  const source = '<html><head></head><body><header></header><script>const explicit=seasons.find((season)=>season.id===requestedSeasonId);const registration=seasons.find((season)=>season.status===\'registration\');const remembered=seasons.find((season)=>season.id===rememberedSeasonId);const selected=explicit||remembered||registration||seasons[0];seasonInput.value=selected?.id||\'\';</script></body></html>';
+  const response = await enhancePublicSeasonSelection(
+    new Response(source, { headers: { 'content-type': 'text/html' } }),
+    '/standings',
+  );
+  const html = await response.text();
+  assert.match(html, /data-next-match/);
+  assert.match(html, /pickNextMatch/);
+});
