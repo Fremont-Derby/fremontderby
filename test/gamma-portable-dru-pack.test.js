@@ -5,6 +5,7 @@ import { assertSameThread, assertWritableThread } from '../src/chatThreadGuard.j
 import { chatSendPayload } from '../src/chatComposerPayload.js';
 import { DRU_QA_MISSIONS, listDruQaMissionIds, buildDruQaFixture } from '../src/qaMissionCatalog.js';
 
+// Tracks #2433 — portable pack coverage for Gamma CI.
 test('portable pack lists all ten QA missions and builds fixtures', () => {
   const ids = listDruQaMissionIds();
   assert.equal(ids.length, 10);
