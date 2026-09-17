@@ -1,3 +1,5 @@
+import { isRetiredTradePath } from './retiredTradesGate.js';
+
 export const PUBLIC_PATH_ALIASES = {
   '/home': '/',
   '/register': '/profile',
@@ -15,7 +17,7 @@ export const PUBLIC_PATH_ALIASES = {
   '/score': '/scorecard',
   '/scores': '/scorecard',
   '/roster': '/teams',
-  '/trade': '/trades',
+  '/trade': '/teams',
   '/help': '/rules',
   '/faq': '/rules',
 };
@@ -28,6 +30,18 @@ function canonicalPath(pathname) {
 }
 
 export function aliasRedirect(request, url) {
+  if (isRetiredTradePath(url.pathname)) {
+    if (url.pathname.startsWith('/api/')) {
+      return Response.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
+    return new Response('<!doctype html><title>Not found</title><p>There is no Fremont Derby page at that address.</p>', {
+      status: 404,
+      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
   const target = canonicalPath(url.pathname);
   if (!target || target === url.pathname) return null;
   if (request.method !== 'GET' && request.method !== 'HEAD') {
