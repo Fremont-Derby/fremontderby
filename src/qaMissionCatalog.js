@@ -5,6 +5,7 @@ import { ELIGIBILITY_MISSION, buildEligibilityFixture } from './qaEligibilityCon
 import { FIRST_RACK_MISSION, buildFirstRackFixture } from './qaFirstRackContract.js';
 import { MESSAGE_THREAD_MISSION, buildMessageThreadFixture } from './qaMessageThreadContract.js';
 import { NEXT_MATCH_MISSION, buildNextMatchFixture } from './qaNextMatchContract.js';
+import { PLAYER_DIRECTORY_MISSION, buildPlayerDirectoryFixture } from './qaPlayerDirectoryContract.js';
 import { STANDINGS_CONTEXT_MISSION, buildStandingsContextFixture } from './qaStandingsContextContract.js';
 import { TEAM_CONTEXT_MISSION, buildTeamContextFixture } from './qaTeamContextContract.js';
 
@@ -18,6 +19,7 @@ export const DRU_QA_MISSIONS = [
   { mission: AVAILABILITY_MISSION, build: buildAvailabilityFixture, jflCard: 2275 },
   { mission: NEXT_MATCH_MISSION, build: buildNextMatchFixture, jflCard: 2274 },
   { mission: FIRST_RACK_MISSION, build: buildFirstRackFixture, jflCard: 2272 },
+  { mission: PLAYER_DIRECTORY_MISSION, build: buildPlayerDirectoryFixture, jflCard: 1781 },
 ];
 
 export function listDruQaMissionIds() {
