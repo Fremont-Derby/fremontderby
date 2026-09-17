@@ -19,6 +19,12 @@ for (const path of ['/availability', '/lineup', '/scorecard', '/profile', '/team
   });
 }
 
+test('gamma players product repair injects ?player= highlight', async () => {
+  const html = await repair('/players', '<html><head></head><body><header></header><input type="search" name="q"></body></html>');
+  assert.match(html, /data-player-highlight/);
+  assert.match(html, /Showing player/);
+});
+
 test('gamma product repair rewrites leftover trades nav to teams', async () => {
   const html = await repair('/playoffs', '<html><head></head><body><header></header><a href="/trades">Trades</a></body></html>');
   assert.match(html, /href="\/teams"/);
