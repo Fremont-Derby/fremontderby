@@ -106,7 +106,7 @@ export function renderRulesPage() {
       <li>Individual ranking uses win percentage, with total wins as the first tiebreaker.</li>
       <li>Singles qualification requires playing in at least five of the seven regular-season rounds anywhere in the league.</li>
       <li>Singles also award cash for regular-season performance, with a larger payout attached to the singles championship.</li>
-      <li>Exact season payouts are published separately.</li>
+      <li>Exact season payouts are based on the available prize pool and are published separately.</li>
     </ul>
 
     <h2>Playoffs</h2>
