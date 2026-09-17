@@ -10,7 +10,8 @@ export function renderPracticePage() {
   <main class="app" data-fd-dru-practice="true">
     <header><h1>Practice</h1></header>
     <p>Published league nights are the default table window. Teams may practice or play a makeup before the posted date.</p>
-    <p><a href="/availability">Check in</a> · <a href="/schedule">Schedule</a> · <a href="/messages">Messages</a></p>
+    <p data-next-match>Your next published night is on Schedule. Use that date unless a captain posts a makeup.</p>
+    <p><a href="/schedule">Schedule</a> · <a href="/availability">Check in</a> · <a href="/messages">Messages</a></p>
   </main>
 </body>
 </html>`;
