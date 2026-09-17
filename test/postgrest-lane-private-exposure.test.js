@@ -20,6 +20,6 @@ test('shared staging exposes lane private schemas to PostgREST', () => {
 
 test('supabaseSchema maps private profile to lane_private', () => {
   const src = readFileSync(join(root, 'src/supabaseSchema.js'), 'utf8');
-  assert.match(src, /requestedProfile === 'private'/);
+  assert.match(src, /requested === 'private'/);
   assert.match(src, /\$\{schema\}_private/);
 });
