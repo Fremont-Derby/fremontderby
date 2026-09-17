@@ -110,7 +110,7 @@ test('DRU welcome and rules expose league surface links', async () => {
 });
 
 test('DRU pages that should show next match do', async () => {
-  for (const path of ['/schedule', '/availability', '/lineup', '/notifications', '/practice', '/scorecard', '/profile']) {
+  for (const path of ['/schedule', '/availability', '/lineup', '/notifications', '/practice', '/scorecard', '/profile', '/standings']) {
     const response = await get(path);
     const html = await response.text();
     assert.equal(response.status, 200, path);
