@@ -3,13 +3,25 @@ const REQUESTED_TEAM_SCRIPT = `<script data-requested-team-marker>
   const requested = new URLSearchParams(location.search).get('team');
   if (!requested) return;
   const target = requested.trim().toLowerCase();
-  const nodes = document.querySelectorAll('[data-team-id], [data-team-name], [data-team]');
-  for (const el of nodes) {
-    const hay = [el.getAttribute('data-team-id'), el.getAttribute('data-team-name'), el.getAttribute('data-team')]
-      .join(' ')
-      .toLowerCase();
-    if (hay.split(/\s+/).includes(target) || hay === target) el.setAttribute('data-requested-team', 'true');
+  function matches(el) {
+    const hay = [
+      el.getAttribute('data-team-id'),
+      el.getAttribute('data-team-name'),
+      el.getAttribute('data-team'),
+      el.textContent,
+    ].join(' ').toLowerCase();
+    return hay.includes(target);
   }
+  function mark() {
+    const nodes = document.querySelectorAll('[data-team-id], [data-team-name], [data-team], [data-hub-team], .team-choice');
+    for (const el of nodes) {
+      if (matches(el)) el.setAttribute('data-requested-team', 'true');
+      else el.removeAttribute('data-requested-team');
+    }
+  }
+  mark();
+  const observer = new MutationObserver(mark);
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 })();
 </script>`;
 
@@ -33,6 +45,8 @@ export async function enhanceTeamsCanonicalActions(response) {
     html = html.includes('</body>')
       ? html.replace('</body>', `${REQUESTED_TEAM_SCRIPT}</body>`)
       : html + REQUESTED_TEAM_SCRIPT;
+  } else if (!html.includes('[data-hub-team]')) {
+    html = html.replace('</body>', `${REQUESTED_TEAM_SCRIPT}</body>`);
   }
 
   return new Response(html, {

@@ -19,14 +19,15 @@ test('Teams canonical-action enhancer removes legacy availability and trades des
   assert.doesNotMatch(html, /Roster & trades/);
 });
 
-test('Teams enhancer marks the requested team from the team query param', async () => {
-  const source = '<html><body><div data-team-id="team-target">Rail Owls</div></body></html>';
+test('Teams enhancer marks hub team text from the team query param', async () => {
+  const source = '<html><body><span data-hub-team>Rail Owls</span></body></html>';
   const response = await enhanceTeamsCanonicalActions(new Response(source, {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   }));
   const html = await response.text();
   assert.match(html, /data-requested-team-marker/);
-  assert.match(html, /URLSearchParams\(location\.search\)\.get\('team'\)/);
+  assert.match(html, /\[data-hub-team\]/);
+  assert.match(html, /MutationObserver/);
 });
 
 test('Teams runtime hub points availability to Schedule and roster management stays on Teams', async () => {
@@ -40,6 +41,7 @@ test('Teams runtime hub points availability to Schedule and roster management st
   assert.match(html, /Handle invites, requests, and roster changes\./);
   assert.match(html, /Message your team or players directly\./);
   assert.match(html, /data-requested-team-marker/);
+  assert.match(html, /\[data-hub-team\]/);
   assert.doesNotMatch(html, /data-hub-availability href="\/availability"/);
   assert.doesNotMatch(html, /data-hub-manage href="\/trades"/);
 });
