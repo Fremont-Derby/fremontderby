@@ -127,3 +127,5 @@ export function enhanceChatHttpExpectedThread() {
 
   return chatHttpHandlers;
 }
+
+enhanceChatHttpExpectedThread();
