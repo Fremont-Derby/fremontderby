@@ -64,6 +64,45 @@ function injectPlayerHighlight(html, headers) {
   );
 }
 
+function injectFreeAgentInvitations(html, headers) {
+  if (html.includes('/api/me/invitations') && html.includes('data-invites')) return html;
+  const nonce = nonceFromHtmlOrHeaders(html, headers);
+  const attr = nonce ? ` nonce="${nonce}"` : '';
+  if (!html.includes('data-invites')) {
+    html = html.replace(
+      '</main>',
+      '<p data-invite-status role="status">Checking for team invites…</p><ul data-invites hidden></ul></main>',
+    );
+  }
+  return html.replace(
+    '</body>',
+    `<script${attr}>
+      (()=>{
+        const statusEl=document.querySelector('[data-invite-status]');
+        const listEl=document.querySelector('[data-invites]');
+        if(!statusEl||!listEl)return;
+        fetch('/api/me/invitations',{headers:{accept:'application/json'}})
+          .then((response)=>response.json())
+          .then((body)=>{
+            const invites=body.invitations||[];
+            if(!invites.length){
+              statusEl.textContent='No team invites waiting. Open Teams to ask a captain, or browse Player directory.';
+              return;
+            }
+            listEl.hidden=false;
+            for(const invite of invites){
+              const item=document.createElement('li');
+              item.textContent=invite.team_name||invite.teamName||'Team invite';
+              listEl.append(item);
+            }
+            statusEl.textContent=invites.length+' team invite'+(invites.length===1?'':'s')+' waiting.';
+          })
+          .catch(()=>{statusEl.textContent='Could not load invitations. Open Teams to ask a captain.';});
+      })();
+    </script></body>`,
+  );
+}
+
 function retireTradesNav(html) {
   return String(html || '')
     .replaceAll('href="/trades"', 'href="/teams"')
@@ -82,6 +121,7 @@ export async function applyProductScriptRepairs(response, pathname) {
   html = retireTradesNav(html);
   if (NEXT_MATCH_PATHS.has(pathname)) html = injectNextMatch(html, response.headers);
   if (pathname === '/players') html = injectPlayerHighlight(html, response.headers);
+  if (pathname === '/free-agents') html = injectFreeAgentInvitations(html, response.headers);
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,
