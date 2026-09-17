@@ -5,7 +5,15 @@ import { repairLineupScript } from './lineupScriptRepair.js';
 import { repairStandingsPageScript } from './standingsScriptRepair.js';
 import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
 
-const NEXT_MATCH_PATHS = new Set(['/availability', '/lineup', '/scorecard', '/profile']);
+const NEXT_MATCH_PATHS = new Set([
+  '/availability',
+  '/lineup',
+  '/scorecard',
+  '/profile',
+  '/teams',
+  '/playoffs',
+  '/schedule',
+]);
 
 function nonceFromHtmlOrHeaders(html, headers) {
   const fromTag = html.match(/<script\b[^>]*\bnonce=(["'])([^"']+)\1/i);
