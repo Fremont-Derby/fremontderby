@@ -1,4 +1,5 @@
 import { publicSeasonSelectionBrowserSource } from './publicSeasonSelection.js';
+import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
 
 const ROUTES = new Set(['/schedule', '/standings', '/prizes']);
 
@@ -50,6 +51,16 @@ export async function enhancePublicSeasonSelection(response, pathname) {
       "function preferredSeason(seasons) {\n      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });\n    }",
       'prizes default',
     );
+    if (!html.includes('data-next-match')) {
+      html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
+      html = html.replace(
+        '</body>',
+        `<script>
+          ${nextMatchSummaryBrowserSource}
+          (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+        </script></body>`,
+      );
+    }
   }
 
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
