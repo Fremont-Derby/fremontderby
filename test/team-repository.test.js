@@ -108,3 +108,108 @@ test('team repository loads team management with open seasons and player directo
   assert.match(calls[2].url, /\/rest\/v1\/players\?/);
   assert.equal(calls[2].init.headers.apikey, 'service-role-secret');
 });
+
+test('team repository loads the actor trade-management view', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_id: 'player-1',
+        trades: [{ tradeId: 'trade-1', status: 'pending' }],
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const tradeManagement = await repository.listOwnTeamTrades({
+    actorUserId: 'user-1',
+  });
+
+  assert.deepEqual(tradeManagement, {
+    player_id: 'player-1',
+    trades: [{ tradeId: 'trade-1', status: 'pending' }],
+  });
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_trades');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+  });
+  assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+});
+
+test('team repository creates a team through the captain RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'team-1',
+        season_id: 'season-1',
+        name: 'Breakers',
+        captain_player_id: 'player-1',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const team = await repository.createTeamWithCaptain({
+    actorUserId: 'user-1',
+    seasonId: 'season-1',
+    teamName: 'Breakers',
+  });
+
+  assert.deepEqual(team, {
+    id: 'team-1',
+    season_id: 'season-1',
+    name: 'Breakers',
+  captain_player_id: 'player-1',
+  });
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/create_team_with_captain');
+  assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+    target_season_id: 'season-1',
+    team_name: 'Breakers',
+  });
+});
+
+test('team repository surfaces Supabase failures', async () => {
+  const { fetch } = createFetch([
+    { status: 400, body: { message: 'Player profile is required before creating a team' } },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  await assert.rejects(
+    () => repository.createTeamWithCaptain({
+      actorUserId: 'user-1',
+      seasonId: 'season-1',
+      teamName: 'Breakers',
+    }),
+    /Player profile is required/,
+  );
+});
+
+test('team repository invites a player through the invitation RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'invitation-1',
+        season_id: 'season-1',
+        team_id: 'team-1',
+        invited_player_id: 'player-2',
+        status: 'pending',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const invitation = await repository.invitePlayerToTeam({
+    actorUserId: 'captain-user-1',
+    teamId: 'team-1',
+    playerId: 'player-2',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/invite_player_to_team');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_team_id: 'team-1',
+    target_player_id: 'player-2',
+  });
+  assert.equal(invitation.status, 'pending');
+});
