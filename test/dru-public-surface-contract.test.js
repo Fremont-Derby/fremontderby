@@ -19,6 +19,14 @@ test('DRU readiness JSON is expected 200', () => {
   assert.ok(DRU_PUBLIC_SURFACE.json200.includes('/health/environment'));
 });
 
+test('DRU empty /api/me reads used by public shells are expected 200', () => {
+  for (const path of DRU_PUBLIC_SURFACE.emptyRead200) {
+    assert.equal(expectedPublicStatus(path), 200, path);
+  }
+  assert.ok(DRU_PUBLIC_SURFACE.emptyRead200.includes('/api/me/matches'));
+  assert.ok(DRU_PUBLIC_SURFACE.emptyRead200.includes('/api/me/invitations'));
+});
+
 test('retired player-trade surface is expected 404 on DRU', () => {
   assert.equal(expectedPublicStatus('/trades'), 404);
   assert.ok(!DRU_PUBLIC_SURFACE.html200.includes('/trades'));
