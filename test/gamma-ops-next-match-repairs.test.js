@@ -10,7 +10,7 @@ async function repair(path, source) {
   return response.text();
 }
 
-for (const path of ['/availability', '/lineup', '/scorecard', '/profile', '/teams', '/playoffs', '/schedule', '/messages', '/notifications', '/practice', '/players']) {
+for (const path of ['/availability', '/lineup', '/scorecard', '/profile', '/teams', '/playoffs', '/schedule', '/messages', '/notifications', '/practice', '/players', '/free-agents']) {
   test(`gamma ${path} product repair injects next match`, async () => {
     const html = await repair(path, '<html><head></head><body><header></header><main></main></body></html>');
     assert.match(html, /data-next-match/);

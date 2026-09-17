@@ -17,6 +17,7 @@ const NEXT_MATCH_PATHS = new Set([
   '/notifications',
   '/practice',
   '/players',
+  '/free-agents',
 ]);
 
 function nonceFromHtmlOrHeaders(html, headers) {

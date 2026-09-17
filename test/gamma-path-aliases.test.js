@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PUBLIC_PATH_ALIASES, aliasRedirect } from '../src/publicPathAliases.js';
 
-// Tracks #2229 #2232 #2234. Out of scope: main promotion, DRU bypass, kid seed, UI restyle.
+// Tracks #2229 #2232 #2234 #2416 #2418. Out of scope: main promotion, DRU bypass, kid seed, UI restyle.
 
 test('aliases map the live Gamma 404 paths to real product pages', () => {
   assert.equal(PUBLIC_PATH_ALIASES['/home'], '/');
   assert.equal(PUBLIC_PATH_ALIASES['/login'], '/profile');
   assert.equal(PUBLIC_PATH_ALIASES['/score'], '/scorecard');
+  assert.equal(PUBLIC_PATH_ALIASES['/trade'], '/teams');
 });
 
 test('aliasRedirect issues a 302 to the product page', () => {
@@ -33,6 +34,12 @@ test('the site root is not redirected away from /', () => {
 test('unknown paths are left to the existing router', () => {
   const url = new URL('https://gamma.fremontderby.com/standings');
   assert.equal(aliasRedirect(new Request(url), url), null);
+});
+
+test('retired trades page is 404', () => {
+  const url = new URL('https://gamma.fremontderby.com/trades');
+  const response = aliasRedirect(new Request(url), url);
+  assert.equal(response.status, 404);
 });
 
 test('Gamma router wires aliasRedirect before the legacy 404 path', async () => {
