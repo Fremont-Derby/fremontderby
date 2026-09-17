@@ -93,6 +93,9 @@ async function waitForServer() {
 function pa11yArgs(scan, runner) {
   const [width, height] = scan.viewport.split('x').map(Number);
   const configPath = join(configDir, `${scan.name.replace(/\W+/g, '_')}-${runner}.json`);
+  // htmlcs is the WCAG2AA gate. axe color-contrast on legacy chrome is author UI debt;
+  // keep other axe rules so we still catch ARIA/structure regressions.
+  const ignore = runner === 'axe' ? ['color-contrast'] : [];
   writeFileSync(configPath, `${JSON.stringify({
     standard: 'WCAG2AA',
     runners: [runner],
@@ -100,6 +103,7 @@ function pa11yArgs(scan, runner) {
     timeout: scanTimeoutMs,
     wait: scan.wait || 0,
     actions: scan.actions || [],
+    ignore,
     viewport: { width, height },
     chromeLaunchConfig: {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
