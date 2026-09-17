@@ -9,6 +9,12 @@ test('free agents page sends humans to Teams', () => {
   assert.doesNotMatch(html, /bindings are healthy/);
 });
 
+test('free agents page reads invitations from the empty-read API', () => {
+  const html = renderFreeAgentsPage();
+  assert.match(html, /\/api\/me\/invitations/);
+  assert.match(html, /data-invites/);
+});
+
 test('admin players search placeholder stays short', () => {
   const html = repairAdminPlayersScript('placeholder="Type part of a name — e.g. \u201cjen\u201d or \u201cbreakers\u201d"');
   assert.match(html, /placeholder="Search by player or team"/);
