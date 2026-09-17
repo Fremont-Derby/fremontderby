@@ -1,1 +1,1 @@
-{{file:/workspace/harden-2188/out_index.js}}
+PLACEHOLDER_REPLACE_WITH_FILE
