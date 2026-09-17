@@ -8,13 +8,14 @@ test('catalog lists unique portable mission ids', () => {
   assert.ok(ids.includes('player.find-next-match'));
   assert.ok(ids.includes('captain.add-players'));
   assert.ok(ids.includes('player.mark-availability'));
+  assert.ok(ids.includes('captain.score-first-rack'));
 });
 
 test('catalog rebuilds a fixture from mission id and seed', () => {
-  const a = buildDruQaFixture('player.find-next-match', 'catalog-1');
-  const b = buildDruQaFixture('player.find-next-match', 'catalog-1');
-  assert.equal(a.missionId, 'player.find-next-match');
-  assert.deepEqual(a.nextMatch, b.nextMatch);
+  const a = buildDruQaFixture('captain.score-first-rack', 'catalog-2');
+  const b = buildDruQaFixture('captain.score-first-rack', 'catalog-2');
+  assert.equal(a.missionId, 'captain.score-first-rack');
+  assert.deepEqual(a.match, b.match);
 });
 
 test('every catalog entry points at a JFL card and a fixture builder', () => {

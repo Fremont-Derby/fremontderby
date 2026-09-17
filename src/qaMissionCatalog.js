@@ -2,6 +2,7 @@ import { AVAILABILITY_MISSION, buildAvailabilityFixture } from './qaAvailability
 import { CAPTAIN_ADD_PLAYERS_MISSION, buildCaptainAddPlayersFixture } from './qaCaptainAddPlayersContract.js';
 import { CAPTAINCY_TRANSFER_MISSION, buildCaptaincyTransferFixture } from './qaCaptaincyTransferContract.js';
 import { ELIGIBILITY_MISSION, buildEligibilityFixture } from './qaEligibilityContract.js';
+import { FIRST_RACK_MISSION, buildFirstRackFixture } from './qaFirstRackContract.js';
 import { MESSAGE_THREAD_MISSION, buildMessageThreadFixture } from './qaMessageThreadContract.js';
 import { NEXT_MATCH_MISSION, buildNextMatchFixture } from './qaNextMatchContract.js';
 import { STANDINGS_CONTEXT_MISSION, buildStandingsContextFixture } from './qaStandingsContextContract.js';
@@ -16,6 +17,7 @@ export const DRU_QA_MISSIONS = [
   { mission: CAPTAINCY_TRANSFER_MISSION, build: buildCaptaincyTransferFixture, jflCard: 2277 },
   { mission: AVAILABILITY_MISSION, build: buildAvailabilityFixture, jflCard: 2275 },
   { mission: NEXT_MATCH_MISSION, build: buildNextMatchFixture, jflCard: 2274 },
+  { mission: FIRST_RACK_MISSION, build: buildFirstRackFixture, jflCard: 2272 },
 ];
 
 export function listDruQaMissionIds() {
