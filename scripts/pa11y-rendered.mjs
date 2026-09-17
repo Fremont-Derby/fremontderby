@@ -5,6 +5,8 @@ const host = '127.0.0.1';
 const port = 8787;
 const baseUrl = `http://${host}:${port}`;
 const serverTimeoutMs = 30_000;
+/** Per-scan hard kill — unbounded pa11y "wait for element" hangs CI otherwise. */
+const scanTimeoutMs = 45_000;
 
 const scans = [
   { name: 'home desktop', path: '/', viewport: '1280x900' },
@@ -13,7 +15,9 @@ const scans = [
     name: 'home phone menu open',
     path: '/',
     viewport: '320x800',
-    actions: ['click element .fd-nav-menu summary', 'wait for element .fd-nav-menu[open] to be visible'],
+    // Avoid unbounded "wait for element … to be visible" (known hang).
+    actions: ['click element .fd-nav-menu summary'],
+    wait: 500,
   },
   {
     name: 'standings truthful loading/recovery',
@@ -23,11 +27,30 @@ const scans = [
   },
 ];
 
-function run(command, args, options = {}) {
+function run(command, args, options = {}, timeoutMs = scanTimeoutMs) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: 'inherit', ...options });
-    child.once('error', reject);
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        // ignore
+      }
+      reject(new Error(`${command} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    child.once('error', (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
     child.once('exit', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       if (code === 0) resolve();
       else reject(new Error(`${command} exited ${code ?? signal ?? 'unknown'}`));
     });
@@ -63,7 +86,7 @@ function pa11yArgs(scan, runner) {
     '--chrome-launch-config', '{"args":["--no-sandbox","--disable-setuid-sandbox"]}',
   ];
   if (scan.wait) args.push('--wait', String(scan.wait));
-  for (const action of scan.actions || []) args.push('--actions', action);
+  for (const action of scan.actions || []) args.push('--action', action);
   return args;
 }
 
@@ -80,7 +103,7 @@ try {
     for (const runner of ['htmlcs', 'axe']) {
       console.log(`\n[a11y] ${scan.name} | ${scan.viewport} | ${runner}`);
       try {
-        await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } });
+        await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } }, scanTimeoutMs);
       } catch (error) {
         failed = true;
         console.error(`[a11y] FAILED: ${scan.name} | ${scan.viewport} | ${runner}: ${error.message}`);
@@ -88,7 +111,11 @@ try {
     }
   }
 } finally {
-  server.kill('SIGTERM');
+  try {
+    server.kill('SIGTERM');
+  } catch {
+    // ignore
+  }
 }
 
 if (failed) process.exitCode = 1;
