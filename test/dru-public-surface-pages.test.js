@@ -118,3 +118,13 @@ test('DRU schedule page wires next match from /api/me/matches', async () => {
   assert.match(html, /pickNextMatch/);
   assert.doesNotMatch(html, /This dog lost the rack/);
 });
+
+test('DRU availability page wires next match from /api/me/matches', async () => {
+  const response = await get('/availability');
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.match(html, /data-next-match/);
+  assert.match(html, /\/api\/me\/matches/);
+  assert.match(html, /pickNextMatch/);
+  assert.doesNotMatch(html, /This dog lost the rack/);
+});
