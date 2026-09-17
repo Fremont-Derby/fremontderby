@@ -95,3 +95,16 @@ test('DRU empty public /api/me reads do not 404', async () => {
     assert.equal(response.status, 200, path);
   }
 });
+
+test('DRU welcome and rules expose league surface links', async () => {
+  for (const path of ['/', '/rules']) {
+    const response = await get(path);
+    const html = await response.text();
+    assert.equal(response.status, 200, path);
+    assert.match(html, /href="\/schedule">Schedule</, path);
+    assert.match(html, /href="\/standings">Standings</, path);
+    assert.match(html, /href="\/teams">Teams</, path);
+    assert.match(html, /href="\/players">Players</, path);
+    assert.doesNotMatch(html, /This dog lost the rack/);
+  }
+});
