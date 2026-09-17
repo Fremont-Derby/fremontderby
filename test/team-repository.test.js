@@ -158,7 +158,7 @@ test('team repository creates a team through the captain RPC', async () => {
     id: 'team-1',
     season_id: 'season-1',
     name: 'Breakers',
-  captain_player_id: 'player-1',
+    captain_player_id: 'player-1',
   });
   assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/create_team_with_captain');
   assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
@@ -212,4 +212,265 @@ test('team repository invites a player through the invitation RPC', async () => 
     target_player_id: 'player-2',
   });
   assert.equal(invitation.status, 'pending');
+});
+
+test('team repository proposes a trade through the captain RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        season_id: 'season-1',
+        requesting_team_id: 'team-1',
+        requested_team_id: 'team-2',
+        offered_player_id: 'player-1',
+        requested_player_id: 'player-2',
+        status: 'pending',
+        admin_exception: false,
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.proposeTeamTrade({
+    actorUserId: 'captain-user-1',
+    teamId: 'team-1',
+    offeredPlayerId: 'player-1',
+    requestedTeamId: 'team-2',
+    requestedPlayerId: 'player-2',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/propose_team_trade');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    actor_team_id: 'team-1',
+    offered_roster_player_id: 'player-1',
+    requested_roster_team_id: 'team-2',
+    requested_roster_player_id: 'player-2',
+  });
+  assert.equal(trade.admin_exception, false);
+});
+
+test('team repository proposes an admin trade exception through the admin RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        status: 'pending',
+        admin_exception: true,
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.adminProposeTeamTradeException({
+    actorUserId: 'admin-user-1',
+    teamId: 'team-1',
+    offeredPlayerId: 'player-1',
+    requestedTeamId: 'team-2',
+    requestedPlayerId: 'player-2',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/admin_propose_team_trade_exception');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'admin-user-1',
+    actor_team_id: 'team-1',
+    offered_roster_player_id: 'player-1',
+    requested_roster_team_id: 'team-2',
+    requested_roster_player_id: 'player-2',
+  });
+  assert.equal(trade.admin_exception, true);
+});
+
+test('team repository responds to an invitation through the response RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'invitation-1',
+        season_id: 'season-1',
+        team_id: 'team-1',
+        invited_player_id: 'player-2',
+        status: 'accepted',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const invitation = await repository.respondToTeamInvitation({
+    actorUserId: 'user-2',
+    invitationId: 'invitation-1',
+    response: 'accepted',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/respond_to_team_invitation');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-2',
+    target_invitation_id: 'invitation-1',
+    response_status: 'accepted',
+  });
+  assert.equal(invitation.status, 'accepted');
+});
+
+test('team repository records a traded-player response through the response RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        status: 'pending',
+        requesting_player_accepted_at: '2026-09-01T00:00:00Z',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.respondToTeamTradePlayer({
+    actorUserId: 'user-1',
+    tradeId: 'trade-1',
+    response: 'accepted',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/respond_to_team_trade_player');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'user-1',
+    target_trade_id: 'trade-1',
+    response_status: 'accepted',
+  });
+  assert.equal(trade.status, 'pending');
+});
+
+test('team repository records a captain trade approval through the approval RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'trade-1',
+        status: 'completed',
+        completed_at: '2026-09-01T00:00:00Z',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const trade = await repository.approveTeamTradeCaptain({
+    actorUserId: 'captain-user-2',
+    tradeId: 'trade-1',
+    response: 'approved',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/approve_team_trade_captain');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-2',
+    target_trade_id: 'trade-1',
+    response_status: 'approved',
+  });
+  assert.equal(trade.status, 'completed');
+});
+
+test('team repository cancels an invitation through the cancellation RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'invitation-1',
+        status: 'canceled',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const invitation = await repository.cancelTeamInvitation({
+    actorUserId: 'captain-user-1',
+    invitationId: 'invitation-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/cancel_team_invitation');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_invitation_id: 'invitation-1',
+  });
+  assert.equal(invitation.status, 'canceled');
+});
+
+test('team repository removes a team member through the removal RPC', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        id: 'membership-1',
+        team_id: 'team-1',
+        player_id: 'player-2',
+        role: 'player',
+        ends_at: '2026-09-01T00:00:00Z',
+      }],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const membership = await repository.removeTeamMember({
+    actorUserId: 'captain-user-1',
+    membershipId: 'membership-1',
+  });
+
+  assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/remove_team_member');
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    actor_user_id: 'captain-user-1',
+    target_membership_id: 'membership-1',
+  });
+  assert.equal(membership.ends_at, '2026-09-01T00:00:00Z');
+});
+
+
+test('team repository names the opponent in each captain lineup matchup', async () => {
+  const { fetch, calls } = createFetch([
+    {
+      body: [{
+        player_id: null,
+        captain_teams: [{
+          teamId: 'team-1',
+          teamName: 'Breakers',
+          seasonId: 'season-1',
+          seasonName: 'Season 1',
+        }],
+        invitations: [],
+      }],
+    },
+    { body: [] },
+    { body: [] },
+    {
+      body: [{
+        id: 'match-1',
+        round_id: 'round-4',
+        team_a_id: 'team-1',
+        team_b_id: 'team-2',
+        table_number: 3,
+        status: 'scheduled',
+      }],
+    },
+    {
+      body: [{
+        id: 'round-4',
+        round_number: 4,
+        scheduled_on: '2026-09-24',
+        status: 'published',
+        stage: 'regular',
+        lineup_deadline_at: '2026-09-24T18:30:00Z',
+      }],
+    },
+    {
+      body: [
+        { id: 'team-1', name: 'Breakers' },
+        { id: 'team-2', name: 'Rack Pack' },
+      ],
+    },
+  ]);
+  const repository = createTeamRepository(env, { fetch });
+
+  const teamManagement = await repository.listOwnTeamManagement({
+    actorUserId: 'captain-user-1',
+  });
+
+  assert.equal(
+    teamManagement.captain_teams[0].lineupRounds[0].opponentName,
+    'Rack Pack',
+  );
+  assert.match(calls[3].url, /team_a_id/);
+  assert.match(calls[3].url, /team_b_id/);
+  assert.match(calls[5].url, /\/rest\/v1\/teams\?/);
+  assert.match(calls[5].url, /season_id=eq\.season-1/);
 });
