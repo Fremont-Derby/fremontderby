@@ -11,7 +11,7 @@ async function htmlFor(path) {
   return response.text();
 }
 
-for (const path of ['/availability', '/lineup', '/scorecard', '/profile']) {
+for (const path of ['/availability', '/lineup', '/scorecard', '/profile', '/teams', '/playoffs', '/schedule']) {
   test(`gamma ${path} product repair injects next match`, async () => {
     const html = await htmlFor(path);
     assert.match(html, /data-next-match/);
