@@ -11,3 +11,9 @@ test('player directory fetches public individual standings', () => {
   const script = html.split('<script>')[1].split('</script>')[0];
   new vm.Script(script);
 });
+
+test('player directory marks the requested player from the query string', () => {
+  const html = renderPlayersDirectoryPage();
+  assert.match(html, /get\('player'\)/);
+  assert.match(html, /data-requested-player/);
+});

@@ -21,14 +21,19 @@ export function renderPlayersDirectoryPage() {
     const emptyEl = document.querySelector('[data-empty]');
     const listEl = document.querySelector('[data-list]');
     const searchEl = document.querySelector('[data-search]');
+    const requestedPlayer = (new URLSearchParams(location.search).get('player') || '').trim();
+    if (requestedPlayer && !searchEl.value) searchEl.value = requestedPlayer;
     let rows = [];
     function paint() {
       const query = (searchEl.value || '').trim().toLowerCase();
+      const requested = requestedPlayer.toLowerCase();
       const visible = query.length < 2 ? rows : rows.filter((row) => (row.display_name || '').toLowerCase().includes(query));
       listEl.replaceChildren();
       for (const row of visible) {
         const item = document.createElement('li');
-        item.textContent = row.display_name || 'Unnamed player';
+        const name = row.display_name || 'Unnamed player';
+        item.textContent = name;
+        if (requested && name.toLowerCase() === requested) item.setAttribute('data-requested-player', 'true');
         listEl.append(item);
       }
       listEl.hidden = visible.length === 0;
