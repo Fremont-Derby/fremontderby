@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { domainsForEnv } from './lane-custom-domains.mjs';
+import { assertWranglerMatrix, loadRepoMatrixAndConfig } from './assert-wrangler-matrix.mjs';
 
 export const laneDeployments = Object.freeze({
   jfl: Object.freeze({ branch: 'fremontderby-jfl', environment: 'jfl' }),
@@ -61,7 +62,16 @@ export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
   return args;
 }
 
+export function assertCheckedInMatrix() {
+  const { matrix, config } = loadRepoMatrixAndConfig();
+  const failures = assertWranglerMatrix(config, matrix);
+  if (failures.length) {
+    throw new Error(`Refusing lane deploy: wrangler matrix drift\n${failures.join('\n')}`);
+  }
+}
+
 export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
+  assertCheckedInMatrix();
   // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell.
   const isWin = process.platform === 'win32';
   const args = laneDeployArgs(lane, env, spawn);

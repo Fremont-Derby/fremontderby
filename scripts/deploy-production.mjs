@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { assertWranglerMatrix, loadRepoMatrixAndConfig } from './assert-wrangler-matrix.mjs';
 
 function requireWorkersBuildValue(env, name) {
   const value = env[name]?.trim();
@@ -44,7 +45,16 @@ export function productionDeployArgs(env = process.env) {
   return args;
 }
 
+export function assertCheckedInMatrix() {
+  const { matrix, config } = loadRepoMatrixAndConfig();
+  const failures = assertWranglerMatrix(config, matrix);
+  if (failures.length) {
+    throw new Error(`Refusing production deploy: wrangler matrix drift\n${failures.join('\n')}`);
+  }
+}
+
 export function runProductionDeploy({ env = process.env, spawn = spawnSync } = {}) {
+  assertCheckedInMatrix();
   // Embed git SHA into the Worker bundle so /health versionTag cannot be dropped by var binding.
   const stamp = spawn(process.execPath, ['scripts/stamp-deploy-identity.mjs'], {
     env,

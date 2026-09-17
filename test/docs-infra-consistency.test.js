@@ -36,3 +36,9 @@ test('deployment ADR mentions schema partition and health identity', () => {
   assert.match(adr4, /Accept-Profile/);
   assert.match(adr4, /health\/environment/);
 });
+
+test('environments doc points at the deployment-matrix guardrail', () => {
+  assert.match(environments, /deployment-matrix\.json/);
+  assert.match(environments, /check:matrix/);
+});
+
