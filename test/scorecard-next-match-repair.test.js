@@ -9,7 +9,7 @@ test('scorecard repair still honors the requested match date', () => {
   assert.match(html, /void honorRequestedMatchDate\(\)/);
 });
 
-test('scorecard repair injects next match from \/api\/me\/matches', () => {
+test('scorecard repair injects next match from /api/me/matches', () => {
   const source = '<html><body><header></header><script>function selectRequestedMatch(){}filtersEl.hidden=false;populateMatchups();selectRequestedMatch()}</script></body></html>';
   const html = repairScorecardScript(source);
   assert.match(html, /data-next-match/);
