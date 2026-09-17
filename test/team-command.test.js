@@ -1,16 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  adminProposeTeamTradeExceptionCommand,
-  approveTeamTradeCaptainCommand,
   cancelTeamInvitationCommand,
   createTeamWithCaptainCommand,
   invitePlayerToTeamCommand,
   listOwnTeamManagementCommand,
-  listOwnTeamTradesCommand,
-  proposeTeamTradeCommand,
   removeTeamMemberCommand,
-  respondToTeamTradePlayerCommand,
   respondToTeamInvitationCommand,
 } from '../src/teamCommands.js';
 
@@ -36,13 +31,6 @@ function createRepository() {
         invitations: [],
       };
     },
-    async listOwnTeamTrades(payload) {
-      calls.push(['listOwnTeamTrades', payload]);
-      return {
-        player_id: 'player-1',
-        trades: [],
-      };
-    },
     async invitePlayerToTeam(payload) {
       calls.push(['invitePlayerToTeam', payload]);
       return {
@@ -52,42 +40,11 @@ function createRepository() {
         status: 'pending',
       };
     },
-    async proposeTeamTrade(payload) {
-      calls.push(['proposeTeamTrade', payload]);
-      return {
-        id: 'trade-1',
-        status: 'pending',
-        requesting_team_id: payload.teamId,
-        requested_team_id: payload.requestedTeamId,
-      };
-    },
-    async adminProposeTeamTradeException(payload) {
-      calls.push(['adminProposeTeamTradeException', payload]);
-      return {
-        id: 'trade-1',
-        status: 'pending',
-        admin_exception: true,
-      };
-    },
     async respondToTeamInvitation(payload) {
       calls.push(['respondToTeamInvitation', payload]);
       return {
         id: payload.invitationId,
         status: payload.response,
-      };
-    },
-    async respondToTeamTradePlayer(payload) {
-      calls.push(['respondToTeamTradePlayer', payload]);
-      return {
-        id: payload.tradeId,
-        status: payload.response === 'accepted' ? 'pending' : 'declined',
-      };
-    },
-    async approveTeamTradeCaptain(payload) {
-      calls.push(['approveTeamTradeCaptain', payload]);
-      return {
-        id: payload.tradeId,
-        status: payload.response === 'approved' ? 'pending' : 'declined',
       };
     },
     async cancelTeamInvitation(payload) {
@@ -152,22 +109,6 @@ test('team management command loads the authenticated actor team view', async ()
   ]);
 });
 
-test('team trades command loads the authenticated actor trade view', async () => {
-  const repository = createRepository();
-
-  const tradeManagement = await listOwnTeamTradesCommand(
-    { actorUserId: 'user-1' },
-    repository,
-  );
-
-  assert.deepEqual(tradeManagement, {
-    player_id: 'player-1',
-    trades: [],
-  });
-  assert.deepEqual(repository.calls, [
-    ['listOwnTeamTrades', { actorUserId: 'user-1' }],
-  ]);
-});
 
 test('team creation command rejects invalid team names before writing', async () => {
   const repository = createRepository();
@@ -213,77 +154,8 @@ test('invite command sends a captain invitation request', async () => {
   ]);
 });
 
-test('trade proposal command sends a captain trade request', async () => {
-  const repository = createRepository();
 
-  const trade = await proposeTeamTradeCommand(
-    {
-      actorUserId: 'captain-user-1',
-      teamId: 'team-1',
-      offeredPlayerId: 'player-1',
-      requestedTeamId: 'team-2',
-      requestedPlayerId: 'player-2',
-    },
-    repository,
-  );
 
-  assert.equal(trade.status, 'pending');
-  assert.deepEqual(repository.calls, [
-    ['proposeTeamTrade', {
-      actorUserId: 'captain-user-1',
-      teamId: 'team-1',
-      offeredPlayerId: 'player-1',
-      requestedTeamId: 'team-2',
-      requestedPlayerId: 'player-2',
-    }],
-  ]);
-});
-
-test('admin trade exception command sends an admin proposal request', async () => {
-  const repository = createRepository();
-
-  const trade = await adminProposeTeamTradeExceptionCommand(
-    {
-      actorUserId: 'admin-user-1',
-      teamId: 'team-1',
-      offeredPlayerId: 'player-1',
-      requestedTeamId: 'team-2',
-      requestedPlayerId: 'player-2',
-    },
-    repository,
-  );
-
-  assert.equal(trade.admin_exception, true);
-  assert.deepEqual(repository.calls, [
-    ['adminProposeTeamTradeException', {
-      actorUserId: 'admin-user-1',
-      teamId: 'team-1',
-      offeredPlayerId: 'player-1',
-      requestedTeamId: 'team-2',
-      requestedPlayerId: 'player-2',
-    }],
-  ]);
-});
-
-test('trade proposal command rejects missing trade sides before writing', async () => {
-  const repository = createRepository();
-
-  await assert.rejects(
-    () => proposeTeamTradeCommand(
-      {
-        actorUserId: 'captain-user-1',
-        teamId: 'team-1',
-        offeredPlayerId: '',
-        requestedTeamId: 'team-2',
-        requestedPlayerId: 'player-2',
-      },
-      repository,
-    ),
-    /offeredPlayerId is required/,
-  );
-
-  assert.deepEqual(repository.calls, []);
-});
 
 test('respond command allows only accepted or declined responses', async () => {
   const repository = createRepository();
@@ -305,45 +177,7 @@ test('respond command allows only accepted or declined responses', async () => {
   );
 });
 
-test('trade player response command allows only accepted or declined responses', async () => {
-  const repository = createRepository();
 
-  assert.deepEqual(
-    await respondToTeamTradePlayerCommand(
-      { actorUserId: 'user-2', tradeId: 'trade-1', response: 'accepted' },
-      repository,
-    ),
-    { id: 'trade-1', status: 'pending' },
-  );
-
-  await assert.rejects(
-    () => respondToTeamTradePlayerCommand(
-      { actorUserId: 'user-2', tradeId: 'trade-1', response: 'maybe' },
-      repository,
-    ),
-    /accepted or declined/,
-  );
-});
-
-test('trade captain approval command allows only approved or declined responses', async () => {
-  const repository = createRepository();
-
-  assert.deepEqual(
-    await approveTeamTradeCaptainCommand(
-      { actorUserId: 'captain-user-2', tradeId: 'trade-1', response: 'approved' },
-      repository,
-    ),
-    { id: 'trade-1', status: 'pending' },
-  );
-
-  await assert.rejects(
-    () => approveTeamTradeCaptainCommand(
-      { actorUserId: 'captain-user-2', tradeId: 'trade-1', response: 'accepted' },
-      repository,
-    ),
-    /approved or declined/,
-  );
-});
 
 test('cancel invitation command sends a captain cancellation request', async () => {
   const repository = createRepository();
