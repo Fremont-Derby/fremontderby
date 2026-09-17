@@ -20,3 +20,11 @@ test('pickNextMatch can filter by team id', () => {
   ], { now, teamId: 'c' });
   assert.equal(nextMatchLabel(next), 'C vs D');
 });
+
+test('pickNextMatch returns null when nothing is upcoming', () => {
+  const now = Date.parse('2026-09-17T12:00:00Z');
+  const next = pickNextMatch([
+    { starts_at: '2026-09-16T12:00:00Z', home_team_name: 'Past', away_team_name: 'Gone' },
+  ], { now });
+  assert.equal(next, null);
+});
