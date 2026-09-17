@@ -114,7 +114,7 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
-        "BETA_AUTH_BYPASS": "1",
+        "BETA_AUTH_BYPASS": "0",
         "BETA_ACTOR_EMAIL": "gamma-actor@fremontderby.com",
         "SUPABASE_SCHEMA": "gamma",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
