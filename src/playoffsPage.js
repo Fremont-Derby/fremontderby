@@ -10,7 +10,8 @@ export function renderPlayoffsPage() {
   <main class="app" data-fd-dru-playoffs="true">
     <header><h1>Playoffs</h1></header>
     <p>Postseason bracket from the published schedule. Semifinals and championship appear here once playoffs start.</p>
-    <p><a href="/schedule">Schedule</a> · <a href="/standings">Standings</a></p>
+    <p data-playoff-empty>No bracket rows yet. Seeds come from Standings after the regular season closes.</p>
+    <p><a href="/standings">Standings</a> · <a href="/schedule">Schedule</a></p>
   </main>
 </body>
 </html>`;
