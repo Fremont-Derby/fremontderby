@@ -109,22 +109,14 @@ test('DRU welcome and rules expose league surface links', async () => {
   }
 });
 
-test('DRU schedule page wires next match from /api/me/matches', async () => {
-  const response = await get('/schedule');
-  const html = await response.text();
-  assert.equal(response.status, 200);
-  assert.match(html, /data-next-match/);
-  assert.match(html, /\/api\/me\/matches/);
-  assert.match(html, /pickNextMatch/);
-  assert.doesNotMatch(html, /This dog lost the rack/);
-});
-
-test('DRU availability page wires next match from /api/me/matches', async () => {
-  const response = await get('/availability');
-  const html = await response.text();
-  assert.equal(response.status, 200);
-  assert.match(html, /data-next-match/);
-  assert.match(html, /\/api\/me\/matches/);
-  assert.match(html, /pickNextMatch/);
-  assert.doesNotMatch(html, /This dog lost the rack/);
+test('DRU pages that should show next match do', async () => {
+  for (const path of ['/schedule', '/availability', '/lineup', '/notifications', '/practice']) {
+    const response = await get(path);
+    const html = await response.text();
+    assert.equal(response.status, 200, path);
+    assert.match(html, /data-next-match/, path);
+    assert.match(html, /\/api\/me\/matches/, path);
+    assert.match(html, /pickNextMatch/, path);
+    assert.doesNotMatch(html, /This dog lost the rack/);
+  }
 });
