@@ -34,3 +34,11 @@ test('formal trade HTTP APIs are unavailable without authenticating or touching 
     assert.deepEqual(await response.json(), { error: 'Not found' }, pathname);
   }
 });
+
+test('primary nav HTML does not advertise Trades', async () => {
+  const { renderPrimaryNavigation } = await import('../src/appShell.js');
+  const html = renderPrimaryNavigation('/');
+  assert.doesNotMatch(html, />\s*Trades\s*</);
+  assert.doesNotMatch(html, /href=["']\/trades["']/);
+  assert.doesNotMatch(html, /data-nav-key=["']trades["']/);
+});
