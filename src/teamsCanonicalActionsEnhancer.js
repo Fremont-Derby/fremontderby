@@ -1,3 +1,5 @@
+import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
+
 const REQUESTED_TEAM_SCRIPT = `<script data-requested-team-marker>
 (() => {
   const requested = new URLSearchParams(location.search).get('team');
@@ -25,6 +27,11 @@ const REQUESTED_TEAM_SCRIPT = `<script data-requested-team-marker>
 })();
 </script>`;
 
+const NEXT_MATCH_SCRIPT = `<script data-teams-next-match>
+  ${nextMatchSummaryBrowserSource}
+  (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+</script>`;
+
 export async function enhanceTeamsCanonicalActions(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
@@ -47,6 +54,13 @@ export async function enhanceTeamsCanonicalActions(response) {
       : html + REQUESTED_TEAM_SCRIPT;
   } else if (!html.includes('[data-hub-team]')) {
     html = html.replace('</body>', `${REQUESTED_TEAM_SCRIPT}</body>`);
+  }
+
+  if (!html.includes('data-next-match')) {
+    html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
+    html = html.includes('</body>')
+      ? html.replace('</body>', `${NEXT_MATCH_SCRIPT}</body>`)
+      : html + NEXT_MATCH_SCRIPT;
   }
 
   return new Response(html, {
