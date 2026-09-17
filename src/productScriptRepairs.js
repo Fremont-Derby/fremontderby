@@ -42,6 +42,28 @@ function injectNextMatch(html, headers) {
   );
 }
 
+function injectPlayerHighlight(html, headers) {
+  if (html.includes('data-player-highlight')) return html;
+  const nonce = nonceFromHtmlOrHeaders(html, headers);
+  const attr = nonce ? ` nonce="${nonce}"` : '';
+  html = html.replace('</header>', '</header><p data-player-highlight hidden></p>');
+  return html.replace(
+    '</body>',
+    `<script${attr}>
+      (()=>{
+        const query=new URLSearchParams(location.search);
+        const requested=query.get('player')||query.get('q');
+        const banner=document.querySelector('[data-player-highlight]');
+        if(!requested||!banner)return;
+        banner.hidden=false;
+        banner.textContent='Showing player: '+requested;
+        const search=document.querySelector('input[type="search"],input[name="q"],input[data-player-search]');
+        if(search&&!search.value) search.value=requested;
+      })();
+    </script></body>`,
+  );
+}
+
 function retireTradesNav(html) {
   return String(html || '')
     .replaceAll('href="/trades"', 'href="/teams"')
@@ -59,6 +81,7 @@ export async function applyProductScriptRepairs(response, pathname) {
   if (pathname === '/lineup') html = repairLineupScript(html);
   html = retireTradesNav(html);
   if (NEXT_MATCH_PATHS.has(pathname)) html = injectNextMatch(html, response.headers);
+  if (pathname === '/players') html = injectPlayerHighlight(html, response.headers);
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,
