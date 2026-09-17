@@ -10,9 +10,13 @@ test('DRU public HTML shells that humans use are expected 200', () => {
   for (const path of DRU_PUBLIC_SURFACE.html200) {
     assert.equal(expectedPublicStatus(path), 200, path);
   }
-  assert.equal(expectedPublicStatus('/health'), 200);
-  assert.equal(expectedPublicStatus('/prizes'), 200);
-  assert.equal(expectedPublicStatus('/'), 200);
+});
+
+test('DRU readiness JSON is expected 200', () => {
+  for (const path of DRU_PUBLIC_SURFACE.json200) {
+    assert.equal(expectedPublicStatus(path), 200, path);
+  }
+  assert.ok(DRU_PUBLIC_SURFACE.json200.includes('/health/environment'));
 });
 
 test('retired player-trade surface is expected 404 on DRU', () => {
@@ -23,20 +27,21 @@ test('retired player-trade surface is expected 404 on DRU', () => {
 test('unlisted paths stay unclassified so canary can ignore them', () => {
   assert.equal(expectedPublicStatus('/seasons'), null);
   assert.equal(expectedPublicStatus('/demo'), null);
+  assert.equal(expectedPublicStatus('/health/ready'), null);
 });
 
 test('canary failure copy names host, kind, status, url, and error', () => {
   const text = formatCanaryFailure({
     host: 'dru.fremontderby.com',
-    kind: 'html',
-    status: 404,
-    url: 'https://dru.fremontderby.com/playoffs',
-    error: 'hound',
+    kind: 'json',
+    status: 503,
+    url: 'https://dru.fremontderby.com/health/environment',
+    error: 'ok false',
   });
   assert.match(text, /host=dru\.fremontderby\.com/);
-  assert.match(text, /kind=html/);
-  assert.match(text, /status=404/);
-  assert.match(text, /url=https:\/\/dru\.fremontderby\.com\/playoffs/);
-  assert.match(text, /error=hound/);
+  assert.match(text, /kind=json/);
+  assert.match(text, /status=503/);
+  assert.match(text, /url=https:\/\/dru\.fremontderby\.com\/health\/environment/);
+  assert.match(text, /error=ok false/);
   assert.doesNotMatch(text, /Still failing: run/);
 });
