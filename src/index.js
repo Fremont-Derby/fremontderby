@@ -5,8 +5,8 @@ export {
   readJsonBody,
   clientErrorMessage,
   statusForError,
-  renderLandingPage,
 } from './indexShared.js';
+export { renderLandingPage } from './landingPage.js';
 export {
   handlePublishScheduleRequest,
   handleCreateSeasonSetupRequest,
