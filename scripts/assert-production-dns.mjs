@@ -4,7 +4,9 @@
  * Uses DNS-over-HTTPS (no local dig required) — post-incident guard after
  * missing Workers custom-domain binding left apex with no A/AAAA.
  */
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { formatCanaryIncidentComment } from './canary-incident-comment.mjs';
 
 export const PRODUCTION_DNS_HOSTS = Object.freeze([
   'fremontderby.com',
@@ -97,7 +99,6 @@ export async function assertProductionDnsAndHealth({
     }
   }
   const dnsFailed = dnsResults.filter((row) => !row.ok);
-  // Only hit HTTP when DNS looks present for that host
   for (const row of dnsResults.filter((r) => r.ok)) {
     try {
       healthResults.push(await assertHostnameHealth(row.hostname, fetchImpl));
@@ -124,6 +125,26 @@ if (isDirect) {
   const summary = await assertProductionDnsAndHealth();
   console.log(JSON.stringify(summary, null, 2));
   if (!summary.ok) {
+    const failed = [
+      ...summary.dnsFailed.map((row) => ({
+        host: row.hostname,
+        kind: 'dns',
+        error: row.error,
+      })),
+      ...summary.healthFailed.map((row) => ({
+        host: row.hostname,
+        kind: 'health',
+        status: row.status,
+        url: row.url,
+        error: row.error,
+      })),
+    ];
+    const comment = formatCanaryIncidentComment({
+      runUrl: process.env.CANARY_RUN_URL || '',
+      failed,
+    });
+    writeFileSync('canary-failure.md', comment);
+    console.error(comment);
     console.error(
       'Production DNS/health guard failed. Check Workers custom domain binding for fremontderby.com → fremontderby-prod (workflow: Restore lane custom domains). Negative DNS cache may still affect clients for ~30m after repair.',
     );
