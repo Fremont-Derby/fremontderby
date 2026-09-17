@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { dualScoringHttpHandlers } from '../src/dualScoringHttp.js';
+import { dualScoringStatusForError } from '../src/dualScoringHttp.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const sql = readFileSync(
@@ -17,8 +17,10 @@ test('migration rejects dual-team score tracker resolution', () => {
 });
 
 test('HTTP maps dual-team scoring rejection to 403', async () => {
-  const handlers = dualScoringHttpHandlers;
-  // smoke: status mapper source includes both-teams phrase
-  const src = readFileSync(join(root, 'src/dualScoringHttp.js'), 'utf8');
+  const src = readFileSync(join(root, 'src/rpcErrorStatus.js'), 'utf8');
   assert.match(src, /active on both teams in the matchup/);
+  assert.equal(
+    dualScoringStatusForError(new Error('Player is active on both teams in the matchup')),
+    403,
+  );
 });

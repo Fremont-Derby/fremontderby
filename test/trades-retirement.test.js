@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import worker from '../src/routerEntry.js';
 
-const retiredApiPaths = [
+const tradeApiPaths = [
   '/api/me/trades',
   '/api/teams/team-1/trades',
   '/api/team-trades/trade-1/player-response',
@@ -11,24 +11,25 @@ const retiredApiPaths = [
   '/api/admin/teams/team-1/trades',
 ];
 
-test('legacy Trades page is a real 404 before the legacy renderer can run', async () => {
+test('live Trades page renders before any legacy retirement path can run', async () => {
   const response = await worker.fetch(new Request('https://fremontderby.com/trades'), {}, {});
   const html = await response.text();
 
-  assert.equal(response.status, 404);
+  assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') || '', /text\/html/);
-  assert.match(html, /404|not found/i);
-  assert.doesNotMatch(html, /Propose trade|Accept trade|Approve trade/i);
+  assert.match(html, /Trades/i);
+  assert.doesNotMatch(html, /This dog lost the rack/);
 });
 
-test('formal trade HTTP APIs are unavailable without authenticating or touching data', async () => {
-  for (const pathname of retiredApiPaths) {
+test('formal trade HTTP APIs require authentication instead of pretending to be retired', async () => {
+  for (const pathname of tradeApiPaths) {
     const response = await worker.fetch(new Request(`https://fremontderby.com${pathname}`, {
-      method: pathname === '/api/me/trades' ? 'GET' : 'POST',
+      method: pathname === '/api/me/trades' || pathname === '/api/teams/team-1/trades' ? 'GET' : 'POST',
       headers: { 'content-type': 'application/json' },
-      body: pathname === '/api/me/trades' ? undefined : '{}',
+      body: pathname === '/api/me/trades' || pathname === '/api/teams/team-1/trades' ? undefined : '{}',
     }), {}, {});
-    assert.equal(response.status, 404, pathname);
-    assert.deepEqual(await response.json(), { error: 'Not found' }, pathname);
+    assert.equal(response.status, 401, pathname);
+    const body = await response.json();
+    assert.equal(typeof body.error, 'string', pathname);
   }
 });
