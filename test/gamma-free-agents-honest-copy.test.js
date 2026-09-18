@@ -3,6 +3,7 @@ import test from 'node:test';
 import { renderFreeAgentsPage } from '../src/publicShellPages.js';
 import worker from '../src/routerEntry.js';
 
+// Quiet contract recheck after PR body fix (no auto-close keywords).
 test('Gamma free-agents shell uses honest roster copy', () => {
   const html = renderFreeAgentsPage();
   assert.match(html, /No open roster list is published yet/);
