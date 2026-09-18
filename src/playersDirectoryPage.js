@@ -1,3 +1,5 @@
+import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
+
 export function renderPlayersDirectoryPage() {
   return `<!doctype html>
 <html lang="en">
@@ -9,6 +11,7 @@ export function renderPlayersDirectoryPage() {
 <body>
   <main class="app" data-fd-dru-players="true">
     <header><h1>Player directory</h1></header>
+    <p data-next-match>Looking up your next published match…</p>
     <p data-player-highlight hidden></p>
     <p>Public names from the active season. Contact numbers, payments, and internal IDs are never shown.</p>
     <label>Search <input data-search type="search" placeholder="Type at least 2 letters" maxlength="80" /></label>
@@ -18,6 +21,19 @@ export function renderPlayersDirectoryPage() {
     <p><a href="/teams">Teams</a> · <a href="/standings">Standings</a> · <a href="/schedule">Schedule</a></p>
   </main>
   <script>
+    ${nextMatchSummaryBrowserSource}
+    const nextEl = document.querySelector('[data-next-match]');
+    fetch('/api/me/matches', { headers: { accept: 'application/json' } })
+      .then((response) => response.json())
+      .then((body) => {
+        const next = pickNextMatch(body.matches || []);
+        nextEl.textContent = next
+          ? ('Next match: ' + nextMatchLabel(next))
+          : 'No upcoming match published.';
+      })
+      .catch(() => {
+        nextEl.textContent = 'Could not load matches.';
+      });
     const statusEl = document.querySelector('[data-status]');
     const emptyEl = document.querySelector('[data-empty]');
     const listEl = document.querySelector('[data-list]');
