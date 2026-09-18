@@ -81,7 +81,7 @@ function injectStandingsHighlight(html, headers) {
         const banner=document.querySelector('[data-standings-highlight]');
         if(!requested||!banner)return;
         banner.hidden=false;
-        banner.textContent='Showing standing: '+requested;
+        banner.textContent='Showing team: '+requested;
         banner.setAttribute('data-requested-standing', requested);
         for (const row of document.querySelectorAll('[data-team-name], [data-standing-name]')) {
           if (isRequestedStanding(row.getAttribute('data-team-name')||row.getAttribute('data-standing-name')||row.textContent, requested)) {
@@ -151,7 +151,7 @@ export async function applyProductScriptRepairs(response, pathname) {
   html = retireTradesNav(html);
   if (NEXT_MATCH_PATHS.has(pathname)) html = injectNextMatch(html, response.headers);
   if (pathname === '/players') html = injectPlayerHighlight(html, response.headers);
-  if (pathname === '/standings') html = injectStandingsHighlight(html, response.headers);
+  if (pathname === '/standings' || pathname === '/prizes') html = injectStandingsHighlight(html, response.headers);
   if (pathname === '/free-agents') html = injectFreeAgentInvitations(html, response.headers);
   return new Response(html, {
     status: response.status,
