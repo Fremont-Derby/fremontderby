@@ -6,9 +6,9 @@ import worker from '../src/routerEntry.js';
 test('Gamma free-agents page shows next match and invitations', async () => {
   const directHtml = renderFreeAgentsPage();
   assert.match(directHtml, /data-next-match/);
-  assert.match(directHtml, /\\/api\\/me\\/matches/);
+  assert.match(directHtml, /\/api\/me\/matches/);
   assert.match(directHtml, /pickNextMatch/);
-  assert.match(directHtml, /\\/api\\/me\\/invitations/);
+  assert.match(directHtml, /\/api\/me\/invitations/);
   assert.match(directHtml, /data-invites/);
   assert.match(directHtml, /Captains invite from Teams/);
   assert.match(directHtml, /No open roster list is published yet/);
