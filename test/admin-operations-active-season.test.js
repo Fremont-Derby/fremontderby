@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 
 test('operations repository prefers an active season', () => {
   const source = readFileSync(new URL('../src/adminOperationsRepository.js', import.meta.url), 'utf8');
-  assert.match(source, /status=eq\.active/);
-  assert.match(source, /activeSeasons/);
+  const helper = readFileSync(new URL('../src/adminOperationsSeasonPick.js', import.meta.url), 'utf8');
+  assert.match(source, /fetchOperationsSeason/);
+  assert.match(helper, /status=eq\.active/);
+  assert.match(helper, /activeSeasons/);
 });
