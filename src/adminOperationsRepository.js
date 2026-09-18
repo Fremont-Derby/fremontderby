@@ -171,10 +171,16 @@ export function createAdminOperationsRepository(
         result_limit: 1,
       });
 
-      const seasons = await table(
+      const activeSeasons = await table(
         'seasons',
-        'select=id,name,status,updated_at&order=updated_at.desc&limit=1',
+        'select=id,name,status,updated_at&status=eq.active&order=updated_at.desc&limit=1',
       );
+      const seasons = activeSeasons.rows.length
+        ? activeSeasons
+        : await table(
+          'seasons',
+          'select=id,name,status,updated_at&order=updated_at.desc&limit=1',
+        );
       const season = seasons.rows[0] ?? null;
       const seasonFilter = season ? `season_id=eq.${encodeURIComponent(season.id)}&` : null;
       let currentRound = null;
