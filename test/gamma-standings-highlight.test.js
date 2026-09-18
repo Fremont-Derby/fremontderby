@@ -17,5 +17,5 @@ test('standings product repair injects ?team= highlight hook', async () => {
   const html = await response.text();
   assert.match(html, /data-standings-highlight/);
   assert.match(html, /isRequestedStanding/);
-  assert.match(html, /Showing standing/);
+  assert.match(html, /Showing team/);
 });
