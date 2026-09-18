@@ -8,7 +8,8 @@ import { renderFreeAgentsPage, renderPracticePage } from '../src/publicShellPage
 test('free-agents shell is honest and does not invent players', () => {
   const html = renderFreeAgentsPage();
   assert.match(html, /Free agents/);
-  assert.match(html, /does not invent names/);
+  assert.match(html, /No open roster list is published yet/);
+  assert.match(html, /Captains invite from Teams/);
   assert.match(html, /href="\/teams"/);
   assert.doesNotMatch(html, /Kid League|druAgentSession|BETA_AUTH_BYPASS/);
 });
