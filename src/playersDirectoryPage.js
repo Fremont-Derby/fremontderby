@@ -9,6 +9,7 @@ export function renderPlayersDirectoryPage() {
 <body>
   <main class="app" data-fd-dru-players="true">
     <header><h1>Player directory</h1></header>
+    <p data-player-highlight hidden></p>
     <p>Public names from the active season. Contact numbers, payments, and internal IDs are never shown.</p>
     <label>Search <input data-search type="search" placeholder="Type at least 2 letters" maxlength="80" /></label>
     <p data-status>Loading players…</p>
@@ -21,8 +22,14 @@ export function renderPlayersDirectoryPage() {
     const emptyEl = document.querySelector('[data-empty]');
     const listEl = document.querySelector('[data-list]');
     const searchEl = document.querySelector('[data-search]');
-    const requestedPlayer = (new URLSearchParams(location.search).get('player') || '').trim();
+    const banner = document.querySelector('[data-player-highlight]');
+    const queryParams = new URLSearchParams(location.search);
+    const requestedPlayer = (queryParams.get('player') || queryParams.get('q') || '').trim();
     if (requestedPlayer && !searchEl.value) searchEl.value = requestedPlayer;
+    if (requestedPlayer && banner) {
+      banner.hidden = false;
+      banner.textContent = 'Showing player: ' + requestedPlayer;
+    }
     let rows = [];
     function paint() {
       const query = (searchEl.value || '').trim().toLowerCase();
