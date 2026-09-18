@@ -23,9 +23,9 @@ export function renderFreeAgentsPage() {
     '/free-agents',
     'Free agents',
     'Free agents',
-    `<p>Players who are not on a team yet will be listed here when a season is open for registration.</p>
-     <p>This page does not invent names. If the list is empty, no free-agent list has been published for the current season.</p>
-     <p><a href="/teams">Find or start a team</a> \u00b7 <a href="/profile">Sign in on Profile</a> \u00b7 <a href="/players">Player directory</a></p>`,
+    `<p>Players looking for a roster. Captains invite from Teams. Published names stay on Player directory.</p>
+     <p>No open roster list is published yet. Open Teams to ask a captain, or browse Player directory.</p>
+     <p><a href="/teams">Teams</a> \u00b7 <a href="/players">Player directory</a> \u00b7 <a href="/schedule">Schedule</a></p>`,
   );
 }
 
