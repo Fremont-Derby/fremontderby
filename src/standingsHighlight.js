@@ -3,3 +3,5 @@ export function isRequestedStanding(name, requested) {
   if (!target) return false;
   return String(name || '').trim().toLowerCase() === target;
 }
+
+export const standingsHighlightBrowserSource = `${isRequestedStanding.toString()}`;
