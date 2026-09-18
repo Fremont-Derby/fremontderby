@@ -4,6 +4,7 @@ import { repairAdminSeasonTeamsScript } from './adminSeasonTeamsScriptRepair.js'
 import { repairLineupScript } from './lineupScriptRepair.js';
 import { repairStandingsPageScript } from './standingsScriptRepair.js';
 import { repairPlayoffsCopy } from './playoffsCopyRepair.js';
+import { repairPracticeCopy } from './practiceCopyRepair.js';
 import { repairScorecardScript } from './scorecardScriptRepair.js';
 import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
 import { standingsHighlightBrowserSource } from './standingsHighlight.js';
@@ -145,6 +146,7 @@ export async function applyProductScriptRepairs(response, pathname) {
   let html = await response.text();
   if (pathname === '/standings') html = repairStandingsPageScript(html);
   if (pathname === '/playoffs') html = repairPlayoffsCopy(html);
+  if (pathname === '/practice') html = repairPracticeCopy(html);
   if (pathname === '/admin/players') html = repairAdminPlayersScript(html);
   if (pathname === '/availability') html = repairAvailabilityScript(html);
   if (pathname === '/admin/season-teams') html = repairAdminSeasonTeamsScript(html);
