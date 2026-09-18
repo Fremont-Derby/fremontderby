@@ -1,5 +1,6 @@
 import { designSystemStyles } from './designSystem.js';
 import { livePageRefreshScript } from './livePageRefresh.js';
+import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
 
 export function renderPlayersDirectoryPage() {
   return `<!doctype html>
@@ -30,6 +31,7 @@ export function renderPlayersDirectoryPage() {
       <div class="brand"><span class="mark">9</span><span>Player directory</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
     </header>
+    <p data-next-match>Looking up your next published match…</p>
     <nav aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
       <a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a>
@@ -65,6 +67,15 @@ export function renderPlayersDirectoryPage() {
   </main>
   ${livePageRefreshScript}
   <script>
+    ${nextMatchSummaryBrowserSource}
+    const nextEl=document.querySelector('[data-next-match]');
+    fetch('/api/me/matches',{headers:{accept:'application/json'}})
+      .then((response)=>response.json())
+      .then((body)=>{
+        const next=pickNextMatch(body.matches||[]);
+        nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';
+      })
+      .catch(()=>{nextEl.textContent='Could not load matches.';});
     const statusEl=document.querySelector('[data-status]');
     const seasonEl=document.querySelector('[data-season]');
     const searchEl=document.querySelector('[data-search]');
