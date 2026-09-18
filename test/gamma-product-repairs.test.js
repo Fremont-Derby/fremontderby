@@ -12,8 +12,27 @@ test('admin players confirm keeps a real newline', () => {
 });
 
 test('availability repair prefers an upcoming night', () => {
-  const source = "const requestedContext=contexts.find((context)=>context.roundId===requested);if(requestedContext)contextSelect.value=contextKey(requestedContext);else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;";
-  assert.match(repairAvailabilityScript(source), /upcoming/);
+  const source = `const requestedContext=contexts.find((context)=>context.roundId===requested);
+  if(requestedContext)contextSelect.value=contextKey(requestedContext);
+  else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;
+  else {
+    const today=new Date().toISOString().slice(0,10);
+    const withDate=contexts.filter((context)=>context.scheduledOn||context.scheduled_on);
+    const tonight=withDate.find((context)=>(context.scheduledOn||context.scheduled_on)===today);
+    const upcoming=withDate
+      .filter((context)=>(context.scheduledOn||context.scheduled_on)>=today)
+      .sort((a,b)=>String(a.scheduledOn||a.scheduled_on).localeCompare(String(b.scheduledOn||b.scheduled_on)))[0];
+    const pick=tonight||upcoming||contexts[0];
+    if(pick)contextSelect.value=contextKey(pick);
+  }
+  `;
+  const repaired = repairAvailabilityScript(source);
+  assert.match(repaired, /onOrAfterToday/);
+  assert.match(repaired, /rememberedContext&&onOrAfterToday\(rememberedContext\)/);
+  assert.doesNotMatch(
+    repaired,
+    /else if\(remembered&&contexts\.some\(\(context\)=>contextKey\(context\)===remembered\)\)contextSelect\.value=remembered;/,
+  );
 });
 
 test('season teams repair prefers the active season', () => {
