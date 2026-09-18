@@ -151,7 +151,9 @@ export async function applyProductScriptRepairs(response, pathname) {
   html = retireTradesNav(html);
   if (NEXT_MATCH_PATHS.has(pathname)) html = injectNextMatch(html, response.headers);
   if (pathname === '/players') html = injectPlayerHighlight(html, response.headers);
-  if (pathname === '/standings' || pathname === '/prizes') html = injectStandingsHighlight(html, response.headers);
+  if (pathname === '/standings' || pathname === '/prizes' || pathname === '/playoffs') {
+    html = injectStandingsHighlight(html, response.headers);
+  }
   if (pathname === '/free-agents') html = injectFreeAgentInvitations(html, response.headers);
   return new Response(html, {
     status: response.status,
