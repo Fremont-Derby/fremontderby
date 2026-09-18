@@ -1,5 +1,6 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
+import { fetchOperationsSeason } from './adminOperationsSeasonPick.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);
@@ -171,10 +172,7 @@ export function createAdminOperationsRepository(
         result_limit: 1,
       });
 
-      const seasons = await table(
-        'seasons',
-        'select=id,name,status,updated_at&order=updated_at.desc&limit=1',
-      );
+      const seasons = await fetchOperationsSeason(table);
       const season = seasons.rows[0] ?? null;
       const seasonFilter = season ? `season_id=eq.${encodeURIComponent(season.id)}&` : null;
       let currentRound = null;
