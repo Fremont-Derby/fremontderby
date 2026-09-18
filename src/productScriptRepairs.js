@@ -5,6 +5,7 @@ import { repairLineupScript } from './lineupScriptRepair.js';
 import { repairStandingsPageScript } from './standingsScriptRepair.js';
 import { repairScorecardScript } from './scorecardScriptRepair.js';
 import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
+import { standingsHighlightBrowserSource } from './standingsHighlight.js';
 
 const NEXT_MATCH_PATHS = new Set([
   '/availability',
@@ -25,7 +26,7 @@ function nonceFromHtmlOrHeaders(html, headers) {
   const fromTag = html.match(/<script\b[^>]*\bnonce=(["'])([^"']+)\1/i);
   if (fromTag?.[2]) return fromTag[2];
   const csp = headers?.get?.('content-security-policy') || '';
-  const fromCsp = csp.match(/nonce-([A-Za-z0-9_+\/=-]+)/);
+  const fromCsp = csp.match(/nonce-([A-Za-z0-9_+/\/=-]+)/);
   return fromCsp?.[1] || '';
 }
 
@@ -60,6 +61,33 @@ function injectPlayerHighlight(html, headers) {
         banner.textContent='Showing player: '+requested;
         const search=document.querySelector('input[type="search"],input[name="q"],input[data-player-search]');
         if(search&&!search.value) search.value=requested;
+      })();
+    </script></body>`,
+  );
+}
+
+function injectStandingsHighlight(html, headers) {
+  if (html.includes('data-standings-highlight')) return html;
+  const nonce = nonceFromHtmlOrHeaders(html, headers);
+  const attr = nonce ? ` nonce="${nonce}"` : '';
+  html = html.replace('</header>', '</header><p data-standings-highlight hidden></p>');
+  return html.replace(
+    '</body>',
+    `<script${attr}>
+      ${standingsHighlightBrowserSource}
+      (()=>{
+        const query=new URLSearchParams(location.search);
+        const requested=query.get('team')||query.get('q');
+        const banner=document.querySelector('[data-standings-highlight]');
+        if(!requested||!banner)return;
+        banner.hidden=false;
+        banner.textContent='Showing standing: '+requested;
+        banner.setAttribute('data-requested-standing', requested);
+        for (const row of document.querySelectorAll('[data-team-name], [data-standing-name]')) {
+          if (isRequestedStanding(row.getAttribute('data-team-name')||row.getAttribute('data-standing-name')||row.textContent, requested)) {
+            row.setAttribute('data-requested-standing-row', 'true');
+          }
+        }
       })();
     </script></body>`,
   );
@@ -123,6 +151,7 @@ export async function applyProductScriptRepairs(response, pathname) {
   html = retireTradesNav(html);
   if (NEXT_MATCH_PATHS.has(pathname)) html = injectNextMatch(html, response.headers);
   if (pathname === '/players') html = injectPlayerHighlight(html, response.headers);
+  if (pathname === '/standings') html = injectStandingsHighlight(html, response.headers);
   if (pathname === '/free-agents') html = injectFreeAgentInvitations(html, response.headers);
   return new Response(html, {
     status: response.status,
