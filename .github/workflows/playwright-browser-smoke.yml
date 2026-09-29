@@ -22,6 +22,9 @@ jobs:
       PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
       PLAYWRIGHT_EXPECTED_ENVIRONMENT: jfl
       PLAYWRIGHT_BROWSERS_PATH: C:\actions-runner\playwright-browsers
+    defaults:
+      run:
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
 
     steps:
       - name: Check out trusted main
@@ -34,7 +37,6 @@ jobs:
         run: npm ci
 
       - name: Prove runner prerequisites
-        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = 'Stop'
           $nodeVersion = node --version
@@ -54,7 +56,6 @@ jobs:
 
       - name: Write non-secret run metadata
         if: always()
-        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path test-results | Out-Null
