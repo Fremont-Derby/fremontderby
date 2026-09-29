@@ -46,12 +46,15 @@ Passing this Work runbook does **not** close #219 by itself. #219 requires two r
 
 ## Default environment and safety
 
-Use environments in this order unless the current issue or product owner says otherwise:
+Choose the environment by validation mode rather than pretending one lane serves every purpose:
 
-1. **Gamma — `https://gamma.fremontderby.com`**: default integrated browser-validation target. Production-like auth, isolated gamma schema, no auth bypass.
-2. **JFL / DRU — `https://jfl.fremontderby.com` / `https://dru.fremontderby.com`**: use when a feature is not yet promoted to gamma or when destructive/resettable setup is needed.
-3. **Test Drive / War Games surfaces**: use for fast orientation and shared-component scoring proof. Test Drive is useful because the rack-ledger scorer is shared with production, but it does not prove production auth/data integration.
-4. **Production — `https://fremontderby.com`**: read-only/safe smoke by default. Do not create, edit, score, finalize, delete, seed, reset, or otherwise mutate live league data unless the product owner explicitly authorizes that exact production action.
+1. **JFL — `https://jfl.fremontderby.com`**: default rapid-iteration browser lab for exploratory Work and Playwright development. It has isolated staging data and may use explicitly gated test actors/auth bypass. Use it for destructive scoring/lineup/retry/concurrency/mobile validation.
+2. **DRU — `https://dru.fremontderby.com`**: independent proving ground and source of portable fixes/contracts. Use when validating DRU-owned behavior or comparing an independently proven implementation; it is not the default browser loop.
+3. **Gamma — `https://gamma.fremontderby.com`**: integrated production-like release-candidate target. No auth bypass. Treat broad Gamma automation as release evidence only after #2527 records a reconciled Gamma baseline SHA.
+4. **Test Drive / War Games surfaces**: useful for orientation and shared-component scoring proof, but not proof of production auth/data integration.
+5. **Production — `https://fremontderby.com`**: read-only/safe smoke by default. Do not create, edit, score, finalize, delete, seed, reset, or otherwise mutate live league data unless the product owner explicitly authorizes that exact production action.
+
+The permanent JFL, DRU, and Gamma branches are heavily diverged. Never use commit-count age as a proxy for product completeness and never wholesale-merge a permanent lane branch to “catch Gamma up.” Follow #2527 for feature-level reconciliation and selective promotion.
 
 Before any meaningful browser pass, verify lane identity using the repository's current health/canary guidance. A hostname resolving is not proof that the correct Worker/environment is running.
 
@@ -339,6 +342,20 @@ Use current code/issues/rule docs as authority; do not hard-code remembered rule
 - Spot-check zoom/reflow and key text/control contrast consistent with `.github/agents/ux-product.agent.md`.
 
 ## Fast execution phases
+
+## Validation modes
+
+### Fast iteration mode — JFL
+
+Use JFL for daily/high-frequency Work exploration and the Playwright development loop. A JFL failure is actionable product/test evidence, but JFL is not the release candidate.
+
+### Release-candidate mode — Gamma
+
+Use Gamma after #2527 establishes the accepted integrated baseline. Gamma runs are smaller and stricter: exact lane/SHA identity, real auth, critical captain path, persistence/recovery, mobile completion, and selected rules.
+
+### Promotion principle
+
+When JFL/DRU uncovers useful behavior, promote the coherent product capability to Gamma through focused lane-owned PRs. Do not promote lane-only QA scaffolding unless it is explicitly needed in the integrated product/test architecture.
 
 ### Phase 0 — 10-minute reconnaissance
 
