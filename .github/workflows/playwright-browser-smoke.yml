@@ -8,7 +8,7 @@ on:
         required: true
         default: smoke
         type: choice
-        options: [smoke, controlled-failure, runner-recovery]
+        options: [smoke, controlled-failure]
 
 permissions:
   contents: read
@@ -55,20 +55,10 @@ jobs:
 
           Write-Host "PASS: runner=$env:RUNNER_NAME os=$env:RUNNER_OS node=$nodeVersion freeGb=$freeGb utc=$clock"
 
-      - name: Exercise automatic runner recovery
-        if: inputs.evidence_mode == 'runner-recovery'
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $listener = Get-Process -Name Runner.Listener -ErrorAction Stop
-          Write-Host "Stopping runner listener PID $($listener.Id); the Windows service must recover it unattended."
-          Stop-Process -Id $listener.Id -Force
-
       - name: Ensure pinned Chromium is present
-        if: inputs.evidence_mode != 'runner-recovery'
         run: npm run browser:install
 
       - name: Run JFL browser smoke
-        if: inputs.evidence_mode != 'runner-recovery'
         run: npm run test:browser:smoke
 
       - name: Write non-secret run metadata
