@@ -620,3 +620,15 @@ The implementing agent should begin by claiming #2524 and inventorying the **act
 Do not guess its OS, labels, installation path, or service model.
 
 Then implement Slice A and Slice B as the smallest safe vertical proof before broadening the test matrix.
+## Official references
+
+Implementation should verify commands against current upstream documentation rather than copying old examples from chat:
+
+- GitHub self-hosted runner setup: https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
+- GitHub secure-use guidance for self-hosted runners: https://docs.github.com/en/actions/reference/security/secure-use
+- GitHub runner-group access controls: https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/manage-access
+- Playwright CI guidance: https://playwright.dev/docs/ci
+- Playwright browser installation/version coupling: https://playwright.dev/docs/browsers
+- Playwright trace viewer: https://playwright.dev/docs/trace-viewer-intro
+- Playwright device/mobile emulation: https://playwright.dev/docs/emulation
+
