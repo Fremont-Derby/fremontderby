@@ -13,6 +13,7 @@ test('browser workflow stays manual, main-only, and pinned to the isolated runne
   assert.match(workflow, /group: fremont-browser/);
   assert.match(workflow, /labels: \[self-hosted, Windows, X64, fremont-browser\]/);
   assert.match(workflow, /permissions:\s+contents: read/);
+  assert.match(workflow, /defaults:\s+run:\s+shell: powershell -NoProfile -ExecutionPolicy Bypass/);
   assert.match(workflow, /persist-credentials: false/);
   assert.doesNotMatch(workflow, /SUPABASE|CLOUDFLARE|secrets\./);
 });
