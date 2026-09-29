@@ -8,6 +8,7 @@ test('browser workflow stays manual, main-only, and pinned to the isolated runne
   const workflow = await read('.github/workflows/playwright-browser-smoke.yml');
 
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /options: \[smoke, controlled-failure\]/);
   assert.doesNotMatch(workflow, /pull_request:/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /group: fremont-browser/);
@@ -16,6 +17,7 @@ test('browser workflow stays manual, main-only, and pinned to the isolated runne
   assert.match(workflow, /defaults:\s+run:\s+shell: powershell -NoProfile -ExecutionPolicy Bypass/);
   assert.match(workflow, /persist-credentials: false/);
   assert.doesNotMatch(workflow, /SUPABASE|CLOUDFLARE|secrets\./);
+  assert.doesNotMatch(workflow, /type:\s*string|ref: \$\{\{ inputs\.|PLAYWRIGHT_BASE_URL: \$\{\{ inputs\./);
 });
 
 test('browser dependency and Chromium install are reproducible', async () => {
