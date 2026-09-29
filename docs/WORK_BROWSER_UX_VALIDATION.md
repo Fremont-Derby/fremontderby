@@ -18,6 +18,16 @@ This runbook complements rather than replaces:
 
 Browser automation is an **accelerator and evidence collector**, not authority to weaken release gates or mutate production casually.
 
+## Browser automation strategy
+
+The product-owner decision recorded in #2524 makes a persistent self-hosted Playwright harness a priority investment. The intended split is:
+
+- **Playwright**: repeatable browser smoke/regression, desktop + phone emulation, persistence/concurrency checks, and remote traces/reports.
+- **ChatGPT Work**: exploratory UX discovery, novel edge cases, triage, and deciding what deserves durable automation.
+- **Existing Node/domain/HTTP tests**: fastest deterministic protection for rules, APIs, authorization, rendering contracts, and deployment behavior.
+
+Follow `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` for the runner/harness implementation. Because the repository is public, the self-hosted browser runner must never execute arbitrary public pull-request code.
+
 ## End goal
 
 Fremont Derby is ready to run a normal real league night when all of the following are true on the intended release candidate:
@@ -451,9 +461,11 @@ The browser operator may fix a defect when all are true:
 - regression coverage can be added at the appropriate existing layer;
 - relevant tests can be run.
 
-Prefer the repository's existing Node/domain/render/HTTP contract tests. There is currently no repository Playwright harness. Do **not** add Playwright or another browser-test dependency as incidental cleanup during this time-critical validation mission.
+Prefer the lowest reliable regression layer. Existing Node/domain/render/HTTP contract tests remain the default for business rules, APIs, auth, rendering contracts, and deployment behavior.
 
-If repeated Work browser runs show that a durable browser harness would materially reduce release risk, create a separate scoped issue proposing it, with concrete candidate scenarios and maintenance cost. That decision should not block the current validation pass.
+**Playwright is now an explicit project priority under issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md`.** Once that foundation is available, use Playwright for browser-level regressions that materially depend on real navigation, viewport/touch behavior, browser persistence, multi-context state, or other user-visible browser behavior. Do not recreate a browser scenario manually in every Work run when a trustworthy Playwright test already covers it.
+
+Until #2524 is verified, Work may continue manual browser validation rather than blocking release discovery on the harness implementation.
 
 ## Regression rule
 
@@ -538,7 +550,7 @@ reproduce -> capture evidence -> classify -> deduplicate -> fix or route -> rete
 
 Do not mutate production unless the product owner explicitly authorizes the exact production action. Do not weaken auth/RLS/environment isolation. Do not invent passes or replace the two-human #219 release gate.
 
-Fix only contained unowned defects with the smallest safe change and appropriate existing regression coverage. Do not add Playwright or another new browser-test framework incidentally during this mission.
+Fix only contained unowned defects with the smallest safe change and appropriate regression coverage. Treat #2524 as the owned path for establishing Playwright infrastructure; once the harness is verified, add focused browser regressions there when the defect genuinely requires a real-browser assertion rather than a lower-layer test.
 
 End with exact environment/SHA tested, scenario status, linked blocker/high issues and PRs, and one clear next action. The desired outcome is READY TO RUN #219 with zero known blockers.
 ```
