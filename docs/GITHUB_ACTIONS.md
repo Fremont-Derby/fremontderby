@@ -89,6 +89,24 @@ Workflows use `concurrency` groups with `cancel-in-progress: true` so repeated p
 - No workflow uses `untrusted-base-ref PR event`.
 - Required check names for branch protection: `test`, `accessibility`, `pr-card-contract`, `validate` (release-source-policy).
 
+## Self-hosted browser runner (#2524)
+
+The persistent Windows browser runner is isolated in the organization runner group `fremont-browser` and selected with all four labels: `self-hosted`, `Windows`, `X64`, and `fremont-browser`.
+
+- `.github/workflows/self-hosted-browser-runner-smoke.yml` proves service, temporary-filesystem, and public JFL connectivity without checking out repository code.
+- `.github/workflows/playwright-browser-smoke.yml` checks out only trusted `main`, installs the exact lockfile, reuses the persistent Chromium cache, runs one desktop plus one phone JFL smoke, and uploads a seven-day report/trace bundle.
+- Both workflows are `workflow_dispatch` only, require actor `subiki`, require `refs/heads/main`, and use only `contents: read`.
+- Neither workflow accepts a URL, ref, repository, command, or suite from dispatch input. Public `pull_request` jobs remain on GitHub-hosted runners.
+- The `fremont-browser` runner group must use **Selected repositories** (`Fremont-Derby/fremontderby`) and **Selected workflows** for these two exact files on `refs/heads/main`. Leave the service offline if the group falls back to `All workflows`.
+
+Runner maintenance:
+
+1. Service: `actions.runner.Fremont-Derby.PREFECT`, delayed automatic start under `NT AUTHORITY\\NETWORK SERVICE`.
+2. Installation/cache: `C:\\actions-runner` and `C:\\actions-runner\\playwright-browsers`.
+3. After changing `@playwright/test`, run `npm ci` and `npm run browser:install` on the runner, then rerun both trusted workflows.
+4. Diagnose offline/boot failures from `C:\\actions-runner\\_diag` and the Windows Application log provider `ActionsRunnerService` before restarting repeatedly.
+5. A queued job means runner/group eligibility or availability; a started job failing before browser assertions is bootstrap/runner failure; a Playwright assertion failure is application/test signal.
+
 ## Org + lane identities (#1173)
 
 See **`docs/github-org-lane-identities.md`** for the GitHub Organization transfer and separate JFL/DRU actor checklist.

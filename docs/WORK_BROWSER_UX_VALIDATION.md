@@ -484,6 +484,8 @@ Prefer the lowest reliable regression layer. Existing Node/domain/render/HTTP co
 
 Until #2524 is verified, Work may continue manual browser validation rather than blocking release discovery on the harness implementation.
 
+The initial #2524 harness lives in `browser/smoke/` and `.github/workflows/playwright-browser-smoke.yml`. Consult or rerun that trusted JFL desktop/phone smoke before manually repeating its public Test Drive assertions. A green smoke proves the browser substrate and those narrow assertions only; continue interactive exploration for authenticated, concurrent, destructive, and not-yet-automated scenarios.
+
 ## Regression rule
 
 Every fixed BLOCKER should receive durable regression protection whenever technically practical.

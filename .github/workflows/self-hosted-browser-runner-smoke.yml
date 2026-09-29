@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Prove trusted runner execution
-        shell: powershell
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = 'Stop'
 
@@ -31,7 +31,7 @@ jobs:
           Write-Host "PASS: trusted workflow reached a Windows runner in the fremont-browser group."
 
       - name: Prove isolated temp filesystem
-        shell: powershell
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = 'Stop'
 
@@ -46,7 +46,7 @@ jobs:
           Write-Host 'PASS: runner temp filesystem is writable and cleanup succeeded.'
 
       - name: Prove JFL public reachability and identity
-        shell: powershell
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = 'Stop'
 

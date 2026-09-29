@@ -7,6 +7,10 @@
   "scripts": {
     "lint": "node scripts/lint.mjs",
     "test": "node --test",
+    "test:browser": "playwright test",
+    "test:browser:smoke": "playwright test browser/smoke",
+    "browser:install": "playwright install chromium",
+    "browser:report": "playwright show-report",
     "check": "node scripts/check-js-syntax.mjs",
     "check:matrix": "node scripts/assert-wrangler-matrix.mjs",
     "prebuild": "node scripts/guard-cloudflare-build.mjs",
@@ -33,5 +37,8 @@
     "canary": "node scripts/assert-production-dns.mjs && node scripts/assert-lane-health.mjs && node scripts/assert-public-surface.mjs",
     "canary:contract": "node --test test/public-surface-contract.test.js test/assert-production-dns.test.js",
     "do-work:check": "npm run canary:contract && npm run canary"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }
