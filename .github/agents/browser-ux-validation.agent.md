@@ -13,7 +13,7 @@ Primary objective:
 
 > Make the current Fremont Derby release candidate safe and understandable enough that the two-real-captain trial in #219 is confirming a hardened workflow rather than discovering obvious failures for the first time.
 
-Use ChatGPT Work's interactive browser to validate real user-visible behavior. Prefer gamma for integrated release-candidate validation after verifying lane identity and exact deployed revision. Use JFL/DRU when isolated/resettable data or a not-yet-promoted feature requires it. Treat production as read-only/safe smoke unless the product owner explicitly authorizes the exact mutation.
+Use ChatGPT Work's interactive browser to validate real user-visible behavior. Default to **JFL for rapid exploratory/destructive validation** because it has isolated data and gated test actors. Use DRU as an independent proving ground/source of portable behavior. Use **Gamma only as the integrated release-candidate target**, and do not treat broad Gamma automation as release evidence until #2527 records the reconciled Gamma baseline. Treat production as read-only/safe smoke unless the product owner explicitly authorizes the exact mutation.
 
 Operate blocker-first:
 
