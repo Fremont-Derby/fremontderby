@@ -18,6 +18,16 @@ This runbook complements rather than replaces:
 
 Browser automation is an **accelerator and evidence collector**, not authority to weaken release gates or mutate production casually.
 
+## Browser automation strategy
+
+The product-owner decision recorded in #2524 makes a persistent self-hosted Playwright harness a priority investment. The intended split is:
+
+- **Playwright**: repeatable browser smoke/regression, desktop + phone emulation, persistence/concurrency checks, and remote traces/reports.
+- **ChatGPT Work**: exploratory UX discovery, novel edge cases, triage, and deciding what deserves durable automation.
+- **Existing Node/domain/HTTP tests**: fastest deterministic protection for rules, APIs, authorization, rendering contracts, and deployment behavior.
+
+Follow `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` for the runner/harness implementation. Because the repository is public, the self-hosted browser runner must never execute arbitrary public pull-request code.
+
 ## End goal
 
 Fremont Derby is ready to run a normal real league night when all of the following are true on the intended release candidate:
@@ -36,12 +46,15 @@ Passing this Work runbook does **not** close #219 by itself. #219 requires two r
 
 ## Default environment and safety
 
-Use environments in this order unless the current issue or product owner says otherwise:
+Choose the environment by validation mode rather than pretending one lane serves every purpose:
 
-1. **Gamma — `https://gamma.fremontderby.com`**: default integrated browser-validation target. Production-like auth, isolated gamma schema, no auth bypass.
-2. **JFL / DRU — `https://jfl.fremontderby.com` / `https://dru.fremontderby.com`**: use when a feature is not yet promoted to gamma or when destructive/resettable setup is needed.
-3. **Test Drive / War Games surfaces**: use for fast orientation and shared-component scoring proof. Test Drive is useful because the rack-ledger scorer is shared with production, but it does not prove production auth/data integration.
-4. **Production — `https://fremontderby.com`**: read-only/safe smoke by default. Do not create, edit, score, finalize, delete, seed, reset, or otherwise mutate live league data unless the product owner explicitly authorizes that exact production action.
+1. **JFL — `https://jfl.fremontderby.com`**: default rapid-iteration browser lab for exploratory Work and Playwright development. It has isolated staging data and may use explicitly gated test actors/auth bypass. Use it for destructive scoring/lineup/retry/concurrency/mobile validation.
+2. **DRU — `https://dru.fremontderby.com`**: independent proving ground and source of portable fixes/contracts. Use when validating DRU-owned behavior or comparing an independently proven implementation; it is not the default browser loop.
+3. **Gamma — `https://gamma.fremontderby.com`**: integrated production-like release-candidate target. No auth bypass. Treat broad Gamma automation as release evidence only after #2527 records a reconciled Gamma baseline SHA.
+4. **Test Drive / War Games surfaces**: useful for orientation and shared-component scoring proof, but not proof of production auth/data integration.
+5. **Production — `https://fremontderby.com`**: read-only/safe smoke by default. Do not create, edit, score, finalize, delete, seed, reset, or otherwise mutate live league data unless the product owner explicitly authorizes that exact production action.
+
+The permanent JFL, DRU, and Gamma branches are heavily diverged. Never use commit-count age as a proxy for product completeness and never wholesale-merge a permanent lane branch to “catch Gamma up.” Follow #2527 for feature-level reconciliation and selective promotion.
 
 Before any meaningful browser pass, verify lane identity using the repository's current health/canary guidance. A hostname resolving is not proof that the correct Worker/environment is running.
 
@@ -330,6 +343,20 @@ Use current code/issues/rule docs as authority; do not hard-code remembered rule
 
 ## Fast execution phases
 
+## Validation modes
+
+### Fast iteration mode — JFL
+
+Use JFL for daily/high-frequency Work exploration and the Playwright development loop. A JFL failure is actionable product/test evidence, but JFL is not the release candidate.
+
+### Release-candidate mode — Gamma
+
+Use Gamma after #2527 establishes the accepted integrated baseline. Gamma runs are smaller and stricter: exact lane/SHA identity, real auth, critical captain path, persistence/recovery, mobile completion, and selected rules.
+
+### Promotion principle
+
+When JFL/DRU uncovers useful behavior, promote the coherent product capability to Gamma through focused lane-owned PRs. Do not promote lane-only QA scaffolding unless it is explicitly needed in the integrated product/test architecture.
+
 ### Phase 0 — 10-minute reconnaissance
 
 Goal: know what exact build and environment are being tested.
@@ -451,9 +478,11 @@ The browser operator may fix a defect when all are true:
 - regression coverage can be added at the appropriate existing layer;
 - relevant tests can be run.
 
-Prefer the repository's existing Node/domain/render/HTTP contract tests. There is currently no repository Playwright harness. Do **not** add Playwright or another browser-test dependency as incidental cleanup during this time-critical validation mission.
+Prefer the lowest reliable regression layer. Existing Node/domain/render/HTTP contract tests remain the default for business rules, APIs, auth, rendering contracts, and deployment behavior.
 
-If repeated Work browser runs show that a durable browser harness would materially reduce release risk, create a separate scoped issue proposing it, with concrete candidate scenarios and maintenance cost. That decision should not block the current validation pass.
+**Playwright is now an explicit project priority under issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md`.** Once that foundation is available, use Playwright for browser-level regressions that materially depend on real navigation, viewport/touch behavior, browser persistence, multi-context state, or other user-visible browser behavior. Do not recreate a browser scenario manually in every Work run when a trustworthy Playwright test already covers it.
+
+Until #2524 is verified, Work may continue manual browser validation rather than blocking release discovery on the harness implementation.
 
 ## Regression rule
 
@@ -538,7 +567,7 @@ reproduce -> capture evidence -> classify -> deduplicate -> fix or route -> rete
 
 Do not mutate production unless the product owner explicitly authorizes the exact production action. Do not weaken auth/RLS/environment isolation. Do not invent passes or replace the two-human #219 release gate.
 
-Fix only contained unowned defects with the smallest safe change and appropriate existing regression coverage. Do not add Playwright or another new browser-test framework incidentally during this mission.
+Fix only contained unowned defects with the smallest safe change and appropriate regression coverage. Treat #2524 as the owned path for establishing Playwright infrastructure; once the harness is verified, add focused browser regressions there when the defect genuinely requires a real-browser assertion rather than a lower-layer test.
 
 End with exact environment/SHA tested, scenario status, linked blocker/high issues and PRs, and one clear next action. The desired outcome is READY TO RUN #219 with zero known blockers.
 ```

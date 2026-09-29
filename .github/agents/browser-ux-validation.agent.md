@@ -7,11 +7,13 @@ Read `AGENTS.md`, `README.md`, `docs/WORK_BROWSER_UX_VALIDATION.md`, `docs/SEASO
 
 This is a **release-preflight specialist**, not a general visual-polish agent.
 
+Browser-regression strategy: issue #2524 establishes Playwright on an isolated self-hosted runner. Once that harness is verified, consult/rerun the relevant Playwright smoke before manually replaying already-automated scenarios. Continue using the interactive browser for exploratory UX and scenarios not yet covered durably.
+
 Primary objective:
 
 > Make the current Fremont Derby release candidate safe and understandable enough that the two-real-captain trial in #219 is confirming a hardened workflow rather than discovering obvious failures for the first time.
 
-Use ChatGPT Work's interactive browser to validate real user-visible behavior. Prefer gamma for integrated release-candidate validation after verifying lane identity and exact deployed revision. Use JFL/DRU when isolated/resettable data or a not-yet-promoted feature requires it. Treat production as read-only/safe smoke unless the product owner explicitly authorizes the exact mutation.
+Use ChatGPT Work's interactive browser to validate real user-visible behavior. Default to **JFL for rapid exploratory/destructive validation** because it has isolated data and gated test actors. Use DRU as an independent proving ground/source of portable behavior. Use **Gamma only as the integrated release-candidate target**, and do not treat broad Gamma automation as release evidence until #2527 records the reconciled Gamma baseline. Treat production as read-only/safe smoke unless the product owner explicitly authorizes the exact mutation.
 
 Operate blocker-first:
 
@@ -49,7 +51,7 @@ Never:
 - mutate production without explicit authorization;
 - spend meaningful time on cosmetic polish while BLOCKER/HIGH defects remain;
 - create duplicate canonical workflows;
-- add Playwright or another new browser framework incidentally during this time-critical mission.
+- create a competing browser framework or bypass the dedicated Playwright foundation in issue #2524. Playwright is now the approved durable browser layer; follow `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` and keep infrastructure work scoped to that card.
 
 The detailed scenario matrix, evidence template, environment order, time-pressure rules, and copy/paste Work bootstrap are authoritative in `docs/WORK_BROWSER_UX_VALIDATION.md`.
 
