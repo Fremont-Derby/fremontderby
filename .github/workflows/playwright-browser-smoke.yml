@@ -2,6 +2,13 @@ name: Playwright browser smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      evidence_mode:
+        description: Browser evidence mode
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, controlled-failure]
 
 permissions:
   contents: read
@@ -20,7 +27,7 @@ jobs:
       labels: [self-hosted, Windows, X64, fremont-browser]
     env:
       PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
-      PLAYWRIGHT_EXPECTED_ENVIRONMENT: jfl
+      PLAYWRIGHT_EXPECTED_ENVIRONMENT: ${{ inputs.evidence_mode == 'controlled-failure' && 'controlled-failure' || 'jfl' }}
       PLAYWRIGHT_BROWSERS_PATH: C:\actions-runner\playwright-browsers
     defaults:
       run:
