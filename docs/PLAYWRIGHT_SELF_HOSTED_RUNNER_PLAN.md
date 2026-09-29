@@ -19,9 +19,10 @@ When this plan is complete:
 3. The repository has a pinned Playwright dependency and lockfile.
 4. A trusted GitHub Actions workflow can run browser smoke tests on the self-hosted runner without exposing the machine to arbitrary public pull-request code.
 5. Failures produce screenshots/traces/HTML reports that can be inspected remotely from GitHub.
-6. The first deterministic desktop + phone smoke suite runs against a non-production Fremont Derby environment.
+6. The first deterministic desktop + phone smoke suite runs against **JFL as the rapid-iteration browser lab**.
 7. Browser validation can continue while the project owner is traveling and not present at the runner.
-8. The foundation is ready for later authenticated captain flows, gamma release-candidate gates, and a scheduled ChatGPT Work objective.
+8. A separate Gamma release-candidate suite runs only after #2527 establishes a current reconciled Gamma baseline.
+9. The foundation is ready for authenticated captain flows, selective JFL/DRU promotion, Gamma release-candidate gates, and a later scheduled ChatGPT Work objective.
 
 ## Non-goals for the first implementation
 
@@ -92,6 +93,69 @@ This becomes the durable browser smoke/regression layer.
 - deciding what is worth turning into durable Playwright coverage.
 
 ChatGPT Work should increasingly call or consult Playwright results instead of manually replaying every already-automated path.
+
+## Lane strategy: JFL fast loop, Gamma release gate
+
+Do not use one environment for two conflicting jobs.
+
+### JFL — default Playwright development target
+
+Use JFL for fast, repeatable browser automation and destructive validation because it has isolated staging data and may use explicitly gated test actors/auth bypass.
+
+JFL is where we should iterate on:
+
+- browser-harness smoke;
+- deterministic synthetic users/data;
+- lineup mutation/reordering/unlock cases;
+- score entry, rack edits, mismatch/reconciliation, repeated submit;
+- two-browser-context captain tests;
+- refresh/retry/stale-state tests;
+- mobile viewport behavior;
+- exploratory Work sessions that intentionally create bad state.
+
+JFL being green does **not** mean the release candidate is green.
+
+### DRU — portable evidence and independent proving ground
+
+DRU is not the primary Playwright loop. Mine it for independently proven product fixes, helpers, QA contracts, and edge-case behavior. Promote useful capabilities selectively; do not make Playwright depend on DRU-specific seed/session internals unless the target scenario explicitly belongs there.
+
+### Gamma — integrated release candidate
+
+Gamma is the production-like integration gate:
+
+- no auth bypass;
+- current approved JFL/DRU product behavior combined;
+- exact deployed SHA/version required;
+- smaller, stricter Playwright RC suite;
+- used only after #2527 records a reconciled Gamma baseline.
+
+Until #2527 is verified, Gamma browser failures are useful evidence but must not be interpreted as proof that newly automated JFL behavior regressed.
+
+### Production — read-only by default
+
+Production remains smoke/read-only unless the product owner explicitly authorizes the exact mutation.
+
+### Promotion loop
+
+```text
+current main
+   |
+   +--> JFL-owned implementation -> JFL deploy -> Playwright fast loop
+   |                                  |
+   |                                  +--> proven product behavior
+   |                                             |
+   +--> DRU portable evidence -------------------+
+                                                 v
+                                      focused Gamma promotion PRs
+                                                 |
+                                                 v
+                                      reconciled Gamma Playwright RC
+                                                 |
+                                                 v
+                                               #219
+```
+
+Never wholesale-merge permanent JFL or DRU branches into Gamma. Their histories are intentionally independent and currently heavily diverged. Follow #2527 for the feature-level reconciliation audit.
 
 ## Runner topology
 
@@ -215,8 +279,10 @@ Do not run every test at every viewport initially. Keep a small smoke set fast.
 Use an environment variable such as:
 
 ```text
-PLAYWRIGHT_BASE_URL=https://gamma.fremontderby.com
+PLAYWRIGHT_BASE_URL=https://jfl.fremontderby.com
 ```
+
+JFL is the default during harness development. Gamma becomes the base URL only for the release-candidate suite after #2527 records the accepted Gamma baseline SHA.
 
 Do not bake environment credentials or host assumptions into test files.
 
@@ -262,8 +328,10 @@ Prefer constrained choices rather than arbitrary refs/URLs.
 
 Safe examples:
 
-- target lane: `jfl | dru | gamma`;
-- suite: `smoke | critical`.
+- target lane: `jfl | gamma` initially;
+- suite: `smoke | critical | rc`.
+
+Default to `jfl`. A Gamma `rc` run must first verify that the deployed SHA matches the current accepted Gamma baseline from #2527. Keep DRU available as an explicit diagnostic/portable-proof target rather than the default browser loop.
 
 Checkout should remain restricted to trusted repository-owned refs.
 
@@ -379,17 +447,17 @@ If the UI cannot be reliably selected by accessible semantics, that may itself r
 
 ## Data strategy
 
-### Phase 1
+### Phase 1 — JFL harness proof
 
-Use public/Test Drive or isolated no-secret data.
+Use JFL public/Test Drive or isolated no-secret behavior to prove the browser harness.
 
-### Phase 2
+### Phase 2 — JFL deterministic mutation
 
-Use JFL/DRU for deterministic mutating browser tests because those lanes are designed for isolated/resettable data and may support test actors.
+Add JFL test actors/isolated fixtures for mutating browser tests. Prefer JFL over DRU for the primary Playwright fast loop; use DRU to prove portable behavior independently when useful.
 
-### Phase 3
+### Phase 3 — Gamma release-candidate proof
 
-Introduce dedicated gamma test identities only when needed for production-like auth proof.
+After #2527 establishes a reconciled Gamma baseline, introduce dedicated Gamma test identities only where production-like auth proof is required.
 
 Gamma auth bypass remains forbidden.
 
@@ -521,6 +589,17 @@ Leave all state in GitHub and never mutate production without explicit authority
 
 Once #2524 is closed, replace issue-specific priority with a release-readiness objective rather than hard-coding a permanent issue number.
 
+## Parallel release-baseline work
+
+Playwright foundation work and Gamma reconciliation should proceed in parallel:
+
+- **#2524** owns runner + Playwright foundation and targets JFL first.
+- **#2527** owns the JFL/DRU/main feature audit and selective promotion needed to make Gamma current.
+
+Do not block runner/Playwright work waiting for Gamma.
+
+Do not promote Gamma to the primary automated RC target until #2527 is verified.
+
 ## Planned implementation slices
 
 ### Slice A — runner inventory + hardening
@@ -565,16 +644,17 @@ Deliverables:
 Exit:
 GitHub dispatch completes green and evidence is inspectable remotely.
 
-### Slice D — useful desktop + mobile smoke
+### Slice D — useful JFL desktop + mobile smoke
 
 Deliverables:
 
-- lane identity test;
-- desktop Test Drive/public critical test;
-- phone-emulated critical test.
+- JFL lane identity/version test;
+- desktop Test Drive/public critical test against JFL;
+- phone-emulated critical test against JFL;
+- environment metadata proving which JFL SHA was exercised.
 
 Exit:
-suite proves actual user-visible browser behavior.
+suite proves actual user-visible browser behavior on the rapid-iteration lane.
 
 ### Slice E — resilience proof
 
@@ -591,13 +671,14 @@ foundation meets #2524 acceptance.
 
 Create separate cards rather than expanding the foundation indefinitely:
 
-1. authenticated JFL/DRU captain fixture + reset strategy;
-2. two-browser-context league-night critical flow;
-3. gamma authenticated release-candidate smoke;
-4. scheduled browser validation cadence;
-5. ChatGPT Work autonomous release-readiness loop;
-6. optional Firefox/WebKit coverage based on observed risk;
-7. optional visual regression after functional stability.
+1. authenticated **JFL** captain fixture + deterministic reset strategy;
+2. two-browser-context JFL league-night critical flow;
+3. #2527 Gamma reconciliation and accepted RC baseline;
+4. Gamma authenticated release-candidate smoke using the same portable critical assertions;
+5. trusted scheduled browser validation cadence;
+6. ChatGPT Work autonomous release-readiness loop;
+7. optional Firefox/WebKit coverage based on observed risk;
+8. optional visual regression after functional stability.
 
 ## Definition of done for the foundation
 
@@ -620,6 +701,74 @@ The implementing agent should begin by claiming #2524 and inventorying the **act
 Do not guess its OS, labels, installation path, or service model.
 
 Then implement Slice A and Slice B as the smallest safe vertical proof before broadening the test matrix.
+## Human enablement: highest-value 30 minutes
+
+The project owner can materially accelerate #2524 by doing only the steps agents cannot safely infer from GitHub.
+
+### Minute 0-5 — merge the planning authority
+
+1. Review/merge PR #2525 once its relevant docs/governance checks are acceptable.
+2. Leave #2524 unclaimed until the implementation agent actually accepts it.
+3. Leave #2527 unclaimed unless assigning a lane immediately.
+
+### Minute 5-15 — identify the actual runner
+
+In GitHub:
+
+1. Open **Fremont-Derby/fremontderby -> Settings -> Actions -> Runners**.
+2. Record the current self-hosted runner name, status (online/offline), labels, and runner group.
+3. If more than one runner exists, identify which machine is intended for browser automation.
+4. Do **not** broaden repository/workflow access or add production secrets.
+
+On the intended Linux runner host, capture:
+
+```bash
+hostname
+uname -a
+cat /etc/os-release
+node --version || true
+npm --version || true
+df -h /
+free -h
+systemctl list-units --type=service --all | grep -Ei 'actions\.runner|github.*runner' || true
+ps -ef | grep -E 'Runner\.(Listener|Worker)' | grep -v grep || true
+```
+
+Paste the output into #2524. Redact only actual secrets; hostnames, OS/version, CPU architecture, RAM/disk, and service names are useful evidence.
+
+### Minute 15-25 — decide isolation
+
+Answer these in a comment on #2524:
+
+- Is this runner a dedicated VM/host, or a personal/shared workstation?
+- Does the account running it have personal SSH keys?
+- Does it have production Cloudflare/Supabase credentials?
+- Does it have broad home-lab/root access that browser-test code does not need?
+- Can it remain powered on while you travel?
+
+If the answer reveals broad credentials or personal-machine exposure, prefer creating a small dedicated Linux VM rather than hardening the shared machine under time pressure.
+
+### Minute 25-30 — enable the next agent
+
+Post one comment on #2524 containing:
+
+```text
+Runner chosen: <name/host>
+GitHub status: online/offline
+Labels: <labels>
+Isolation: dedicated VM/host | shared
+Autostart service: yes/no/unknown
+Can stay powered while traveling: yes/no
+Production credentials present: yes/no/unknown
+Personal SSH keys present: yes/no/unknown
+Diagnostics: <paste output>
+Human decision: use this runner | create dedicated VM
+```
+
+That is enough for the next implementation agent to start without guessing.
+
+Do not spend the 30 minutes manually installing Playwright. The agent should own the reproducible package/lockfile/browser installation so it lands with documentation and proof.
+
 ## Official references
 
 Implementation should verify commands against current upstream documentation rather than copying old examples from chat:
