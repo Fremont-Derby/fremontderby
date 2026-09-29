@@ -8,7 +8,9 @@ test('browser workflow stays manual, main-only, and pinned to the isolated runne
   const workflow = await read('.github/workflows/playwright-browser-smoke.yml');
 
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /options: \[smoke, controlled-failure\]/);
+  assert.match(workflow, /options: \[smoke, controlled-failure, runner-recovery\]/);
+  assert.match(workflow, /if: inputs\.evidence_mode == 'runner-recovery'/);
+  assert.match(workflow, /Stop-Process -Id \$listener\.Id -Force/);
   assert.doesNotMatch(workflow, /pull_request:/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /group: fremont-browser/);
