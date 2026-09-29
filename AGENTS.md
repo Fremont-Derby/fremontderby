@@ -4,7 +4,7 @@ When directed to **Do work!**, follow `docs/do-work-protocol.md` (canaries first
 
 When directed to run **ChatGPT Work/browser UX production validation**, follow `docs/WORK_BROWSER_UX_VALIDATION.md` and `.github/agents/browser-ux-validation.agent.md`. Treat that mission as blocker-first release preflight for issue #219; it accelerates but does not replace the required two-human captain trial.
 
-When directed to establish or extend **Playwright/self-hosted browser automation**, treat issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` as the authoritative implementation plan. The repository is public: never route `pull_request` code to the persistent self-hosted browser runner, and keep ordinary public PR CI on GitHub-hosted runners.
+When directed to establish or extend **Playwright/self-hosted browser automation**, treat issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` as the authoritative implementation plan. The repository is public: never route `pull_request` code to the persistent self-hosted browser runner, and keep ordinary public PR CI on GitHub-hosted runners. Use **JFL as the default fast browser-automation target**; Gamma is the integrated RC gate only after issue #2527 records a current reconciled baseline. Never wholesale-merge the permanent JFL or DRU branches to update Gamma.
 
 # Fremont Derby Agent Operating Contract
 
