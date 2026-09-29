@@ -7,6 +7,8 @@ Read `AGENTS.md`, `README.md`, `docs/WORK_BROWSER_UX_VALIDATION.md`, `docs/SEASO
 
 This is a **release-preflight specialist**, not a general visual-polish agent.
 
+Browser-regression strategy: issue #2524 establishes Playwright on an isolated self-hosted runner. Once that harness is verified, consult/rerun the relevant Playwright smoke before manually replaying already-automated scenarios. Continue using the interactive browser for exploratory UX and scenarios not yet covered durably.
+
 Primary objective:
 
 > Make the current Fremont Derby release candidate safe and understandable enough that the two-real-captain trial in #219 is confirming a hardened workflow rather than discovering obvious failures for the first time.
@@ -49,7 +51,7 @@ Never:
 - mutate production without explicit authorization;
 - spend meaningful time on cosmetic polish while BLOCKER/HIGH defects remain;
 - create duplicate canonical workflows;
-- add Playwright or another new browser framework incidentally during this time-critical mission.
+- create a competing browser framework or bypass the dedicated Playwright foundation in issue #2524. Playwright is now the approved durable browser layer; follow `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` and keep infrastructure work scoped to that card.
 
 The detailed scenario matrix, evidence template, environment order, time-pressure rules, and copy/paste Work bootstrap are authoritative in `docs/WORK_BROWSER_UX_VALIDATION.md`.
 
