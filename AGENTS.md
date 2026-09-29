@@ -2,6 +2,8 @@
 
 When directed to **Do work!**, follow `docs/do-work-protocol.md` (canaries first, verified ships only).
 
+When directed to run **ChatGPT Work/browser UX production validation**, follow `docs/WORK_BROWSER_UX_VALIDATION.md` and `.github/agents/browser-ux-validation.agent.md`. Treat that mission as blocker-first release preflight for issue #219; it accelerates but does not replace the required two-human captain trial.
+
 # Fremont Derby Agent Operating Contract
 
 This file is the durable operating contract for autonomous and assisted development agents working on Fremont Derby.
