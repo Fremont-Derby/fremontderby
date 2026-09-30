@@ -9,9 +9,30 @@ const files = readdirSync(workflowsDir).filter((f) => f.endsWith('.yml') || f.en
 const DEPLOY_TOUCHING = [
   'deploy-release-lanes.yml',
   'restore-lane-custom-domains.yml',
-  'fix-jfl-supabase-bindings.yml',
   'gamma-prod-refresh.yml',
 ];
+
+test('JFL repair cannot reintroduce versioned secret promotion', () => {
+  const scriptsDir = new URL('../scripts/', import.meta.url);
+  for (const name of readdirSync(scriptsDir).filter((file) => file.endsWith('.mjs'))) {
+    const source = readFileSync(new URL(name, scriptsDir), 'utf8');
+    const executable = source.split(/\r?\n/).filter((line) => !/^\s*(?:\/\/|\*)/.test(line)).join('\n');
+    assert.doesNotMatch(
+      executable,
+      /['"]versions['"]\s*,\s*['"](?:secret|deploy)['"]/,
+      `${name} must not promote Worker versions through a secret repair`,
+    );
+  }
+  for (const name of files) {
+    const source = readFileSync(new URL(name, workflowsDir), 'utf8');
+    const executable = source.split(/\r?\n/).filter((line) => !/^\s*#/.test(line)).join('\n');
+    assert.doesNotMatch(
+      executable,
+      /wrangler(?:@\d+)?\s+versions\s+(?:secret|deploy)\b/,
+      `${name} must not promote Worker versions through a secret repair`,
+    );
+  }
+});
 
 test('deploy-touching workflows never trigger on pull_request', () => {
   for (const name of DEPLOY_TOUCHING) {
