@@ -134,8 +134,10 @@ const liveScorecardSelectionStyles = `
     [data-shared-rack-ledger-scorecard].terminal-mismatch-active{
       padding-bottom:calc(184px + env(safe-area-inset-bottom))!important;
     }
-    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions{
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active .completion-actions,
+    [data-shared-rack-ledger-scorecard].terminal-mismatch-active [data-reconcile]{
       margin-bottom:96px;
+      scroll-margin-bottom:calc(112px + env(safe-area-inset-bottom));
     }
   }
 `;
@@ -334,7 +336,7 @@ const liveScorecardEnhancementsScript = `
         const scoreText = completion.scoreA + '–' + completion.scoreB;
         const headline = terminalMismatch && !state.locked
           ? (winnerName
-            ? 'Your submitted score: ' + winnerName + ' ' + scoreText + ' — score disputed'
+            ? 'Your submitted score shows ' + winnerName + ' ' + scoreText + ' — score disputed'
             : 'Your submitted score reached a target — score disputed')
           : (winnerName
             ? 'Race complete — ' + winnerName + ' wins ' + scoreText
