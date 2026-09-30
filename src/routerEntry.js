@@ -8,6 +8,7 @@ import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
+import { applyProductScriptRepairs } from './productScriptRepairs.js';
 import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
 import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
@@ -100,7 +101,8 @@ async function finalizeBrowserResponse(response, pathname) {
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
-  const accessible = await injectAccessibilityLayer(adminThemed);
+  const productRepaired = await applyProductScriptRepairs(adminThemed, pathname);
+  const accessible = await injectAccessibilityLayer(productRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
   return injectPublicSeo(withAuth, pathname);

@@ -15,7 +15,7 @@ export const PUBLIC_PATH_ALIASES = {
   '/score': '/scorecard',
   '/scores': '/scorecard',
   '/roster': '/teams',
-  '/trade': '/trades',
+  '/trade': '/teams',
   '/help': '/rules',
   '/faq': '/rules',
 };

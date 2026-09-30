@@ -86,5 +86,5 @@ test('CI upserts the status comment and still fails the release gate', () => {
   assert.match(workflow, /findLatestProductionSmokeStatusComment\(comments\)/);
   assert.match(workflow, /github\.rest\.issues\.updateComment/);
   assert.match(workflow, /github\.rest\.issues\.createComment/);
-  assert.match(workflow, /name: Fail release validation\n\s+if: steps\.smoke\.outcome == 'failure'\n\s+run: exit 1/);
+  assert.match(workflow, /name: Fail release validation\r?\n\s+if: steps\.smoke\.outcome == 'failure'\r?\n\s+run: exit 1/);
 });

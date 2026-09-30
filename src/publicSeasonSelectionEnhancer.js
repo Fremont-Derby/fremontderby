@@ -1,5 +1,6 @@
 import { publicSeasonSelectionBrowserSource } from './publicSeasonSelection.js';
 import { applyScriptNonces } from './securityHeaders.js';
+import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
 
 const ROUTES = new Set(['/schedule', '/standings', '/prizes']);
 
@@ -19,6 +20,19 @@ function nonceFromHtmlOrHeaders(html, headers) {
   return fromCsp?.[1] || '';
 }
 
+function injectNextMatch(html, nonce) {
+  if (html.includes('data-next-match')) return html;
+  const attr = nonce ? ` nonce="${nonce}"` : '';
+  html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
+  return html.replace(
+    '</body>',
+    `<script${attr}>
+      ${nextMatchSummaryBrowserSource}
+      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+    </script></body>`,
+  );
+}
+
 export async function enhancePublicSeasonSelection(response, pathname) {
   if (!ROUTES.has(pathname)) return response;
   try {
@@ -36,8 +50,6 @@ async function enhancePublicSeasonSelectionInner(response, pathname) {
   const headers = new Headers(response.headers);
   let html = await response.text();
   const nonce = nonceFromHtmlOrHeaders(html, headers);
-  // Define on window so later scripts can always resolve the helper, even if
-  // a future transform reorders tags. Nonce is required for CSP script-src.
   const helper = nonce
     ? `<script nonce="${nonce}">window.choosePublicSeason=${publicSeasonSelectionBrowserSource};var choosePublicSeason=window.choosePublicSeason;</script>`
     : `<script>window.choosePublicSeason=${publicSeasonSelectionBrowserSource};var choosePublicSeason=window.choosePublicSeason;</script>`;
@@ -66,6 +78,7 @@ async function enhancePublicSeasonSelectionInner(response, pathname) {
       "const selected=choosePublicSeason(seasons,{explicitId:requestedSeasonId,rememberedId:rememberedSeasonId});seasonInput.value=selected?.id||'';",
       'standings default',
     );
+    html = injectNextMatch(html, nonce);
   }
 
   if (pathname === '/prizes') {
@@ -111,6 +124,7 @@ async function enhancePublicSeasonSelectionInner(response, pathname) {
         break;
       }
     }
+    html = injectNextMatch(html, nonce);
   }
 
   return new Response(html, {
