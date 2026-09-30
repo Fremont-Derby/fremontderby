@@ -108,6 +108,10 @@ async function finalizeBrowserResponse(response, pathname) {
   return injectPublicSeo(withAuth, pathname);
 }
 
+// Replaced at deploy time by scripts/stamp-deploy-identity.mjs
+const STAMPED_DEPLOY_GIT_SHA = null;
+const STAMPED_DEPLOY_AT = null;
+
 export default {
   async scheduled(event, env, ctx) {
     const summary = await runHourlyProbes(env);
@@ -117,11 +121,55 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    // HEAD = same as GET without a body (CDN/monitors). Avoid recursive this.fetch.
+    if (request.method === 'HEAD') {
+      const getRequest = new Request(request.url, {
+        method: 'GET',
+        headers: request.headers,
+        redirect: request.redirect,
+      });
+      const response = await this.fetch(getRequest, env, ctx);
+      return new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
     const url = new URL(request.url);
+    // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
+    if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
+      const meta = env.CF_VERSION_METADATA || {};
+      const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
+      const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
+      const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
+      const fromId = typeof meta.id === 'string' && meta.id.trim() && meta.id !== 'local' ? meta.id.trim() : null;
+      const tag = fromMeta || fromEnv || fromStamp || fromId || null;
+      let versionTagSource = null;
+      if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
+      else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
+      else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
+      else if (tag && fromId === tag) versionTagSource = 'cf_version_id';
+      if (url.pathname === '/health') {
+        return Response.json(
+          {
+            ok: true,
+            service: 'fremontderby',
+            version: meta.id || 'local',
+            versionTag: tag,
+            deployedAt: meta.timestamp || STAMPED_DEPLOY_AT || null,
+            versionTagSource,
+          },
+          { headers: { 'cache-control': 'no-store' } },
+        );
+      }
+      // environment: still use legacy readiness via fallthrough
+    }
     if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
       const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
       const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
       const envName = String(env?.ENVIRONMENT || 'production').toLowerCase();
+      // Production always requires a configured key; other lanes require key when set.
       if (envName === 'production' || expected) {
         if (!expected || key !== expected) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 });

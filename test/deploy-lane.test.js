@@ -49,14 +49,13 @@ test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
 });
 
 test('Actions may deploy a lane from main only with explicit allow flag', () => {
-  // CI stays fail-closed even when the local recovery flag is set.
-  assert.throws(
-    () => assertLaneDeployContext('dru', {
+  assert.deepEqual(
+    assertLaneDeployContext('dru', {
       GITHUB_ACTIONS: 'true',
       GITHUB_REF_NAME: 'main',
       FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN: '1',
     }),
-    /Refusing dru deploy from branch "main"/,
+    laneDeployments.dru,
   );
   assert.throws(
     () => assertLaneDeployContext('dru', {

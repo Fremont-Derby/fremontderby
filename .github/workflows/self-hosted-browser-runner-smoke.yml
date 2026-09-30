@@ -1,0 +1,64 @@
+name: Self-hosted browser runner smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fremont-browser-runner-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: github.actor == 'subiki'
+    name: Windows runner connectivity smoke
+    timeout-minutes: 5
+    runs-on:
+      group: fremont-browser
+
+    steps:
+      - name: Prove trusted runner execution
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if ($env:RUNNER_OS -ne 'Windows') {
+            throw "Expected Windows runner, got '$env:RUNNER_OS'."
+          }
+
+          Write-Host "PASS: trusted workflow reached a Windows runner in the fremont-browser group."
+
+      - name: Prove isolated temp filesystem
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $probe = Join-Path $env:RUNNER_TEMP 'fremont-runner-smoke.txt'
+          'fremont-browser-smoke' | Set-Content -Path $probe -Encoding ascii
+
+          if ((Get-Content -Path $probe -Raw).Trim() -ne 'fremont-browser-smoke') {
+            throw 'Runner temp filesystem probe failed.'
+          }
+
+          Remove-Item -Path $probe -Force
+          Write-Host 'PASS: runner temp filesystem is writable and cleanup succeeded.'
+
+      - name: Prove JFL public reachability and identity
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $response = Invoke-RestMethod -Uri 'https://jfl.fremontderby.com/health/environment' -Method Get -TimeoutSec 20
+
+          if ($response.environment -ne 'jfl') {
+            throw "Expected JFL environment identity, got '$($response.environment)'."
+          }
+
+          if (-not $response.versionTag) {
+            throw 'JFL health response did not include versionTag.'
+          }
+
+          Write-Host "PASS: JFL is reachable and identifies itself as environment=jfl."
+          Write-Host "JFL versionTag: $($response.versionTag)"

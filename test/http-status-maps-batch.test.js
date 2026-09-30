@@ -48,8 +48,8 @@ test('admin players HTTP status map', () => {
 });
 
 test('sandbox feedback HTTP status map', () => {
-  assert.equal(sandboxFeedbackStatusForError(new Error('HTTP 401')), 400);
+  assert.equal(sandboxFeedbackStatusForError(new Error('Supabase request failed with 401')), 401);
   assert.equal(sandboxFeedbackStatusForError(new Error('League admin access is required')), 403);
-  assert.equal(sandboxFeedbackStatusForError(new Error('Report not found')), 400);
+  assert.equal(sandboxFeedbackStatusForError(new Error('Chat report not found')), 404);
   assert.equal(sandboxFeedbackStatusForError(new Error('invalid')), 400);
 });

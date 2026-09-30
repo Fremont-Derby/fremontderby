@@ -116,14 +116,17 @@ test('known app route allowlist covers ordinary delegated pages', () => {
   assert.equal(isKnownAppPagePath('/definitely-missing'), false);
 });
 
-test('retired Trades route stays on the normal 404 path', async () => {
+test('restored Trades route serves the live trades page', async () => {
   const response = await router.fetch(
     new Request('https://fremontderby.test/trades'),
     {},
     {},
   );
-  assert.notEqual(response.status, 500);
-  assert.ok([200, 404].includes(response.status));
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /Trades/i);
+  assert.doesNotMatch(html, /This dog lost the rack/);
 });
 
 test('not-found page includes basset hound artwork and escapes the bad path', () => {

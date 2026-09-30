@@ -36,10 +36,9 @@ test('unknown paths are left to the existing router', () => {
   assert.equal(aliasRedirect(new Request(url), url), null);
 });
 
-test('retired trades page is 404', () => {
+test('restored trades page is left to the current router', () => {
   const url = new URL('https://gamma.fremontderby.com/trades');
-  const response = aliasRedirect(new Request(url), url);
-  assert.equal(response.status, 404);
+  assert.equal(aliasRedirect(new Request(url), url), null);
 });
 
 test('Gamma router wires aliasRedirect before the legacy 404 path', async () => {

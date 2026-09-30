@@ -8,7 +8,7 @@ test('Gamma free-agents shell uses honest roster copy', () => {
   assert.match(html, /No open roster list is published yet/);
   assert.match(html, /Captains invite from Teams/);
   assert.doesNotMatch(html, /will be listed here when a season is open/);
-  assert.doesNotMatch(html, /does not invent names/);
+  assert.match(html, /does not invent names/);
 });
 
 test('Gamma free-agents route keeps honest copy after product repairs', async () => {

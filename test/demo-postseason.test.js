@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { renderDemoSeasonPage } from '../src/demoSeasonPage.js';
 
-test('Try a League Night shows the complete fictional postseason without production persistence', () => {
+test('Test Drive the App shows the complete fictional postseason without production persistence', () => {
   const html = renderDemoSeasonPage();
   assert.match(html, /Test Drive the App/);
   assert.match(html, /War Games practice/);

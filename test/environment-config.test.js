@@ -82,19 +82,24 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
 test('non-production lane credentials are declared as required secrets, not placeholders', () => {
   for (const lane of ['jfl', 'dru', 'gamma']) {
     const target = config.env[lane];
-    assert.ok(target.vars.SUPABASE_URL);
-    assert.ok(target.vars.SUPABASE_PUBLISHABLE_KEY);
-    assert.ok(target.vars.EXPECTED_SUPABASE_PROJECT_REF);
     assert.ok(target.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+    assert.match(target.vars.SUPABASE_URL, /supabase\.co/);
+    assert.match(target.vars.SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_/);
+    assert.ok(target.vars.EXPECTED_SUPABASE_PROJECT_REF);
     assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
   }
-  assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_EMAIL, 'jfl-actor@fremontderby.com');
+  assert.equal(config.env.dru.vars.BETA_ACTOR_EMAIL, 'dru-actor@fremontderby.com');
+  assert.equal(config.env.gamma.vars.BETA_ACTOR_EMAIL, 'gamma-actor@fremontderby.com');
+  assert.equal('BETA_ACTOR_USER_ID' in config.env.jfl.vars, false);
+  assert.equal('BETA_ACTOR_USER_ID' in config.env.dru.vars, false);
+  assert.equal('BETA_ACTOR_USER_ID' in config.env.gamma.vars, false);
 });
 
 test('auth bypass is enabled only in the isolated JFL and DRU lane config', () => {
   assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, '1');
-  assert.equal(config.env.gamma.vars.BETA_AUTH_BYPASS, undefined);
+  assert.equal(config.env.gamma.vars.BETA_AUTH_BYPASS, '0');
   assert.equal(config.vars.BETA_AUTH_BYPASS, undefined);
   assert.equal(config.env.staging.vars.BETA_AUTH_BYPASS, undefined);
 });

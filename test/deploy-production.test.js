@@ -17,15 +17,23 @@ test('Workers Builds production deploy is allowed from main with full Git metada
 });
 
 test('Workers Builds production deploy tags the Worker version with the exact Git SHA', () => {
-  const args = productionDeployArgs({
-    WORKERS_CI: '1',
-    WORKERS_CI_BRANCH: 'main',
-    WORKERS_CI_COMMIT_SHA: commitSha,
-  });
-  assert.equal(args[0], 'wrangler');
-  assert.equal(args[1], 'deploy');
-  assert.ok(args.includes('--tag'));
-  assert.ok(args.includes(commitSha));
+  assert.deepEqual(
+    productionDeployArgs({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'main',
+      WORKERS_CI_COMMIT_SHA: commitSha,
+    }),
+    [
+      'wrangler',
+      'deploy',
+      '--tag',
+      commitSha,
+      '--message',
+      `git:${commitSha}`,
+      '--var',
+      `DEPLOY_GIT_SHA:${commitSha}`,
+    ],
+  );
 });
 
 test('Workers Builds production deploy rejects a pull-request branch', () => {

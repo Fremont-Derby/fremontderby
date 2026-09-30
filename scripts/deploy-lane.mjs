@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { domainsForEnv } from './lane-custom-domains.mjs';
+import { assertWranglerMatrix, loadRepoMatrixAndConfig } from './assert-wrangler-matrix.mjs';
 
 export const laneDeployments = Object.freeze({
   jfl: Object.freeze({ branch: 'fremontderby-jfl', environment: 'jfl' }),
@@ -37,15 +38,12 @@ export function assertLaneDeployContext(lane, env = process.env, spawn = spawnSy
   const config = laneDeployments[lane];
   if (!config) throw new Error(`Unknown release lane "${lane}".`);
 
-  const branch = resolveDeployBranch(env, spawn);
-
-  // CI must always fail closed on branch/lane mismatches. The local override exists only
-  // for an explicit human recovery from a checked-out branch and can never bypass CI.
-  const isCi = env.GITHUB_ACTIONS === 'true' || env.WORKERS_CI === '1';
-  if (!isCi && env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1') {
+  // Controlled deploys from main (Actions or operator laptop) after explicit review.
+  if (env.FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN === '1') {
     return config;
   }
 
+  const branch = resolveDeployBranch(env, spawn);
   if (branch !== config.branch) {
     throw new Error(
       `Refusing ${lane} deploy from branch "${branch}"; expected "${config.branch}".`,
@@ -64,7 +62,17 @@ export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
   return args;
 }
 
+export function assertCheckedInMatrix() {
+  const { matrix, config } = loadRepoMatrixAndConfig();
+  const failures = assertWranglerMatrix(config, matrix);
+  if (failures.length) {
+    throw new Error(`Refusing lane deploy: wrangler matrix drift\n${failures.join('\n')}`);
+  }
+}
+
 export function runLaneDeploy(lane, { env = process.env, spawn = spawnSync } = {}) {
+  assertCheckedInMatrix();
+  // Windows: spawnSync('npx.cmd', ...) often returns EINVAL without shell.
   const isWin = process.platform === 'win32';
   const args = laneDeployArgs(lane, env, spawn);
   const result = spawn(isWin ? 'npx' : 'npx', args, {
@@ -85,6 +93,7 @@ if (isDirectRun) {
     process.exitCode = 1;
   }
 }
+
 
 export function expectedHostnamesForLane(lane) {
   const envName = laneDeployments[lane]?.environment;

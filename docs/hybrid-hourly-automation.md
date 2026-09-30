@@ -6,7 +6,7 @@ Three layers keep Fremont Derby from depending on a single scheduler.
 
 - Name: `fremontderby-hourly-work-loop`
 - Cadence: hourly (America/Los_Angeles)
-- Role: run tests, ship small PRs, comment on blockers
+- Role: execute **[Do work! protocol](./do-work-protocol.md)** — canaries first, then verified ships; not unfocused thrash
 - Soft dependency: Grok automation platform availability
 
 ## 2. Cloudflare Cron (deterministic probes — primary)

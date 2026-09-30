@@ -60,9 +60,9 @@ test('gamma readiness fails when BETA_AUTH_BYPASS is declared on', () => {
   assert.ok(result.checks.find((c) => c.name === 'authBypassRestrictedToTestLane' && !c.ok));
 });
 
-test('wrangler gamma env does not declare BETA_AUTH_BYPASS', () => {
+test('wrangler gamma env explicitly disables BETA_AUTH_BYPASS', () => {
   const cfg = parseJsonc(readFileSync(join(root, 'wrangler.jsonc'), 'utf8'));
-  assert.equal(cfg.env.gamma.vars.BETA_AUTH_BYPASS, undefined);
+  assert.equal(cfg.env.gamma.vars.BETA_AUTH_BYPASS, '0');
   assert.equal(cfg.env.jfl.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(cfg.env.dru.vars.BETA_AUTH_BYPASS, '1');
 });

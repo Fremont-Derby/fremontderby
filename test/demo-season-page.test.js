@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderDemoSeasonPage } from '../src/demoSeasonPage.js';
 
-test('Try a League Night presents War Games as a guided isolated product tour', () => {
+test('Test Drive the App presents War Games as a guided isolated product tour', () => {
   const html = renderDemoSeasonPage();
 
   assert.match(html, /Test Drive the App/);

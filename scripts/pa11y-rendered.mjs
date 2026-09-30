@@ -1,30 +1,77 @@
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import process from 'node:process';
 
 const host = '127.0.0.1';
 const port = 8787;
 const baseUrl = `http://${host}:${port}`;
-const serverTimeoutMs = 25_000;
-const overallTimeoutMs = 4 * 60_000;
-
-const ignoredCodes = new Set([
-  'color-contrast',
-  'aria-prohibited-attr',
-  'aria-valid-attr-value',
-]);
+const serverTimeoutMs = 30_000;
+/** Per-scan hard kill for hung Chromium/pa11y. */
+const scanTimeoutMs = 45_000;
+const configDir = mkdtempSync(join(tmpdir(), 'pa11y-config-'));
 
 const scans = [
-  { name: 'home desktop', path: '/', viewport: { width: 1280, height: 900 } },
-  { name: 'home phone', path: '/', viewport: { width: 320, height: 800 } },
-  { name: 'standings truthful loading/recovery', path: '/standings', viewport: { width: 320, height: 800 }, wait: 250 },
+  { name: 'home desktop', path: '/', viewport: '1280x900' },
+  { name: 'home phone', path: '/', viewport: '320x800' },
+  {
+    name: 'home phone menu open',
+    path: '/',
+    viewport: '320x800',
+    // Avoid unbounded "wait for element … to be visible" (known hang).
+    actions: ['click element .fd-nav-menu summary'],
+    wait: 500,
+  },
+  {
+    name: 'standings truthful loading/recovery',
+    path: '/standings',
+    viewport: '320x800',
+    wait: 250,
+  },
 ];
 
-function installPa11y() {
-  const result = spawnSync('npm', ['install', '--no-save', '--no-fund', '--no-audit', 'pa11y@9.0.1'], {
-    stdio: 'inherit',
-    env: process.env,
+function killTree(child) {
+  if (!child?.pid) return;
+  try {
+    process.kill(-child.pid, 'SIGKILL');
+  } catch {
+    try {
+      child.kill('SIGKILL');
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function run(command, args, options = {}, timeoutMs = scanTimeoutMs) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: 'inherit',
+      detached: true,
+      ...options,
+    });
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      killTree(child);
+      reject(new Error(`${command} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    child.once('error', (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.once('exit', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error(`${command} exited ${code ?? signal ?? 'unknown'}`));
+    });
   });
-  if (result.status !== 0) throw new Error(`npm install pa11y@9.0.1 failed (${result.status})`);
 }
 
 async function waitForServer() {
@@ -43,27 +90,40 @@ async function waitForServer() {
   throw new Error(`Local Worker did not become ready within ${serverTimeoutMs}ms: ${lastError?.message || 'unknown error'}`);
 }
 
-function blockingIssues(issues) {
-  return (issues || []).filter((issue) => {
-    const code = String(issue.code || issue.type || '');
-    if (ignoredCodes.has(code)) return false;
-    if (code.includes('color-contrast') || code.includes('1_4_3')) return false;
-    if (code.includes('aria-prohibited') || code.includes('aria-valid-attr')) return false;
-    return true;
-  });
+function pa11yArgs(scan, runner) {
+  const [width, height] = scan.viewport.split('x').map(Number);
+  const configPath = join(configDir, `${scan.name.replace(/\W+/g, '_')}-${runner}.json`);
+  // htmlcs is the WCAG2AA gate. axe color-contrast on legacy chrome is author UI debt;
+  // keep other axe rules so we still catch ARIA/structure regressions.
+  const ignore = runner === 'axe' ? ['color-contrast'] : [];
+  writeFileSync(configPath, `${JSON.stringify({
+    standard: 'WCAG2AA',
+    runners: [runner],
+    threshold: 0,
+    timeout: scanTimeoutMs,
+    wait: scan.wait || 0,
+    actions: scan.actions || [],
+    ignore,
+    viewport: { width, height },
+    chromeLaunchConfig: {
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
+  }, null, 2)}\n`);
+
+  return [
+    '-y',
+    'pa11y@9.0.1',
+    `${baseUrl}${scan.path}`,
+    '--config', configPath,
+    '--reporter', 'cli',
+    '--timeout', String(scanTimeoutMs),
+  ];
 }
 
-const overallTimer = setTimeout(() => {
-  console.error('[a11y] overall deadline reached; exiting');
-  process.exit(1);
-}, overallTimeoutMs);
-
-installPa11y();
-const pa11y = (await import('pa11y')).default;
 const server = spawn(
   'npx',
   ['-y', 'wrangler@4.30.0', 'dev', '--local', '--ip', host, '--port', String(port)],
-  { stdio: 'inherit', env: { ...process.env, CI: '1' }, detached: true },
+  { stdio: 'inherit', detached: true, env: { ...process.env, CI: '1' } },
 );
 
 let failed = false;
@@ -71,29 +131,12 @@ try {
   await waitForServer();
   for (const scan of scans) {
     for (const runner of ['htmlcs', 'axe']) {
-      console.log(`\n[a11y] ${scan.name} | ${scan.viewport.width}x${scan.viewport.height} | ${runner}`);
+      console.log(`\n[a11y] ${scan.name} | ${scan.viewport} | ${runner}`);
       try {
-        const results = await pa11y(`${baseUrl}${scan.path}`, {
-          standard: 'WCAG2AA',
-          runners: [runner],
-          timeout: 20000,
-          wait: scan.wait || 0,
-          viewport: scan.viewport,
-          chromeLaunchConfig: { args: ['--no-sandbox', '--disable-setuid-sandbox'] },
-        });
-        const issues = blockingIssues(results?.issues);
-        const ignored = (results?.issues || []).length - issues.length;
-        if (ignored) console.log(`[a11y] ignored ${ignored} pre-existing theme/ARIA issue(s)`);
-        if (issues.length) {
-          failed = true;
-          console.error(`[a11y] FAILED: ${scan.name} | ${runner}: ${issues.length} issue(s)`);
-          for (const issue of issues.slice(0, 12)) {
-            console.error(`  - ${issue.code || issue.type}: ${issue.message} (${issue.selector || ''})`);
-          }
-        }
+        await run('npx', pa11yArgs(scan, runner), { env: { ...process.env, CI: '1' } }, scanTimeoutMs);
       } catch (error) {
         failed = true;
-        console.error(`[a11y] FAILED: ${scan.name} | ${runner}: ${error.message}`);
+        console.error(`[a11y] FAILED: ${scan.name} | ${scan.viewport} | ${runner}: ${error.message}`);
       }
     }
   }
@@ -101,9 +144,8 @@ try {
   failed = true;
   console.error(`[a11y] FAILED: ${error.message}`);
 } finally {
-  clearTimeout(overallTimer);
-  try { if (server.pid) process.kill(-server.pid, 'SIGKILL'); } catch {}
-  try { server.kill('SIGKILL'); } catch {}
+  killTree(server);
 }
 
+// wrangler/workerd otherwise keeps the event loop alive past scan failures
 process.exit(failed ? 1 : 0);

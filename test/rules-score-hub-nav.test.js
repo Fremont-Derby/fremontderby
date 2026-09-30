@@ -4,11 +4,16 @@ import { readFileSync } from 'node:fs';
 
 test('rules page league night CTAs', () => {
   const src = readFileSync(new URL('../src/publicPages.js', import.meta.url), 'utf8');
-  assert.match(src, /renderRulesPage/);
-  assert.match(src, /href=\"\/scorecard\"|href=\"\/availability\"|href=\"\/schedule\"/);
+  const i = src.indexOf('renderRulesPage');
+  const chunk = src.slice(i);
+  assert.match(chunk, /href="\/scorecard"/);
+  assert.match(chunk, /href="\/availability"/);
+  assert.match(chunk, /href="\/lineup"/);
 });
 
 test('score picker hub tools expanded', () => {
   const src = readFileSync(new URL('../src/scorePickerPage.js', import.meta.url), 'utf8');
-  assert.match(src, /href=\"\/standings\"|href=\"\/playoffs\"|href=\"\/schedule\"/);
+  assert.match(src, /href="\/trades"/);
+  assert.match(src, /href="\/playoffs"/);
+  assert.match(src, /href="\/standings"/);
 });

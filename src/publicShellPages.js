@@ -25,7 +25,7 @@ export function renderFreeAgentsPage() {
     'Free agents',
     'Free agents',
     `<p data-next-match>Looking up your next published match…</p>
-     <p>Players looking for a roster. Captains invite from Teams. Published names stay on Player directory.</p>
+     <p>Players looking for a roster. Captains invite from Teams. This page does not invent names; published names stay on Player directory.</p>
      <p data-status>No open roster list is published yet. Open Teams to ask a captain, or browse Player directory.</p>
      <ul data-invites hidden></ul>
      <p><a href="/teams">Teams</a> \u00b7 <a href="/players">Player directory</a> \u00b7 <a href="/schedule">Schedule</a></p>
