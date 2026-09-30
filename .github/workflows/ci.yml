@@ -128,14 +128,21 @@ jobs:
               }]
             }')"
 
-          for attempt in 1 2; do
-            response="$(curl --fail-with-body --silent --show-error \
-              --request POST \
-              --header 'content-type: application/json' \
-              --data "$payload" \
-              https://jfl.fremontderby.com/api/qa/evidence)"
-            jq -e --arg run_id "$run_id" \
-              '.saved == true and .runId == $run_id' <<<"$response"
+          for attempt in 1 2 3 4 5; do
+            if response="$(curl --fail-with-body --silent --show-error \
+                --request POST \
+                --header 'content-type: application/json' \
+                --data "$payload" \
+                https://jfl.fremontderby.com/api/qa/evidence)" && \
+              jq -e --arg run_id "$run_id" \
+                '.saved == true and .runId == $run_id' <<<"$response"; then
+              break
+            fi
+            if [[ "$attempt" == 5 ]]; then
+              echo "JFL QA evidence ingestion did not become ready after $attempt attempts" >&2
+              exit 1
+            fi
+            sleep $((attempt * 5))
           done
 
       - name: Verify JFL modern UI proof route
