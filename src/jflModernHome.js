@@ -504,7 +504,7 @@ export function renderJflModernHome() {
       <span class="fd-eyebrow">Fremont Derby</span>
       <h1>Know what to do next.</h1>
       <p class="fd-home__lede">Cash pool league with flexible scheduling, team competition, and an individual race for cash. The Home page keeps the next useful action in front of you.</p>
-      <div class="fd-home__facts" aria-label="League format">
+      <div class="fd-home__facts" role="group" aria-label="League format">
         <span class="fd-home__fact">12-week calendar</span>
         <span class="fd-home__fact">3 players per regular-season matchup</span>
         <span class="fd-home__fact">Free agents can compete</span>

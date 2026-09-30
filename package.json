@@ -6,7 +6,9 @@
   "scripts": {
     "lint": "node scripts/lint.mjs",
     "test": "node --test",
+    "test:season1": "node --test test/season1-complete-e2e.test.js test/regular-season-e2e.test.js test/rack-ledger-scorecard.test.js test/two-device-scorecard-flow.test.js test/season-publish-readiness.test.js",
     "check": "node scripts/check-js-syntax.mjs",
+    "a11y": "node scripts/pa11y-rendered.mjs",
     "prebuild": "node scripts/guard-cloudflare-build.mjs",
     "build": "npx wrangler deploy --dry-run --env=\"\" --outdir dist",
     "dev": "npx wrangler dev",
