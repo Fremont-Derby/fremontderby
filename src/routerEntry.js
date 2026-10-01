@@ -22,7 +22,6 @@ import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
-import { injectDruAgentSession } from './druAgentSession.js';
 import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
@@ -179,7 +178,7 @@ async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
   const withSeo = await injectPublicSeo(withAuth, pathname);
   const withFeedback = await injectTesterFeedback(withSeo);
-  return injectDruAgentSession(withFeedback, env);
+  return withFeedback;
 }
 
 // Replaced at deploy time by scripts/stamp-deploy-identity.mjs
@@ -212,10 +211,6 @@ export default {
 
     requestEnv = env;
     const url = new URL(request.url);
-    if (url.pathname === '/sandbox/war-game' && String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { renderDruWarGamePage } = await import('./druWarGamePage.js');
-      return new Response(renderDruWarGamePage(), { headers: { 'content-type': 'text/html; charset=utf-8' } });
-    }
     const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {

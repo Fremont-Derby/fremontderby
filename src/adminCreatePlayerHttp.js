@@ -25,10 +25,6 @@ export async function handleCreateAdminPlayerRequest(
       displayName,
       allowExactDuplicate: body.allowExactDuplicate === true,
     });
-    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { ensureDruPracticePhone } = await import('./druPracticePhone.js');
-      await ensureDruPracticePhone(env, player.playerId || player.id, fetchImpl);
-    }
     return Response.json(
       { player },
       { status: 201, headers: { 'cache-control': 'no-store' } },
