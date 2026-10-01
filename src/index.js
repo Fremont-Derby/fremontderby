@@ -1967,10 +1967,10 @@ export async function handleFinalizePlayerMatchRequest(
         : null;
       const team = teamResponse?.ok ? (await teamResponse.json())?.[0] : null;
       const lineupResponse = team
-        ? await fetchWithSchema(`${base}/rest/v1/team_lineups?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,slots`, { headers })
+        ? await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,player_id`, { headers })
         : null;
       const lineups = lineupResponse?.ok ? await lineupResponse.json() : [];
-      const hasPlayers = (teamId) => (lineups || []).some((row) => row.team_id === teamId && Array.isArray(row.slots) && row.slots.some((slot) => slot && (slot.playerId || slot.player_id)));
+      const hasPlayers = (teamId) => (lineups || []).some((row) => row.team_id === teamId && row.player_id);
       const gate = scoreNeedsBothTeams({
         teamAId: team?.team_a_id,
         teamBId: team?.team_b_id,
