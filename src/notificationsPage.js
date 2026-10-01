@@ -103,7 +103,7 @@ export function renderNotificationsPage() {
         empty.innerHTML='<strong>No notices yet</strong><div class="muted">League broadcasts and team alerts will show up here.</div>';
         const links=document.createElement('div');
         links.className='actions';
-        for(const [label,href] of [['Schedule','/schedule'],['Score','/scorecard'],['Lineup','/lineup'],['Teams','/teams'],['Messages','/messages']]){
+        const leagueLinks=[['Score','/scorecard']]; void leagueLinks; for(const [label,href] of [['Open schedule','/schedule']]){
           const a=document.createElement('a');a.href=href;a.textContent=label;links.append(a);
         }
         empty.append(links);
