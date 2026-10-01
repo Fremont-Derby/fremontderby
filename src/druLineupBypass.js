@@ -8,95 +8,75 @@ function hasPlayers(slots) {
   return Array.isArray(slots) && slots.some((slot) => slot && (slot.playerId || slot.player_id));
 }
 
-async function seatWhereLockReads(env, fetchImpl, base, key, row) {
-  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
-  const now = new Date().toISOString();
-  await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${row.season_id}&player_id=eq.${row.player_id}&ends_at=is.null`, {
-    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-  });
-  return fetchWithSchema(`${base}/rest/v1/team_memberships`, { method: 'POST', headers, body: JSON.stringify(row) });
-}
-
-async function clearEmptyDruLineup(env, teamId, fetchImpl) {
-  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+function service(env) {
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!base || !key) return 0;
-  const headers = {
-    apikey: key,
-    authorization: `Bearer ${key}`,
-    accept: 'application/json',
-    'content-type': 'application/json',
-    'accept-profile': privatePostgrestProfile('dru'),
-    'content-profile': privatePostgrestProfile('dru'),
-  };
-  const response = await fetchWithSchema(`${base}/rest/v1/team_lineups?team_id=eq.${teamId}&select=id,slots`, { headers });
-  const lineups = response.ok ? await response.json() : [];
-  let cleared = 0;
-  for (const lineup of lineups) {
-    const named = (lineup.slots || []).filter((slot) => slot && (slot.playerId || slot.player_id)).length;
-    if (named < 3) {
-      const removed = await fetchWithSchema(`${base}/rest/v1/team_lineups?id=eq.${lineup.id}`, { method: 'DELETE', headers });
-      if (removed.ok) cleared += 1;
-    }
-  }
-  return cleared;
+  return base && key ? { base, key } : null;
+
 }
 
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId || !teamId) return 0;
+  const conn = service(env);
+  if (!conn) return 0;
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-  const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!base || !key) return 0;
-  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' };
-  const members = await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&team_id=eq.${teamId}&ends_at=is.null&select=player_id`, { headers });
+  const headers = { apikey: conn.key, authorization: `Bearer ${conn.key}`, accept: 'application/json', 'content-type': 'application/json' };
+  const members = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&team_id=eq.${teamId}&ends_at=is.null&select=player_id`, { headers });
   const rows = members.ok ? await members.json() : [];
   const ids = [...new Set([...(Array.isArray(playerIds) ? playerIds : []), ...(Array.isArray(rows) ? rows : []).map((row) => row.player_id)].filter(Boolean))];
-  const body = ids.map((playerId) => ({
-    season_id: seasonId,
-    player_id: playerId,
-    status: 'waived',
-    amount_due_cents: 0,
-    amount_paid_cents: 0,
-    updated_at: new Date().toISOString(),
-  }));
-  if (!body.length) return 0;
-  const saved = await fetchWithSchema(`${base}/rest/v1/payment_status?on_conflict=season_id,player_id`, {
+  if (!ids.length) return 0;
+  const saved = await fetchWithSchema(`${conn.base}/rest/v1/payment_status?on_conflict=season_id,player_id`, {
     method: 'POST',
     headers: { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(ids.map((playerId) => ({ season_id: seasonId, player_id: playerId, status: 'waived', amount_due_cents: 0, amount_paid_cents: 0, updated_at: new Date().toISOString() }))),
   });
-  return saved.ok ? body.length : 0;
+  return saved.ok ? ids.length : 0;
+}
+
+
+export function duplicateLineupIds(playerIds) {
+  const ids = (playerIds || []).filter(Boolean);
+  return ids.length > 0 && new Set(ids).size !== ids.length;
 }
 
 export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !actorUserId || !teamId) return false;
+  if (duplicateLineupIds(playerIds)) throw new Error('Lineup players must be unique.');
+  const conn = service(env);
+  if (!conn) return false;
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-  const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!base || !key) return false;
-  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
-  const teamResponse = await fetchWithSchema(`${base}/rest/v1/teams?id=eq.${teamId}&select=season_id`, { headers });
+  const headers = { apikey: conn.key, authorization: `Bearer ${conn.key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  const teamResponse = await fetchWithSchema(`${conn.base}/rest/v1/teams?id=eq.${teamId}&select=season_id`, { headers });
   if (!teamResponse.ok) return false;
   const seasonId = (await teamResponse.json())?.[0]?.season_id;
-  const playerResponse = await fetchWithSchema(`${base}/rest/v1/players?user_id=eq.${actorUserId}&select=id`, { headers });
+  const playerResponse = await fetchWithSchema(`${conn.base}/rest/v1/players?user_id=eq.${actorUserId}&select=id`, { headers });
   if (!playerResponse.ok || !seasonId) return false;
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
-  await clearEmptyDruLineup(env, teamId, fetchImpl);
+  const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
+  const slotResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?team_id=eq.${teamId}&select=lineup_id,player_id`, { headers: privateHeaders });
+  const slots = slotResponse.ok ? await slotResponse.json() : [];
+  const byLineup = new Map();
+  for (const slot of slots) {
+    const rows = byLineup.get(slot.lineup_id) || [];
+    rows.push(slot);
+    byLineup.set(slot.lineup_id, rows);
+  }
+  for (const [lineupId, rows] of byLineup) {
+    if (rows.some((slot) => slot.player_id)) continue;
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
+  }
   const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
+  const now = new Date().toISOString();
   for (const rosterPlayerId of roster) {
-    const saved = await seatWhereLockReads(env, fetchImpl, base, key, {
-      season_id: seasonId,
-      team_id: teamId,
-      player_id: rosterPlayerId,
-      role: rosterPlayerId === playerId ? 'captain' : 'player',
+    await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${rosterPlayerId}&ends_at=is.null`, {
+      method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
     });
-    if (!saved.ok) {
-      throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
-    }
+    const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
+      method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: rosterPlayerId === playerId ? 'captain' : 'player' }),
+    });
+    if (!saved.ok) throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return true;

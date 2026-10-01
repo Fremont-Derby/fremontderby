@@ -32,3 +32,9 @@ export function missionTask(task) {
 export function stuckPath(path) {
   return { text: path?.recover || 'Go back to the schedule.' };
 }
+
+export function scoreNeedsBothTeams(match) {
+  if (!match?.teamAId || !match?.teamBId) return { ok: false, text: 'Set both teams before scoring.' };
+  if (!match?.lineupA || !match?.lineupB) return { ok: false, text: 'Both teams need a lineup before scoring.' };
+  return { ok: true, text: 'Both teams are set.' };
+}

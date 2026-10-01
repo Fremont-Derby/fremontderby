@@ -1953,6 +1953,32 @@ export async function handleFinalizePlayerMatchRequest(
 ) {
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' };
+      const playerResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=team_match_id`, { headers });
+      const teamMatchId = playerResponse.ok ? (await playerResponse.json())?.[0]?.team_match_id : null;
+      const teamResponse = teamMatchId
+        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=team_a_id,team_b_id`, { headers })
+        : null;
+      const team = teamResponse?.ok ? (await teamResponse.json())?.[0] : null;
+      const lineupResponse = team
+        ? await fetchWithSchema(`${base}/rest/v1/team_lineups?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,slots`, { headers })
+        : null;
+      const lineups = lineupResponse?.ok ? await lineupResponse.json() : [];
+      const hasPlayers = (teamId) => (lineups || []).some((row) => row.team_id === teamId && Array.isArray(row.slots) && row.slots.some((slot) => slot && (slot.playerId || slot.player_id)));
+      const gate = scoreNeedsBothTeams({
+        teamAId: team?.team_a_id,
+        teamBId: team?.team_b_id,
+        lineupA: team && hasPlayers(team.team_a_id),
+        lineupB: team && hasPlayers(team.team_b_id),
+      });
+      if (!gate.ok) return jsonResponse({ error: gate.text }, 409);
+    }
     const repository = createScoringRepository(env, { fetch: fetchImpl });
     const match = await finalizePlayerMatchCommand(
       {

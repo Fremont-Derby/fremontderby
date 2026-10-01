@@ -1,3 +1,4 @@
+import { duplicateLineupIds } from '../src/druLineupBypass.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { waiveDruTeamPayments } from '../src/druLineupBypass.js';
@@ -20,4 +21,9 @@ test('a DRU lineup lock can waive the practice roster', async () => {
   assert.equal(posted[0].status, 'waived');
   const skipped = await waiveDruTeamPayments({ ENVIRONMENT: 'gamma' }, { seasonId: 's', teamId: 't' });
   assert.equal(skipped, 0);
+});
+
+test('a practice lineup rejects a repeated player', () => {
+  assert.equal(duplicateLineupIds(['a', 'b']), false);
+  assert.equal(duplicateLineupIds(['a', 'a']), true);
 });
