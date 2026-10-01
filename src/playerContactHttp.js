@@ -3,6 +3,7 @@ import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   getAdminPlayerContactCommand,
   getOwnPlayerContactCommand,
+  setAdminPlayerContactCommand,
   setOwnPlayerContactCommand,
 } from './playerContactCommands.js';
 import { createPlayerContactRepository } from './playerContactRepository.js';
