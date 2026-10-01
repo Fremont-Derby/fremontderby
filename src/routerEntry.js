@@ -48,8 +48,6 @@ import { renderPlayoffsPage } from './playoffsPage.js';
 import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
 import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
-import { routeDruEnvironmentHealth } from './druEnvironmentHttp.js';
-import { routeDruKidLeagueSeed } from './druKidLeagueSeedHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -260,12 +258,6 @@ export default {
       }
       return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
     }
-
-    const environmentResponse = routeDruEnvironmentHealth(request, env);
-    if (environmentResponse) return finalizeBrowserResponse(environmentResponse, url.pathname);
-
-    const kidLeagueSeedResponse = await routeDruKidLeagueSeed(request, env);
-    if (kidLeagueSeedResponse) return finalizeBrowserResponse(kidLeagueSeedResponse, url.pathname);
 
     const emptyReadResponse = routeDruPublicEmptyReads(request, env);
     if (emptyReadResponse) return finalizeBrowserResponse(emptyReadResponse, url.pathname);
