@@ -36,6 +36,7 @@ export function renderNotificationsPage() {
       <a class="ghost" href="/trades">Trades</a>
       <a class="ghost" href="/standings">Standings</a>
     </div>
+    <p class="note" data-notice-events>A notice is created for a direct message, a team or league message, a lineup or match ready check, a score mismatch or final result, a season announcement, and a report outcome.</p>
     <section class="list" data-list></section>
   </main>
   ${livePageRefreshScript}
