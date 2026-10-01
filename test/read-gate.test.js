@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { auditRow, backupRestore, migrationPair, piiAccess, publicRead, refreshSafe, retention, secondTab } from '../src/readGate.js';
+test('a public read cannot write', () => { assert.equal(publicRead({ writes: true }).ok, false); });
+test('a restore must be rehearsed', () => { assert.equal(backupRestore({ taken: true }).ok, false); });
+test('a migration names both states', () => { assert.equal(migrationPair('v1', 'v2').ok, true); });
+test('an audit row needs actor, action, and time', () => { assert.equal(auditRow({ actor: 'Mina', action: 'edit', when: 'now' }).ok, true); });
+test('personal-data access needs a why', () => { assert.equal(piiAccess({ who: 'Mina', field: 'phone' }).ok, false); });
+test('retention names the days', () => { assert.match(retention({ field: 'phone', days: 30 }).text, /30/); });
+test('a second tab cannot overwrite an unsaved edit', () => { assert.equal(secondTab([{ saved: false }]).ok, false); });
+test('refresh waits for a save', () => { assert.equal(refreshSafe({ saved: false }).ok, false); });
