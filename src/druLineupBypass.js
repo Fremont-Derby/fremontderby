@@ -84,16 +84,6 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
   await clearEmptyDruLineup(env, teamId, fetchImpl);
-  const now = new Date().toISOString();
-  await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${playerId}&ends_at=is.null`, {
-    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-  });
-  await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&team_id=eq.${teamId}&role=eq.captain&ends_at=is.null`, {
-    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-  });
-  const inserted = await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
-    method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
-  });
   const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
   for (const rosterPlayerId of roster) {
     const saved = await seatWhereLockReads(fetchImpl, base, key, {
@@ -107,5 +97,5 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
     }
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
-  return inserted.ok;
+  return true;
 }
