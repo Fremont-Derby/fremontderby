@@ -566,6 +566,23 @@ export async function handleConfigureSeasonRegistrationRequest(
   }
 }
 
+
+export function reviewDecisionWord(body) {
+  const normalized = String(normalizeApproveDecline(body) ?? body?.decision ?? '').toLowerCase();
+  const words = {
+    approved: 'approve',
+    approve: 'approve',
+    accepted: 'approve',
+    accept: 'approve',
+    deferred: 'defer',
+    defer: 'defer',
+    rejected: 'reject',
+    declined: 'reject',
+    reject: 'reject',
+  };
+  return words[normalized] || normalized;
+}
+
 export async function handleReviewTeamApplicationRequest(
   request,
   env,
@@ -580,10 +597,7 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: ({approved:'approve', approve:'approve', deferred:'defer', defer:'defer', rejected:'reject', declined:'reject', reject:'reject'}).get(
-          String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase(),
-          normalizeApproveDecline(body) ?? body.decision,
-        ),
+        decision: reviewDecisionWord(body),
         reason: body.reason ?? body.note,
       },
       repository,
