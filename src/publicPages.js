@@ -139,6 +139,7 @@ export function renderRulesPage() {
     </ul>
 
     <p class="note">Season-specific settings such as dates, deadlines, race-chart values, and payout amounts are published separately and may change between seasons.</p>
+    <p class="note" data-known-issues>Testers: non-blocking issues stay on the project board and do not stop league night.</p>
 
 
     <div class="actions">
