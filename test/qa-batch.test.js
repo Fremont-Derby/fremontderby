@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { campaignBase, clientError, cluster, datasetRow, launchCopy, missionBatch, missionChrome, previewPath, qaExplorer, replaceDrive, replayCompare, runnerDone, scorecardDrive, shadowRank, surveyApi, surveySummary, telemetryContract, triageLabel, validationLoop } from '../src/qaBatch.js';
+import { campaignBase, campaignBuild, clientError, cluster, datasetRow, launchCopy, missionBatch, missionChrome, previewPath, qaExplorer, replaceDrive, replayCompare, runnerDone, scorecardDrive, shadowRank, surveyApi, surveySummary, telemetryContract, triageLabel, validationLoop } from '../src/qaBatch.js';
 
 test('a survey summary counts rows', () => { assert.equal(surveySummary([1, 2]).count, 2); });
 test('survey results are admin only', () => { assert.equal(surveyApi({ role: 'player' }).ok, false); });
