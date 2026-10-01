@@ -12,8 +12,6 @@ import { fileURLToPath } from 'node:url';
  * and use a build command that runs `npm run prebuild` / this script before deploy.
  */
 
-export const CLOUDFLARE_BUILD_BRANCHES = Object.freeze(['main', 'fremontderby-jfl', 'fremontderby-dru', 'fremontderby-gamma']);
-
 export const LANE_BRANCH_ALLOWLISTS = Object.freeze({
   production: Object.freeze([/^main$/]),
   jfl: Object.freeze([/^fremontderby-jfl$/, /^jfl\//]),
