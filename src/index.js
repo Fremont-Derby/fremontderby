@@ -215,6 +215,8 @@ export async function handlePublishScheduleRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { prepareDruPracticePublish } = await import('./druPublishPrep.js');
+      await prepareDruPracticePublish(env, seasonId, fetchImpl);
       const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
       await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
     }
