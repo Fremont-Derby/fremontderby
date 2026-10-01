@@ -72,7 +72,7 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
     await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
       method: 'POST',
       headers: { ...headers, prefer: 'return=minimal' },
-      body: JSON.stringify({ season_id: seasonId, team_id: add.team_id, player_id: add.player_id, role: 'player' }),
+      body: JSON.stringify({ season_id: seasonId, team_id: add.team_id, player_id: add.player_id, role: add.role }),
     });
   }
   if (plan.seasonPlayers.length) {
