@@ -24,12 +24,15 @@ export async function reserveFreshDruSeason(env, { seasonName }, fetchImpl = glo
   const rows = await existing.json();
   if (!Array.isArray(rows) || rows.length === 0) return null;
   if (rows.some((row) => String(row.name || '').trim() === name)) return null;
+  await fetchWithSchema(`${base}/rest/v1/seasons?status=eq.registration`, {
+    method: 'PATCH', headers, body: JSON.stringify({ status: 'draft' }),
+  });
   const inserted = await fetchWithSchema(`${base}/rest/v1/seasons`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
       name,
-      status: 'draft',
+      status: 'registration',
       league_night: 'thursday',
       first_round_date: '2026-10-22',
       roster_lock_round: 4,
