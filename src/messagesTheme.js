@@ -36,6 +36,11 @@ export const messagesThemeStyles = `
     border-color: var(--fd-border, #d7d9d7) !important;
     box-shadow: var(--fd-shadow-soft, 0 3px 10px rgba(25,31,27,.08)) !important;
   }
+  main.app:has([data-chat-layout]) .message-list {
+    max-height: min(60vh, 640px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
   main.app:has([data-chat-layout]) .layout {
     background: var(--fd-bg-surface, #ffffff) !important;
   }
