@@ -9,6 +9,7 @@ main{max-width:720px;margin:0 auto;padding:16px;display:grid;gap:12px}
 .muted{color:#aab3bb}.panel{background:#191d22;border:1px solid #343c45;border-radius:12px;padding:12px}
 a{color:#9ee5bd} input,button{min-height:44px}</style>
 </head><body><main>
+    <p class="note" data-expiry-split>Registration expiry is maintained apart from the public read pages.</p>
 <p class="muted"><a href="/admin">Admin</a> · <a href="/admin/players">Players</a></p>
 <h1>Player season stats</h1>
 <p class="muted">Derived from finalized matches. Locked match ratings are historical.</p>
