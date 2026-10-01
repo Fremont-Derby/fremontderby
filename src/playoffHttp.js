@@ -31,6 +31,18 @@ export function createPlayoffHttpHandlers({
     async start(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
+        if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+          const { practicePlayoffsReady } = await import('./druTeamResult.js');
+          const { withSupabaseSchema } = await import('./supabaseSchema.js');
+          const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+          const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+          const key = env.SUPABASE_SERVICE_ROLE_KEY;
+          const response = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&status=eq.finalized&select=status,winner_team_id`, {
+            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+          });
+          const rows = response.ok ? await response.json() : [];
+          if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'Score a week and name a winner before playoffs.' }, 409);
+        }
         const repository = createRepository(env, { fetch: fetchImpl });
         const playoffs = await startSeasonPlayoffsCommand(
           { seasonId, actorUserId: actor.id },
