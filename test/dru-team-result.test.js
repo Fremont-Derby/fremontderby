@@ -13,3 +13,7 @@ test('a DRU team result follows the finished races', () => {
     { status: 'in_progress', winner_side: null },
   ]), null);
 });
+
+test('a practice result waits until both teams are set', () => {
+  assert.equal(teamWinnerId({ team_a_id: 'a' }, [{ status: 'finalized', winner_side: 'A' }]), null);
+});

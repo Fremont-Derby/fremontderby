@@ -5,6 +5,7 @@ function druOnly(env) {
 }
 
 export function teamWinnerId(match, playerMatches) {
+  if (!match?.team_a_id || !match?.team_b_id) return null;
   const rows = (playerMatches || []).filter((row) => ['finalized', 'corrected'].includes(row.status) && ['A', 'B'].includes(row.winner_side));
   if (!rows.length || rows.length !== (playerMatches || []).length) return null;
   let a = 0;
