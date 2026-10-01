@@ -1,5 +1,6 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
+import { freshSeasonInsert, freshSeasonSetup, shouldInsertFreshDruSeason } from './druFreshSeason.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -121,6 +122,31 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
       playoffTeamCount,
       playoffAnchorTiebreaker,
     }) {
+      const payload = {
+        seasonName,
+        leagueNight,
+        firstRoundDate,
+        rosterLockRound,
+        openingBlockLength,
+        individualMinMatches,
+        roundIntervalDays,
+        tableNumbers,
+        raceChartVersion,
+        playoffTeamCount,
+        playoffAnchorTiebreaker,
+      };
+      if (shouldInsertFreshDruSeason(env, seasonId)) {
+        const inserted = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/seasons`, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            prefer: 'return=representation',
+          },
+          body: JSON.stringify(freshSeasonInsert(payload)),
+        });
+        const row = Array.isArray(inserted) ? inserted[0] : inserted;
+        return freshSeasonSetup(row);
+      }
       const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/configure_season_setup`, {
         method: 'POST',
         headers,
