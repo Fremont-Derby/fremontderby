@@ -30,7 +30,8 @@ test('check-in hides past weeks before rendering or loading saved state', () => 
   assert.match(html, /const today=localDateKey\(\)/);
   assert.match(html, /if\(context\.scheduledOn&&context\.scheduledOn<today\)continue/);
   assert.match(html, /const groups=groupContexts\(contexts\)/);
-  assert.match(html, /Promise\.all\(groups\.map/);
+  assert.match(html, /for\(const group of groups\).*await loadSavedAvailability\(group,card\)/);
+  assert.doesNotMatch(html, /Promise\.all\(groups\.map/);
 });
 
 test('one-tap check-in restores saved date availability with fixed color bands', () => {
