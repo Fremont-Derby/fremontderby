@@ -57,7 +57,7 @@ test('team repository loads team management with open seasons and player directo
 
   assert.deepEqual(teamManagement, {
     player_id: 'player-1',
-    captain_teams: [{ teamName: 'Breakers' }],
+    captain_teams: [{ teamName: 'Breakers', roster: [], members: [] }],
     invitations: [{ teamName: 'Rack Pack' }],
     open_seasons: [{
       id: 'season-1',
@@ -66,9 +66,33 @@ test('team repository loads team management with open seasons and player directo
       first_round_date: '2026-09-03',
     }],
     players: [
-      { id: 'player-1', display_name: 'Alice' },
-      { id: 'player-2', display_name: 'Bob' },
+      {
+        id: 'player-1',
+        playerId: 'player-1',
+        displayName: 'Alice',
+        display_name: 'Alice',
+        hasLogin: false,
+        user_id: undefined,
+        createdAt: undefined,
+        created_at: undefined,
+        isDuplicateName: false,
+        label: 'Alice — Unclaimed',
+      },
+      {
+        id: 'player-2',
+        playerId: 'player-2',
+        displayName: 'Bob',
+        display_name: 'Bob',
+        hasLogin: false,
+        user_id: undefined,
+        createdAt: undefined,
+        created_at: undefined,
+        isDuplicateName: false,
+        label: 'Bob — Unclaimed',
+      },
     ],
+    applications: [],
+    returning_slots: [],
   });
   assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_management');
   assert.deepEqual(JSON.parse(calls[0].init.body), {
@@ -77,6 +101,9 @@ test('team repository loads team management with open seasons and player directo
   assert.equal(calls[0].init.headers.apikey, 'service-role-secret');
   assert.match(calls[1].url, /\/rest\/v1\/seasons\?/);
   assert.match(calls[1].url, /status=eq\.registration/);
+  assert.match(calls[2].url, /display_name/);
+  assert.match(calls[2].url, /user_id/);
+  assert.match(calls[2].url, /created_at/);
   assert.equal(calls[1].init.headers.apikey, 'service-role-secret');
   assert.match(calls[2].url, /\/rest\/v1\/players\?/);
   assert.equal(calls[2].init.headers.apikey, 'service-role-secret');

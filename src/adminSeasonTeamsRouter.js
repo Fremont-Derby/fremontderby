@@ -1,5 +1,6 @@
 import { adminSeasonTeamsHttpHandlers } from './adminSeasonTeamsHttp.js';
 import { renderAdminSeasonTeamsPage } from './adminSeasonTeamsPage.js';
+import { preferActiveSeasonDefault } from './gammaSeasonTeamsActiveDefault.js';
 import { decorateHtmlWithShell } from './appShell.js';
 
 function htmlResponse(html, pathname) {
@@ -19,7 +20,7 @@ export async function routeAdminSeasonTeams(request, env) {
   const url = new URL(request.url);
   if (url.pathname === '/admin/season-teams') {
     if (request.method !== 'GET') return methodNotAllowed();
-    return htmlResponse(renderAdminSeasonTeamsPage(), url.pathname);
+    return htmlResponse(preferActiveSeasonDefault(renderAdminSeasonTeamsPage()), url.pathname);
   }
 
   const candidates = url.pathname.match(

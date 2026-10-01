@@ -4,7 +4,9 @@ import test from 'node:test';
 import {
   extractTrackingCardNumbers,
   findTrackingCardConflicts,
+  validateAgentBranchOwnership,
   validatePullRequestBody,
+  validateTrackingCardLabels,
 } from '../scripts/check-pr-card-contract.mjs';
 
 const REPOSITORY = 'subiki/fremontderby';
@@ -76,6 +78,86 @@ test('rejects automatic close keywords', () => {
   assert.ok(errors.some((error) => error.includes('Automatic close keywords')));
 });
 
+
+test('accepts valid handoff and merge-ready tracking-card labels', () => {
+  assert.deepEqual(validateTrackingCardLabels([
+    'agent:jfl',
+    'stage:handoff',
+    'priority:p1',
+    'area:product',
+    'area:qa',
+    'handoff:review',
+  ]), []);
+  assert.deepEqual(validateTrackingCardLabels([
+    'agent:dru',
+    'stage:merge-ready',
+    'priority:p0',
+    'area:data',
+  ]), []);
+});
+
+test('rejects missing, multiple, or unaccepted owners', () => {
+  const noOwner = validateTrackingCardLabels([
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(noOwner.some((error) => error.includes('exactly one agent:*')));
+
+  const multipleOwners = validateTrackingCardLabels([
+    'agent:jfl',
+    'agent:dru',
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(multipleOwners.some((error) => error.includes('found 2')));
+
+  const unclaimed = validateTrackingCardLabels([
+    'agent:unclaimed',
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(unclaimed.some((error) => error.includes('replace agent:unclaimed')));
+});
+
+test('rejects invalid stage, priority, and area cardinality', () => {
+  const errors = validateTrackingCardLabels([
+    'agent:codex',
+    'stage:in-progress',
+    'stage:handoff',
+    'priority:p1',
+    'priority:p2',
+    'handoff:review',
+  ]);
+  assert.ok(errors.some((error) => error.includes('exactly one stage:*')));
+  assert.ok(errors.some((error) => error.includes('exactly one priority:*')));
+  assert.ok(errors.some((error) => error.includes('at least one area:*')));
+});
+
+test('requires an accepted handoff state before merge readiness', () => {
+  const missingTarget = validateTrackingCardLabels([
+    'agent:codex',
+    'stage:handoff',
+    'priority:p1',
+    'area:process',
+  ]);
+  assert.ok(missingTarget.some((error) => error.includes('exactly one handoff:*')));
+
+  const staleTarget = validateTrackingCardLabels([
+    'agent:codex',
+    'stage:merge-ready',
+    'priority:p1',
+    'area:process',
+    'handoff:review',
+  ]);
+  assert.ok(staleTarget.some((error) => error.includes('cannot retain')));
+});
+
 test('reports another open PR that owns the same tracking card', () => {
   assert.deepEqual(findTrackingCardConflicts({
     currentPullRequestNumber: 595,
@@ -114,4 +196,46 @@ test('excludes the current PR and PRs that track different cards', () => {
     ],
     repositoryFullName: REPOSITORY,
   }), []);
+});
+
+
+test('accepts JFL and DRU PRs only in their own branch namespaces', () => {
+  assert.deepEqual(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'JFL' }),
+    'jfl/issue-629-immutable-agent-branches',
+  ), []);
+  assert.deepEqual(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'DRU' }),
+    'dru/issue-629-immutable-agent-branches',
+  ), []);
+});
+
+test('rejects JFL and DRU PRs outside their own branch namespaces', () => {
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'JFL' }),
+    'dru/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('JFL-owned PRs')));
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'DRU' }),
+    'jfl/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('DRU-owned PRs')));
+});
+
+test('rejects non-owners using JFL or DRU branch namespaces', () => {
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'Orchestrator / ChatGPT' }),
+    'jfl/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('Only a PR whose owner lane is JFL')));
+  assert.ok(validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'Orchestrator / ChatGPT' }),
+    'dru/issue-629-immutable-agent-branches',
+  ).some((error) => error.includes('Only a PR whose owner lane is DRU')));
+});
+
+test('rejects ambiguous JFL and DRU co-ownership', () => {
+  const errors = validateAgentBranchOwnership(
+    validBody({ 'Owner lane / agent': 'JFL / DRU' }),
+    'jfl/issue-629-immutable-agent-branches',
+  );
+  assert.deepEqual(errors, ['Owner lane / agent must name only one of JFL or DRU.']);
 });

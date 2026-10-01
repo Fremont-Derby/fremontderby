@@ -107,10 +107,7 @@ export function buildNextMatchFixture(seed) {
         starts_at: laterStarts,
       },
     ],
-    product: {
-      route: '/schedule',
-      homeRoute: '/',
-    },
+    product: { route: '/schedule', homeRoute: '/' },
     semantic: {
       exactly_one_next_match: true,
       match_is_in_the_future: true,

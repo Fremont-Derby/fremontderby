@@ -39,8 +39,9 @@ test('published rounds include four table-assigned team matches', () => {
   for (const round of schedule.rounds) {
     assert.equal(round.stage, 'regular');
     assert.equal(round.matches.length, 4);
+    // Tables are a rotation of the configured set (fair distribution across weeks).
     assert.deepEqual(
-      round.matches.map((match) => match.tableNumber),
+      [...round.matches.map((match) => match.tableNumber)].sort((a, b) => a - b),
       [5, 6, 7, 8],
     );
 
@@ -54,6 +55,9 @@ test('published rounds include four table-assigned team matches', () => {
     }
     assert.equal(teamsInRound.size, 8);
   }
+  const week0 = schedule.rounds[0].matches.map((m) => m.tableNumber).join(',');
+  const week1 = schedule.rounds[1].matches.map((m) => m.tableNumber).join(',');
+  assert.notEqual(week0, week1, 'table assignment should rotate between rounds');
 });
 
 test('season publication rejects invalid setup inputs', () => {
@@ -83,5 +87,45 @@ test('season publication rejects invalid setup inputs', () => {
       tableNumbers: [1, 1, 2, 3],
     }),
     /unique/,
+  );
+});
+
+test('season publication rejects non-positive interval and missing season id', () => {
+  assert.throws(
+    () => publishRegularSeasonSchedule({
+      seasonId: 'season-1',
+      teamIds: teams,
+      firstRoundDate: '2026-09-03',
+      intervalDays: 0,
+    }),
+    /intervalDays/,
+  );
+  assert.throws(
+    () => publishRegularSeasonSchedule({
+      teamIds: teams,
+      firstRoundDate: '2026-09-03',
+    }),
+    /seasonId is required/,
+  );
+});
+
+test('publishing supports custom positive intervalDays', () => {
+  const schedule = publishRegularSeasonSchedule({
+    seasonId: 'season-1',
+    teamIds: teams,
+    firstRoundDate: '2026-09-03',
+    intervalDays: 14,
+  });
+  assert.deepEqual(
+    schedule.rounds.map((round) => round.scheduledOn),
+    [
+      '2026-09-03',
+      '2026-09-17',
+      '2026-10-01',
+      '2026-10-15',
+      '2026-10-29',
+      '2026-11-12',
+      '2026-11-26',
+    ],
   );
 });

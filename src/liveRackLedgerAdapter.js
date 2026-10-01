@@ -4,31 +4,68 @@ export const liveRackLedgerAdapterSource = String.raw`
     const matchId=params.get('match')||'';
     const scoringTeamId=params.get('team')||'';
     const scoringTeamName=params.get('teamName')||'your team';
+    let expectedOwnRacks=[];
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
+    function isOpenAuthLane(){const h=String(location.hostname||'');return h.startsWith('dru.')||h.startsWith('jfl.')||h.startsWith('gamma.');}
     function showSignInRecovery(){
       const context=document.querySelector('[data-match-context]');
       if(context)context.innerHTML='<a href="/profile">Open Profile to sign in</a>';
+    }
+    function setTransportHint(message){
+      const status=document.querySelector('[data-status]');
+      if(!status||!message)return;
+      status.textContent=message;
+      status.dataset.tone='error';
     }
     function requireContext(){
       const token=accessToken();
       if(!matchId)throw new Error('Choose a match from the scorecard list.');
       if(!scoringTeamId)throw new Error('Choose which team you are scoring for.');
-      if(!token){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
+      if(!token&&!isOpenAuthLane()){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
       return{matchId,scoringTeamId,token};
     }
-    async function api(path,options={}){
+    async function api(path,options={},attempt=0){
+      if(typeof navigator!=='undefined'&&navigator.onLine===false){
+        setTransportHint('You are offline. Reconnect, then try again — the last saved racks are still on the server.');
+        throw new Error('You are offline. Check your connection and try again.');
+      }
       const inputs=requireContext();
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
       const separator=base.includes('?')?'&':'?';
       const contextualPath=base+separator+'scoringTeamId='+encodeURIComponent(inputs.scoringTeamId);
-      const response=await fetch(contextualPath,{...options,headers:{authorization:'Bearer '+inputs.token,'content-type':'application/json',...(options.headers||{})}});
+      let response;
+      try{
+        response=await fetch(contextualPath,{...options,headers:{...(inputs.token?{authorization:'Bearer '+inputs.token}:{}), 'content-type':'application/json',...(options.headers||{})}});
+      }catch(error){
+        if(attempt<1){
+          await new Promise((resolve)=>setTimeout(resolve,450));
+          return api(path,options,attempt+1);
+        }
+        setTransportHint('Network error scoring this match. Your last successful save is on the server — retry when the signal is back.');
+        throw new Error('Network error. Retry in a moment.');
+      }
       let body={};
       try{body=await response.json()}catch{}
       if(response.status===401){sessionStorage.removeItem('fd.accessToken');showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
-      if(!response.ok)throw new Error(body.error||'Request failed');
+      if(!response.ok){
+        const message=body.error||'Request failed';
+        if(message==='Score record is already complete'){
+          throw new Error('Your side already reached the race target. Submit it now, or edit/undo a rack if your score is wrong.');
+        }
+        throw new Error(message);
+      }
       return body;
     }
+
+    window.addEventListener('offline',()=>setTransportHint('Offline — rack taps will not save until you reconnect.'));
+    window.addEventListener('online',()=>{
+      const status=document.querySelector('[data-status]');
+      if(status&&/offline|network error/i.test(status.textContent||'')){
+        status.textContent='Back online. Refreshing scorecard…';
+        status.dataset.tone='ok';
+      }
+    });
 
     window.fdRackLedgerAdapter={
       mode:'live',
@@ -43,18 +80,32 @@ export const liveRackLedgerAdapterSource = String.raw`
           api('/api/player-matches/:id/scorecard',{method:'GET'}),
           api('/api/player-matches/:id/score-comparison',{method:'GET'}),
         ]);
-        return{scorecard:scoreBody.scorecard,context:comparisonBody.context,comparison:comparisonBody.comparison};
+        const scorecard=scoreBody.scorecard;
+        const comparison=comparisonBody.comparison;
+        expectedOwnRacks=Array.isArray(comparison?.own_racks)?comparison.own_racks:[];
+        const opponentRacks=Array.isArray(comparison?.opponent_racks)?comparison.opponent_racks:[];
+        const ownSide=comparison?.tracker_player_id===scorecard?.player_a_id?'A':comparison?.tracker_player_id===scorecard?.player_b_id?'B':null;
+        window.fdRackLedgerState={
+          ownSide,
+          ownConfirmed:Boolean(comparison?.own_confirmed_at),
+          ownRackCount:expectedOwnRacks.length,
+          opponentRackCount:opponentRacks.length,
+          historiesMatch:Boolean(comparison?.histories_match),
+          mismatchRackNumber:Number(comparison?.mismatch_rack_number||0)||null,
+          locked:['finalized','corrected'].includes(scorecard?.status),
+        };
+        return{scorecard,context:comparisonBody.context,comparison};
       },
       async setOpeningDiscipline({openingDiscipline}){
         return api('/api/player-matches/:id/score-racks',{method:'POST',body:JSON.stringify({openingDiscipline,scoringTeamId})});
       },
       async saveRack(input){
-        const body={scoringTeamId,winnerSide:input.winnerSide};
+        const body={scoringTeamId,winnerSide:input.winnerSide,expectedRacks:expectedOwnRacks};
         if(input.rackNumber!=null)body.rackNumber=input.rackNumber;
         return api('/api/player-matches/:id/score-racks',{method:'POST',body:JSON.stringify(body)});
       },
-      async undo(){return api('/api/player-matches/:id/score-racks/undo',{method:'POST',body:JSON.stringify({scoringTeamId})})},
-      async confirm(){return api('/api/player-matches/:id/score-confirm',{method:'POST',body:JSON.stringify({scoringTeamId})})},
+      async undo(){return api('/api/player-matches/:id/score-racks/undo',{method:'POST',body:JSON.stringify({scoringTeamId,expectedRacks:expectedOwnRacks})})},
+      async confirm(){return api('/api/player-matches/:id/score-confirm',{method:'POST',body:JSON.stringify({scoringTeamId,expectedRacks:expectedOwnRacks})})},
       async finalize(){return api('/api/player-matches/:id/finalize-reconciled',{method:'POST',body:JSON.stringify({scoringTeamId})})},
     };
   })();

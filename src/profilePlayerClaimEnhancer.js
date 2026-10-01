@@ -7,10 +7,10 @@ const card = `<article class="panel" data-player-claim hidden>
   <div class="player-claim" role="region" aria-label="Claim an existing Fremont Derby player profile">
     <div class="player-claim-copy">If the league already added you, claim that prepared player before creating a new profile. Only unclaimed players with no competitive racks can be claimed here.</div>
     <form class="player-claim-search" data-player-claim-search>
-      <label>Player name<input type="search" maxlength="80" autocomplete="name" placeholder="Search by name" data-player-claim-query /></label>
+      <label>Player name<input type="search" maxlength="80" autocomplete="name" placeholder="Search by name" data-player-claim-query data-safe-ac="publicPlayers" /></label>
       <button class="ghost" type="submit">Search players</button>
     </form>
-    <div class="player-claim-status" role="status" aria-live="polite" data-player-claim-status>Checking for prepared players…</div>
+    <div class="player-claim-status" role="status" aria-live="polite" data-player-claim-status></div>
     <div class="player-claim-results" data-player-claim-results></div>
   </div>
 </article>`;
@@ -32,20 +32,20 @@ const script = `<script data-player-claim-script>
     const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body;
   }
   function setStatus(message,tone){status.textContent=message;status.dataset.tone=tone||'muted'}
-  function contextFor(player){const teams=Array.isArray(player.teamNames)?player.teamNames:[];const seasons=Array.isArray(player.seasonNames)?player.seasonNames:[];const parts=[];if(teams.length)parts.push('Team: '+teams.join(', '));if(seasons.length)parts.push('Season: '+seasons.join(', '));return parts.join(' · ')||'No current team or season context'}
+  function contextFor(player){const teams=Array.isArray(player.teamNames)?player.teamNames:[];const seasons=Array.isArray(player.seasonNames)?player.seasonNames:[];const parts=[];if(teams.length)parts.push('Team: '+teams.join(', '));if(seasons.length)parts.push('Season: '+seasons.join(', '));if(player.registrationStatus)parts.push('Registered: '+player.registrationStatus);if(player.paymentStatus)parts.push('Payment: '+player.paymentStatus);if(player.createdAt){const y=String(player.createdAt).slice(0,4);if(/^\d{4}$/.test(y))parts.push('Added '+y)}if(player.isDuplicateName){const id=String(player.playerId||'');if(id)parts.push('#'+id.slice(-4))}return parts.join(' · ')||'No current team or season context'}
   function renderPlayers(players){
     results.replaceChildren();
     if(!players.length){const empty=document.createElement('div');empty.className='player-claim-empty';empty.textContent=query.value.trim()?'No claimable player matches that name. If your prepared record has game history, contact the league admin.':'No claimable prepared players found. You can create a new profile below if the league has not already added you.';results.append(empty);return}
-    for(const player of players){const row=document.createElement('div');row.className='player-claim-option';const copy=document.createElement('div');const name=document.createElement('strong');name.textContent=player.displayName;const detail=document.createElement('div');detail.className='player-claim-context';detail.textContent=contextFor(player);copy.append(name,detail);const button=document.createElement('button');button.type='button';button.className='primary';button.textContent='Claim '+player.displayName;button.dataset.claimPlayer=player.playerId;button.dataset.claimName=player.displayName;row.append(copy,button);results.append(row)}
+    const nameCounts={};for(const p of players){const k=String(p.displayName||'').trim().toLowerCase();if(k)nameCounts[k]=(nameCounts[k]||0)+1}for(const player of players){player.isDuplicateName=(nameCounts[String(player.displayName||'').trim().toLowerCase()]||0)>1;const row=document.createElement('div');row.className='player-claim-option';const copy=document.createElement('div');const name=document.createElement('strong');name.textContent=player.displayName;const detail=document.createElement('div');detail.className='player-claim-context';detail.textContent=contextFor(player);copy.append(name,detail);const button=document.createElement('button');button.type='button';button.className='primary';button.textContent='Claim '+player.displayName;button.dataset.claimPlayer=player.playerId;button.dataset.claimName=player.displayName;if(player.isDuplicateName)button.dataset.claimDuplicate='1';row.append(copy,button);results.append(row)}
   }
   async function load(){
-    if(!token())return;setStatus('Checking for prepared players…');
+    if(!token())return;setStatus('Loading prepared players…');
     const value=query.value.trim();const body=await request('/api/me/player-claim-options'+(value?'?q='+encodeURIComponent(value):''),{method:'GET'});const options=body.options||{};
     if(options.canClaim===false){root.hidden=true;return}
     root.hidden=false;renderPlayers(options.players||[]);setStatus((options.players||[]).length?'Choose the prepared player that is you.':'No prepared player is ready to claim.');
   }
   async function claim(button){
-    const playerId=button.dataset.claimPlayer;const name=button.dataset.claimName||'this player';
+    const playerId=button.dataset.claimPlayer;const name=button.dataset.claimName||'this player';const detail=button.closest('.player-claim-option')?.querySelector('.player-claim-context')?.textContent||'';if(button.dataset.claimDuplicate==='1'||(detail&&detail.includes('#'))){if(!confirm('More than one prepared player may share this name.\n\nClaim this record?\n'+name+(detail?'\n'+detail:'')))return;}
     if(!window.confirm('Claim '+name+' as my player profile?'))return;
     button.disabled=true;setStatus('Claiming '+name+'…');
     try{await request('/api/me/player-claim',{method:'POST',body:JSON.stringify({playerId})});setStatus('Profile claimed. Reloading your player history…','ok');setTimeout(()=>location.reload(),350)}catch(error){setStatus(error.message||'We could not complete that claim.','error');button.disabled=false;await load().catch(()=>{})}

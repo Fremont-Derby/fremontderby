@@ -1,0 +1,133 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { renderScorecardPage, resolveRaceCompletion } from '../src/scorecardPage.js';
+
+test('live scorecard promotes the captain submission score and removes redundant action cards', () => {
+  const html = renderScorecardPage();
+
+  assert.match(html, /Live individual score/);
+  assert.match(html, /\.submission\[data-value="W"\]/);
+  assert.match(html, /\.submission\[data-value="L"\]/);
+  assert.match(html, /window\.fdRackLedgerState/);
+  assert.match(html, /state\.ownSide === 'A'/);
+  assert.match(html, /state\.ownSide === 'B'/);
+  assert.ok(html.includes('ownConfirmed:Boolean(comparison?.own_confirmed_at)'));
+  assert.match(html, /if \(canUndo\) undoButton\.disabled = false/);
+  assert.match(html, /Undo last rack & unlock/);
+  assert.match(html, /This also unlocks your submitted score/);
+  assert.match(html, /new MutationObserver\(syncEnhancements\)/);
+  assert.match(html, /document\.querySelector\('\[data-edit-current\]'\)\?\.remove\(\)/);
+  assert.match(html, /document\.querySelector\('\.quick-actions \.details'\)\?\.remove\(\)/);
+});
+
+// Keep this contract page-local: mobile WebKit must not repaint selected score controls as white.
+test('opening selection and next action have unmistakable mobile states', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('.opening-option[aria-pressed="true"]:active'));
+  assert.ok(html.includes('.opening-option[aria-pressed="true"]:focus'));
+  assert.ok(html.includes('-webkit-text-fill-color:#fff!important'));
+  assert.ok(html.includes('-webkit-appearance:none'));
+  assert.ok(html.includes("content:'✓'"));
+  assert.ok(html.includes('.add-rack.primary:not(:disabled)'));
+  assert.ok(html.includes('.add-rack.primary:disabled'));
+  assert.ok(html.includes('background:#e7ebe8!important'));
+  assert.ok(html.includes('color:#5f6762!important'));
+});
+
+test('next-rack scoring stays open and tells the captain to choose a winner', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('function bindRackScoringFlow()'));
+  assert.ok(html.includes("winnerPicker.dataset.open !== 'true'"));
+  assert.ok(html.includes('event.stopImmediatePropagation()'));
+  assert.ok(html.includes("'Choose Rack ' + nextRack + ' winner below'"));
+  assert.ok(html.includes("'Score Rack ' + nextRack"));
+  assert.ok(html.includes("addRack.setAttribute('aria-expanded', String(open))"));
+  assert.ok(html.includes("winnerPicker.scrollIntoView({ block: 'nearest', behavior: 'smooth' })"));
+});
+
+test('pre-terminal confirmation is disabled with recovery guidance', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes("confirmButton.textContent = 'Keep scoring · race not finished'"));
+  assert.ok(html.includes('confirmButton.disabled = true'));
+  assert.ok(html.includes("Reach one player's race target before confirming."));
+  assert.ok(html.includes("confirmButton.textContent = 'Submit my completed side'"));
+  assert.ok(html.includes("confirmButton.textContent = 'Confirm this side'"));
+});
+
+test('race completion respects unequal targets on either side', () => {
+  assert.deepEqual(
+    resolveRaceCompletion({ scoreA: 4, scoreB: 3, targetA: 4, targetB: 7 }),
+    { winnerSide: 'A', scoreA: 4, scoreB: 3 },
+  );
+  assert.deepEqual(
+    resolveRaceCompletion({ scoreA: 3, scoreB: 7, targetA: 4, targetB: 7 }),
+    { winnerSide: 'B', scoreA: 3, scoreB: 7 },
+  );
+  assert.equal(resolveRaceCompletion({ scoreA: 3, scoreB: 6, targetA: 4, targetB: 7 }), null);
+});
+
+test('finished races replace Add Rack with a clear completion state', () => {
+  const html = renderScorecardPage();
+
+  assert.match(html, /function syncRaceCompletion\(\)/);
+  assert.match(html, /addRack\.hidden = true/);
+  assert.match(html, /winnerPicker\.hidden = true/);
+  assert.match(html, /Race complete — /);
+  assert.match(html, /Review the racks, then confirm your side below/);
+  assert.match(html, /Waiting for the other side to agree/);
+  assert.match(html, /edit a rack or undo the last rack/);
+  assert.match(html, /dataset\.raceComplete = 'true'/);
+});
+
+test('terminal mismatches stop overrun scoring and keep completed-side submission available', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('opponentRackCount:opponentRacks.length'));
+  assert.ok(html.includes('historiesMatch:Boolean(comparison?.histories_match)'));
+  assert.ok(html.includes('mismatchRackNumber:Number(comparison?.mismatch_rack_number||0)||null'));
+  assert.match(html, /terminalMismatch = Boolean\(completion\) && !state\.historiesMatch/);
+  assert.match(html, /button\.dataset\.terminalTrailing = String\(trailing\)/);
+  assert.match(html, /Rack .* is after your completed race/);
+  assert.match(html, /Submit my completed side/);
+  assert.match(html, /You do not need to answer more racks/);
+  assert.match(html, /Opponent has trailing racks/);
+  assert.match(html, /Your side already reached the race target\. Submit it now/);
+  assert.match(html, /nextRack\.after\(completionActions\)/);
+  assert.match(html, /terminal-mismatch-active/);
+});
+
+test('disputed target-reaching submissions are not presented as final race results', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes("completeCard.dataset.disputed = String(terminalMismatch && !state.locked)"));
+  assert.ok(html.includes('Your submitted score shows '));
+  assert.ok(html.includes('score disputed'));
+  assert.ok(html.includes('this is not the final match result'));
+  assert.ok(html.includes('Score disputed — fix rack'));
+  assert.ok(html.includes('First disagreement: rack'));
+  assert.ok(html.includes('Race complete — '));
+  assert.ok(html.includes(' wins '));
+});
+
+test('terminal mismatch actions and reconciliation clear the fixed mobile dock', () => {
+  const html = renderScorecardPage();
+
+  assert.ok(html.includes('padding-bottom:calc(184px + env(safe-area-inset-bottom))!important'));
+  assert.ok(html.includes('margin-bottom:96px'));
+  assert.ok(html.includes('scroll-margin-bottom:calc(112px + env(safe-area-inset-bottom))'));
+  assert.ok(html.includes('[data-reconcile]'));
+});
+
+test('terminal mismatch enhancement does not create an endless ledger mutation loop', () => {
+  const html = renderScorecardPage();
+
+  assert.match(html, /if \(button\.textContent !== '—'\) button\.textContent = '—'/);
+  assert.match(html, /else if \(button\.textContent !== '\+'\)/);
+  assert.match(html, /if \(button\.getAttribute\('aria-label'\) !== label\)/);
+});
+
+// This contract intentionally stays page-local so shared sandbox reconciliation remains unchanged.

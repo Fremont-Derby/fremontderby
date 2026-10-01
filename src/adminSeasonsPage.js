@@ -1,3 +1,4 @@
+import { normalizeStatusTone } from './statusTone.js';
 export function renderAdminSeasonsPage() {
   return `<!doctype html>
 <html lang="en">
@@ -7,7 +8,7 @@ export function renderAdminSeasonsPage() {
   <title>Seasons · Fremont Derby Admin</title>
   <style>
     :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#0d1110;color:#f3f6f4;--panel:#17201c;--line:#31443a;--muted:#a9b8b0;--green:#45b77c;--gold:#e2bd58}
-    *{box-sizing:border-box}body{margin:0;background:#0d1110}button,input,select,a{font:inherit}
+    *{box-sizing:border-box}input,select,textarea{font-size:16px}button,a,summary,.letter-index button,.action{touch-action:manipulation;-webkit-tap-highlight-color:transparent}body{margin:0;background:#0d1110}button,input,select,a{font:inherit}
     button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #9ee5bd;outline-offset:2px}
     .app{width:min(920px,100%);margin:auto;padding:18px}
     .head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
@@ -19,7 +20,7 @@ export function renderAdminSeasonsPage() {
     input,select{min-height:48px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#0b100e;color:#fff}
     .directory-tools{display:grid;gap:8px;margin-top:12px}
     .results-meta{min-height:22px;color:var(--muted);font-weight:700}
-    .letter-index{display:flex;flex-wrap:wrap;gap:6px}
+    .letter-index{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:56px;z-index:5;padding:8px 0;background:#0d1110}
     .letter-index button{min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#0b100e;color:#dff0e6;font-weight:900;cursor:pointer}
     .letter-index button[aria-pressed="true"]{background:var(--green);color:#07140d;border-color:var(--green)}
     .status{margin:12px 0 0;min-height:24px;color:var(--muted)}
@@ -33,7 +34,7 @@ export function renderAdminSeasonsPage() {
     .actions a{min-height:44px;display:inline-flex;align-items:center;padding:0 14px;border-radius:10px;border:1px solid var(--line);color:#dff0e6;text-decoration:none;font-weight:800}
     .actions a.primary{background:var(--green);color:#07140d;border-color:var(--green)}
     .empty{padding:18px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
-  </style>
+  @media(max-width:720px){.app{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
   <main class="app">
@@ -43,7 +44,15 @@ export function renderAdminSeasonsPage() {
         <h1>Seasons</h1>
         <div class="muted">Find a season by name or status, then jump into setup or season teams without hunting through dropdowns.</div>
       </div>
-      <a class="back" href="/admin">Admin home</a>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <a class="back" href="/admin">Admin home</a>
+        <a class="back" href="/admin/season-teams">Season teams</a>
+        <a class="back" href="/season-setup">League setup</a>
+        <a class="back" href="/admin/players">Players</a>
+        <a class="back" href="/admin/audit">Audit</a>
+        <a class="back" href="/scorecard">Score</a>
+        <a class="back" href="/schedule">Schedule</a>
+      </div>
     </header>
     <section class="panel">
       <div class="tools">
@@ -53,11 +62,13 @@ export function renderAdminSeasonsPage() {
         <label for="admin-season-status">Status
           <select id="admin-season-status" data-status-filter aria-label="Filter by season status">
             <option value="">All statuses</option>
+            <option value="draft">Draft</option>
             <option value="registration">Registration</option>
             <option value="active">Active</option>
             <option value="playoffs">Playoffs</option>
             <option value="complete">Complete</option>
-            <option value="new">New</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="archived">Archived</option>
           </select>
         </label>
       </div>
@@ -65,7 +76,7 @@ export function renderAdminSeasonsPage() {
         <div class="results-meta" role="status" aria-live="polite" data-results-meta></div>
         <div class="letter-index" data-letter-index role="group" aria-label="Jump to season name letter"></div>
       </div>
-      <div class="status" role="status" aria-live="polite" data-status>Checking admin access…</div>
+      <div class="status" role="status" aria-live="polite" data-status></div>
       <div class="list" id="admin-season-list" data-list hidden></div>
       <div class="empty" data-empty hidden>No seasons match that search.</div>
     </section>
@@ -84,9 +95,23 @@ export function renderAdminSeasonsPage() {
     function token() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
-    function setStatus(message, tone = '') {
+    const normalizeStatusTone = ${normalizeStatusTone.toString()};
+    function setStatus(message, tone = '', opts = {}) {
+      if (window.fdSetStatus) {
+        if (!message) {
+          window.fdSetStatus(statusEl, '', '', opts);
+          statusEl.removeAttribute('data-tone');
+          return;
+        }
+        window.fdSetStatus(statusEl, message, tone ? normalizeStatusTone(tone) : '', opts);
+        return;
+      }
       statusEl.textContent = message;
-      statusEl.dataset.tone = tone;
+      if (!message) {
+        statusEl.removeAttribute('data-tone');
+        return;
+      }
+      statusEl.dataset.tone = tone ? normalizeStatusTone(tone) : '';
     }
     function normalize(value) {
       return String(value || '').trim().toLowerCase();
@@ -117,7 +142,7 @@ export function renderAdminSeasonsPage() {
     }
     function filteredSeasons() {
       const query = normalize(searchEl.value);
-      const tokens = query.split(/\\s+/).filter(Boolean);
+          const tokens = query.trim().split(new RegExp('[ \\t\\n\\r]+')).filter(Boolean);
       const status = statusFilterEl.value;
       let list = sortedSeasons(seasons).filter((season) => {
         if (status && String(season.status || '') !== status) return false;
@@ -160,6 +185,22 @@ export function renderAdminSeasonsPage() {
       listEl.replaceChildren();
       emptyEl.hidden = shown.length > 0;
       listEl.hidden = shown.length === 0;
+      emptyEl.textContent = seasons.length
+        ? ((query || activeLetter || statusFilterEl.value)
+          ? ('No seasons match '
+            + (query ? ('“' + searchEl.value.trim() + '”') : '')
+            + (query && (activeLetter || statusFilterEl.value) ? ' ' : '')
+            + (activeLetter ? ('letter ' + activeLetter) : '')
+            + (activeLetter && statusFilterEl.value ? ' · ' : '')
+            + (statusFilterEl.value ? ('status ' + statusFilterEl.value) : '')
+            + '.')
+          : 'No seasons match that search.')
+        : 'No seasons loaded yet.';
+      if (seasons.length && shown.length === 0 && (query || activeLetter || statusFilterEl.value)) {
+        setStatus(emptyEl.textContent, 'error');
+      } else if (seasons.length && shown.length && (query || activeLetter || statusFilterEl.value)) {
+        setStatus(shown.length + ' match' + (shown.length === 1 ? '' : 'es') + '.', 'ok');
+      }
       for (const season of shown) {
         const card = document.createElement('article');
         card.className = 'card';
@@ -194,8 +235,9 @@ export function renderAdminSeasonsPage() {
         listEl.append(card);
       }
     }
-    async function load() {
-      setStatus('Loading seasons…');
+    async function load(opts={}) {
+      const quiet = Boolean(opts && opts.quiet);
+      if (!quiet) setStatus('Loading seasons…');
       const body = await api('/api/admin/seasons');
       seasons = Array.isArray(body.seasons) ? body.seasons : [];
       render();
@@ -215,8 +257,9 @@ export function renderAdminSeasonsPage() {
       emptyEl.hidden = true;
       resultsMetaEl.textContent = '';
       letterIndexEl.replaceChildren();
-      setStatus(error.message, 'error');
+      setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
     });
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

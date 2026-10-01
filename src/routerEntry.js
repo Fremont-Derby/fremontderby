@@ -1,12 +1,18 @@
+import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
+import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
+import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
+import { renderAdminSupportPage } from './adminSupportPage.js';
+import { routeAdminSupport } from './adminSupportHttp.js';
+import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
+import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
-import { repairAdminPlayersScript } from './adminPlayersScriptRepair.js';
-import { repairAvailabilityScript } from './availabilityScriptRepair.js';
-import { repairAdminSeasonTeamsScript } from './adminSeasonTeamsScriptRepair.js';
-import { repairScorecardScript } from './scorecardScriptRepair.js';
-import { repairLineupScript } from './lineupScriptRepair.js';
+import { applyProductScriptRepairs } from './productScriptRepairs.js';
+import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
+import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
+import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
@@ -30,16 +36,17 @@ import { injectPublicSurfaceTheme } from './publicSurfaceTheme.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
+import { routeSeasonLifecycle } from './seasonLifecycleHttp.js';
+import { enhanceSeasonLifecycle } from './seasonLifecycleEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
+import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
 import { renderPlayoffsPage } from './playoffsPage.js';
 import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
-import { renderFreeAgentsPage } from './freeAgentsPage.js';
-import { renderPracticePage } from './practicePage.js';
 import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
 import { routeDruEnvironmentHealth } from './druEnvironmentHttp.js';
 import { routeDruKidLeagueSeed } from './druKidLeagueSeedHttp.js';
@@ -169,89 +176,170 @@ async function finalizeBrowserResponse(response, pathname, env = {}) {
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
-  const adminScriptRepaired = pathname === '/admin/players'
-    ? new Response(repairAdminPlayersScript(await adminThemed.clone().text()), {
-        status: adminThemed.status,
-        statusText: adminThemed.statusText,
-        headers: adminThemed.headers,
-      })
-    : adminThemed;
-  const availabilityRepaired = pathname === '/availability'
-    ? new Response(repairAvailabilityScript(await adminScriptRepaired.clone().text()), {
-        status: adminScriptRepaired.status,
-        statusText: adminScriptRepaired.statusText,
-        headers: adminScriptRepaired.headers,
-      })
-    : adminScriptRepaired;
-  const seasonTeamsRepaired = pathname === '/admin/season-teams'
-    ? new Response(repairAdminSeasonTeamsScript(await availabilityRepaired.clone().text()), {
-        status: availabilityRepaired.status,
-        statusText: availabilityRepaired.statusText,
-        headers: availabilityRepaired.headers,
-      })
-    : availabilityRepaired;
-  const scorecardRepaired = pathname === '/scorecard'
-    ? new Response(repairScorecardScript(await seasonTeamsRepaired.clone().text()), {
-        status: seasonTeamsRepaired.status,
-        statusText: seasonTeamsRepaired.statusText,
-        headers: seasonTeamsRepaired.headers,
-      })
-    : seasonTeamsRepaired;
-  const lineupRepaired = pathname === '/lineup'
-    ? new Response(repairLineupScript(await scorecardRepaired.clone().text()), {
-        status: scorecardRepaired.status,
-        statusText: scorecardRepaired.statusText,
-        headers: scorecardRepaired.headers,
-      })
-    : scorecardRepaired;
-  const accessible = await injectAccessibilityLayer(lineupRepaired);
+  const productRepaired = await applyProductScriptRepairs(adminThemed, pathname);
+  const accessible = await injectAccessibilityLayer(productRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
-  const persistent = await injectPersistentAuthSession(mobileMenuAccessible);
-  return injectDruAgentSession(persistent, env);
+  const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
+  const withSeo = await injectPublicSeo(withAuth, pathname);
+  return injectDruAgentSession(withSeo, env);
 }
 
+// Replaced at deploy time by scripts/stamp-deploy-identity.mjs
+const STAMPED_DEPLOY_GIT_SHA = null;
+const STAMPED_DEPLOY_AT = null;
+
 export default {
+  async scheduled(event, env, ctx) {
+    const summary = await runHourlyProbes(env);
+    const notify = await maybeCommentProbeFailures(env, summary);
+    console.log(JSON.stringify({ type: 'hourly_probe', ok: summary.ok, failures: summary.failures.length, notify }));
+    return summary;
+  },
+
   async fetch(request, env, ctx) {
+    // HEAD = same as GET without a body (CDN/monitors). Avoid recursive this.fetch.
+    if (request.method === 'HEAD') {
+      const getRequest = new Request(request.url, {
+        method: 'GET',
+        headers: request.headers,
+        redirect: request.redirect,
+      });
+      const response = await this.fetch(getRequest, env, ctx);
+      return new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
     const url = new URL(request.url);
-    const pathname = stripTrailingSlash(url.pathname);
-    const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
+    // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
+    if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
+      const meta = env.CF_VERSION_METADATA || {};
+      const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
+      const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
+      const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
+      const fromId = typeof meta.id === 'string' && meta.id.trim() && meta.id !== 'local' ? meta.id.trim() : null;
+      const tag = fromMeta || fromEnv || fromStamp || fromId || null;
+      let versionTagSource = null;
+      if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
+      else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
+      else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
+      else if (tag && fromId === tag) versionTagSource = 'cf_version_id';
+      if (url.pathname === '/health') {
+        return Response.json(
+          {
+            ok: true,
+            service: 'fremontderby',
+            version: meta.id || 'local',
+            versionTag: tag,
+            deployedAt: meta.timestamp || STAMPED_DEPLOY_AT || null,
+            versionTagSource,
+          },
+          { headers: { 'cache-control': 'no-store' } },
+        );
+      }
+      // environment: still use legacy readiness via fallthrough
+    }
+    if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
+      const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
+      const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
+      const envName = String(env?.ENVIRONMENT || 'production').toLowerCase();
+      // Production always requires a configured key; other lanes require key when set.
+      if (envName === 'production' || expected) {
+        if (!expected || key !== expected) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+      }
+      const summary = await runHourlyProbes(env);
+      if (url.searchParams.get('notify') === '1') {
+        summary.notify = await maybeCommentProbeFailures(env, summary);
+      }
+      return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
+    }
 
     const environmentResponse = routeDruEnvironmentHealth(request, env);
-    if (environmentResponse) {
-      return page(environmentResponse);
-    }
+    if (environmentResponse) return finalizeBrowserResponse(environmentResponse, url.pathname);
 
     const kidLeagueSeedResponse = await routeDruKidLeagueSeed(request, env);
-    if (kidLeagueSeedResponse) {
-      return page(kidLeagueSeedResponse);
-    }
+    if (kidLeagueSeedResponse) return finalizeBrowserResponse(kidLeagueSeedResponse, url.pathname);
 
     if (isRetiredTradePath(url.pathname)) {
-      return page(retiredTradeResponse(request, url.pathname));
+      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
     }
 
     const emptyReadResponse = routeDruPublicEmptyReads(request, env);
-    if (emptyReadResponse) {
-      return page(emptyReadResponse);
+    if (emptyReadResponse) return finalizeBrowserResponse(emptyReadResponse, url.pathname);
+
+    // Trades restored — paths served by legacy router / index handlers.
+
+    const aliased = aliasRedirect(request, url);
+    if (aliased) return aliased;
+
+    if (url.pathname === '/free-agents' || url.pathname === '/practice') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      const html = url.pathname === '/practice' ? renderPracticePage() : renderFreeAgentsPage();
+      return finalizeBrowserResponse(new Response(html, {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
     }
 
-    if (request.method === 'GET') {
-      const render = PUBLIC_HTML_PAGES.get(pathname);
-      if (render) {
-        return page(htmlPageResponse(render, pathname), pathname);
-      }
-      const rewritten = LIVE_PAGE_REWRITES.get(pathname);
-      if (rewritten) {
-        const next = new URL(request.url);
-        next.pathname = rewritten;
-        request = new Request(next, request);
-        url.pathname = rewritten;
+    if (url.pathname === '/admin/player-stats') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+    if (url.pathname === '/admin/rating-health') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+    if (url.pathname === '/admin/support') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+    if (url.pathname === '/admin/player-contact') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+
+    {
+      const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
+      if (recompute && request.method === 'POST') {
+        return finalizeBrowserResponse(
+          await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
+          url.pathname,
+        );
       }
     }
 
-    if (url.pathname === '/api/admin/players' && request.method === 'POST') return page(await handleCreateAdminPlayerRequest(request, env));
+    {
+      const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
+      if (ratingObs && request.method === 'POST') {
+        return finalizeBrowserResponse(
+          await handleRecordRatingObservationRequest(request, env, decodeURIComponent(ratingObs[1])),
+          url.pathname,
+        );
+      }
+    }
+
+    if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
+      return finalizeBrowserResponse(
+        await handleChallongePublishDryRunRequest(request, env),
+        url.pathname,
+      );
+    }
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
-    if (playerClaimResponse) return page(playerClaimResponse);
+    if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
+    const adminSupportResponse = await routeAdminSupport(request, env);
+    if (adminSupportResponse) return finalizeBrowserResponse(adminSupportResponse, url.pathname);
     const playerContactResponse = await routePlayerContact(request, env);
     if (playerContactResponse) return page(playerContactResponse);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
@@ -259,18 +347,22 @@ export default {
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
     if (dateAvailabilityResponse) return page(dateAvailabilityResponse);
     const seasonCloseResponse = await routeSeasonClose(request, env);
-    if (seasonCloseResponse) return page(seasonCloseResponse);
+    if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
+    const seasonLifecycleResponse = await routeSeasonLifecycle(request, env);
+    if (seasonLifecycleResponse) return finalizeBrowserResponse(seasonLifecycleResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);
     if (adminGatewayResponse) return page(adminGatewayResponse);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
     if (adminSeasonTeamsResponse) return page(adminSeasonTeamsResponse);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
-    if (url.pathname === '/schedule' && request.method === 'GET') return page(await enhanceScheduleAvailability(reconciled));
-    if (url.pathname === '/teams' && request.method === 'GET') return page(await enhanceTeamsCanonicalActions(reconciled));
+    if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
+    if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
+    if (url.pathname === '/admin/seasons' && request.method === 'GET') return finalizeBrowserResponse(await enhanceSeasonLifecycle(reconciled), url.pathname);
     if (url.pathname === '/season-setup' && request.method === 'GET') {
       const withPublishReadiness = await enhanceSeasonPublishReadiness(reconciled);
-      return page(await enhanceSeasonClose(withPublishReadiness));
+      const withClose = await enhanceSeasonClose(withPublishReadiness);
+      return finalizeBrowserResponse(await enhanceSeasonLifecycle(withClose), url.pathname);
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);

@@ -6,7 +6,7 @@ import { renderAdminSeasonTeamsPage } from '../src/adminSeasonTeamsPage.js';
 test('season teams gives prepared/current teams an explicit phone-safe Add players action', () => {
   const html = renderAdminSeasonTeamsPage();
 
-  assert.match(html, /rosterLink\.textContent='Add players'/);
+  assert.match(html, /rosterLink\.textContent=needsDepth\?/);
   assert.match(html, /\/admin\/players\?season=/);
   assert.match(html, /'&team='/);
   assert.match(html, /function isTargetSeasonTeam\(row\)/);

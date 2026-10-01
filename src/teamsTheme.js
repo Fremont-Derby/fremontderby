@@ -1,7 +1,7 @@
 export const teamsThemeStyles = `
   /* Teams keeps its dense roster/recruiting layout, but not the legacy dark page theme. */
   main.app:has([data-night-hub]) {
-    color-scheme: light;
+    color-scheme: light !important;
     color: var(--fd-text, #171b19) !important;
   }
   main.app:has([data-night-hub]) .topbar,

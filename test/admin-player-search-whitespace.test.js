@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { renderAdminPlayersPage } from '../src/adminPlayersPage.js';
+
+test('admin players search splits on whitespace without relying on \\s in a template literal', () => {
+  const source = readFileSync(new URL('../src/adminPlayersPage.js', import.meta.url), 'utf8');
+  // Source lives inside a template literal, so backslashes are doubled.
+  assert.match(source, /split\(new RegExp\('\[ \\\\t\\\\n\\\\r\]\+'\)\)/);
+  // Browser-facing HTML has the evaluated single-escaped form.
+  const html = renderAdminPlayersPage();
+  assert.doesNotMatch(html, /split\(\/s\+\/\)/);
+  assert.match(html, /split\(new RegExp\('\[ \\t\\n\\r\]\+'\)\)/);
+  assert.match(html, /No players match/);
+});
+
+test('admin players Find submit reports zero matches in status text', () => {
+  const html = renderAdminPlayersPage();
+  assert.match(html, /No players match/);
+  assert.match(html, /setStatus\('No players match/);
+});
