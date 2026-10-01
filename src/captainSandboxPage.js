@@ -55,7 +55,7 @@ export function renderCaptainSandboxPage() {
     @media(max-width:700px){.orientation-grid,.orientation-actions{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.orientation-player,.request,.practice-availability .orientation-player{grid-template-columns:1fr}.readiness{align-items:flex-start;flex-direction:column}.choice{width:100%}.choice button{flex:1}}
   </style>
 </head>
-<body><main class="app">\n    <p data-add-player="roster">The captain can add a new player without adding the same player twice.</p>
+<body><main class="app">\n    <p data-captain-transfer="successor">Captaincy moves only to an eligible teammate, and the old captain loses manage controls.</p>
     <p class="note" data-tester-path>The tester path is the mission, not the raw preview.</p>
     <section data-captain-handoff><h2>Hand off captain</h2><p data-handoff-current></p><label>Eligible teammate <select data-successor></select></label><button type="button" data-confirm-handoff>Confirm handoff</button><p data-handoff-result></p></section>
   <div class="sandbox">SEASON 1 WAR GAMES · FICTIONAL PRACTICE ONLY · NEVER AFFECTS LEAGUE RECORDS</div>
