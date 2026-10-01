@@ -89,7 +89,7 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
   }
   const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'return=minimal' };
   for (const team of teams) {
-    const captain = memberships.find((row) => row.team_id === team.id && row.role === 'captain');
+    const captain = membershipsWithCaptains.find((row) => row.team_id === team.id && row.role === 'captain');
     await fetchWithSchema(`${base}/rest/v1/season_team_slots`, {
       method: 'POST',
       headers: privateHeaders,
