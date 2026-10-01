@@ -14,3 +14,4 @@ test('team review does not call get on a plain object', () => {
   assert.doesNotThrow(() => reviewDecisionWord({ decision: 'approve' }));
   assert.notEqual(reviewDecisionWord({ decision: 'approve' }), undefined);
 });
+
