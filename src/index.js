@@ -580,10 +580,9 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: ({approved:'approve', approve:'approve', deferred:'defer', defer:'defer', rejected:'reject', declined:'reject', reject:'reject'}).get(
-          String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase(),
-          normalizeApproveDecline(body) ?? body.decision,
-        ),
+        decision: ({approved:'approve', approve:'approve', deferred:'defer', defer:'defer', rejected:'reject', declined:'reject', reject:'reject'})[
+          String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase()
+        ] ?? (normalizeApproveDecline(body) ?? body.decision),
         reason: body.reason ?? body.note,
       },
       repository,
