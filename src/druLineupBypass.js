@@ -55,6 +55,14 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const inserted = await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
     method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
   });
-  await waiveDruTeamPayments(env, { seasonId, teamId, playerIds }, fetchImpl);
+  const roster = [...new Set(playerIds.filter(Boolean))];
+  if (roster.length) {
+    await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
+      method: 'POST',
+      headers: { ...headers, prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(roster.map((playerId) => ({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'player' }))),
+    });
+  }
+  await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return inserted.ok;
 }
