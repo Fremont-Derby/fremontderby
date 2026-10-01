@@ -1,23 +1,25 @@
-export function eligibilityReason(player) {
-  if (player?.eligible) return { eligible: true, text: 'Eligible.' };
-  return { eligible: false, text: player?.reason || 'Missing a requirement.' };
+export function nightStep(step) {
+  return { ok: Boolean(step?.name && step?.owner), text: step?.name ? `${step.name} is owned by ${step.owner}.` : 'Name the night step.' };
 }
-
-export function sessionLane(cookie) {
-  const lane = String(cookie || '').split(';').find((part) => part.trim().startsWith('lane='));
-  return { lane: lane ? lane.split('=')[1] : null, text: lane ? `Session is for ${lane.split('=')[1]}.` : 'No lane on this session.' };
+export function triageLabel(defect) {
+  return { ok: Boolean(defect?.label && defect?.issue), text: defect?.issue ? `Linked to #${defect.issue}.` : 'Link the defect.' };
 }
-
-export function leagueNightSteps() {
-  return ['Open the season', 'Check the teams', 'Score the match', 'Close the night'];
+export function personaMission(mission) {
+  return { ready: Boolean(mission?.persona && mission?.task), text: mission?.task || 'Name the task.' };
 }
-
-export function manualScore(match, score) {
-  if (!match || !score) return null;
-  return { match, score, text: `Entered ${score} by hand for later re-entry.` };
+export function bootstrapStatus(response) {
+  return { ok: response?.status !== 405, text: response?.status === 405 ? 'Season bootstrap was blocked.' : 'Bootstrap answered.' };
 }
-
-export function restoreBackup(backup) {
-  if (!backup?.lane || backup.lane === 'prod') return { restored: false, text: 'Production backups are not restored here.' };
-  return { restored: true, text: `Restored the ${backup.lane} backup.` };
+export function nextAction(page) {
+  const actions = page?.actions || [];
+  return { ok: actions.length <= 1, text: actions[0] || 'No action.' };
+}
+export function onionLayer(layer) {
+  return { ok: Number.isInteger(layer?.gate) && layer.gate >= 0, text: layer?.gate === 0 ? 'Start at the baseline.' : `Gate ${layer?.gate}.` };
+}
+export function supportInfra(row) {
+  return { ok: Boolean(row?.evidence && row?.persona), text: 'Support needs evidence and a persona.' };
+}
+export function serviceDown(message) {
+  return { retry: true, text: message || 'The league service is unavailable. Try again.' };
 }
