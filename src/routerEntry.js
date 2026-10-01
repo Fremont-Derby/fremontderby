@@ -213,6 +213,7 @@ export default {
     }
 
     const url = new URL(request.url);
+    const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
