@@ -44,6 +44,18 @@ export function practiceRosterPlan(teams = [], memberships = [], players = [], m
   return { adds, seasonPlayers };
 }
 
+
+export function practiceSlotPlan(teams = [], memberships = [], limit = 8) {
+  const slots = [];
+  for (const team of teams) {
+    if (slots.length >= limit) break;
+    const captain = memberships.find((row) => row.team_id === team.id && row.role === 'captain');
+    if (!captain) continue;
+    slots.push({ team_id: team.id, captain_player_id: captain.player_id });
+  }
+  return slots;
+}
+
 export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId) return { prepared: false };
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
@@ -92,15 +104,14 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
     });
   }
   const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'return=minimal' };
-  for (const team of teams) {
-    const captain = membershipsWithCaptains.find((row) => row.team_id === team.id && row.role === 'captain');
+  for (const slot of practiceSlotPlan(teams, membershipsWithCaptains)) {
     await fetchWithSchema(`${base}/rest/v1/season_team_slots`, {
       method: 'POST',
       headers: privateHeaders,
       body: JSON.stringify({
         season_id: seasonId,
-        team_id: team.id,
-        assigned_captain_player_id: captain?.player_id || null,
+        team_id: slot.team_id,
+        assigned_captain_player_id: slot.captain_player_id,
         status: 'confirmed',
         last_action_reason: 'DRU practice night',
         resolved_at: new Date().toISOString(),
