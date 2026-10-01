@@ -309,7 +309,7 @@ const liveScorecardEnhancementsScript = `
           if (confirmButton && !state.locked && !state.ownConfirmed) {
             confirmButton.disabled = true;
             confirmButton.textContent = 'Keep scoring · race not finished';
-            confirmButton.title = 'Reach one player\'s race target before confirming.';
+            confirmButton.title = "Reach one player's race target before confirming.";
           }
           syncRackScoringPrompt();
           return;
