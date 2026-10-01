@@ -4,6 +4,10 @@ function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
 }
 
+export function practiceDepthFloor(seasonMinimum) {
+  return Math.max(4, Number(seasonMinimum || 3));
+}
+
 export function practiceRosterPlan(teams = [], memberships = [], players = [], minimum = 3) {
   const used = new Set(memberships.map((row) => row.player_id));
   const spare = players.filter((player) => player.id && !used.has(player.id));
@@ -35,7 +39,7 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
   if (!seasonResponse.ok) return { prepared: false };
   const season = (await seasonResponse.json())?.[0];
   if (!season || season.name === 'Season 1') return { prepared: false };
-  const minimum = Number(season.minimum_committed_roster || 3);
+  const minimum = practiceDepthFloor(season.minimum_committed_roster);
   const [teamsResponse, membershipResponse, playerResponse] = await Promise.all([
     fetchWithSchema(`${base}/rest/v1/teams?season_id=eq.${seasonId}&select=id,name`, { headers }),
     fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&ends_at=is.null&select=team_id,player_id,role`, { headers }),
