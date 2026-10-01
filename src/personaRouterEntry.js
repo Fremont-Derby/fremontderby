@@ -16,11 +16,19 @@ import { enhanceQaResultUx } from './qaResultUxEnhancer.js';
 import { injectTestPersonaControls } from './testPersonaEnhancer.js';
 import { routeTestPersona } from './testPersonaHttp.js';
 import { testPersonaEnabled } from './testPersona.js';
+import { routeJflPublicSurfaces } from './jflPublicSurfacePages.js';
 
 export default {
   ...baseRouterEntry,
 
   async fetch(request, env, ctx) {
+    const publicSurface = routeJflPublicSurfaces(request);
+    if (publicSurface?.rewrite) {
+      request = publicSurface.rewrite;
+    } else if (publicSurface) {
+      return publicSurface;
+    }
+
     const qaEvidenceResponse = await routeQaEvidence(request, env);
     if (qaEvidenceResponse) return qaEvidenceResponse;
 
