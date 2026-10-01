@@ -1,4 +1,5 @@
 import { adminSeasonTeamsHttpHandlers } from './adminSeasonTeamsHttp.js';
+import { routeDruReviewWord } from './druReviewWordHttp.js';
 import { renderAdminSeasonTeamsPage } from './adminSeasonTeamsPage.js';
 import { preferActiveSeasonDefault } from './gammaSeasonTeamsActiveDefault.js';
 import { decorateHtmlWithShell } from './appShell.js';
@@ -17,6 +18,8 @@ function methodNotAllowed() {
 }
 
 export async function routeAdminSeasonTeams(request, env) {
+  const druReviewResponse = await routeDruReviewWord(request, env);
+  if (druReviewResponse) return druReviewResponse;
   const url = new URL(request.url);
   if (url.pathname === '/admin/season-teams') {
     if (request.method !== 'GET') return methodNotAllowed();

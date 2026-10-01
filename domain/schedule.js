@@ -7,7 +7,7 @@
  */
 export function generateRoundRobin(teamIds) {
   if (!Array.isArray(teamIds) || teamIds.length !== 8) {
-    throw new Error('Season 1 schedule requires exactly 8 teams');
+    throw new Error('A schedule needs exactly 8 teams');
   }
   if (new Set(teamIds).size !== teamIds.length) {
     throw new Error('Team identifiers must be unique');

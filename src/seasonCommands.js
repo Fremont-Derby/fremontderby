@@ -22,6 +22,7 @@ function activeTeamIds(teams) {
 
   const teamIds = teams
     .filter((team) => team.active !== false)
+    .filter((team) => Number(team.activeRosterCount ?? team.active_roster_count ?? 1) > 0)
     .map((team) => team.id);
 
   if (teamIds.some((teamId) => !teamId)) {
