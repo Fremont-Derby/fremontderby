@@ -57,11 +57,12 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   });
   const roster = [...new Set(playerIds.filter(Boolean))];
   if (roster.length) {
-    await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
+    const saved = await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
       method: 'POST',
-      headers: { ...headers, prefer: 'resolution=merge-duplicates,return=minimal' },
+      headers: { ...headers, prefer: 'return=minimal' },
       body: JSON.stringify(roster.map((playerId) => ({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'player' }))),
     });
+    if (!saved.ok) throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return inserted.ok;
