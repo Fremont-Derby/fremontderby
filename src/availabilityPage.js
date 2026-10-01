@@ -11,6 +11,7 @@ export function renderAvailabilityPage() {
 </head>
 <body>
   <main class="app">
+    <p class="note" data-gate-followup>A gate fails on a scoring or roster break. A wording miss can pass with a follow-up.</p>
     <header class="topbar"><div class="brand"><span class="mark">A</span><span>League night check-in</span></div><div class="status" data-status role="status" aria-live="polite">Loading check-in…</div></header>
     <nav data-shortcuts aria-label="League night shortcuts" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px">
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Schedule</a>

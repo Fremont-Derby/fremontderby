@@ -167,6 +167,7 @@ export function renderDemoSeasonPage() {
 </head>
 <body>
   <main>
+    <p class="note" data-plain-launch>A mission starts with the task in plain language, not fixture data.</p>
     <div class="demo-banner">TRY A LEAGUE NIGHT · FICTIONAL PLAYERS AND RESULTS · CANNOT AFFECT THE REAL SEASON</div>
     <section class="hero">
       <div class="kicker">War Games practice</div>

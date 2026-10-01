@@ -20,6 +20,7 @@ export function renderLineupPage() {
 </head>
 <body>
   <main class="app">
+    <p class="note" data-lineup-next>A stuck tester gets the next lineup action.</p>
     <header class="topbar"><div class="brand"><span class="mark">L</span><span>Fremont Derby Lineup</span></div><div class="status" data-status role="status" aria-live="polite"><span data-status-copy>Loading…</span><button class="status-close" data-status-close type="button" aria-label="Dismiss message" hidden>Close</button></div></header>
     <nav aria-label="League night" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px">
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>

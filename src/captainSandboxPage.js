@@ -1,3 +1,17 @@
+export function eligibleSuccessors(members, captainId) {
+  return members.filter(member => member.id !== captainId && member.status !== 'unavailable' && member.agreed === true);
+}
+
+export function transferCaptain(members, captainId, successorId) {
+  const successor = eligibleSuccessors(members, captainId).find(member => member.id === successorId);
+  if (!successor) return { ok: false, reason: 'Choose an eligible teammate who agreed.' };
+  return {
+    ok: true,
+    captainId: successor.id,
+    formerCaptainId: captainId,
+    members: members.map(member => ({ ...member, type: member.id === successor.id ? 'captain' : member.id === captainId ? 'roster' : member.type })),
+  };
+}
 import {
   sharedBlindLineupControllerSource,
   sharedBlindLineupMarkup,
@@ -41,6 +55,8 @@ export function renderCaptainSandboxPage() {
   </style>
 </head>
 <body><main class="app">
+    <p class="note" data-tester-path>The tester path is the mission, not the raw preview.</p>
+    <section data-captain-handoff><h2>Hand off captain</h2><p data-handoff-current></p><label>Eligible teammate <select data-successor></select></label><button type="button" data-confirm-handoff>Confirm handoff</button><p data-handoff-result></p></section>
   <div class="sandbox">SEASON 1 WAR GAMES · FICTIONAL PRACTICE ONLY · NEVER AFFECTS LEAGUE RECORDS</div>
   <header class="top"><div><h1>Captain dry run</h1><div class="muted">Build a team, make roster decisions, submit a lineup, then stress the roster midseason.</div></div><span style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><a href="/demo">War Games home</a><a href="/teams">Live Teams</a><a href="/players">Live Players</a><a href="/schedule">Live Schedule</a><a href="/scorecard">Live Score</a><a href="/lineup">Live Lineup</a><a href="/availability">Live Check in</a><a href="/standings">Live Standings</a></span></header>
   <section class="orientation-panel quick"><strong>No sign-in or setup required.</strong><div class="muted">Everything on this screen is fictional, throwaway practice stored only in this browser tab. The lineup step below is the same component captains use in production.</div></section>
