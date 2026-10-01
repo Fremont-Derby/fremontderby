@@ -31,7 +31,6 @@ import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
 import { enhancePublicSeasonSelection } from './publicSeasonSelectionEnhancer.js';
-import { enhanceDruNextMatch } from './druNextMatchEnhance.js';
 import { injectPublicSurfaceTheme } from './publicSurfaceTheme.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
@@ -47,7 +46,6 @@ import { injectTeamsTheme } from './teamsTheme.js';
 import { renderPlayoffsPage } from './playoffsPage.js';
 import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
-import { routeDruPublicEmptyReads } from './druPublicEmptyReadsHttp.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -165,8 +163,7 @@ async function reconcileProductShell(response, pathname) {
 let requestEnv = {};
 async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
-  const withNextMatch = await enhanceDruNextMatch(seasonSelected, pathname);
-  const designed = await injectSiteStyles(withNextMatch);
+  const designed = await injectSiteStyles(seasonSelected);
   const publicThemed = await injectPublicSurfaceTheme(designed, pathname);
   const playerThemed = await injectPlayerSurfaceTheme(publicThemed, pathname);
   const standingsThemed = await injectStandingsTheme(playerThemed, pathname);
@@ -258,9 +255,6 @@ export default {
       }
       return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
     }
-
-    const emptyReadResponse = routeDruPublicEmptyReads(request, env);
-    if (emptyReadResponse) return finalizeBrowserResponse(emptyReadResponse, url.pathname);
 
     // Trades restored — paths served by legacy router / index handlers.
 

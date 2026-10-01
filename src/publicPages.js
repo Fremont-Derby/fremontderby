@@ -50,10 +50,6 @@ export function renderIntroPage() {
     <p><strong>No team? No problem.</strong> Free agents and subs can still play, build their individual record, and compete for cash.</p>
     <div class="actions">
       <a class="button primary" href="/profile">Join / sign in</a>
-      <a class="button" href="/schedule">Schedule</a>
-      <a class="button" href="/standings">Standings</a>
-      <a class="button" href="/teams">Teams</a>
-      <a class="button" href="/players">Players</a>
       <a class="button demo" href="/demo">Test drive the app</a>
       <a class="button" href="/availability">Check in</a>
       <a class="button" href="/scorecard">Score</a>
@@ -142,12 +138,6 @@ export function renderRulesPage() {
       <li>League admins handle exceptions and disputes when players cannot resolve them themselves.</li>
     </ul>
 
-    <div class="actions">
-      <a class="button" href="/schedule">Schedule</a>
-      <a class="button" href="/standings">Standings</a>
-      <a class="button" href="/teams">Teams</a>
-      <a class="button" href="/players">Players</a>
-    </div>
     <p class="note">Season-specific settings such as dates, deadlines, race-chart values, and payout amounts are published separately and may change between seasons.</p>
 
 

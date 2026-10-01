@@ -52,24 +52,11 @@ export function assertLaneDeployContext(lane, env = process.env, spawn = spawnSy
   return config;
 }
 
-/**
- * Prefer GITHUB_SHA (Actions) then WORKERS_CI_COMMIT_SHA (Cloudflare Workers Builds).
- * Only accept a full 40-char hex SHA so we never stamp a partial or non-git value.
- */
-export function resolveDeploySha(env = process.env) {
-  const candidates = [env.GITHUB_SHA, env.WORKERS_CI_COMMIT_SHA];
-  for (const raw of candidates) {
-    const sha = String(raw || '').trim();
-    if (/^[0-9a-f]{40}$/i.test(sha)) return sha;
-  }
-  return '';
-}
-
 export function laneDeployArgs(lane, env = process.env, spawn = spawnSync) {
   const config = assertLaneDeployContext(lane, env, spawn);
   const args = ['wrangler', 'deploy', '--env', config.environment];
-  const sha = resolveDeploySha(env);
-  if (sha) {
+  const sha = String(env.GITHUB_SHA || '').trim();
+  if (/^[0-9a-f]{40}$/i.test(sha)) {
     args.push('--tag', sha, '--message', `git:${sha}`);
   }
   return args;
