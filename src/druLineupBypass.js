@@ -4,6 +4,15 @@ function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
 }
 
+async function postMembership(fetchImpl, base, key, row) {
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  return fetchImpl(`${base}/rest/v1/team_memberships`, {
+    method: 'POST',
+    headers: { ...headers, 'content-profile': 'public', 'accept-profile': 'public' },
+    body: JSON.stringify(row),
+  });
+}
+
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId || !teamId) return 0;
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
@@ -55,14 +64,9 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const inserted = await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
     method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
   });
-  for (const rosterPlayerId of [...new Set(playerIds.filter(Boolean))]) {
-    if (rosterPlayerId === playerId) continue;
-    await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${rosterPlayerId}&ends_at=is.null`, {
-      method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-    });
-    await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
-      method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: 'player' }),
-    });
+  const named = [...new Set([playerId, ...playerIds.filter(Boolean)])];
+  for (const rosterPlayerId of named) {
+    await postMembership(fetchImpl, base, key, { season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: rosterPlayerId === playerId ? 'captain' : 'player' });
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds }, fetchImpl);
   return inserted.ok;
