@@ -118,7 +118,7 @@ export function renderChatPage(env = {}) {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-message-channels="three">Messages are direct, team, or general.</p>
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
       <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
