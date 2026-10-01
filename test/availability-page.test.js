@@ -30,7 +30,8 @@ test('check-in hides past weeks before rendering or loading saved state', () => 
   assert.match(html, /const today=localDateKey\(\)/);
   assert.match(html, /if\(context\.scheduledOn&&context\.scheduledOn<today\)continue/);
   assert.match(html, /const groups=groupContexts\(contexts\)/);
-  assert.match(html, /Promise\.all\(groups\.map/);
+  assert.match(html, /for\(const group of groups\).*await loadSavedAvailability\(group,card\)/);
+  assert.doesNotMatch(html, /Promise\.all\(groups\.map/);
 });
 
 test('one-tap check-in restores saved date availability with fixed color bands', () => {
@@ -121,6 +122,7 @@ test('availability first render and recovery states are task-oriented', () => {
   assert.match(html, /Open Profile and sign in again/);
   assert.match(html, /Check-in could not be loaded/);
   assert.match(html, /Try again/);
+  assert.match(html, /action===loadPage\|\|recovery\.hidden===false/);
   assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
 });
 

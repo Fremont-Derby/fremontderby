@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import vm from 'node:vm';
 
 import { renderAvailabilityPage } from '../src/availabilityPage.js';
 
@@ -42,8 +43,29 @@ test('check-in presentation is readable pastel with no neon blur or glow treatme
 
 test('saved responses load for every grouped upcoming date and saves update only the tapped row', () => {
   const html = renderAvailabilityPage();
-  assert.match(html, /Promise\.all\(groups\.map/);
+  assert.match(html, /for\(const group of groups\).*await loadSavedAvailability\(group,card\)/);
+  assert.doesNotMatch(html, /Promise\.all\(groups\.map/);
   assert.match(html, /loadSavedAvailability\(group,card\)/);
   assert.match(html, /saveAvailability\(group,card,item\.value\)/);
   assert.match(html, /availability\/me\?date=/);
+});
+
+test('Check-in sanitizes Cloudflare HTML while preserving JSON responses', async () => {
+  const html = renderAvailabilityPage();
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script);
+  const parseJson = vm.runInNewContext(
+    script.slice(0, script.indexOf('function clearRecoveryActions')) + 'parseJson',
+    { document: { querySelector: () => ({}) } },
+  );
+  const response = (status, body) => ({ status, text: async () => body });
+
+  assert.equal((await parseJson(response(200, '{"availability":{"availability_status":"available"}}')))
+    .availability.availability_status, 'available');
+  assert.equal((await parseJson(response(429, '<html>private edge details</html>'))).error,
+    'Check-in is temporarily busy. Wait a moment and try again.');
+  assert.equal((await parseJson(response(403, '<html>Error 1015 private edge details</html>'))).error,
+    'Check-in is temporarily busy. Wait a moment and try again.');
+  assert.equal((await parseJson(response(503, '<html>private upstream details</html>'))).error,
+    'Check-in service is temporarily unavailable. Try again.');
 });
