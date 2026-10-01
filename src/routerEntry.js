@@ -40,6 +40,7 @@ import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.
 import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
+import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
 
@@ -105,7 +106,8 @@ async function finalizeBrowserResponse(response, pathname) {
   const accessible = await injectAccessibilityLayer(productRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
-  return injectPublicSeo(withAuth, pathname);
+  const withFeedback = await injectTesterFeedback(withAuth);
+  return injectPublicSeo(withFeedback, pathname);
 }
 
 // Replaced at deploy time by scripts/stamp-deploy-identity.mjs
