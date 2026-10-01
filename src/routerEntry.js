@@ -212,6 +212,10 @@ export default {
 
     requestEnv = env;
     const url = new URL(request.url);
+    if (url.pathname === '/sandbox/war-game' && String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { renderDruWarGamePage } = await import('./druWarGamePage.js');
+      return new Response(renderDruWarGamePage(), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
     const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
