@@ -21,6 +21,7 @@ export function renderAdminSupportPage() {
 </head>
 <body>
   <main>
+    <p class="note" data-recovery-note>A recovery note says what league data can be restored and how recent that copy is.</p>
     <p class="muted"><a href="/admin">Admin</a> · Support</p>
     <h1>Admin Support</h1>
     <p class="muted">Shared queue for player help. Mark items <strong>Replied</strong> or <strong>Handled</strong>. Private phone numbers stay on Player contact.</p>
