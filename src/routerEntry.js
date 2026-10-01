@@ -259,10 +259,6 @@ export default {
       return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
     }
 
-    if (isRetiredTradePath(url.pathname)) {
-      return page(retiredTradeResponse(request, url.pathname));
-    }
-
     const environmentResponse = routeDruEnvironmentHealth(request, env);
     if (environmentResponse) return finalizeBrowserResponse(environmentResponse, url.pathname);
 

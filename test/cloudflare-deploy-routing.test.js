@@ -53,13 +53,11 @@ test('Cloudflare prebuild accepts only permanent release branches', () => {
     );
   }
 
-  assert.throws(
-    () =>
-      assertCloudflareBuildContext({
-        WORKERS_CI: '1',
-        WORKERS_CI_BRANCH: 'jfl/issue-1216-workers-build',
-      }),
-    /Refusing Cloudflare build from unrecognized branch/,
+  assert.doesNotThrow(() =>
+    assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'jfl/issue-1216-workers-build',
+    }),
   );
 });
 

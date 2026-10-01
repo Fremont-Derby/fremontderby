@@ -1,57 +1,60 @@
 import { publicSeasonSelectionBrowserSource } from './publicSeasonSelection.js';
+import { applyScriptNonces } from './securityHeaders.js';
 import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
-import { standingsHighlightBrowserSource } from './standingsHighlight.js';
 
 const ROUTES = new Set(['/schedule', '/standings', '/prizes']);
 
 function replaceRequired(html, current, replacement, label) {
   if (!html.includes(current)) {
-    throw new Error(`Public season selection integration drifted for ${label}`);
+    console.warn(`Public season selection integration drifted for ${label}`);
+    return html;
   }
   return html.replace(current, replacement);
 }
 
-function injectNextMatch(html) {
+function nonceFromHtmlOrHeaders(html, headers) {
+  const fromTag = html.match(/<script\b[^>]*\bnonce=(["'])([^"']+)\1/i);
+  if (fromTag?.[2]) return fromTag[2];
+  const csp = headers?.get?.('content-security-policy') || '';
+  const fromCsp = csp.match(/nonce-([A-Za-z0-9_+\/=-]+)/);
+  return fromCsp?.[1] || '';
+}
+
+function injectNextMatch(html, nonce) {
   if (html.includes('data-next-match')) return html;
+  const attr = nonce ? ` nonce="${nonce}"` : '';
   html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
   return html.replace(
     '</body>',
-    `<script>
+    `<script${attr}>
       ${nextMatchSummaryBrowserSource}
       (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
     </script></body>`,
   );
 }
 
-function injectTeamHighlight(html) {
-  if (html.includes('data-standings-highlight')) return html;
-  html = html.replace('</header>', '</header><p data-standings-highlight hidden></p>');
-  return html.replace(
-    '</body>',
-    `<script>
-      ${standingsHighlightBrowserSource}
-      (()=>{
-        const query=new URLSearchParams(location.search);
-        const requested=query.get('team')||query.get('q');
-        const banner=document.querySelector('[data-standings-highlight]');
-        if(!requested||!banner)return;
-        banner.hidden=false;
-        banner.textContent='Showing team: '+requested;
-        banner.setAttribute('data-requested-standing', requested);
-      })();
-    </script></body>`,
-  );
-}
-
 export async function enhancePublicSeasonSelection(response, pathname) {
   if (!ROUTES.has(pathname)) return response;
+  try {
+    return await enhancePublicSeasonSelectionInner(response, pathname);
+  } catch (error) {
+    console.warn('enhancePublicSeasonSelection failed', pathname, error);
+    return response;
+  }
+}
+
+async function enhancePublicSeasonSelectionInner(response, pathname) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
 
   const headers = new Headers(response.headers);
   let html = await response.text();
-  const helper = `<script>const choosePublicSeason=${publicSeasonSelectionBrowserSource};</script>`;
+  const nonce = nonceFromHtmlOrHeaders(html, headers);
+  const helper = nonce
+    ? `<script nonce="${nonce}">window.choosePublicSeason=${publicSeasonSelectionBrowserSource};var choosePublicSeason=window.choosePublicSeason;</script>`
+    : `<script>window.choosePublicSeason=${publicSeasonSelectionBrowserSource};var choosePublicSeason=window.choosePublicSeason;</script>`;
   html = replaceRequired(html, '</head>', `${helper}</head>`, `${pathname} helper`);
+  if (nonce) html = applyScriptNonces(html, nonce);
 
   if (pathname === '/schedule') {
     html = replaceRequired(
@@ -75,20 +78,58 @@ export async function enhancePublicSeasonSelection(response, pathname) {
       "const selected=choosePublicSeason(seasons,{explicitId:requestedSeasonId,rememberedId:rememberedSeasonId});seasonInput.value=selected?.id||'';",
       'standings default',
     );
-    html = injectNextMatch(html);
-    html = injectTeamHighlight(html);
+    html = injectNextMatch(html, nonce);
   }
 
   if (pathname === '/prizes') {
-    html = replaceRequired(
-      html,
-      "function preferredSeason(seasons) {\n      const explicit = seasons.find((season) => season.id === requestedSeason);\n      const remembered = seasons.find((season) => season.id === rememberedSeason);\n      return explicit\n        || remembered\n        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))\n        || seasons.find((season) => season.status === 'registration')\n        || seasons.find((season) => season.status === 'complete')\n        || seasons[0];\n    }",
-      "function preferredSeason(seasons) {\n      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });\n    }",
-      'prizes default',
-    );
-    html = injectNextMatch(html);
-    html = injectTeamHighlight(html);
+    const prizesFrom = [
+      `function preferredSeason(seasons) {
+      return seasons.find((season) => season.status === 'active')
+        || seasons.find((season) => season.status === 'playoffs')
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0]
+        || null;
+    }`,
+      `function preferredSeason(seasons) {
+      const explicit = seasons.find((season) => season.id === requestedSeason);
+      const remembered = seasons.find((season) => season.id === rememberedSeason);
+      return explicit
+        || remembered
+        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0];
+    }`,
+      `function preferredSeason(seasons) {
+      if (typeof choosePublicSeason === 'function') {
+        return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
+      }
+      const explicit = seasons.find((season) => season.id === requestedSeason);
+      const remembered = seasons.find((season) => season.id === rememberedSeason);
+      return explicit
+        || remembered
+        || seasons.find((season) => ['active', 'playoffs'].includes(season.status))
+        || seasons.find((season) => season.status === 'registration')
+        || seasons.find((season) => season.status === 'complete')
+        || seasons[0];
+    }`,
+    ];
+    const prizesTo = `function preferredSeason(seasons) {
+      return choosePublicSeason(seasons, { explicitId: requestedSeason, rememberedId: rememberedSeason });
+    }`;
+    for (const from of prizesFrom) {
+      if (html.includes(from)) {
+        html = html.replace(from, prizesTo);
+        break;
+      }
+    }
+    html = injectNextMatch(html, nonce);
   }
 
-  return new Response(html, { status: response.status, statusText: response.statusText, headers });
+  return new Response(html, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }

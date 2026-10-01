@@ -20,3 +20,5 @@ export function teamContextSummary(team = {}) {
     hasSeason: Boolean(season),
   };
 }
+
+export const teamContextHighlightBrowserSource = `${isRequestedTeam.toString()}\n${teamContextSummary.toString()}`;
