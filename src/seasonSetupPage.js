@@ -12,6 +12,7 @@ export function renderSeasonSetupPage() {
 </head>
 <body>
   <main class="app">
+    <p data-fill="2256">Card 2256 is in the DRU lane.</p>
     <p class="note" data-release-risk>Before a gate, the risk note is the pages changed, the data touched, and whether league night can still be scored.</p>
     <header class="topbar"><div class="brand"><span class="mark">S</span><span>Fremont Derby Season Setup</span></div><div class="status" data-status>Ready</div></header>
     <nav aria-label="Admin destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px">
