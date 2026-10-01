@@ -1988,7 +1988,7 @@ export async function handleFinalizePlayerMatchRequest(
       const seasonId = seasonResponse?.ok ? (await seasonResponse.json())?.[0]?.season_id : null;
       const ids = [playerRow?.player_a_id, playerRow?.player_b_id].filter(Boolean);
       const paymentResponse = seasonId && ids.length
-        ? await fetchWithSchema(`${base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=in.(${ids.join(',')})&select=player_id,status`, { headers })
+        ? await fetchWithSchema(`${base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=in.(${ids.join(',')})&select=player_id,status`, { headers: privateHeaders })
         : null;
       const payments = paymentResponse?.ok ? await paymentResponse.json() : [];
       const paid = practiceScoreAllowed(ids.map((id) => (payments || []).find((row) => row.player_id === id)));
