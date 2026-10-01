@@ -38,6 +38,7 @@ export function renderAdminSeasonsPage() {
 </head>
 <body>
   <main class="app">
+    <p class="note" data-smoke-gate>A human gate waits on a real data check, not a shell-only page load.</p>
     <header class="head">
       <div>
         <div class="muted">Admin · League Management</div>
