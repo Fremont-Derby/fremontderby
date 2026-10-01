@@ -1979,6 +1979,20 @@ export async function handleFinalizePlayerMatchRequest(
         lineupB: team && hasPlayers(team.team_b_id),
       });
       if (!gate.ok) return jsonResponse({ error: gate.text }, 409);
+      const { practiceScoreAllowed } = await import('./scoreFlow.js');
+      const playersResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=player_a_id,player_b_id,team_match_id`, { headers });
+      const playerRow = playersResponse.ok ? (await playersResponse.json())?.[0] : null;
+      const seasonResponse = teamMatchId
+        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=season_id`, { headers })
+        : null;
+      const seasonId = seasonResponse?.ok ? (await seasonResponse.json())?.[0]?.season_id : null;
+      const ids = [playerRow?.player_a_id, playerRow?.player_b_id].filter(Boolean);
+      const paymentResponse = seasonId && ids.length
+        ? await fetchWithSchema(`${base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=in.(${ids.join(',')})&select=player_id,status`, { headers })
+        : null;
+      const payments = paymentResponse?.ok ? await paymentResponse.json() : [];
+      const paid = practiceScoreAllowed(ids.map((id) => (payments || []).find((row) => row.player_id === id)));
+      if (!paid.ok) return jsonResponse({ error: paid.text }, 409);
     }
     const repository = createScoringRepository(env, { fetch: fetchImpl });
     const match = await finalizePlayerMatchCommand(
