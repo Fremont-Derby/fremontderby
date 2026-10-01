@@ -1955,11 +1955,12 @@ export async function handleFinalizePlayerMatchRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
       const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
-      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const { privatePostgrestProfile, withSupabaseSchema } = await import('./supabaseSchema.js');
       const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
       const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
       const key = env.SUPABASE_SERVICE_ROLE_KEY;
       const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' };
+      const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
       const playerResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=team_match_id`, { headers });
       const teamMatchId = playerResponse.ok ? (await playerResponse.json())?.[0]?.team_match_id : null;
       const teamResponse = teamMatchId
@@ -1967,7 +1968,7 @@ export async function handleFinalizePlayerMatchRequest(
         : null;
       const team = teamResponse?.ok ? (await teamResponse.json())?.[0] : null;
       const lineupResponse = team
-        ? await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,player_id`, { headers })
+        ? await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,player_id`, { headers: privateHeaders })
         : null;
       const lineups = lineupResponse?.ok ? await lineupResponse.json() : [];
       const hasPlayers = (teamId) => (lineups || []).some((row) => row.team_id === teamId && row.player_id);
