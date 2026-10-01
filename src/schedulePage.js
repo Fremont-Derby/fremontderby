@@ -14,7 +14,7 @@ export function renderSchedulePage() {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-next-match="briefing">Your next match names the opponent, the time, and the table.</p>
     <section data-standings-context><h2>My standings</h2><p>The next match names the team, the rank, and the matches played.</p></section>
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Schedule</span></div><div class="status" data-status>Loading…</div></header>
     <nav data-schedule-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
