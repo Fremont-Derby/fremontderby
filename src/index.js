@@ -1964,7 +1964,7 @@ export async function handleFinalizePlayerMatchRequest(
       const playerResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=team_match_id`, { headers });
       const teamMatchId = playerResponse.ok ? (await playerResponse.json())?.[0]?.team_match_id : null;
       const teamResponse = teamMatchId
-        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=team_a_id,team_b_id`, { headers })
+        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=team_a_id,team_b_id,season_id`, { headers })
         : null;
       const team = teamResponse?.ok ? (await teamResponse.json())?.[0] : null;
       const lineupResponse = team
@@ -2002,6 +2002,10 @@ export async function handleFinalizePlayerMatchRequest(
       },
       repository,
     );
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && team?.season_id) {
+      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+      await closeFinishedDruTeamMatches(env, { seasonId: team.season_id }, fetchImpl);
+    }
 
     return jsonResponse({ match });
   } catch (error) {

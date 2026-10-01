@@ -1,10 +1,10 @@
-import { withSupabaseSchema } from './supabaseSchema.js';
+import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
 
 function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
 }
 
-export function teamWinnerId(match, playerMatches) {
+export function teamWinnerId(match, playerMatches, forfeits = []) {
   if (!match?.team_a_id || !match?.team_b_id) return null;
   const rows = (playerMatches || []).filter((row) => ['finalized', 'corrected'].includes(row.status) && ['A', 'B'].includes(row.winner_side));
   if (!rows.length || rows.length !== (playerMatches || []).length) return null;
@@ -13,6 +13,10 @@ export function teamWinnerId(match, playerMatches) {
   for (const row of rows) {
     if (row.winner_side === 'A') a += 1;
     if (row.winner_side === 'B') b += 1;
+  }
+  for (const slot of forfeits) {
+    if (slot.team_id === match.team_a_id) b += 1;
+    if (slot.team_id === match.team_b_id) a += 1;
   }
   if (a === b) return null;
   return a > b ? match.team_a_id : match.team_b_id;
@@ -38,7 +42,10 @@ export async function closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl =
     const playersResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?team_match_id=eq.${match.id}&select=status,winner_side`, { headers });
     if (!playersResponse.ok) continue;
     const playerMatches = await playersResponse.json();
-    const winner = teamWinnerId(match, playerMatches);
+    const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
+    const slotResponse = await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?team_id=in.(${match.team_a_id},${match.team_b_id})&player_id=is.null&select=team_id`, { headers: privateHeaders });
+    const forfeits = slotResponse.ok ? await slotResponse.json() : [];
+    const winner = teamWinnerId(match, playerMatches, forfeits);
     if (!winner) continue;
     const saved = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${match.id}`, {
       method: 'PATCH',
