@@ -18,7 +18,7 @@ function normalizeLineupSlots(slots) {
     throw new Error('Lineup cannot contain more than three slots');
   }
 
-  return slots.map((slot, index) => {
+  const normalized = slots.map((slot, index) => {
     if (!slot || Array.isArray(slot) || typeof slot !== 'object') {
       throw new Error('Each lineup slot must be an object');
     }
@@ -33,6 +33,11 @@ function normalizeLineupSlots(slots) {
       playerId: slot.playerId ?? null,
     };
   });
+  const numbers = new Set(normalized.map((slot) => slot.slotNumber));
+  if (numbers.size !== 3 || ![1, 2, 3].every((number) => numbers.has(number))) {
+    throw new Error('Lineup must include slots 1, 2, and 3. Mark a blank slot Forfeit.');
+  }
+  return normalized;
 }
 
 export async function submitTeamLineupCommand(
