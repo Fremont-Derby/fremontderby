@@ -21,5 +21,5 @@ test('test evidence is red, green, or refactor', () => {
 });
 
 test('human validation uses a known step', () => {
-  assert.equal(humanValidation('do the task'), 'do the task');
+  assert.equal(humanValidation('do the task').text, 'do the task');
 });
