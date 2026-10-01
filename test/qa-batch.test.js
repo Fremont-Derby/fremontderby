@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { campaignBase, clientError, cluster, datasetRow, launchCopy, missionBatch, missionChrome, previewPath, qaExplorer, replaceDrive, replayCompare, runnerDone, scorecardDrive, shadowRank, surveyApi, surveySummary, telemetryContract, triageLabel, validationLoop } from '../src/qaBatch.js';
+
+test('a survey summary counts rows', () => { assert.equal(surveySummary([1, 2]).count, 2); });
+test('survey results are admin only', () => { assert.equal(surveyApi({ role: 'player' }).ok, false); });
+test('a batch is six missions', () => { assert.equal(missionBatch([1, 2, 3, 4, 5, 6]).ok, true); });
+test('the runner needs a phone frame', () => { assert.equal(runnerDone({ complete: true, mobile: true }).ok, true); });
+test('abort stays visible', () => { assert.equal(missionChrome({ task: 'Go', abort: true }).ok, true); });
+test('test drive is not the path', () => { assert.equal(replaceDrive('test-drive').ok, false); });
+test('preview is not the tester path', () => { assert.equal(previewPath('preview').ok, false); });
+test('launch copy has a start', () => { assert.equal(launchCopy(''), 'Start the mission.'); });
+test('a campaign needs a persona and a mission', () => { assert.equal(campaignBase({ persona: 'player' }).ok, false); });
+test('a campaign has a name', () => { assert.equal(campaignBuild({}).text, 'Name the campaign.'); });
+test('a replay names a change', () => { assert.equal(replayCompare('a', 'b').changed, true); });
+test('shadow rank stays in shadow', () => { assert.equal(shadowRank(1).shadow, true); });
+test('a dataset row cannot hold a secret', () => { assert.equal(datasetRow({ id: 'r', secret: true }).ok, false); });
+test('a cluster counts items', () => { assert.match(cluster([1, 2]).text, /2 items/); });
+test('triage links a defect', () => { assert.equal(triageLabel({ label: 'bug' }).ok, false); });
+test('the explorer names the run', () => { assert.match(qaExplorer({ id: 'q1' }).text, /q1/); });
+test('a client error stays public', () => { assert.equal(clientError({ public: 'Try again.' }).text, 'Try again.'); });
+test('telemetry cannot hold a phone', () => { assert.equal(telemetryContract({ name: 'tap', phone: '1' }).ok, false); });
+test('the scorecard drive names the step', () => { assert.match(scorecardDrive('').text, /rack/); });
+test('a validation loop names the round', () => { assert.equal(validationLoop('').text, 'Name the round.'); });
