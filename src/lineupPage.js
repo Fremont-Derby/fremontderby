@@ -19,7 +19,7 @@ export function renderLineupPage() {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-lineup-lock="both">The lineup stays editable until both captains submit, and an edit unsubmits it.</p>
     <section data-mission-path><h2>Tester path</h2><p>Test Drive and fixture preview send the tester to the mission, not the raw preview.</p></section>
     <p class="note" data-what-next>If you are not sure what to do, set your lineup, then open the scorecard for the match.</p>
     <header class="topbar"><div class="brand"><span class="mark">L</span><span>Fremont Derby Lineup</span></div><div class="status" data-status role="status" aria-live="polite"><span data-status-copy>Loading…</span><button class="status-close" data-status-close type="button" aria-label="Dismiss message" hidden>Close</button></div></header>
