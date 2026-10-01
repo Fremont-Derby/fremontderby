@@ -9,7 +9,7 @@ function hasPlayers(slots) {
 }
 
 async function seatWhereLockReads(fetchImpl, base, key, row) {
-  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal', 'content-profile': 'public', 'accept-profile': 'public' };
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
   const now = new Date().toISOString();
   await fetchImpl(`${base}/rest/v1/team_memberships?season_id=eq.${row.season_id}&player_id=eq.${row.player_id}&ends_at=is.null`, {
     method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
