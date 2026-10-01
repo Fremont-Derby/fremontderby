@@ -38,3 +38,11 @@ export function scoreNeedsBothTeams(match) {
   if (!match?.lineupA || !match?.lineupB) return { ok: false, text: 'Both teams need a lineup before scoring.' };
   return { ok: true, text: 'Both teams are set.' };
 }
+
+export function practiceScoreAllowed(payments) {
+  const rows = payments || [];
+  if (!rows.length || rows.some((row) => !row || row.status === 'unpaid' || !row.status)) {
+    return { ok: false, text: 'Record payment or a practice waiver before scoring.' };
+  }
+  return { ok: true, text: 'Payment is on file.' };
+}
