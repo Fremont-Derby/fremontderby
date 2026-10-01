@@ -1552,6 +1552,10 @@ export async function handleSubmitTeamLineupRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { ensureDruActorCanLockLineup } = await import('./druLineupBypass.js');
+      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId }, fetchImpl);
+    }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
       {
