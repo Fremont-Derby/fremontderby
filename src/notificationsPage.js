@@ -75,8 +75,15 @@ export function renderNotificationsPage() {
       body.className='muted';
       body.textContent=item.body;
       card.append(title,body);
+      const stale=/resolved|finalized|archived|closed/i.test((item.title||'')+' '+(item.body||''));
+      if(stale){
+        const done=document.createElement('div');
+        done.className='muted';
+        done.textContent='Already handled';
+        card.append(done);
+      }
       const href=resolveHref(item);
-      if(href){
+      if(href && !stale){
         const link=document.createElement('a');
         link.href=href;
         link.textContent=href==='/schedule' && !item.href ? 'Open schedule' : 'Open';
