@@ -214,6 +214,10 @@ export async function handlePublishScheduleRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
+      await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
+    }
 
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
     const result = await publishSeasonScheduleCommand(
