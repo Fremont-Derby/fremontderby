@@ -18,3 +18,4 @@ test('the scorecard searches the requested season before Season 1', () => {
   assert.doesNotMatch(html, /status==='active'/);
   assert.match(html, /data-dru-season/);
 });
+
