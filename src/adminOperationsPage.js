@@ -17,6 +17,7 @@ export function renderAdminOperationsPage(env = {}) {
 </head>
 <body>
   <main class="app">
+    <section data-night-checklist><h2>League night</h2><label><input type="checkbox" data-night-step="roster" /> Roster is set</label><label><input type="checkbox" data-night-step="schedule" /> Schedule is posted</label><label><input type="checkbox" data-night-step="scores" /> Scores can be entered</label><p data-night-ready>Night is not ready.</p></section>
     <p class="note" data-night-budget>On league night, a page should answer in a few seconds. If it does not, retry once, then record the workflow.</p>
     <header class="head"><div><h1>League operations</h1><div class="sub" data-season>Is Fremont Derby running smoothly?</div></div><div class="head-actions"><nav class="admin-links" aria-label="Admin tools"><a href="/admin">Admin home</a><a href="/admin/players">Players</a><a href="/admin/seasons">Seasons</a><a href="/admin/season-teams">Season teams</a><a href="/season-setup">Season setup</a><a href="/messages/moderation">Moderation</a><a href="/admin/audit">Audit log</a><a href="/scorecard">Score</a><a href="/schedule">Schedule</a><a href="/standings">Standings</a></nav><div class="status" role="status" aria-live="polite" data-status>Loading league health…</div><button data-refresh type="button">Refresh</button></div></header>
     <section class="metrics" aria-label="League summary">
