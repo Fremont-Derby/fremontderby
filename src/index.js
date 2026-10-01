@@ -248,9 +248,15 @@ export async function handleCreateSeasonSetupRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    let reservedSeasonId = null;
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { reserveFreshDruSeason } = await import('./druFreshSeason.js');
+      reservedSeasonId = await reserveFreshDruSeason(env, { seasonName: body.seasonName ?? body.season_name }, fetchImpl);
+    }
     const setup = await saveSeasonSetupCommand(
       {
         actorUserId: actor.id,
+        seasonId: reservedSeasonId,
         seasonName: body.seasonName ?? body.season_name,
         leagueNight: body.leagueNight ?? body.league_night,
         firstRoundDate: body.firstRoundDate ?? body.first_round_date,
@@ -582,7 +588,9 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: normalizeApproveDecline(body) ?? body.decision,
+        decision: ({approved:'approve', approve:'approve', deferred:'defer', defer:'defer', rejected:'reject', declined:'reject', reject:'reject'})[
+          String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase()
+        ] ?? (normalizeApproveDecline(body) ?? body.decision),
         reason: body.reason ?? body.note,
       },
       repository,
