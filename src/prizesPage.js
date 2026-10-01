@@ -282,6 +282,11 @@ async function readJson(response) {
   </main>
 
   <script>
+    async function readJson(response) {
+      const text = await response.text();
+      if (!text || text.trim().startsWith('<')) throw new Error('Prizes did not return data. Try again.');
+      return JSON.parse(text);
+    }
     const form = document.querySelector('[data-form]');
     const seasonInput = document.querySelector('[data-season-id]');
     const loadButton = document.querySelector('[data-load]');
