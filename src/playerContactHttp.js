@@ -3,6 +3,7 @@ import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   getAdminPlayerContactCommand,
   getOwnPlayerContactCommand,
+  setAdminPlayerContactCommand,
   setOwnPlayerContactCommand,
 } from './playerContactCommands.js';
 import { createPlayerContactRepository } from './playerContactRepository.js';
@@ -53,13 +54,23 @@ export async function routePlayerContact(
   const adminMatch = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/contact$/);
   if (!own && !adminMatch) return null;
   if (own && !['GET', 'PUT'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
-  if (adminMatch && request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+  if (adminMatch && !['GET', 'PUT'].includes(request.method)) return json({ error: 'Method not allowed' }, 405);
 
   const reveal = url.searchParams.get('reveal') === '1' || url.searchParams.get('reveal') === 'true';
 
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createPlayerContactRepository(env, { fetch: fetchImpl });
+
+    if (adminMatch && request.method === 'PUT') {
+      const body = await request.json().catch(() => ({}));
+      const contact = await setAdminPlayerContactCommand({
+        actorUserId: actor.id,
+        playerId: decodeURIComponent(adminMatch[1]),
+        phone: body.phone ?? null,
+      }, repository);
+      return json({ contact: normalizeContact(contact, { reveal: false }) });
+    }
 
     if (adminMatch) {
       const contact = await getAdminPlayerContactCommand({
