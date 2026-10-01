@@ -4,6 +4,15 @@ function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
 }
 
+async function seatWhereLockReads(fetchImpl, base, key, row) {
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  return fetchImpl(`${base}/rest/v1/team_memberships`, {
+    method: 'POST',
+    headers: { ...headers, 'content-profile': 'public', 'accept-profile': 'public' },
+    body: JSON.stringify(row),
+  });
+}
+
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId || !teamId) return 0;
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
@@ -55,14 +64,17 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const inserted = await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
     method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
   });
-  const roster = [...new Set(playerIds.filter(Boolean))];
-  if (roster.length) {
-    const saved = await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
-      method: 'POST',
-      headers: { ...headers, prefer: 'return=minimal' },
-      body: JSON.stringify(roster.map((playerId) => ({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'player' }))),
+  const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
+  for (const rosterPlayerId of roster) {
+    const saved = await seatWhereLockReads(fetchImpl, base, key, {
+      season_id: seasonId,
+      team_id: teamId,
+      player_id: rosterPlayerId,
+      role: rosterPlayerId === playerId ? 'captain' : 'player',
     });
-    if (!saved.ok) throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
+    if (!saved.ok && saved.status !== 409) {
+      throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
+    }
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return inserted.ok;
