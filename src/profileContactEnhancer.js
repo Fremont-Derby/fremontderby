@@ -1,5 +1,3 @@
-import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
-
 const style = `<style data-profile-contact-style>
   .profile-contact{display:grid;gap:12px;padding:12px}
   .profile-contact-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
@@ -156,23 +154,12 @@ const script = `<script data-profile-contact-script>
 })();
 </script>`;
 
-const nextMatchScript = `<script data-profile-next-match>
-  ${nextMatchSummaryBrowserSource}
-  (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
-</script>`;
-
 export async function enhanceProfileContact(response) {
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
   let html = await response.text();
-  if (!html.includes('data-next-match')) {
-    html = html.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
-    html = html.replace('</body>', `${nextMatchScript}</body>`);
-  }
   const target = '<section class="stack" data-authenticated-content hidden>';
-  if (!html.includes(target) || html.includes('data-profile-contact')) {
-    return new Response(html, response);
-  }
+  if (!html.includes(target) || html.includes('data-profile-contact')) return new Response(html, response);
   html = html
     .replace('</head>', `${style}</head>`)
     .replace(target, `${target}${card}`)
