@@ -5,12 +5,12 @@ function druOnly(env) {
 }
 
 async function seatWhereLockReads(fetchImpl, base, key, row) {
-  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
-  return fetchImpl(`${base}/rest/v1/team_memberships`, {
-    method: 'POST',
-    headers: { ...headers, 'content-profile': 'public', 'accept-profile': 'public' },
-    body: JSON.stringify(row),
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal', 'content-profile': 'public', 'accept-profile': 'public' };
+  const now = new Date().toISOString();
+  await fetchImpl(`${base}/rest/v1/team_memberships?season_id=eq.${row.season_id}&player_id=eq.${row.player_id}&ends_at=is.null`, {
+    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
   });
+  return fetchImpl(`${base}/rest/v1/team_memberships`, { method: 'POST', headers, body: JSON.stringify(row) });
 }
 
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
@@ -72,7 +72,7 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
       player_id: rosterPlayerId,
       role: rosterPlayerId === playerId ? 'captain' : 'player',
     });
-    if (!saved.ok && saved.status !== 409) {
+    if (!saved.ok) {
       throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
     }
   }
