@@ -49,3 +49,5 @@ export async function reserveFreshDruSeason(env, { seasonName }, fetchImpl = glo
   const created = await inserted.json();
   return created?.[0]?.id || null;
 }
+
+// registration status is the team-screen gate
