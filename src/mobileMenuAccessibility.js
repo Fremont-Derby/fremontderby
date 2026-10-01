@@ -36,7 +36,7 @@ const mobileMenuStyles = `
   }
   .fd-shell:has(.fd-nav-menu[open]) { z-index: 1200; }
   .fd-shell:has(.fd-nav-menu[open]) + .fd-mobile-dock {
-    opacity: .2;
+    opacity: 1;
     pointer-events: none;
   }
 
@@ -84,6 +84,11 @@ const mobileMenuScript = `
     event.preventDefault();
     menu.open = false;
     summary.focus();
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!menu.open) return;
+    if (menu.contains(event.target)) return;
+    menu.open = false;
   });
   syncMenuState();
 })();
