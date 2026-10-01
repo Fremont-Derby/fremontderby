@@ -4,6 +4,10 @@ function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
 }
 
+function hasPlayers(slots) {
+  return Array.isArray(slots) && slots.some((slot) => slot && (slot.playerId || slot.player_id));
+}
+
 async function seatWhereLockReads(fetchImpl, base, key, row) {
   const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
   return fetchImpl(`${base}/rest/v1/team_memberships`, {
@@ -11,6 +15,31 @@ async function seatWhereLockReads(fetchImpl, base, key, row) {
     headers: { ...headers, 'content-profile': 'public', 'accept-profile': 'public' },
     body: JSON.stringify(row),
   });
+}
+
+async function clearEmptyDruLineup(env, teamId, fetchImpl) {
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return 0;
+  const headers = {
+    apikey: key,
+    authorization: `Bearer ${key}`,
+    accept: 'application/json',
+    'content-type': 'application/json',
+    'accept-profile': privatePostgrestProfile('dru'),
+    'content-profile': privatePostgrestProfile('dru'),
+  };
+  const response = await fetchWithSchema(`${base}/rest/v1/team_lineups?team_id=eq.${teamId}&select=id,slots`, { headers });
+  const lineups = response.ok ? await response.json() : [];
+  let cleared = 0;
+  for (const lineup of lineups) {
+    if (!hasPlayers(lineup.slots)) {
+      const removed = await fetchWithSchema(`${base}/rest/v1/team_lineups?id=eq.${lineup.id}`, { method: 'DELETE', headers });
+      if (removed.ok) cleared += 1;
+    }
+  }
+  return cleared;
 }
 
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
@@ -54,6 +83,7 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   if (!playerResponse.ok || !seasonId) return false;
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
+  await clearEmptyDruLineup(env, teamId, fetchImpl);
   const now = new Date().toISOString();
   await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${playerId}&ends_at=is.null`, {
     method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
