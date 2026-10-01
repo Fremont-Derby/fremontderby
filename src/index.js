@@ -221,6 +221,16 @@ export async function handlePublishScheduleRequest(
       await prepareDruPracticePublish(env, seasonId, fetchImpl);
       const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
       await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
+      const { practicePublishReady } = await import('./druPublishPrep.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&status=eq.confirmed&select=team_id`, {
+        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'dru_private' },
+      });
+      const ready = practicePublishReady(slots.ok ? (await slots.json()).length : 0);
+      if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
     }
 
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
