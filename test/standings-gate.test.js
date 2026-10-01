@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { archiveSeason, criticalWrite, deployOrder, onionDone, privilegedChange, recompute, regressionCheck, rulesVersion } from '../src/standingsGate.js';
+test('a privileged change needs both sides', () => { assert.equal(privilegedChange({ actor: 'Mina' }).ok, false); });
+test('standings count only finalized wins', () => { assert.equal(recompute([{ final: true, winner: 'Owls' }, { final: false, winner: 'Sharks' }]).Owls, 1); });
+test('a season tags its rules', () => { assert.equal(rulesVersion({ rules: 'v1' }).ok, true); });
+test('a completed season is archived', () => { assert.equal(archiveSeason({ status: 'final', archived: true }).ok, true); });
+test('schema deploys before the app', () => { assert.equal(deployOrder({ schemaBeforeApp: false }).ok, false); });
+test('a passed gate needs a fixture', () => { assert.equal(regressionCheck({ passed: true }).ok, false); });
+test('a critical write is idempotent', () => { assert.equal(criticalWrite({ idempotent: true }).ok, true); });
+test('an onion page names its task', () => { assert.equal(onionDone({ shell: true, readable: true }).ok, false); });

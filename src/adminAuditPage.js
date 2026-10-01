@@ -23,8 +23,8 @@ export function renderAdminAuditPage() {
 </head>
 <body>
   <main class="app">
-    <p class="note" data-lane-session>This session is for this lane only. A prod, Gamma, JFL, or DRU login is not shared.</p>
     <section data-secret-names><h2>Required secret names</h2><ul><li>SESSION_SECRET</li><li>GITHUB_TOKEN</li></ul><p>Names only. Values stay in the lane secret store.</p></section>
+    <p class="note" data-lane-session>This session is for this lane only. A prod, Gamma, JFL, or DRU login is not shared.</p>
     <header class="topbar">
       <div class="brand"><span class="mark">9</span><span>Admin audit log</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>

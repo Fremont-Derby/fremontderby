@@ -20,6 +20,7 @@ export function renderNotificationsPage() {
 </head>
 <body>
   <main class="app">
+    <section data-mission-order><h2>Mission order</h2><p>The next mission is the first one in the list that is not done.</p></section>
     <header class="topbar">
       <div class="brand"><span class="mark">9</span><span>Notifications</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>

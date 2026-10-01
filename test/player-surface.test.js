@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { surfaceLine } from '../src/playerSurface.js';
+import { renderSchedulePage } from '../src/schedulePage.js';
 
 test('card 2311 has a player sentence', () => { assert.equal(surfaceLine(2311).text, 'Recent surveys are counted for the admin.'); });
 test('card 2310 has a player sentence', () => { assert.equal(surfaceLine(2310).text, 'Survey results stay on the admin page.'); });
@@ -52,3 +53,4 @@ test('card 1955 has a player sentence', () => { assert.equal(surfaceLine(1955).t
 test('card 1890 has a player sentence', () => { assert.equal(surfaceLine(1890).text, 'A skin needs a name and a lane.'); });
 test('card 1887 has a player sentence', () => { assert.equal(surfaceLine(1887).text, 'A page has one next action.'); });
 test('card 1783 has a player sentence', () => { assert.equal(surfaceLine(1783).text, 'A playoff match needs both teams.'); });
+test('the schedule page shows the next-match sentence', () => { assert.match(renderSchedulePage(), /The next match names the opponent/); });
