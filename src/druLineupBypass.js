@@ -35,7 +35,8 @@ async function clearEmptyDruLineup(env, teamId, fetchImpl) {
   const lineups = response.ok ? await response.json() : [];
   let cleared = 0;
   for (const lineup of lineups) {
-    if (!hasPlayers(lineup.slots)) {
+    const named = (lineup.slots || []).filter((slot) => slot && (slot.playerId || slot.player_id)).length;
+    if (named < 3) {
       const removed = await fetchWithSchema(`${base}/rest/v1/team_lineups?id=eq.${lineup.id}`, { method: 'DELETE', headers });
       if (removed.ok) cleared += 1;
     }
