@@ -8,15 +8,6 @@ function hasPlayers(slots) {
   return Array.isArray(slots) && slots.some((slot) => slot && (slot.playerId || slot.player_id));
 }
 
-async function seatWhereLockReads(fetchImpl, base, key, row) {
-  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal', 'content-profile': 'public', 'accept-profile': 'public' };
-  const now = new Date().toISOString();
-  await fetchImpl(`${base}/rest/v1/team_memberships?season_id=eq.${row.season_id}&player_id=eq.${row.player_id}&ends_at=is.null`, {
-    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-  });
-  return fetchImpl(`${base}/rest/v1/team_memberships`, { method: 'POST', headers, body: JSON.stringify(row) });
-}
-
 async function clearEmptyDruLineup(env, teamId, fetchImpl) {
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
@@ -30,14 +21,15 @@ async function clearEmptyDruLineup(env, teamId, fetchImpl) {
     'accept-profile': privatePostgrestProfile('dru'),
     'content-profile': privatePostgrestProfile('dru'),
   };
-  const response = await fetchWithSchema(`${base}/rest/v1/team_lineups?team_id=eq.${teamId}&select=id,slots`, { headers });
+  const response = await fetchWithSchema(`${base}/rest/v1/team_lineups?team_id=eq.${teamId}&select=id`, { headers });
   const lineups = response.ok ? await response.json() : [];
   let cleared = 0;
   for (const lineup of lineups) {
-    if (!hasPlayers(lineup.slots)) {
-      const removed = await fetchWithSchema(`${base}/rest/v1/team_lineups?id=eq.${lineup.id}`, { method: 'DELETE', headers });
-      if (removed.ok) cleared += 1;
-    }
+    const slots = await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineup.id}&player_id=not.is.null&select=id`, { headers });
+    const rows = slots.ok ? await slots.json() : [];
+    if (hasPlayers(rows) || rows.length) continue;
+    const removed = await fetchWithSchema(`${base}/rest/v1/team_lineups?id=eq.${lineup.id}`, { method: 'DELETE', headers });
+    if (removed.ok) cleared += 1;
   }
   return cleared;
 }
@@ -84,18 +76,21 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
   await clearEmptyDruLineup(env, teamId, fetchImpl);
-  const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
-  for (const rosterPlayerId of roster) {
-    const saved = await seatWhereLockReads(fetchImpl, base, key, {
-      season_id: seasonId,
-      team_id: teamId,
-      player_id: rosterPlayerId,
-      role: rosterPlayerId === playerId ? 'captain' : 'player',
+  const now = new Date().toISOString();
+  await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&team_id=eq.${teamId}&role=eq.captain&ends_at=is.null`, {
+    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
+  });
+  await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
+    method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
+  });
+  const roster = [...new Set(playerIds.filter((id) => id && id !== playerId))];
+  if (roster.length) {
+    await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(roster.map((rosterPlayerId) => ({ season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: 'player' }))),
     });
-    if (!saved.ok) {
-      throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
-    }
   }
-  await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
+  await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: [playerId, ...roster] }, fetchImpl);
   return true;
 }
