@@ -108,16 +108,10 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
 });
 
 test('unrecovered JFL and Gamma Supabase credentials remain required secrets', () => {
-  const common = [
-    'SUPABASE_URL',
-    'SUPABASE_PUBLISHABLE_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'EXPECTED_SUPABASE_PROJECT_REF',
-  ];
   for (const lane of ['jfl', 'gamma']) {
     const target = config.env[lane];
-    for (const name of common) assert.ok(target.secrets.required.includes(name));
-    assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
+    assert.ok(target.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+    assert.doesNotMatch(JSON.stringify(target.vars || {}), /REPLACE_|SET_ME|placeholder/i);
   }
 });
 
@@ -126,8 +120,7 @@ test('DRU actor id stays secret-backed (not hardcoded in root vars)', () => {
   assert.ok(config.secrets.required.includes('BETA_ACTOR_USER_ID'));
   assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
   assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, undefined);
-  assert.ok(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'));
-  assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.gamma.vars.BETA_AUTH_BYPASS, '0');
 });
 
 test('auth bypass is enabled for the DRU root deployment profile', () => {

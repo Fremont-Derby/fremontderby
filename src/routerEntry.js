@@ -164,7 +164,8 @@ async function reconcileProductShell(response, pathname) {
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
-async function finalizeBrowserResponse(response, pathname, env = {}) {
+let requestEnv = {};
+async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
   const withNextMatch = await enhanceDruNextMatch(seasonSelected, pathname);
   const designed = await injectSiteStyles(withNextMatch);
@@ -212,6 +213,7 @@ export default {
       });
     }
 
+    requestEnv = env;
     const url = new URL(request.url);
     const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
