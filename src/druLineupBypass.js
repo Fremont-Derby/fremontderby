@@ -12,6 +12,7 @@ function service(env) {
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   return base && key ? { base, key } : null;
+
 }
 
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
