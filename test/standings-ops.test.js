@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { checkinBurst, cloudflareHtml, mockSeason, oneCaptaincy, standingsMode } from '../src/standingsOps.js';
 
 test('standings names the mode', () => {
-  assert.equal(standingsMode('points'), 'points');
+  assert.equal(standingsMode('points').text, 'points');
   assert.match(standingsMode('').text, /missing/);
 });
 
