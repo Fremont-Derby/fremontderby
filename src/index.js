@@ -568,7 +568,7 @@ export async function handleConfigureSeasonRegistrationRequest(
 
 
 export function reviewDecisionWord(body) {
-  const normalized = String(normalizeApproveDecline(body) ?? body?.decision ?? '').toLowerCase();
+  const normalized = String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase();
   const words = {
     approved: 'approve',
     approve: 'approve',
