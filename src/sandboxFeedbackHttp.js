@@ -1,3 +1,4 @@
+import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 import {
   listSandboxFeedbackCommand,
@@ -5,6 +6,7 @@ import {
   submitSandboxFeedbackCommand,
 } from './sandboxFeedbackCommands.js';
 import { createSandboxFeedbackRepository } from './sandboxFeedbackRepository.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -14,26 +16,11 @@ function jsonResponse(body, status = 200) {
 }
 
 async function readJsonBody(request) {
-  const text = await request.text();
-  if (!text.trim()) return {};
-  try {
-    const body = JSON.parse(text);
-    if (!body || Array.isArray(body) || typeof body !== 'object') {
-      throw new Error('Request body must be a JSON object');
-    }
-    return body;
-  } catch (error) {
-    if (error instanceof SyntaxError) throw new Error('Request body must be valid JSON');
-    throw error;
-  }
+  return readSanitizedJsonBody(request);
 }
 
-function statusForError(error) {
-  const message = error?.message || 'Request failed';
-  if (/401/.test(message)) return 401;
-  if (/403|League admin access is required/i.test(message)) return 403;
-  if (/not found/i.test(message)) return 404;
-  return 400;
+export function sandboxFeedbackStatusForError(error) {
+  return rpcErrorStatus(error);
 }
 
 export function createSandboxFeedbackHttpHandlers({
@@ -55,7 +42,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback }, 201);
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, sandboxFeedbackStatusForError(error));
       }
     },
 
@@ -71,7 +58,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, sandboxFeedbackStatusForError(error));
       }
     },
 
@@ -85,7 +72,7 @@ export function createSandboxFeedbackHttpHandlers({
         }, repository);
         return jsonResponse({ feedback });
       } catch (error) {
-        return jsonResponse({ error: error.message }, statusForError(error));
+        return jsonResponse({ error: safeClientErrorMessage(error) }, sandboxFeedbackStatusForError(error));
       }
     },
   };

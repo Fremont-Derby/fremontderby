@@ -8,8 +8,9 @@ test('Profile exposes an admin tool group only after existing admin authorizatio
 
   assert.match(html, /data-admin-tools hidden/);
   assert.match(html, /aria-label="League admin tools"/);
+  assert.match(html, /href="\/admin"[^>]*>Admin home<\/a>/);
+  assert.match(html, /href="\/admin\/players"[^>]*>Players<\/a>/);
   assert.match(html, /href="\/admin\/operations"[^>]*>Operations<\/a>/);
-  assert.match(html, /href="\/season-setup"[^>]*>Season setup<\/a>/);
   assert.match(html, /href="\/messages\/moderation"[^>]*>Moderation<\/a>/);
   assert.match(html, /fetch\('\/api\/admin\/operations'/);
   assert.match(html, /adminTools\.hidden = response\.status !== 200/);

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "workers": {
+    "production": {
+      "workerNames": ["fremontderby-prod", "fremontderby"],
+      "branch": "main",
+      "buildCommand": "node scripts/guard-cloudflare-build.mjs production",
+      "deployCommand": "npm run deploy:production",
+      "buildLane": "production"
+    },
+    "jfl": {
+      "workerNames": ["fremontderby-jfl"],
+      "branch": "fremontderby-jfl",
+      "buildCommand": "node scripts/guard-cloudflare-build.mjs jfl",
+      "deployCommand": "npm run deploy:jfl",
+      "buildLane": "jfl"
+    },
+    "dru": {
+      "workerNames": ["fremontderby-dru"],
+      "branch": "fremontderby-dru",
+      "buildCommand": "node scripts/guard-cloudflare-build.mjs dru",
+      "deployCommand": "npm run deploy:dru",
+      "buildLane": "dru"
+    },
+    "gamma": {
+      "workerNames": ["fremontderby-gamma"],
+      "branch": "fremontderby-gamma",
+      "buildCommand": "node scripts/guard-cloudflare-build.mjs gamma",
+      "deployCommand": "npm run deploy:gamma",
+      "buildLane": "gamma"
+    }
+  }
+}

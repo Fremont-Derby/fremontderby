@@ -27,8 +27,8 @@ test('standings page keeps team and individual standings one tap away', () => {
 test('standings page uses phone-native cards instead of horizontal table scrolling', () => {
   const html = renderStandingsPage();
 
-  assert.match(html, /data-team-cards aria-label="Team standings"/);
-  assert.match(html, /data-player-cards aria-label="Individual standings"/);
+  assert.match(html, /data-team-cards(?:\s+role="region")?\s+aria-label="Team standings"/);
+  assert.match(html, /data-player-cards(?:\s+role="region")?\s+aria-label="Individual standings"/);
   assert.match(html, /\.panel table\{display:none\}/);
   assert.match(html, /\.mobile-list\{display:block\}/);
   assert.doesNotMatch(html, /min-width:\s*720px/);
@@ -46,6 +46,8 @@ test('standings tabs and controls expose keyboard and motion accessibility', () 
   assert.match(html, /event\.key!==\'ArrowLeft\'/);
   assert.match(html, /event\.key!==\'ArrowRight\'/);
   assert.match(html, /\.focus\(\)/);
+  assert.match(html, /id="team-tab"/);
+  assert.match(html, /id="individual-tab"/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, />Load standings<\/button>/);
 });

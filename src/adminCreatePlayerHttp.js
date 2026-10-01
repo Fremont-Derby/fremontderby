@@ -1,12 +1,10 @@
 import { createAdminPlayersRepository } from './adminPlayersRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
+import { rpcErrorStatus } from './rpcErrorStatus.js';
+import { safeClientErrorMessage } from './requestSanitize.js';
 
-function statusFor(error) {
-  if (error instanceof AuthError) return error.status;
-  if (/Actor is not a league admin/i.test(error.message)) return 403;
-  if (/already exists/i.test(error.message)) return 409;
-  if (/required|80 characters/i.test(error.message)) return 400;
-  return 502;
+export function adminCreatePlayerStatusFor(error) {
+  return rpcErrorStatus(error);
 }
 
 export async function handleCreateAdminPlayerRequest(
@@ -33,8 +31,8 @@ export async function handleCreateAdminPlayerRequest(
     );
   } catch (error) {
     return Response.json(
-      { error: error.message },
-      { status: statusFor(error), headers: { 'cache-control': 'no-store' } },
+      { error: safeClientErrorMessage(error) },
+      { status: adminCreatePlayerStatusFor(error), headers: { 'cache-control': 'no-store' } },
     );
   }
 }

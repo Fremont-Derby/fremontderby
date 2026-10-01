@@ -17,22 +17,8 @@ export const CAPTAINCY_TRANSFER_MISSION = {
     { id: 'ineligible-blocked', type: 'mixed', text: 'An ineligible transfer target is prevented with an obvious recovery path.' },
     { id: 'fixture-contract', type: 'machine', text: 'The fixture has one intended successor, roster distractors, and an optional ineligible candidate.' },
   ],
-  randomizableFields: [
-    'captainName',
-    'successorName',
-    'distractorNames',
-    'ineligibleName',
-    'teamName',
-    'seasonName',
-    'variant',
-  ],
-  invariants: [
-    'exactly_one_intended_successor',
-    'former_captain_loses_authority',
-    'roster_otherwise_unchanged',
-    'ineligible_transfer_prevented',
-    'no_dual_captain_state',
-  ],
+  randomizableFields: ['captainName', 'successorName', 'distractorNames', 'ineligibleName', 'teamName', 'seasonName', 'variant'],
+  invariants: ['exactly_one_intended_successor', 'former_captain_loses_authority', 'roster_otherwise_unchanged', 'ineligible_transfer_prevented', 'no_dual_captain_state'],
 };
 
 const FIRST_NAMES = ['Nova', 'Maya', 'Eli', 'Riley', 'Theo', 'Jules', 'Mina', 'Dax'];
@@ -95,7 +81,6 @@ export function buildCaptaincyTransferFixture(seed) {
   const ineligibleName = variant === 'ineligible-blocked' ? uniquePerson(random, used) : null;
   const team = teamName(random);
   const seasonName = `${pick(random, SEASON_WORDS)} League`;
-
   const roster = [captainName, successorName, ...distractorNames];
   if (ineligibleName) roster.push(ineligibleName);
 
@@ -105,44 +90,12 @@ export function buildCaptaincyTransferFixture(seed) {
     seed,
     persona: 'captain',
     variant,
-    captain: {
-      id: `qa-${seed}-captain`,
-      name: captainName,
-      isCaptain: true,
-      afterTransferIsCaptain: false,
-    },
-    team: {
-      id: `qa-${seed}-team`,
-      name: team,
-      seasonId: `qa-${seed}-season`,
-      seasonName,
-      roster,
-    },
-    successor: {
-      id: `qa-${seed}-successor`,
-      name: successorName,
-      eligible: true,
-      afterTransferIsCaptain: true,
-    },
-    distractors: distractorNames.map((name, index) => ({
-      id: `qa-${seed}-distractor-${index + 1}`,
-      name,
-      eligible: true,
-      intended: false,
-    })),
-    ineligible: ineligibleName
-      ? {
-          id: `qa-${seed}-ineligible`,
-          name: ineligibleName,
-          eligible: false,
-          reason: 'Not on active roster eligibility for captaincy',
-        }
-      : null,
-    product: {
-      routes: ['/', '/teams'],
-      homeRoute: '/',
-      persistTeamKey: 'fd.teamId',
-    },
+    captain: { id: `qa-${seed}-captain`, name: captainName, isCaptain: true, afterTransferIsCaptain: false },
+    team: { id: `qa-${seed}-team`, name: team, seasonId: `qa-${seed}-season`, seasonName, roster },
+    successor: { id: `qa-${seed}-successor`, name: successorName, eligible: true, afterTransferIsCaptain: true },
+    distractors: distractorNames.map((name, index) => ({ id: `qa-${seed}-distractor-${index + 1}`, name, eligible: true, intended: false })),
+    ineligible: ineligibleName ? { id: `qa-${seed}-ineligible`, name: ineligibleName, eligible: false, reason: 'Not on active roster eligibility for captaincy' } : null,
+    product: { routes: ['/', '/teams'], homeRoute: '/', persistTeamKey: 'fd.teamId' },
     semantic: {
       exactly_one_intended_successor: true,
       former_captain_loses_authority: true,

@@ -1,18 +1,6 @@
-import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
-
-const OLD_PICKER = "const requestedContext=contexts.find((context)=>context.roundId===requested);if(requestedContext)contextSelect.value=contextKey(requestedContext);else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;";
-const NEW_PICKER = "const startOfToday=new Date();startOfToday.setHours(0,0,0,0);const upcoming=contexts.find((context)=>Number.isFinite(Date.parse(context.scheduledOn))&&Date.parse(context.scheduledOn)>=startOfToday.getTime());const requestedContext=contexts.find((context)=>context.roundId===requested);if(requestedContext)contextSelect.value=contextKey(requestedContext);else if(upcoming)contextSelect.value=contextKey(upcoming);else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;";
+const OLD_PICKER = "const requestedContext=contexts.find((context)=>context.roundId===requested);\n  if(requestedContext)contextSelect.value=contextKey(requestedContext);\n  else if(remembered&&contexts.some((context)=>contextKey(context)===remembered))contextSelect.value=remembered;\n  else {\n    const today=new Date().toISOString().slice(0,10);\n    const withDate=contexts.filter((context)=>context.scheduledOn||context.scheduled_on);\n    const tonight=withDate.find((context)=>(context.scheduledOn||context.scheduled_on)===today);\n    const upcoming=withDate\n      .filter((context)=>(context.scheduledOn||context.scheduled_on)>=today)\n      .sort((a,b)=>String(a.scheduledOn||a.scheduled_on).localeCompare(String(b.scheduledOn||b.scheduled_on)))[0];\n    const pick=tonight||upcoming||contexts[0];\n    if(pick)contextSelect.value=contextKey(pick);\n  }\n  ";
+const NEW_PICKER = "const requestedContext=contexts.find((context)=>context.roundId===requested);\n  const today=new Date().toISOString().slice(0,10);\n  const onOrAfterToday=(context)=>{const stamp=context.scheduledOn||context.scheduled_on||'';return Boolean(stamp&&stamp>=today)};\n  const rememberedContext=remembered?contexts.find((context)=>contextKey(context)===remembered):null;\n  if(requestedContext)contextSelect.value=contextKey(requestedContext);\n  else if(rememberedContext&&onOrAfterToday(rememberedContext))contextSelect.value=contextKey(rememberedContext);\n  else {\n    const withDate=contexts.filter((context)=>context.scheduledOn||context.scheduled_on);\n    const tonight=withDate.find((context)=>(context.scheduledOn||context.scheduled_on)===today);\n    const upcoming=withDate\n      .filter((context)=>(context.scheduledOn||context.scheduled_on)>=today)\n      .sort((a,b)=>String(a.scheduledOn||a.scheduled_on).localeCompare(String(b.scheduledOn||b.scheduled_on)))[0];\n    const pick=tonight||upcoming||contexts[0];\n    if(pick)contextSelect.value=contextKey(pick);\n  }\n  ";
 
 export function repairAvailabilityScript(html) {
-  let out = String(html || '').replace(OLD_PICKER, NEW_PICKER);
-  if (out.includes('data-next-match')) return out;
-  out = out.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
-  out = out.replace(
-    '</body>',
-    `<script>
-      ${nextMatchSummaryBrowserSource}
-      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
-    </script></body>`,
-  );
-  return out;
+  return String(html || '').replace(OLD_PICKER, NEW_PICKER);
 }

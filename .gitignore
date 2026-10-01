@@ -1,5 +1,8 @@
 node_modules/
 dist/
+.playwright/
+playwright-report/
+test-results/
 .wrangler/
 .dev.vars
 .dev.vars.*

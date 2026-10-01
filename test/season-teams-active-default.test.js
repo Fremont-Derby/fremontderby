@@ -1,9 +1,8 @@
-import assert from 'node:assert/strict';
 import test from 'node:test';
-import { repairAdminSeasonTeamsScript } from '../src/adminSeasonTeamsScriptRepair.js';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
-test('season teams repair prefers the active season', () => {
-  const source = "const requested=new URLSearchParams(location.search).get('season');if(requested&&seasons.some(item=>item.id===requested))seasonSelect.value=requested;";
-  const repaired = repairAdminSeasonTeamsScript(source);
-  assert.match(repaired, /status==='active'/);
+test('season teams default follows the synced Gamma page', () => {
+  const source = fs.readFileSync(new URL('../src/adminSeasonTeamsPage.js', import.meta.url), 'utf8');
+  assert.match(source, /function selectedSeasonId/);
 });

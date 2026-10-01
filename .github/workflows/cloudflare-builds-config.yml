@@ -1,0 +1,47 @@
+name: Cloudflare Workers Builds config
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Check drift or apply the reviewed desired state'
+        required: true
+        default: check
+        type: choice
+        options: [check, apply]
+      lane:
+        description: 'Worker build lane'
+        required: true
+        default: all
+        type: choice
+        options: [all, production, jfl, dru, gamma]
+
+concurrency:
+  group: cloudflare-workers-builds-config
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  configure:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require trusted source and least-privilege Builds token
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
+        run: |
+          test "$GITHUB_REF_NAME" = "main"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_BUILDS_API_TOKEN"
+      - name: ${{ inputs.mode }} Workers Builds desired state
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_BUILDS_API_TOKEN: ${{ secrets.CLOUDFLARE_BUILDS_API_TOKEN }}
+        run: node scripts/configure-cloudflare-builds.mjs "${{ inputs.mode }}" "${{ inputs.lane }}"

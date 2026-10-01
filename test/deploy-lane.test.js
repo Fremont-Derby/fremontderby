@@ -4,7 +4,6 @@ import {
   assertLaneDeployContext,
   laneDeployArgs,
   laneDeployments,
-  resolveDeploySha,
 } from '../scripts/deploy-lane.mjs';
 
 for (const lane of ['jfl', 'dru', 'gamma']) {
@@ -49,30 +48,20 @@ test('GitHub deploys tag the Worker version with the exact commit SHA', () => {
   ]);
 });
 
-test('Workers Builds deploys tag the Worker version from WORKERS_CI_COMMIT_SHA', () => {
-  const sha = 'b'.repeat(40);
-  const args = laneDeployArgs('dru', {
-    WORKERS_CI: '1',
-    WORKERS_CI_BRANCH: 'fremontderby-dru',
-    WORKERS_CI_COMMIT_SHA: sha,
-  });
-  assert.deepEqual(args, [
-    'wrangler', 'deploy', '--env', 'dru',
-    '--tag', sha,
-    '--message', `git:${sha}`,
-  ]);
-});
-
-test('resolveDeploySha prefers GITHUB_SHA over WORKERS_CI_COMMIT_SHA', () => {
-  const github = 'c'.repeat(40);
-  const workers = 'd'.repeat(40);
-  assert.equal(
-    resolveDeploySha({ GITHUB_SHA: github, WORKERS_CI_COMMIT_SHA: workers }),
-    github,
+test('Actions may deploy a lane from main only with explicit allow flag', () => {
+  assert.deepEqual(
+    assertLaneDeployContext('dru', {
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REF_NAME: 'main',
+      FREMONT_ALLOW_LANE_DEPLOY_FROM_MAIN: '1',
+    }),
+    laneDeployments.dru,
   );
-});
-
-test('resolveDeploySha ignores non-40-hex values', () => {
-  assert.equal(resolveDeploySha({ GITHUB_SHA: 'short', WORKERS_CI_COMMIT_SHA: 'also-short' }), '');
-  assert.equal(resolveDeploySha({}), '');
+  assert.throws(
+    () => assertLaneDeployContext('dru', {
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REF_NAME: 'main',
+    }),
+    /Refusing dru deploy from branch "main"/,
+  );
 });

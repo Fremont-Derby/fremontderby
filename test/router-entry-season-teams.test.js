@@ -49,5 +49,6 @@ test('authorized Profile admin grouping exposes season-team management within tw
   assert.equal(response.status, 200);
   assert.match(html, /<nav class="admin-actions" aria-label="League admin tools">/);
   assert.match(html, /href="\/admin\/season-teams">Season teams<\/a>/);
-  assert.match(html, /href="\/season-setup">Season setup<\/a>/);
+  assert.match(html, /href="\/admin\/operations"[^>]*>Operations<\/a>/);
+  assert.doesNotMatch(html, /href="\/season-setup">Season setup<\/a>/);
 });

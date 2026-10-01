@@ -28,6 +28,31 @@ export function configuredSupabaseSchema(env = {}) {
   return configured;
 }
 
+/** Public lane/default profile for this Worker schema. */
+export function publicPostgrestProfile(schema) {
+  return schema;
+}
+
+/** Privileged profile for this Worker schema (`private` on production/staging). */
+export function privatePostgrestProfile(schema) {
+  return schema === 'public' ? 'private' : `${schema}_private`;
+}
+
+/**
+ * Resolve Accept-Profile / Content-Profile for a REST call.
+ * - empty → public lane schema
+ * - `private` or already-qualified `{schema}_private` → private profile for this lane
+ * - any other value (including another lane’s schema) → forced back to this lane’s public schema
+ */
+export function resolvePostgrestProfile(schema, requestedProfile = '') {
+  const requested = String(requestedProfile || '').trim().toLowerCase();
+  const privateProfile = privatePostgrestProfile(schema);
+  if (!requested) return schema;
+  if (requested === 'private' || requested === privateProfile) return privateProfile;
+  if (requested === schema) return schema;
+  return schema;
+}
+
 function headerValue(headers, name) {
   const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name);
   return key ? headers[key] : null;
@@ -59,9 +84,7 @@ export function withSupabaseSchema(fetchImpl, env = {}) {
     const requestedProfile = String(
       headerValue(headers, 'accept-profile') || headerValue(headers, 'content-profile') || '',
     ).toLowerCase();
-    const profile = requestedProfile === 'private'
-      ? (schema === 'public' ? 'private' : `${schema}_private`)
-      : schema;
+    const profile = resolvePostgrestProfile(schema, requestedProfile);
     setHeader(headers, 'accept-profile', profile);
     setHeader(headers, 'content-profile', profile);
     return fetchImpl(input, { ...init, headers });

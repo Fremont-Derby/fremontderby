@@ -1,0 +1,89 @@
+name: Playwright browser smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_mode:
+        description: Browser evidence mode
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, controlled-failure]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fremont-browser-playwright-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: github.actor == 'subiki' && github.ref == 'refs/heads/main'
+    name: JFL desktop and phone Chromium smoke
+    timeout-minutes: 15
+    runs-on:
+      group: fremont-browser
+      labels: [self-hosted, Windows, X64, fremont-browser]
+    env:
+      PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
+      PLAYWRIGHT_EXPECTED_ENVIRONMENT: ${{ inputs.evidence_mode == 'controlled-failure' && 'controlled-failure' || 'jfl' }}
+      PLAYWRIGHT_BROWSERS_PATH: C:\actions-runner\playwright-browsers
+    defaults:
+      run:
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Install pinned Node dependencies
+        run: npm ci
+
+      - name: Prove runner prerequisites
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $nodeVersion = node --version
+          $freeGb = [math]::Round((Get-PSDrive -Name C).Free / 1GB, 1)
+          $clock = (Get-Date).ToUniversalTime().ToString('o')
+
+          if ($freeGb -lt 10) { throw "Runner has only $freeGb GB free." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got $env:RUNNER_OS." }
+
+          Write-Host "PASS: runner=$env:RUNNER_NAME os=$env:RUNNER_OS node=$nodeVersion freeGb=$freeGb utc=$clock"
+
+      - name: Ensure pinned Chromium is present
+        run: npm run browser:install
+
+      - name: Run JFL browser smoke
+        run: npm run test:browser:smoke
+
+      - name: Write non-secret run metadata
+        if: always()
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path test-results | Out-Null
+          $health = Invoke-RestMethod -Uri "$env:PLAYWRIGHT_BASE_URL/health/environment" -TimeoutSec 20
+          @(
+            "requestedTarget=$env:PLAYWRIGHT_BASE_URL"
+            "actualEnvironment=$($health.environment)"
+            "versionTag=$($health.versionTag)"
+            "testedGitSha=$env:GITHUB_SHA"
+            "runnerName=$env:RUNNER_NAME"
+            "runnerLabels=self-hosted,Windows,X64,fremont-browser"
+            "playwrightVersion=$(npx playwright --version)"
+          ) | Set-Content -Path test-results/run-metadata.txt -Encoding ascii
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-browser-smoke-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7

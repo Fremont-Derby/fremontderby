@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-  handleSendDirectMessageRequest,
-  handleSendTeamMessageRequest,
-} from '../src/chatHttp.js';
+import { chatHttpHandlers } from '../src/chatHttp.js';
+import { enhanceChatHttpExpectedThread } from '../src/chatHttpExpectedThreadEnhance.js';
+
+enhanceChatHttpExpectedThread();
 
 function createFetch(responses) {
   const calls = [];
@@ -24,12 +24,13 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-secret',
 };
 
-test('chat HTTP source forwards expected thread ids on send handlers', () => {
-  const source = readFileSync(new URL('../src/chatHttp.js', import.meta.url), 'utf8');
-  assert.ok(source.length > 20000);
+test('expected-thread enhancer source forwards expected thread ids on send handlers', () => {
+  const source = readFileSync(new URL('../src/chatHttpExpectedThreadEnhance.js', import.meta.url), 'utf8');
   assert.match(source, /function expectedThreadId/);
   assert.match(source, /expectedConversationId/);
   assert.match(source, /expectedTeamId/);
+  assert.match(source, /expectedSeasonId/);
+  assert.match(source, /expectedTeamMatchId/);
 });
 
 test('direct send with mismatched expectedConversationId does not write', async () => {
@@ -38,14 +39,14 @@ test('direct send with mismatched expectedConversationId does not write', async 
     'https://fremontderby.com/api/direct-conversations/conversation-distractor/messages',
     {
       method: 'POST',
-      headers: { authorization: 'Bearer token' },
+      headers: { authorization: 'Bearer token', 'content-type': 'application/json' },
       body: JSON.stringify({
         body: 'Hello',
         expectedConversationId: 'conversation-target',
       }),
     },
   );
-  const response = await handleSendDirectMessageRequest(
+  const response = await chatHttpHandlers.sendDirectMessage(
     request,
     env,
     'conversation-distractor',
@@ -60,10 +61,10 @@ test('team send with mismatched expectedTeamId does not write', async () => {
   const { fetch, calls } = createFetch([{ body: { id: 'user-1' } }]);
   const request = new Request('https://fremontderby.com/api/teams/team-b/messages', {
     method: 'POST',
-    headers: { authorization: 'Bearer token' },
+    headers: { authorization: 'Bearer token', 'content-type': 'application/json' },
     body: JSON.stringify({ body: 'Hello', expectedTeamId: 'team-a' }),
   });
-  const response = await handleSendTeamMessageRequest(request, env, 'team-b', { fetch });
+  const response = await chatHttpHandlers.sendTeamMessage(request, env, 'team-b', { fetch });
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /open team chat/);
   assert.equal(calls.length, 1);

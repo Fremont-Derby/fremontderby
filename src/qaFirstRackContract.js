@@ -17,12 +17,7 @@ export const FIRST_RACK_MISSION = {
     { id: 'fixture-contract', type: 'machine', text: 'The fixture has one intended match, rack 1 empty, and a distractor table.' },
   ],
   randomizableFields: ['captainName', 'partnerName', 'opponentNames', 'teamName', 'tableNumber'],
-  invariants: [
-    'first_rack_only',
-    'intended_match_only',
-    'persona_is_captain',
-    'distractor_table_untouched',
-  ],
+  invariants: ['first_rack_only', 'intended_match_only', 'persona_is_captain', 'distractor_table_untouched'],
 };
 
 const FIRST_NAMES = ['Nova', 'Maya', 'Eli', 'Riley', 'Theo', 'Jules', 'Mina', 'Dax'];
@@ -77,21 +72,9 @@ export function buildFirstRackFixture(seed) {
     partner: { id: `qa-${seed}-partner`, name: partnerName },
     opponents: opponentNames.map((name, index) => ({ id: `qa-${seed}-opp-${index + 1}`, name })),
     team: { id: `qa-${seed}-team`, name: teamName },
-    match: {
-      id: `qa-${seed}-match`,
-      tableNumber,
-      intendedRack: 1,
-      firstRackWinner: null,
-    },
-    distractorMatch: {
-      id: `qa-${seed}-match-other`,
-      tableNumber: otherTable,
-      intendedRack: 1,
-    },
-    product: {
-      route: '/scorecard',
-      homeRoute: '/',
-    },
+    match: { id: `qa-${seed}-match`, tableNumber, intendedRack: 1, firstRackWinner: null },
+    distractorMatch: { id: `qa-${seed}-match-other`, tableNumber: otherTable, intendedRack: 1 },
+    product: { route: '/scorecard', homeRoute: '/' },
     semantic: {
       first_rack_only: true,
       intended_match_only: true,

@@ -62,6 +62,13 @@ export function assertWranglerMatrix(config, matrix) {
   return failures;
 }
 
+
+export function loadRepoMatrixAndConfig(root = join(dirname(fileURLToPath(import.meta.url)), '..')) {
+  const matrix = JSON.parse(readFileSync(join(root, 'docs/deployment-matrix.json'), 'utf8'));
+  const config = parseWrangler(readFileSync(join(root, 'wrangler.jsonc'), 'utf8'));
+  return { matrix, config, root };
+}
+
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isMain) {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..');

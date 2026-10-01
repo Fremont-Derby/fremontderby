@@ -1,3 +1,4 @@
+import './chatHttpExpectedThreadEnhance.js';
 const persistentAuthSessionScript = `<script data-fd-persistent-auth>
 (() => {
   const authKeys = new Set(['fd.accessToken', 'fd.refreshToken']);

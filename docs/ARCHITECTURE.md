@@ -30,7 +30,8 @@ Supabase provides Postgres, authentication, and Row Level Security. Browser acce
 
 ## Environments
 - **Local:** local app/tests; no production credentials.
-- **Staging:** separate Supabase project/data and separate Worker hostname.
+- **Non-production lanes (JFL / DRU / gamma):** shared staging Supabase project with **per-lane Postgres schemas** (`jfl`, `dru`, `gamma` + `*_private`), separate Workers and hostnames. PostgREST `Accept-Profile` / `Content-Profile` select the schema. See `docs/ENVIRONMENTS.md`.
+- **Legacy `staging` env:** may remain during migration; gamma is the integrated pre-production lane.
 - **Production:** `fremontderby.com`, production Worker, production Supabase project.
 
 Staging and production must never share database credentials.

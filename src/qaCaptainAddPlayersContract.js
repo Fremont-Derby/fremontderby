@@ -19,23 +19,8 @@ export const CAPTAIN_ADD_PLAYERS_MISSION = {
     { id: 'invalid-blocked', type: 'mixed', text: 'An invalid or duplicate add is prevented with an explanation that makes sense.' },
     { id: 'fixture-contract', type: 'machine', text: 'The fixture has two intended candidates, a distractor, existing roster, and an optional ineligible candidate.' },
   ],
-  randomizableFields: [
-    'captainName',
-    'existingMemberNames',
-    'intendedNames',
-    'distractorName',
-    'ineligibleName',
-    'teamName',
-    'seasonName',
-    'variant',
-  ],
-  invariants: [
-    'exactly_two_intended_candidates',
-    'existing_roster_unchanged',
-    'no_unintended_adds',
-    'captain_permission_required',
-    'ineligible_or_duplicate_add_prevented',
-  ],
+  randomizableFields: ['captainName', 'existingMemberNames', 'intendedNames', 'distractorName', 'ineligibleName', 'teamName', 'seasonName', 'variant'],
+  invariants: ['exactly_two_intended_candidates', 'existing_roster_unchanged', 'no_unintended_adds', 'captain_permission_required', 'ineligible_or_duplicate_add_prevented'],
 };
 
 const FIRST_NAMES = ['Nova', 'Maya', 'Eli', 'Riley', 'Theo', 'Jules', 'Mina', 'Dax'];
@@ -99,7 +84,6 @@ export function buildCaptainAddPlayersFixture(seed) {
   const ineligibleName = variant === 'ineligible-blocked' ? uniquePerson(random, used) : null;
   const team = teamName(random);
   const seasonName = `${pick(random, SEASON_WORDS)} League`;
-
   const existingRoster = [captainName, ...existingMemberNames];
 
   return {
@@ -108,44 +92,12 @@ export function buildCaptainAddPlayersFixture(seed) {
     seed,
     persona: 'captain',
     variant,
-    captain: {
-      id: `qa-${seed}-captain`,
-      name: captainName,
-      isCaptain: true,
-      canAddPlayers: true,
-    },
-    team: {
-      id: `qa-${seed}-team`,
-      name: team,
-      seasonId: `qa-${seed}-season`,
-      seasonName,
-      existingRoster,
-    },
-    intended: intendedNames.map((name, index) => ({
-      id: `qa-${seed}-intended-${index + 1}`,
-      name,
-      eligible: true,
-      intended: true,
-    })),
-    distractor: {
-      id: `qa-${seed}-distractor`,
-      name: distractorName,
-      eligible: true,
-      intended: false,
-    },
-    ineligible: ineligibleName
-      ? {
-          id: `qa-${seed}-ineligible`,
-          name: ineligibleName,
-          eligible: false,
-          reason: 'Not eligible to join this team roster',
-        }
-      : null,
-    product: {
-      routes: ['/', '/teams'],
-      homeRoute: '/',
-      persistTeamKey: 'fd.teamId',
-    },
+    captain: { id: `qa-${seed}-captain`, name: captainName, isCaptain: true, canAddPlayers: true },
+    team: { id: `qa-${seed}-team`, name: team, seasonId: `qa-${seed}-season`, seasonName, existingRoster },
+    intended: intendedNames.map((name, index) => ({ id: `qa-${seed}-intended-${index + 1}`, name, eligible: true, intended: true })),
+    distractor: { id: `qa-${seed}-distractor`, name: distractorName, eligible: true, intended: false },
+    ineligible: ineligibleName ? { id: `qa-${seed}-ineligible`, name: ineligibleName, eligible: false, reason: 'Not eligible to join this team roster' } : null,
+    product: { routes: ['/', '/teams'], homeRoute: '/', persistTeamKey: 'fd.teamId' },
     semantic: {
       exactly_two_intended_candidates: true,
       existing_roster_unchanged: true,

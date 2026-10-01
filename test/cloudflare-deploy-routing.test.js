@@ -48,18 +48,22 @@ test('Cloudflare prebuild accepts only permanent release branches', () => {
   assert.deepEqual(CLOUDFLARE_BUILD_BRANCHES, Object.keys(expectedTargets));
 
   for (const branch of CLOUDFLARE_BUILD_BRANCHES) {
+    const lane = expectedTargets[branch];
     assert.doesNotThrow(() =>
-      assertCloudflareBuildContext({ WORKERS_CI: '1', WORKERS_CI_BRANCH: branch }),
+      assertCloudflareBuildContext({
+        WORKERS_CI: '1',
+        WORKERS_CI_BRANCH: branch,
+        FREMONT_BUILD_LANE: lane,
+      }),
     );
   }
 
-  assert.throws(
-    () =>
-      assertCloudflareBuildContext({
-        WORKERS_CI: '1',
-        WORKERS_CI_BRANCH: 'jfl/issue-1216-workers-build',
-      }),
-    /Refusing Cloudflare build from unrecognized branch/,
+  assert.doesNotThrow(() =>
+    assertCloudflareBuildContext({
+      WORKERS_CI: '1',
+      WORKERS_CI_BRANCH: 'jfl/issue-1216-workers-build',
+      FREMONT_BUILD_LANE: 'jfl',
+    }),
   );
 });
 

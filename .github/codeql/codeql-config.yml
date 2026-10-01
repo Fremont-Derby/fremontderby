@@ -1,0 +1,5 @@
+name: Fremont Derby CodeQL
+paths-ignore:
+  - test/**
+  - scripts/**
+  - node_modules/**
