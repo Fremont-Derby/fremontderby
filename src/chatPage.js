@@ -297,7 +297,11 @@ export function renderChatPage(env = {}) {
     }
     async function parseJson(response) {
       const text = await response.text();
+      if (response.status === 429 || /error 1015|you are being rate limited/i.test(text)) {
+        return { error: 'Too many requests. Wait a few seconds and try again.' };
+      }
       if (!text) return {};
+      if (text.trim().startsWith('<')) return { error: 'The page returned HTML instead of message data. Try again.' };
       try { return JSON.parse(text); } catch { return { error: text }; }
     }
     function consumeOAuthCallback() {
