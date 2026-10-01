@@ -1570,8 +1570,11 @@ export async function handleSubmitTeamLineupRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
+      const playerIds = slots.map((slot) => slot?.playerId).filter(Boolean);
+      if (!playerIds.length) throw new Error('Choose at least one player before locking the lineup');
       const { ensureDruActorCanLockLineup } = await import('./druLineupBypass.js');
-      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, playerIds: (body.slots ?? body.lineupSlots ?? body.lineup_slots ?? []).map((slot) => slot?.playerId).filter(Boolean) }, fetchImpl);
+      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, playerIds }, fetchImpl);
     }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
