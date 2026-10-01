@@ -215,7 +215,9 @@ export async function handlePublishScheduleRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { ensureDruPracticeRegistrations } = await import('./druPracticeRegistration.js');
       const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
+      await ensureDruPracticeRegistrations(env, seasonId, fetchImpl);
       await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
     }
 
@@ -608,6 +610,10 @@ export async function handleManageTeamSlotRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env.ENVIRONMENT || '').trim() === 'dru' && String(body.action ?? body.decision ?? '').toLowerCase() === 'confirm') {
+      const { ensureDruSlotPracticeRegistrations } = await import('./druPracticeRegistration.js');
+      await ensureDruSlotPracticeRegistrations(env, slotId, fetchImpl);
+    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const slot = await manageTeamSlotCommand(
       {
