@@ -17,6 +17,7 @@ export function renderChatModerationPage(env = {}) {
 </head>
 <body>
   <main class="app">
+    <section data-right-message><h2>Send the right message</h2><label>Thread <input data-message-thread /></label><label>Message <input data-message-body /></label><p data-message-result></p></section>
     <p class="note" data-report-privacy>A report keeps the reported message. It does not open unrelated private messages.</p>
     <header class="head"><div><h1>Chat moderation</h1><div style="color:var(--muted)">Review player reports across every chat type.</div></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
