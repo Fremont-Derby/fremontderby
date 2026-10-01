@@ -38,6 +38,7 @@ test('availability repair prefers an upcoming night', () => {
 test('season teams repair prefers the active season', () => {
   const source = "const requested=new URLSearchParams(location.search).get('season');if(requested&&seasons.some(item=>item.id===requested))seasonSelect.value=requested;";
   assert.match(repairAdminSeasonTeamsScript(source), /status==='active'/);
+  assert.equal(repairAdminSeasonTeamsScript(repairAdminSeasonTeamsScript(source)), repairAdminSeasonTeamsScript(source));
 });
 
 test('lineup repair skips a finalized remembered night', () => {
