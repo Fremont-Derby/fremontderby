@@ -21,6 +21,14 @@ export function renderAdminSupportPage() {
 </head>
 <body>
   <main>
+    <section data-qa-triage>
+      <h2>Triage a failure</h2>
+      <label>Label <select data-triage-label><option value="">Choose</option><option>discoverability</option><option>visual-state</option><option>layout</option><option>invalid-state</option><option>data-wrong</option><option>blocked</option></select></label>
+      <label>What failed <input data-triage-summary /></label>
+      <label>GitHub issue <input data-triage-issue inputmode="numeric" /></label>
+      <button type="button" data-triage-save>Link defect</button>
+      <p data-triage-result></p>
+    </section>
     <p class="note" data-recovery-note>A recovery note says what league data can be restored and how recent that copy is.</p>
     <p class="muted"><a href="/admin">Admin</a> · Support</p>
     <h1>Admin Support</h1>
