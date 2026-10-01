@@ -1,11 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bootstrapStatus, nextAction, nightStep, onionLayer, personaMission, serviceDown, supportInfra, triageLabel } from '../src/nightOps.js';
-test('a night step needs an owner', () => { assert.equal(nightStep({ name: 'score', owner: 'captain' }).ok, true); });
-test('triage links a defect', () => { assert.match(triageLabel({ label: 'bug', issue: 12 }).text, /#12/); });
-test('a mission needs a task', () => { assert.equal(personaMission({ persona: 'player' }).ready, false); });
-test('bootstrap 405 is blocked', () => { assert.equal(bootstrapStatus({ status: 405 }).ok, false); });
-test('a page has one next action', () => { assert.equal(nextAction({ actions: ['Save', 'Delete'] }).ok, false); });
-test('the onion starts at the baseline', () => { assert.equal(onionLayer({ gate: 0 }).ok, true); });
-test('support needs evidence', () => { assert.equal(supportInfra({ evidence: 'shot', persona: 'captain' }).ok, true); });
-test('a down service can be retried', () => { assert.equal(serviceDown('').retry, true); });
+import { eligibilityReason, leagueNightSteps, manualScore, restoreBackup, sessionLane } from '../src/nightOps.js';
+
+test('a blocked player gets the reason', () => {
+  assert.equal(eligibilityReason({ eligible: false, reason: 'No team' }).text, 'No team');
+  assert.equal(eligibilityReason({ eligible: true }).text, 'Eligible.');
+});
+
+test('a session names its lane', () => {
+  assert.equal(sessionLane('lane=dru').lane, 'dru');
+  assert.equal(sessionLane('').lane, null);
+});
+
+test('league night has four steps', () => {
+  assert.equal(leagueNightSteps().length, 4);
+});
+
+test('a manual score can be entered again later', () => {
+  assert.match(manualScore('owls-sharks', '4-2').text, /later re-entry/);
+  assert.equal(manualScore('owls-sharks'), null);
+});
+
+test('a production backup is not restored here', () => {
+  assert.equal(restoreBackup({ lane: 'prod' }).restored, false);
+  assert.equal(restoreBackup({ lane: 'dru' }).restored, true);
+});
