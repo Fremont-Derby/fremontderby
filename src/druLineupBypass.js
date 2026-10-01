@@ -46,10 +46,18 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
   const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
-  const lineupResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?team_id=eq.${teamId}&select=id,slots`, { headers: privateHeaders });
-  const lineups = lineupResponse.ok ? await lineupResponse.json() : [];
-  for (const lineup of lineups) {
-    if (!hasPlayers(lineup.slots)) await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?id=eq.${lineup.id}`, { method: 'DELETE', headers: privateHeaders });
+  const slotResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?team_id=eq.${teamId}&select=lineup_id,player_id`, { headers: privateHeaders });
+  const slots = slotResponse.ok ? await slotResponse.json() : [];
+  const byLineup = new Map();
+  for (const slot of slots) {
+    const rows = byLineup.get(slot.lineup_id) || [];
+    rows.push(slot);
+    byLineup.set(slot.lineup_id, rows);
+  }
+  for (const [lineupId, rows] of byLineup) {
+    if (rows.some((slot) => slot.player_id)) continue;
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
   }
   const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
   const now = new Date().toISOString();
