@@ -23,6 +23,7 @@ import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
 import { injectDruAgentSession } from './druAgentSession.js';
+import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
@@ -177,7 +178,8 @@ async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
   const withSeo = await injectPublicSeo(withAuth, pathname);
-  return injectDruAgentSession(withSeo, env);
+  const withFeedback = await injectTesterFeedback(withSeo);
+  return injectDruAgentSession(withFeedback, env);
 }
 
 // Replaced at deploy time by scripts/stamp-deploy-identity.mjs
