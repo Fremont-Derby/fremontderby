@@ -18,6 +18,11 @@ export function teamWinnerId(match, playerMatches) {
   return a > b ? match.team_a_id : match.team_b_id;
 }
 
+
+export function practicePlayoffsReady(matches) {
+  return (matches || []).some((row) => row.status === 'finalized' && row.winner_team_id);
+}
+
 export async function closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId) return 0;
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
