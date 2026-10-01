@@ -78,7 +78,11 @@ export function createScoringRepository(env, { fetch: fetchImpl = globalThis.fet
       });
     },
 
-    recordPlayerMatchRack({ actorUserId, playerMatchId, winnerSide }) {
+    async recordPlayerMatchRack({ actorUserId, playerMatchId, winnerSide }) {
+      if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+        const { waiveDruRaceBeforeScore } = await import('./druScoreWaiver.js');
+        await waiveDruRaceBeforeScore(env, playerMatchId, fetchImpl);
+      }
       return rpc('record_player_match_rack', {
         actor_user_id: actorUserId,
         target_player_match_id: playerMatchId,
