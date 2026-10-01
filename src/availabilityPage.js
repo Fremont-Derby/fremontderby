@@ -10,7 +10,8 @@ export function renderAvailabilityPage() {
   </style>
 </head>
 <body>
-  <main class="app">\n    <p data-date-status="list">Check-in is a date and a status, not a dropdown.</p>
+  <main class="app">
+    <section data-eligibility-check><h2>Check eligibility</h2><p>A player is eligible when payment and availability are both set. The page says which one is missing.</p></section>
     <p class="note" data-gate-followup>A gate fails on a scoring or roster break. A wording miss can pass with a follow-up.</p>
     <header class="topbar"><div class="brand"><span class="mark">A</span><span>League night check-in</span></div><div class="status" data-status role="status" aria-live="polite">Loading check-in…</div></header>
     <nav data-shortcuts aria-label="League night shortcuts" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px">
