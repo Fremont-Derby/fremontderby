@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { auditEvent, bindingTest, coherenceAudit, healthHandoff, moderationQueue, publicSmoke, releaseTrain, rosterAssign } from '../src/rosterGate.js';
+test('an ineligible player cannot join', () => { assert.equal(rosterAssign({ id: 't1' }, { id: 'p1', eligible: false }).ok, false); });
+test('a report names its status', () => { assert.equal(moderationQueue({ id: 'r1', status: 'open' }).ok, true); });
+test('an audit event needs a time', () => { assert.equal(auditEvent({ actor: 'Mina', action: 'edit' }).ok, false); });
+test('a coherent page has no legacy shell', () => { assert.equal(coherenceAudit({ shell: true, legacy: true }).ok, false); });
+test('bindings are durable', () => { assert.equal(bindingTest({ name: 'dru', durable: true }).ok, true); });
+test('public smoke does not write', () => { assert.equal(publicSmoke({ status: 200, writes: true }).ok, false); });
+test('handoff names the lane and the status', () => { assert.equal(healthHandoff({ lane: 'dru', status: 'ok' }).ok, true); });
+test('a release train needs a peer', () => { assert.equal(releaseTrain({ lane: 'dru' }).ok, false); });
