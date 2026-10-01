@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { practiceRosterPlan } from '../src/druPublishPrep.js';
+import { practiceCaptainPlan, practiceRosterPlan } from '../src/druPublishPrep.js';
 
 test('a practice night fills each team to the committed roster', () => {
   const plan = practiceRosterPlan(
@@ -28,4 +28,15 @@ test('opening night needs four players on a practice team', () => {
   );
   assert.equal(plan.adds.length, 1);
   assert.equal(plan.adds[0].player_id, 'spare');
+});
+
+test('a forming practice team gets a spare captain before publish', () => {
+  const adds = practiceCaptainPlan(
+    [{ id: 'team-a' }, { id: 'team-b' }],
+    [{ team_id: 'team-a', player_id: 'captain-a', role: 'captain' }],
+    [{ id: 'captain-a' }, { id: 'spare' }],
+  );
+  assert.equal(adds.length, 1);
+  assert.equal(adds[0].team_id, 'team-b');
+  assert.equal(adds[0].role, 'captain');
 });

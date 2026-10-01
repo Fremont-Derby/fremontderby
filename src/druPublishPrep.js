@@ -8,6 +8,22 @@ export function practiceDepthFloor(seasonMinimum) {
   return Math.max(4, Number(seasonMinimum || 3));
 }
 
+
+export function practiceCaptainPlan(teams = [], memberships = [], players = []) {
+  const used = new Set(memberships.map((row) => row.player_id));
+  const spare = players.filter((player) => player.id && !used.has(player.id));
+  const adds = [];
+  for (const team of teams) {
+    const captain = memberships.find((row) => row.team_id === team.id && row.role === 'captain');
+    if (captain) continue;
+    const player = spare.shift();
+    if (!player) break;
+    adds.push({ team_id: team.id, player_id: player.id, role: 'captain' });
+    used.add(player.id);
+  }
+  return adds;
+}
+
 export function practiceRosterPlan(teams = [], memberships = [], players = [], minimum = 3) {
   const used = new Set(memberships.map((row) => row.player_id));
   const spare = players.filter((player) => player.id && !used.has(player.id));
@@ -49,8 +65,10 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
   const teams = await teamsResponse.json();
   const memberships = await membershipResponse.json();
   const players = await playerResponse.json();
-  const plan = practiceRosterPlan(teams, memberships, players, minimum);
-  for (const add of plan.adds) {
+  const captainAdds = practiceCaptainPlan(teams, memberships, players);
+  const membershipsWithCaptains = memberships.concat(captainAdds);
+  const plan = practiceRosterPlan(teams, membershipsWithCaptains, players, minimum);
+  for (const add of [...captainAdds, ...plan.adds]) {
     await fetchWithSchema(`${base}/rest/v1/team_memberships`, {
       method: 'POST',
       headers: { ...headers, prefer: 'return=minimal' },
@@ -85,5 +103,5 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
       }),
     });
   }
-  return { prepared: true, teams: teams.length, added: plan.adds.length };
+  return { prepared: true, teams: teams.length, added: captainAdds.length + plan.adds.length };
 }
