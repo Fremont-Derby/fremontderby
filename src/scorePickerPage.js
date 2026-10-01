@@ -10,7 +10,9 @@ export function renderScorePickerPage() {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-live-score="both">The live score names both sides, and a finished match does not offer another rack.</p>
+    <p class="note" data-score-fallback>If live scoring fails, write the result down and enter it when the page is back.</p>
+    <p class="note" data-score-error>If a score will not save, the match may already be finalized. Check the scorecard status before retrying.</p>
     <header class="head"><div class="muted" style="font-size:.72rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase">League night</div><h1>Score a match</h1><div class="muted">Start with today, then switch dates, teams, matchups, or revealed races when you need a makeup, early match, or another authorized race. Captains can prepare the blind three here before scoring opens. No tokens or database IDs required.</div>
       <nav class="hub-links" aria-label="League night shortcuts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
         <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>

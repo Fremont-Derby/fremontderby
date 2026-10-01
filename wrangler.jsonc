@@ -14,6 +14,10 @@
     {
       "pattern": "fremontderby.com",
       "custom_domain": true
+    },
+    {
+      "pattern": "www.fremontderby.com",
+      "custom_domain": true
     }
   ],
   "version_metadata": {
@@ -111,6 +115,8 @@
       },
       "vars": {
         "ENVIRONMENT": "gamma",
+        "BETA_AUTH_BYPASS": "0",
+        "BETA_ACTOR_EMAIL": "gamma-actor@fremontderby.com",
         "TEST_PERSONA_OPERATOR_USER_IDS": "e0b7c076-106b-4160-bfab-6de69a4f5ded",
         "SUPABASE_SCHEMA": "gamma",
         "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",

@@ -1,4 +1,5 @@
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
+import { surfaceLine } from './playerSurface.js';
 
 export function renderSchedulePage() {
   return `<!doctype html>
@@ -14,7 +15,8 @@ export function renderSchedulePage() {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-next-match="briefing">The next match names the opponent.</p>
+    <section data-standings-context><h2>My standings</h2><p>The next match names the team, the rank, and the matches played.</p></section>
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Schedule</span></div><div class="status" data-status>Loading…</div></header>
     <nav data-schedule-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
       <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Check in</a>
@@ -151,7 +153,7 @@ let bestLive=null,bestLiveScore=-Infinity,bestUpcoming=null,bestUpcomingDistance
           protocol.textContent='No-show: after the agreed start, captains use explicit forfeit slots on the lineup/scorecard and note it in matchup messages. League admin resolves disputes.';
         }
         card.append(top,versus,actions,makeup,protocol);if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(card);matchList.append(card)}
-        }if(!round.matches.length){const noMatches=document.createElement('div');noMatches.className='empty';noMatches.textContent='No matchups are posted for this league night.';matchList.append(noMatches)}panel.hidden=false;localStorage.setItem('fd.scheduleRoundId',round.roundId);const url=new URL(location.href);url.searchParams.set('season',seasonSelect.value);url.searchParams.set('round',round.roundId);history.replaceState({},'',url)}
+        }if(!round.matches.length){const noMatches=document.createElement('div');noMatches.className='empty';noMatches.textContent='No matchups are posted for this league night. Open lineup to see who is playing.';matchList.append(noMatches)}panel.hidden=false;localStorage.setItem('fd.scheduleRoundId',round.roundId);const url=new URL(location.href);url.searchParams.set('season',seasonSelect.value);url.searchParams.set('round',round.roundId);history.replaceState({},'',url)}
     async function loadSchedule(opts={}){const quiet=Boolean(opts&&opts.quiet);const seasonId=seasonSelect.value;if(!seasonId)return;const path='/api/seasons/'+encodeURIComponent(seasonId)+'/schedule';// WHY: paint last-known schedule immediately so the page feels snappy on mobile.
 if(!quiet&&window.fdReadCachedJson){const cached=window.fdReadCachedJson(path);if(cached&&Array.isArray(cached.rounds)&&cached.rounds.length){rounds=cached.rounds;renderRoundOptions();setStatus('Updating schedule…','muted')}}else if(!quiet){setStatus('Loading schedule…')}const body=await get(path);if(body&&body.__notModified){if(!quiet)setStatus('Schedule up to date','ok');return}rounds=body.rounds||[];localStorage.setItem('fd.scheduleSeasonId',seasonId);renderRoundOptions();const liveCount=rounds.reduce((n,r)=>n+(r.matches||[]).filter((m)=>m.status==='in_progress').length,0);setStatus(rounds.length?(liveCount?liveCount+' match'+(liveCount===1?'':'es')+' live — open Score live from a card':'Schedule ready'):'Schedule not published',rounds.length?'ok':'muted')}
     async function bootstrap(){const body=await get('/api/seasons');seasons=body.seasons||[];renderSeasons();if(seasonSelect.value)await loadSchedule()}async function run(action){try{await action()}catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error');panel.hidden=true;emptyEl.hidden=false}}document.addEventListener('click',(event)=>{

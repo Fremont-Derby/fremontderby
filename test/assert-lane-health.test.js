@@ -6,7 +6,7 @@ import {
   evaluateLaneHealthBody,
 } from '../scripts/assert-lane-health.mjs';
 
-test('lane health checklist covers dru, jfl, gamma, and production', () => {
+test('lane health checklist covers dru, jfl, gamma, production apex, and www', () => {
   assert.deepEqual(
     LANE_HEALTH_CHECKS.map((row) => [row.host, row.expect]),
     [
@@ -14,6 +14,7 @@ test('lane health checklist covers dru, jfl, gamma, and production', () => {
       ['jfl.fremontderby.com', 'jfl'],
       ['gamma.fremontderby.com', 'gamma'],
       ['fremontderby.com', 'production'],
+      ['www.fremontderby.com', 'production'],
     ],
   );
 });
@@ -38,6 +39,17 @@ test('evaluateLaneHealthBody fails when DNS host reports production on a lane', 
   );
   assert.equal(result.ok, false);
   assert.match(result.error, /environment="production" expected="dru"/);
+});
+
+test('evaluateLaneHealthBody fails when hostMatchesEnvironment is false', () => {
+  const result = evaluateLaneHealthBody(
+    'dru.fremontderby.com',
+    'dru',
+    200,
+    JSON.stringify({ ok: true, environment: 'dru', hostMatchesEnvironment: false }),
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.error, /hostMatchesEnvironment=false/);
 });
 
 test('evaluateLaneHealthBody fails on non-JSON and non-2xx', () => {

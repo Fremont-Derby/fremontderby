@@ -22,7 +22,7 @@ const PAGE_SEO = Object.freeze({
     description: 'Official Fremont Derby league rules for regular season, playoffs, and scoring.',
   },
   '/demo': {
-    title: 'Test Drive · Fremont Derby',
+    title: 'Test Drive the App · Fremont Derby',
     description:
       'Try a fictional Fremont Derby league night (War Games test drive). Demo data only — not live season results.',
   },

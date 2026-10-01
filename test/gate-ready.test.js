@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { blindLineup, draftSeason, liveScore, publicShell, publishedSchedule, registration, signedIn, teamInvite } from '../src/gateReady.js';
+test('the shell has home, rules, and nav', () => { assert.equal(publicShell({ home: true, rules: true }).ok, false); });
+test('sign-in needs a name', () => { assert.equal(signedIn({ signedIn: true }).ok, false); });
+test('a draft season is named', () => { assert.equal(draftSeason({ status: 'draft', name: 'Fall' }).ok, true); });
+test('payment is named', () => { assert.equal(registration({ payment: 'paid' }).ok, true); });
+test('an invite names the team and the player', () => { assert.equal(teamInvite({ team: 'Owls' }).ok, false); });
+test('the schedule is 8 teams and 7 rounds', () => { assert.equal(publishedSchedule({ teams: 8, rounds: 7 }).ok, true); });
+test('a blind lineup has three players', () => { assert.equal(blindLineup({ players: ['a', 'b'], blind: true }).ok, false); });
+test('live scoring needs both teams', () => { assert.equal(liveScore({ home: 2 }).ok, false); });

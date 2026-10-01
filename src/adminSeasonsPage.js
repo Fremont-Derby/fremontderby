@@ -37,7 +37,9 @@ export function renderAdminSeasonsPage() {
   @media(max-width:720px){.app{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-archive="completed">Only a completed or validation season can be archived.</p>
+    <section data-rule-log><h2>League rule decision</h2><label>Rule <input data-rule-name /></label><label>Impact <input data-rule-impact /></label><label>Date <input data-rule-date placeholder="YYYY-MM-DD" /></label><button type="button" data-rule-save>Record decision</button><p data-rule-result></p></section>
+    <p class="note" data-smoke-gate>A human gate waits on a real data check, not a shell-only page load.</p>
     <header class="head">
       <div>
         <div class="muted">Admin · League Management</div>
@@ -238,7 +240,7 @@ export function renderAdminSeasonsPage() {
     async function load(opts={}) {
       const quiet = Boolean(opts && opts.quiet);
       if (!quiet) setStatus('Loading seasons…');
-      const body = await api('/api/admin/seasons');
+      const body = await Promise.race([api('/api/admin/seasons'), new Promise((_,reject)=>setTimeout(()=>reject(new Error('Seasons took too long. Try again.')),8000))]);
       seasons = Array.isArray(body.seasons) ? body.seasons : [];
       render();
       setStatus(seasons.length + ' season' + (seasons.length === 1 ? '' : 's') + ' loaded.', 'ok');

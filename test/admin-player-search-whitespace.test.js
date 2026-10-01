@@ -5,11 +5,12 @@ import { renderAdminPlayersPage } from '../src/adminPlayersPage.js';
 
 test('admin players search splits on whitespace without relying on \\s in a template literal', () => {
   const source = readFileSync(new URL('../src/adminPlayersPage.js', import.meta.url), 'utf8');
-  assert.match(source, /split\(\/\[\s\\t\\n\\r\]\+\//);
-  // Evaluate the embedded search the way the browser receives it: template output must not become /s+/
+  // Source lives inside a template literal, so backslashes are doubled.
+  assert.match(source, /split\(new RegExp\('\[ \\\\t\\\\n\\\\r\]\+'\)\)/);
+  // Browser-facing HTML has the evaluated single-escaped form.
   const html = renderAdminPlayersPage();
   assert.doesNotMatch(html, /split\(\/s\+\/\)/);
-  assert.match(html, /split\(\/\[[^\]]*\]\+\//);
+  assert.match(html, /split\(new RegExp\('\[ \\t\\n\\r\]\+'\)\)/);
   assert.match(html, /No players match/);
 });
 

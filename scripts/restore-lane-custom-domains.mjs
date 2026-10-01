@@ -2,7 +2,7 @@
  * Attach Fremont Derby hostnames to the correct Workers via Cloudflare API.
  * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
  *
- * CRITICAL: production apex must stay on fremontderby-prod — never on a lane Worker.
+ * CRITICAL: production apex must stay on fremontderby or fremontderby-prod — never on a lane Worker.
  *
  * #639: Prefer durable `wrangler deploy --env <lane>` (custom_domain routes in wrangler.jsonc)
  * over relying on this script as the steady-state source of truth. This remains an emergency tool.
@@ -58,6 +58,14 @@ async function attachDomain({ hostname, service, environment = 'production' }) {
   return result;
 }
 
+
+function allowedServicesFor(lane) {
+  if (lane.hostname === 'fremontderby.com' || lane.hostname === 'www.fremontderby.com') {
+    return ['fremontderby', 'fremontderby-prod'];
+  }
+  return [lane.service];
+}
+
 async function main() {
   console.log('Listing existing worker domains…');
   let existing = [];
@@ -75,12 +83,13 @@ async function main() {
 
   for (const lane of WORKER_DOMAIN_BINDINGS) {
     const current = byHost.get(lane.hostname);
-    if (current && current.service === lane.service) {
-      console.log(`OK already correct: ${lane.hostname} -> ${lane.service}`);
-      results.push({ ...lane, status: 'already' });
+    const allowed = allowedServicesFor(lane);
+    if (current && allowed.includes(current.service)) {
+      console.log(`OK already correct: ${lane.hostname} -> ${current.service}`);
+      results.push({ ...lane, status: 'already', service: current.service });
       continue;
     }
-    if (current && current.service !== lane.service) {
+    if (current && !allowed.includes(current.service)) {
       console.warn(`MISROUTE: ${lane.hostname} currently -> ${current.service}; rebinding to ${lane.service}`);
     }
     console.log(`Attaching ${lane.hostname} -> ${lane.service}…`);

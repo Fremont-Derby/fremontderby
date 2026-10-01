@@ -57,7 +57,7 @@ test('team repository loads team management with open seasons and player directo
 
   assert.deepEqual(teamManagement, {
     player_id: 'player-1',
-    captain_teams: [{ teamName: 'Breakers' }],
+    captain_teams: [{ teamName: 'Breakers', roster: [], members: [] }],
     invitations: [{ teamName: 'Rack Pack' }],
     open_seasons: [{
       id: 'season-1',
@@ -91,6 +91,8 @@ test('team repository loads team management with open seasons and player directo
         label: 'Bob — Unclaimed',
       },
     ],
+    applications: [],
+    returning_slots: [],
   });
   assert.equal(calls[0].url, 'https://project.supabase.co/rest/v1/rpc/get_own_team_management');
   assert.deepEqual(JSON.parse(calls[0].init.body), {

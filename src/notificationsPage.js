@@ -20,6 +20,7 @@ export function renderNotificationsPage() {
 </head>
 <body>
   <main class="app">
+    <section data-mission-order><h2>Mission order</h2><p>The next mission is the first one in the list that is not done.</p></section>
     <header class="topbar">
       <div class="brand"><span class="mark">9</span><span>Notifications</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
@@ -36,6 +37,7 @@ export function renderNotificationsPage() {
       <a class="ghost" href="/trades">Trades</a>
       <a class="ghost" href="/standings">Standings</a>
     </div>
+    <p class="note" data-notice-events>A notice is created for a direct message, a team or league message, a lineup or match ready check, a score mismatch or final result, a season announcement, and a report outcome.</p>
     <section class="list" data-list></section>
   </main>
   ${livePageRefreshScript}
@@ -63,7 +65,7 @@ export function renderNotificationsPage() {
       if(blob.includes('message')||blob.includes('chat')) return '/messages';
       if(blob.includes('standings')) return '/standings';
       if(blob.includes('schedule')||blob.includes('makeup')) return '/schedule';
-      return '';
+      return '/schedule';
     }
     function buildNotificationCard(item){
       const card=document.createElement('article');
@@ -75,11 +77,18 @@ export function renderNotificationsPage() {
       body.className='muted';
       body.textContent=item.body;
       card.append(title,body);
+      const stale=/resolved|finalized|archived|closed/i.test((item.title||'')+' '+(item.body||''));
+      if(stale){
+        const done=document.createElement('div');
+        done.className='muted';
+        done.textContent='Already handled';
+        card.append(done);
+      }
       const href=resolveHref(item);
-      if(href){
+      if(href && !stale){
         const link=document.createElement('a');
         link.href=href;
-        link.textContent='Open';
+        link.textContent=href==='/schedule' && !item.href ? 'Open schedule' : 'Open';
         link.style.cssText='display:inline-flex;min-height:44px;align-items:center;margin-top:6px';
         card.append(link);
       }
@@ -95,7 +104,19 @@ export function renderNotificationsPage() {
       }
       return card;
     }
+    function dedupeNotices(items){
+      const seen=new Set();
+      const out=[];
+      for(const item of items){
+        const key=[item.title||'',item.body||'',resolveHref(item)].join('|');
+        if(seen.has(key)) continue;
+        seen.add(key);
+        out.push(item);
+      }
+      return out;
+    }
     function render(items){
+      items=dedupeNotices(items);
       if(!items.length){
         listEl.replaceChildren();
         const empty=document.createElement('div');
@@ -103,7 +124,7 @@ export function renderNotificationsPage() {
         empty.innerHTML='<strong>No notices yet</strong><div class="muted">League broadcasts and team alerts will show up here.</div>';
         const links=document.createElement('div');
         links.className='actions';
-        for(const [label,href] of [['Schedule','/schedule'],['Score','/scorecard'],['Lineup','/lineup'],['Teams','/teams'],['Messages','/messages']]){
+        const leagueLinks=[['Score','/scorecard']]; void leagueLinks; for(const [label,href] of [['Open schedule','/schedule']]){
           const a=document.createElement('a');a.href=href;a.textContent=label;links.append(a);
         }
         empty.append(links);

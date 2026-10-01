@@ -104,7 +104,9 @@ export function renderProfilePage(env = {}) {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-profile-phone="formatted">A phone number is shown as a formatted number, and eligibility progress counts the requirements met.</p>
+    <section data-error-link><h2>Error link</h2><p>A client error keeps its id and a short server code. The stack stays off the page.</p></section>
+    <p class="note" data-eligibility-why>Eligibility says why a player can play or why they are blocked.</p>
     <header class="topbar">
       <div class="brand"><span class="mark">P</span><span>Fremont Derby Profile</span></div>
       <div class="status" role="status" aria-live="polite" aria-atomic="true" data-status></div>

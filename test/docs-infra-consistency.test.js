@@ -22,8 +22,8 @@ test('architecture no longer claims only a separate staging project without sche
 
 test('github actions doc is dispatch-aware and names CF secrets', () => {
   assert.match(actions, /workflow_dispatch/);
-  assert.match(actions, /runner_id: 0/);
   assert.match(actions, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(actions, /Workers Builds/);
 });
 
 test('beta pointer stays aligned with open-auth lanes', () => {
@@ -36,3 +36,9 @@ test('deployment ADR mentions schema partition and health identity', () => {
   assert.match(adr4, /Accept-Profile/);
   assert.match(adr4, /health\/environment/);
 });
+
+test('environments doc points at the deployment-matrix guardrail', () => {
+  assert.match(environments, /deployment-matrix\.json/);
+  assert.match(environments, /check:matrix/);
+});
+

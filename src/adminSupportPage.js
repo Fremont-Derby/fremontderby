@@ -20,7 +20,17 @@ export function renderAdminSupportPage() {
   </style>
 </head>
 <body>
-  <main>
+  <main>\n    <p data-policy="gate">A night-blocking defect fails the gate, and a record with match history cannot be deleted.</p>
+    <section data-backup-proof><h2>Restore proof</h2><label>Lane <select data-backup-lane><option>dru</option><option>gamma</option><option>jfl</option></select></label><label>Backup <input data-backup-name /></label><label><input type="checkbox" data-backup-served /> Restored lane served a page</label><p data-backup-result>Not proven.</p></section>
+    <section data-qa-triage>
+      <h2>Triage a failure</h2>
+      <label>Label <select data-triage-label><option value="">Choose</option><option>discoverability</option><option>visual-state</option><option>layout</option><option>invalid-state</option><option>data-wrong</option><option>blocked</option></select></label>
+      <label>What failed <input data-triage-summary /></label>
+      <label>GitHub issue <input data-triage-issue inputmode="numeric" /></label>
+      <button type="button" data-triage-save>Link defect</button>
+      <p data-triage-result></p>
+    </section>
+    <p class="note" data-recovery-note>A recovery note says what league data can be restored and how recent that copy is.</p>
     <p class="muted"><a href="/admin">Admin</a> · Support</p>
     <h1>Admin Support</h1>
     <p class="muted">Shared queue for player help. Mark items <strong>Replied</strong> or <strong>Handled</strong>. Private phone numbers stay on Player contact.</p>

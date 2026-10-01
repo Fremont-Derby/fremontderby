@@ -8,6 +8,9 @@ import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
+import { applyProductScriptRepairs } from './productScriptRepairs.js';
+import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
+import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
@@ -19,6 +22,7 @@ import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
+import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
@@ -39,17 +43,80 @@ import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
+import { renderNotificationsPage } from './notificationsPage.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
   /^\/api\/teams\/[^/]+\/trades$/,
   /^\/api\/team-trades\/[^/]+\/(player-response|captain-approval)$/,
   /^\/api\/admin\/teams\/[^/]+\/trades$/,
+  /^\/trades\/?$/,
+  /^\/trade\/?$/,
 ];
 
+const PUBLIC_HTML_PAGES = new Map([
+  ['/playoffs', renderPlayoffsPage],
+  ['/playoff', renderPlayoffsPage],
+  ['/bracket', renderPlayoffsPage],
+  ['/brackets', renderPlayoffsPage],
+  ['/players', renderPlayersDirectoryPage],
+  ['/player', renderPlayersDirectoryPage],
+  ['/directory', renderPlayersDirectoryPage],
+  ['/notifications', renderNotificationsPage],
+  ['/notify', renderNotificationsPage],
+  ['/free-agents', renderFreeAgentsPage],
+  ['/fa', renderFreeAgentsPage],
+  ['/subs', renderFreeAgentsPage],
+  ['/substitutes', renderFreeAgentsPage],
+  ['/practice', renderPracticePage],
+  ['/practices', renderPracticePage],
+]);
+
+const LIVE_PAGE_REWRITES = new Map([
+  ['/check-in', '/availability'],
+  ['/checkin', '/availability'],
+  ['/league-night', '/availability'],
+  ['/leaguenight', '/availability'],
+  ['/ready-check', '/availability'],
+  ['/readycheck', '/availability'],
+  ['/inbox', '/messages'],
+  ['/chat', '/messages'],
+  ['/msg', '/messages'],
+  ['/msgs', '/messages'],
+  ['/account', '/profile'],
+  ['/settings', '/profile'],
+  ['/me', '/profile'],
+  ['/login', '/profile'],
+  ['/signin', '/profile'],
+  ['/sign-in', '/profile'],
+  ['/scoring', '/scorecard'],
+  ['/score', '/scorecard'],
+  ['/scores', '/scorecard'],
+  ['/awards', '/prizes'],
+  ['/prize', '/prizes'],
+  ['/stats', '/standings'],
+  ['/history', '/standings'],
+  ['/tonight', '/schedule'],
+  ['/week', '/schedule'],
+  ['/schedules', '/schedule'],
+  ['/matches', '/schedule'],
+  ['/roster', '/teams'],
+  ['/join', '/teams'],
+  ['/captain', '/teams'],
+  ['/lineups', '/lineup'],
+  ['/sandbox', '/demo'],
+  ['/try', '/demo'],
+  ['/home', '/'],
+]);
+
+function stripTrailingSlash(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
 function isRetiredTradePath(pathname) {
-  return pathname === '/trades'
-    || RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
+  return RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
 function retiredTradeResponse(request, pathname) {
@@ -57,6 +124,12 @@ function retiredTradeResponse(request, pathname) {
   if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
   return new Response(decorateHtmlWithShell(renderNotFoundPage(pathname), pathname), {
     status: 404,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
+
+function htmlPageResponse(render, pathname) {
+  return new Response(decorateHtmlWithShell(render(), pathname), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
@@ -81,13 +154,14 @@ async function reconcileProductShell(response, pathname) {
   }
   if (pathname === '/demo') {
     html = html
-      .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
+      .replace('<title>Try a League Night \u00b7 Fremont Derby</title>', '<title>Test Drive the App \u00b7 Fremont Derby</title>')
       .replace('<h1>Try a League Night</h1>', '<h1>Test Drive the App</h1>');
   }
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
-async function finalizeBrowserResponse(response, pathname) {
+let requestEnv = {};
+async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
   const designed = await injectSiteStyles(seasonSelected);
   const publicThemed = await injectPublicSurfaceTheme(designed, pathname);
@@ -98,11 +172,18 @@ async function finalizeBrowserResponse(response, pathname) {
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
-  const accessible = await injectAccessibilityLayer(adminThemed);
+  const productRepaired = await applyProductScriptRepairs(adminThemed, pathname);
+  const accessible = await injectAccessibilityLayer(productRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
-  return injectPublicSeo(withAuth, pathname);
+  const withSeo = await injectPublicSeo(withAuth, pathname);
+  const withFeedback = await injectTesterFeedback(withSeo);
+  return withFeedback;
 }
+
+// Replaced at deploy time by scripts/stamp-deploy-identity.mjs
+const STAMPED_DEPLOY_GIT_SHA = null;
+const STAMPED_DEPLOY_AT = null;
 
 export default {
   async scheduled(event, env, ctx) {
@@ -113,7 +194,52 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    // HEAD = same as GET without a body (CDN/monitors). Avoid recursive this.fetch.
+    if (request.method === 'HEAD') {
+      const getRequest = new Request(request.url, {
+        method: 'GET',
+        headers: request.headers,
+        redirect: request.redirect,
+      });
+      const response = await this.fetch(getRequest, env, ctx);
+      return new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
+    requestEnv = env;
     const url = new URL(request.url);
+    const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
+    // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
+    if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
+      const meta = env.CF_VERSION_METADATA || {};
+      const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
+      const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
+      const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
+      const fromId = typeof meta.id === 'string' && meta.id.trim() && meta.id !== 'local' ? meta.id.trim() : null;
+      const tag = fromMeta || fromEnv || fromStamp || fromId || null;
+      let versionTagSource = null;
+      if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
+      else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
+      else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
+      else if (tag && fromId === tag) versionTagSource = 'cf_version_id';
+      if (url.pathname === '/health') {
+        return Response.json(
+          {
+            ok: true,
+            service: 'fremontderby',
+            version: meta.id || 'local',
+            versionTag: tag,
+            deployedAt: meta.timestamp || STAMPED_DEPLOY_AT || null,
+            versionTagSource,
+          },
+          { headers: { 'cache-control': 'no-store' } },
+        );
+      }
+      // environment: still use legacy readiness via fallthrough
+    }
     if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
       const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
       const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
@@ -132,36 +258,43 @@ export default {
     }
 
     // Trades restored — paths served by legacy router / index handlers.
-    
-    
-    
+
+    const aliased = aliasRedirect(request, url);
+    if (aliased) return aliased;
+
+    if (url.pathname === '/free-agents' || url.pathname === '/practice') {
+      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
+      const html = url.pathname === '/practice' ? renderPracticePage() : renderFreeAgentsPage();
+      return finalizeBrowserResponse(new Response(html, {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+      }), url.pathname);
+    }
+
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/rating-health') {
+    if (url.pathname === '/admin/rating-health') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/support') {
+    if (url.pathname === '/admin/support') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-if (url.pathname === '/admin/player-contact') {
+    if (url.pathname === '/admin/player-contact') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
     }
-    
-    {
-      
+
     {
       const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
       if (recompute && request.method === 'POST') {
@@ -172,6 +305,7 @@ if (url.pathname === '/admin/player-contact') {
       }
     }
 
+    {
       const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
       if (ratingObs && request.method === 'POST') {
         return finalizeBrowserResponse(
@@ -187,25 +321,25 @@ if (url.pathname === '/admin/player-contact') {
         url.pathname,
       );
     }
-if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
+    if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const adminSupportResponse = await routeAdminSupport(request, env);
     if (adminSupportResponse) return finalizeBrowserResponse(adminSupportResponse, url.pathname);
     const playerContactResponse = await routePlayerContact(request, env);
-    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
+    if (playerContactResponse) return page(playerContactResponse);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
+    if (playerSeasonRegistrationResponse) return page(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
-    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
+    if (dateAvailabilityResponse) return page(dateAvailabilityResponse);
     const seasonCloseResponse = await routeSeasonClose(request, env);
     if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
     const seasonLifecycleResponse = await routeSeasonLifecycle(request, env);
     if (seasonLifecycleResponse) return finalizeBrowserResponse(seasonLifecycleResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);
-    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse, url.pathname);
+    if (adminGatewayResponse) return page(adminGatewayResponse);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
-    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
+    if (adminSeasonTeamsResponse) return page(adminSeasonTeamsResponse);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
@@ -219,8 +353,8 @@ if (url.pathname === '/api/admin/players' && request.method === 'POST') return f
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
-      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact), url.pathname);
+      return page(await enhanceProfilePlayerClaim(withContact));
     }
-    return finalizeBrowserResponse(reconciled, url.pathname);
+    return page(reconciled);
   },
 };

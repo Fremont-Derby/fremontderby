@@ -1,0 +1,39 @@
+{
+  "production": {
+    "domain": "fremontderby.com",
+    "extraDomains": ["www.fremontderby.com"],
+    "worker": "fremontderby",
+    "environment": "production",
+    "projectRef": "cpiucsxlkicmlbvdvhww",
+    "schema": "public",
+    "workers_dev": false,
+    "preview_urls": false
+  },
+  "gamma": {
+    "domain": "gamma.fremontderby.com",
+    "worker": "fremontderby-gamma",
+    "environment": "gamma",
+    "projectRef": "oqkkvqkerusepyokzbmt",
+    "schema": "gamma",
+    "workers_dev": false,
+    "preview_urls": false
+  },
+  "jfl": {
+    "domain": "jfl.fremontderby.com",
+    "worker": "fremontderby-jfl",
+    "environment": "jfl",
+    "projectRef": "oqkkvqkerusepyokzbmt",
+    "schema": "jfl",
+    "workers_dev": false,
+    "preview_urls": false
+  },
+  "dru": {
+    "domain": "dru.fremontderby.com",
+    "worker": "fremontderby-dru",
+    "environment": "dru",
+    "projectRef": "oqkkvqkerusepyokzbmt",
+    "schema": "dru",
+    "workers_dev": false,
+    "preview_urls": false
+  }
+}
