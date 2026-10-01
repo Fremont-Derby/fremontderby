@@ -63,7 +63,7 @@ export function renderNotificationsPage() {
       if(blob.includes('message')||blob.includes('chat')) return '/messages';
       if(blob.includes('standings')) return '/standings';
       if(blob.includes('schedule')||blob.includes('makeup')) return '/schedule';
-      return '';
+      return '/schedule';
     }
     function buildNotificationCard(item){
       const card=document.createElement('article');
@@ -79,7 +79,7 @@ export function renderNotificationsPage() {
       if(href){
         const link=document.createElement('a');
         link.href=href;
-        link.textContent='Open';
+        link.textContent=href==='/schedule' && !item.href ? 'Open schedule' : 'Open';
         link.style.cssText='display:inline-flex;min-height:44px;align-items:center;margin-top:6px';
         card.append(link);
       }
