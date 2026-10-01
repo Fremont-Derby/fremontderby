@@ -22,6 +22,7 @@ import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
+import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
@@ -40,20 +41,82 @@ import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.
 import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
 import { injectPublicSeo } from './publicSeo.js';
-import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { renderPlayoffsPage } from './playoffsPage.js';
+import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
+import { renderNotificationsPage } from './notificationsPage.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
   /^\/api\/teams\/[^/]+\/trades$/,
   /^\/api\/team-trades\/[^/]+\/(player-response|captain-approval)$/,
   /^\/api\/admin\/teams\/[^/]+\/trades$/,
+  /^\/trades\/?$/,
+  /^\/trade\/?$/,
 ];
 
+const PUBLIC_HTML_PAGES = new Map([
+  ['/playoffs', renderPlayoffsPage],
+  ['/playoff', renderPlayoffsPage],
+  ['/bracket', renderPlayoffsPage],
+  ['/brackets', renderPlayoffsPage],
+  ['/players', renderPlayersDirectoryPage],
+  ['/player', renderPlayersDirectoryPage],
+  ['/directory', renderPlayersDirectoryPage],
+  ['/notifications', renderNotificationsPage],
+  ['/notify', renderNotificationsPage],
+  ['/free-agents', renderFreeAgentsPage],
+  ['/fa', renderFreeAgentsPage],
+  ['/subs', renderFreeAgentsPage],
+  ['/substitutes', renderFreeAgentsPage],
+  ['/practice', renderPracticePage],
+  ['/practices', renderPracticePage],
+]);
+
+const LIVE_PAGE_REWRITES = new Map([
+  ['/check-in', '/availability'],
+  ['/checkin', '/availability'],
+  ['/league-night', '/availability'],
+  ['/leaguenight', '/availability'],
+  ['/ready-check', '/availability'],
+  ['/readycheck', '/availability'],
+  ['/inbox', '/messages'],
+  ['/chat', '/messages'],
+  ['/msg', '/messages'],
+  ['/msgs', '/messages'],
+  ['/account', '/profile'],
+  ['/settings', '/profile'],
+  ['/me', '/profile'],
+  ['/login', '/profile'],
+  ['/signin', '/profile'],
+  ['/sign-in', '/profile'],
+  ['/scoring', '/scorecard'],
+  ['/score', '/scorecard'],
+  ['/scores', '/scorecard'],
+  ['/awards', '/prizes'],
+  ['/prize', '/prizes'],
+  ['/stats', '/standings'],
+  ['/history', '/standings'],
+  ['/tonight', '/schedule'],
+  ['/week', '/schedule'],
+  ['/schedules', '/schedule'],
+  ['/matches', '/schedule'],
+  ['/roster', '/teams'],
+  ['/join', '/teams'],
+  ['/captain', '/teams'],
+  ['/lineups', '/lineup'],
+  ['/sandbox', '/demo'],
+  ['/try', '/demo'],
+  ['/home', '/'],
+]);
+
+function stripTrailingSlash(pathname) {
+  return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
 function isRetiredTradePath(pathname) {
-  return pathname === '/trades'
-    || RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
+  return RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
 function retiredTradeResponse(request, pathname) {
@@ -61,6 +124,12 @@ function retiredTradeResponse(request, pathname) {
   if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
   return new Response(decorateHtmlWithShell(renderNotFoundPage(pathname), pathname), {
     status: 404,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
+
+function htmlPageResponse(render, pathname) {
+  return new Response(decorateHtmlWithShell(render(), pathname), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
@@ -91,7 +160,8 @@ async function reconcileProductShell(response, pathname) {
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
-async function finalizeBrowserResponse(response, pathname) {
+let requestEnv = {};
+async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
   const designed = await injectSiteStyles(seasonSelected);
   const publicThemed = await injectPublicSurfaceTheme(designed, pathname);
@@ -106,8 +176,9 @@ async function finalizeBrowserResponse(response, pathname) {
   const accessible = await injectAccessibilityLayer(productRepaired);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
   const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
-  const withFeedback = await injectTesterFeedback(withAuth);
-  return injectPublicSeo(withFeedback, pathname);
+  const withSeo = await injectPublicSeo(withAuth, pathname);
+  const withFeedback = await injectTesterFeedback(withSeo);
+  return withFeedback;
 }
 
 // Replaced at deploy time by scripts/stamp-deploy-identity.mjs
@@ -138,7 +209,9 @@ export default {
       });
     }
 
+    requestEnv = env;
     const url = new URL(request.url);
+    const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
@@ -254,19 +327,19 @@ export default {
     const adminSupportResponse = await routeAdminSupport(request, env);
     if (adminSupportResponse) return finalizeBrowserResponse(adminSupportResponse, url.pathname);
     const playerContactResponse = await routePlayerContact(request, env);
-    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
+    if (playerContactResponse) return page(playerContactResponse);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
+    if (playerSeasonRegistrationResponse) return page(playerSeasonRegistrationResponse);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
-    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
+    if (dateAvailabilityResponse) return page(dateAvailabilityResponse);
     const seasonCloseResponse = await routeSeasonClose(request, env);
     if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
     const seasonLifecycleResponse = await routeSeasonLifecycle(request, env);
     if (seasonLifecycleResponse) return finalizeBrowserResponse(seasonLifecycleResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);
-    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse, url.pathname);
+    if (adminGatewayResponse) return page(adminGatewayResponse);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
-    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
+    if (adminSeasonTeamsResponse) return page(adminSeasonTeamsResponse);
     const response = await legacyRouter.fetch(request, env, ctx);
     const reconciled = await reconcileProductShell(response, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
@@ -280,8 +353,8 @@ export default {
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
-      return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact), url.pathname);
+      return page(await enhanceProfilePlayerClaim(withContact));
     }
-    return finalizeBrowserResponse(reconciled, url.pathname);
+    return page(reconciled);
   },
 };

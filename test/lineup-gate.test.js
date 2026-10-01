@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { checkinRate, deployedSha, fixtureWithoutSql, gammaLint, lineupSentence, lintBlocker, namedTeams, twoCaptainTrial } from '../src/lineupGate.js';
+test('lineup state is one sentence', () => { assert.equal(lineupSentence({}).ok, false); });
+test('both teams are named', () => { assert.equal(namedTeams({ homeName: 'Owls' }).ok, false); });
+test('four check-in calls are too many', () => { assert.equal(checkinRate(4).ok, false); });
+test('a lint blocker names the file and the rule', () => { assert.equal(lintBlocker({ file: 'a.js', rule: 'semi' }).named, true); });
+test('the badge shows the host and the SHA', () => { assert.equal(deployedSha({ host: 'dru', sha: 'abc' }).ok, true); });
+test('a fixture does not use SQL', () => { assert.equal(fixtureWithoutSql({ name: 'week', sql: true }).ok, false); });
+test('a trial names both captains', () => { assert.equal(twoCaptainTrial({ home: 'Mina' }).ok, false); });
+test('gamma lint stays on gamma', () => { assert.equal(gammaLint('dru').ok, true); });

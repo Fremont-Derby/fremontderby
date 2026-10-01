@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { captainPhone, noticeEvent, reversibleGate, roleBoundary, sessionExpired, tapTarget, testerFeedback, writeState } from '../src/reviewGate.js';
+test('a gate names its undo', () => { assert.equal(reversibleGate({}).ok, false); });
+test('a player cannot take an admin action', () => { assert.equal(roleBoundary({ role: 'player' }, { public: false }).ok, false); });
+test('a tap target is at least 44', () => { assert.equal(tapTarget({ size: 32 }).ok, false); });
+test('a write is pending, saved, or failed', () => { assert.equal(writeState({ state: 'saved' }).ok, true); });
+test('an expired session keeps the draft', () => { assert.match(sessionExpired({ expired: true }).text, /draft/); });
+test('feedback needs the lane and the SHA', () => { assert.equal(testerFeedback({ lane: 'dru', sha: 'abc', text: 'ok' }).ok, true); });
+test('a captain phone is admin-only', () => { assert.equal(captainPhone({ role: 'player' }, '2065550100').shown, false); });
+test('only lineup, score, and check-in create a notice', () => { assert.equal(noticeEvent('trade').notify, false); });

@@ -119,6 +119,7 @@ export function renderChatPage(env = {}) {
 </head>
 <body>
   <main class="app">
+    <section data-stuck-path><h2>If you are stuck</h2><p>Launch goes back to the mission. Lineup goes to lineup. Score goes to score.</p></section>
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
       <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
@@ -296,7 +297,11 @@ export function renderChatPage(env = {}) {
     }
     async function parseJson(response) {
       const text = await response.text();
+      if (response.status === 429 || /error 1015|you are being rate limited/i.test(text)) {
+        return { error: 'Too many requests. Wait a few seconds and try again.' };
+      }
       if (!text) return {};
+      if (text.trim().startsWith('<')) return { error: 'The page returned HTML instead of message data. Try again.' };
       try { return JSON.parse(text); } catch { return { error: text }; }
     }
     function consumeOAuthCallback() {
