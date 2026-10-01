@@ -29,7 +29,7 @@ export async function reserveFreshDruSeason(env, { seasonName }, fetchImpl = glo
     headers,
     body: JSON.stringify({
       name,
-      status: 'draft',
+      status: 'registration',
       league_night: 'thursday',
       first_round_date: '2026-10-22',
       roster_lock_round: 4,
