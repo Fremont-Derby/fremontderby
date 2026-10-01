@@ -1670,6 +1670,10 @@ export async function handleListSeasonScheduleRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+    }
     const ifNoneMatch = request?.headers?.get?.('if-none-match') || '';
     // WHY: warm polls parallelize exists+version (independent I/O) before any heavy build.
     if (ifNoneMatch) {
@@ -1687,10 +1691,6 @@ export async function handleListSeasonScheduleRequest(
     }
     if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
-    }
-    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
-      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
     }
     return conditionalJsonFromVersion(request, {
       scope: `schedule:${seasonId}`,
