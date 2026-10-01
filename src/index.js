@@ -608,12 +608,17 @@ export async function handleManageTeamSlotRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    const action = body.action ?? body.decision ?? body.response;
+    if (String(env.ENVIRONMENT || '').trim() === 'dru' && String(action || '') === 'confirm') {
+      const { registerDruSlotRoster } = await import('./druSlotRoster.js');
+      await registerDruSlotRoster(env, slotId, fetchImpl);
+    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const slot = await manageTeamSlotCommand(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action ?? body.decision ?? body.response,
+        action,
         reason: body.reason ?? body.note,
         extensionDays: body.extensionDays ?? body.extension_days,
       },
