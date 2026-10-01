@@ -20,7 +20,7 @@ export function renderAdminSupportPage() {
   </style>
 </head>
 <body>
-  <main>
+  <main>\n    <p data-policy="gate">A night-blocking defect fails the gate, and a record with match history cannot be deleted.</p>
     <section data-backup-proof><h2>Restore proof</h2><label>Lane <select data-backup-lane><option>dru</option><option>gamma</option><option>jfl</option></select></label><label>Backup <input data-backup-name /></label><label><input type="checkbox" data-backup-served /> Restored lane served a page</label><p data-backup-result>Not proven.</p></section>
     <section data-qa-triage>
       <h2>Triage a failure</h2>
