@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { checkinBurst, humanThrottle, isolatedBinding, lineupUntilBoth, secretScan, selectedControl, unsubmitOnEdit, wafException } from '../src/scoreGate.js';
+test('four check-in calls are too many', () => { assert.equal(checkinBurst(4).ok, false); });
+test('a WAF exception is named', () => { assert.equal(wafException({ named: true, lane: 'dru' }).ok, true); });
+test('a binding stays off production', () => { assert.equal(isolatedBinding({ lane: 'prod' }).ok, false); });
+test('a selected control stays visible', () => { assert.equal(selectedControl({ selected: true, visible: false }).ok, false); });
+test('a live secret fails the scan', () => { assert.equal(secretScan('sk_live_abc').ok, false); });
+test('lineup stays editable until both submit', () => { assert.equal(lineupUntilBoth({ submitted: true }, { submitted: false }).editable, true); });
+test('an edit unsubmits the lineup', () => { assert.equal(unsubmitOnEdit({ edited: true }).submitted, false); });
+test('throttle still needs a human', () => { assert.equal(humanThrottle({ raised: false }).human, true); });
