@@ -1,4 +1,10 @@
 export function renderPrizesPage() {
+
+async function readJson(response) {
+  const text = await response.text();
+  if (!text || text.trim().startsWith('<')) throw new Error('Prizes did not return data. Try again.');
+  return JSON.parse(text);
+}
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -276,6 +282,11 @@ export function renderPrizesPage() {
   </main>
 
   <script>
+    async function readJson(response) {
+      const text = await response.text();
+      if (!text || text.trim().startsWith('<')) throw new Error('Prizes did not return data. Try again.');
+      return JSON.parse(text);
+    }
     const form = document.querySelector('[data-form]');
     const seasonInput = document.querySelector('[data-season-id]');
     const loadButton = document.querySelector('[data-load]');
@@ -418,7 +429,7 @@ export function renderPrizesPage() {
       seasonInput.disabled = true;
       loadButton.disabled = true;
       const response = await fetch('/api/seasons');
-      const body = await response.json();
+      const body = await readJson(response);
       if (!response.ok) throw new Error(body.error || 'Could not load seasons');
       const seasons = body.seasons || [];
       seasonInput.replaceChildren();
@@ -454,7 +465,7 @@ export function renderPrizesPage() {
       if (!quiet) loadButton.disabled = true;
       try {
         const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
-        const body = await response.json();
+        const body = await readJson(response);
         if (!response.ok) {
           throw new Error(body.error || 'Prize summary failed');
         }
