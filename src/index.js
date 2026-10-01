@@ -1688,6 +1688,10 @@ export async function handleListSeasonScheduleRequest(
     if (!(await repository.seasonExists({ seasonId }))) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+    }
     return conditionalJsonFromVersion(request, {
       scope: `schedule:${seasonId}`,
       cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
