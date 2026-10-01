@@ -38,6 +38,7 @@ import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
+import { injectEnvironmentFingerprint } from './environmentFingerprint.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
@@ -185,6 +186,7 @@ const baseRouterEntry = {
 export default {
   async fetch(request, env, ctx) {
     const response = await baseRouterEntry.fetch(request, env, ctx);
-    return decorateJflModernShell(response, request, env);
+    const withShell = await decorateJflModernShell(response, request, env);
+    return injectEnvironmentFingerprint(withShell, request, env);
   },
 };
