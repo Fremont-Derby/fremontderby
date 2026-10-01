@@ -2,7 +2,8 @@ import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
 import { scorecardMatchLabel, seasonsForRequestedMatch } from './druScorecardSeason.js';
 
 const OLD_HOOK = 'filtersEl.hidden=false;populateMatchups();selectRequestedMatch()}';
-const NEW_HOOK = 'filtersEl.hidden=false;populateMatchups();selectRequestedMatch();void honorRequestedMatchDate()}';
+const SHORT_HOOK = 'populateMatchups();selectRequestedMatch()}';
+const NEW_HOOK = 'populateMatchups();selectRequestedMatch();void honorRequestedMatchDate();void openDruSeason()}';
 const HONOR_FN = "function honorRequestedMatchDate(){if(!requestedMatch||requestedContext())return Promise.resolve();const requestedSeason=new URLSearchParams(location.search).get('season')||'';return fetch('/api/seasons').then((response)=>response.text().then((text)=>response.ok&&!text.trim().startsWith('<')?JSON.parse(text):{seasons:[]})).then((body)=>{const seasons=(typeof seasonsForRequestedMatch==='function'?seasonsForRequestedMatch:function(rows,explicitId){const list=rows||[];return list.filter((season)=>season.id===explicitId).concat(list.filter((season)=>season.id!==explicitId))})(body.seasons||[],requestedSeason);const load=(index)=>{const season=seasons[index];if(!season)return null;return fetch('/api/seasons/'+encodeURIComponent(season.id)+'/schedule').then((response)=>response.text().then((text)=>response.ok&&!text.trim().startsWith('<')?JSON.parse(text):{rounds:[]})).then((schedule)=>{const rounds=schedule.rounds||[];for(const round of rounds){const match=(round.matches||[]).find((item)=>item.teamMatchId===requestedMatch);if(!match)continue;const date=round.scheduledOn||round.scheduled_on||'';if(date&&!Array.from(dateSelect.options).some((option)=>option.value===date)){const option=document.createElement('option');option.value=date;option.textContent=dateLabel(date);dateSelect.append(option)}if(date)dateSelect.value=date;populateMatchups();if(!Array.from(matchupSelect.options).some((option)=>option.value===requestedMatch)){const option=document.createElement('option');option.value=requestedMatch;option.textContent=(match.teamAName||'Home')+' vs '+(match.teamBName||'Away')+' · Round '+(round.roundNumber||'');matchupSelect.append(option)}matchupSelect.value=requestedMatch;populateRaces();setStatus('Opened '+(match.teamAName||'Home')+' vs '+(match.teamBName||'Away')+'.');return}return load(index+1)})};return load(0)}).catch(()=>{})}";
 
 export function druScorecardSeasonPickerSource() {
@@ -54,11 +55,9 @@ export function repairScorecardScript(html) {
     next = next.replace('function selectRequestedMatch()', HONOR_FN + 'function selectRequestedMatch()');
   }
   next = next.replace(OLD_HOOK, NEW_HOOK);
-  if (!next.includes('data-dru-season-picker')) {
-    next = next.replace(
-      '</body>',
-      `<script data-dru-season-picker>\n${druScorecardSeasonPickerSource()}\n</script></body>`,
-    );
+  next = next.replace(SHORT_HOOK, NEW_HOOK);
+  if (!next.includes('function openDruSeason')) {
+    next = next.replace('function selectRequestedMatch()', 'function openDruSeason(){' + druScorecardSeasonPickerSource() + '}function selectRequestedMatch()');
   }
   if (next.includes('data-next-match')) return next;
   next = next.replace('</header>', '</header><p data-next-match>Looking up your next published match…</p>');
