@@ -32,7 +32,9 @@ export const liveRackLedgerAdapterSource = String.raw`
         if(message==='Score record is already complete'){
           throw new Error('Your side already reached the race target. Submit it now, or edit/undo a rack if your score is wrong.');
         }
-        throw new Error(message);
+        const failure=new Error(message);
+        failure.status=response.status;
+        throw failure;
       }
       return body;
     }
