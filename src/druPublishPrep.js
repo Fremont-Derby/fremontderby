@@ -120,3 +120,10 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
   }
   return { prepared: true, teams: teams.length, added: captainAdds.length + plan.adds.length };
 }
+
+export function practicePublishReady(teamCount) {
+  const count = Number(teamCount || 0);
+  if (!count) return { ok: false, text: 'Add a team before publishing.' };
+  if (count !== 8) return { ok: false, text: 'A practice night needs exactly 8 teams.' };
+  return { ok: true, text: 'Eight teams are ready.' };
+}

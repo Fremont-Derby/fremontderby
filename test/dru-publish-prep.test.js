@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { practiceCaptainPlan, practiceRosterPlan, practiceSlotPlan } from '../src/druPublishPrep.js';
+import { practiceCaptainPlan, practicePublishReady, practiceRosterPlan, practiceSlotPlan } from '../src/druPublishPrep.js';
 
 test('a practice night fills each team to the committed roster', () => {
   const plan = practiceRosterPlan(
@@ -48,4 +48,10 @@ test('a practice slot is skipped when the team has no captain', () => {
   );
   assert.equal(slots.length, 1);
   assert.equal(slots[0].team_id, 'team-b');
+});
+
+test('a practice publish waits for eight teams', () => {
+  assert.equal(practicePublishReady(0).ok, false);
+  assert.equal(practicePublishReady(3).ok, false);
+  assert.equal(practicePublishReady(8).ok, true);
 });
