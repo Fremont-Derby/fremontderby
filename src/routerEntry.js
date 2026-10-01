@@ -264,10 +264,6 @@ export default {
     const kidLeagueSeedResponse = await routeDruKidLeagueSeed(request, env);
     if (kidLeagueSeedResponse) return finalizeBrowserResponse(kidLeagueSeedResponse, url.pathname);
 
-    if (isRetiredTradePath(url.pathname)) {
-      return finalizeBrowserResponse(retiredTradeResponse(request, url.pathname), url.pathname);
-    }
-
     const emptyReadResponse = routeDruPublicEmptyReads(request, env);
     if (emptyReadResponse) return finalizeBrowserResponse(emptyReadResponse, url.pathname);
 
