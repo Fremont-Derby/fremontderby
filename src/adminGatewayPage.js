@@ -15,6 +15,7 @@ export function renderAdminGatewayPage() {
 </head>
 <body>
   <main class="app">
+    <p class="note" data-workflow-health>Workflow health lists the checks that are red before a release.</p>
     <section class="hero" aria-labelledby="admin-title">
       <div class="kicker">Fremont Derby</div>
       <h1 id="admin-title">Admin</h1>

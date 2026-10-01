@@ -38,6 +38,8 @@ export function renderAdminSeasonsPage() {
 </head>
 <body>
   <main class="app">
+    <section data-rule-log><h2>League rule decision</h2><label>Rule <input data-rule-name /></label><label>Impact <input data-rule-impact /></label><label>Date <input data-rule-date placeholder="YYYY-MM-DD" /></label><button type="button" data-rule-save>Record decision</button><p data-rule-result></p></section>
+    <p class="note" data-smoke-gate>A human gate waits on a real data check, not a shell-only page load.</p>
     <header class="head">
       <div>
         <div class="muted">Admin · League Management</div>
