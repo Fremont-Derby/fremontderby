@@ -95,7 +95,19 @@ export function renderNotificationsPage() {
       }
       return card;
     }
+    function dedupeNotices(items){
+      const seen=new Set();
+      const out=[];
+      for(const item of items){
+        const key=[item.title||'',item.body||'',resolveHref(item)].join('|');
+        if(seen.has(key)) continue;
+        seen.add(key);
+        out.push(item);
+      }
+      return out;
+    }
     function render(items){
+      items=dedupeNotices(items);
       if(!items.length){
         listEl.replaceChildren();
         const empty=document.createElement('div');
