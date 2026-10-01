@@ -20,14 +20,7 @@ function loadWrangler() {
 }
 
 test('wrangler owns custom domains for every lane hostname (#639)', () => {
-  const config = loadWrangler();
-  if (config.name === 'fremontderby-dru') {
-    const hostnames = JSON.stringify(config.routes || []);
-    assert.match(hostnames, /dru\.fremontderby\.com/);
-    assert.doesNotMatch(hostnames, /www\.fremontderby\.com/);
-    return;
-  }
-  assertWranglerRoutesCoverDomains(config);
+  assertWranglerRoutesCoverDomains(loadWrangler());
 });
 
 test('lane deploy maps env to dedicated hostname not production apex', () => {
