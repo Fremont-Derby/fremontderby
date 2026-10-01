@@ -126,8 +126,9 @@ export const jflDeployTimeClientScript = String.raw`
 `;
 
 function renderEnvironmentBadge(env = {}) {
-  const fullSha = String(env.DEPLOY_GIT_SHA || '').trim();
   const metadata = env.CF_VERSION_METADATA || {};
+  const fullSha = String(metadata.tag || env.DEPLOY_GIT_SHA || '').trim();
+  const shortSha = /^[0-9a-f]{40}$/i.test(fullSha) ? fullSha.slice(0, 8) : fullSha || 'unknown';
   const deployedAt = String(metadata.timestamp || '').trim();
   const versionId = String(metadata.id || '').trim();
   const badgeValue = formatJflDeployTimestamp(deployedAt);
@@ -135,7 +136,7 @@ function renderEnvironmentBadge(env = {}) {
   if (versionId) titleParts.push(`version ${versionId}`);
   if (fullSha) titleParts.push(`git ${fullSha}`);
   const timestampAttr = deployedAt ? ` data-deploy-timestamp="${escapeAttribute(deployedAt)}"` : '';
-  return `<span class="fd-env-badge" data-fd-jfl-environment${timestampAttr} title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><span data-fd-jfl-deploy-time>${escapeAttribute(badgeValue)}</span></span>`;
+  return `<span class="fd-env-badge" data-fd-jfl-environment data-fd-environment-fingerprint="jfl"${timestampAttr} title="${escapeAttribute(titleParts.join(' · '))}"><strong>JFL</strong><code data-fd-jfl-deploy-sha>${escapeAttribute(shortSha)}</code><span data-fd-jfl-deploy-time>${escapeAttribute(badgeValue)}</span></span>`;
 }
 
 function injectEnvironmentBadge(html, env) {
@@ -188,6 +189,7 @@ export const jflModernShellStyles = `
     white-space: nowrap;
   }
   .fd-env-badge strong { color: #fff !important; letter-spacing: .09em; }
+  .fd-env-badge code { color: #fff; font: inherit; font-variant-numeric: tabular-nums; }
   .fd-env-badge span { color: #d9eadf; font-variant-numeric: tabular-nums; }
   .fd-nav--modern-primary { margin-left: auto !important; }
   .fd-nav--modern-primary a,

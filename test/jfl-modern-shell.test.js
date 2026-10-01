@@ -69,6 +69,7 @@ test('JFL shell renders five-item mobile dock, secondary navigation, current-pag
   assert.match(shellTag, /data-fd-modern-shell="true"/);
   assert.doesNotMatch(shellStyleTag, /data-fd-modern-shell/);
   assert.match(html, /data-fd-jfl-environment/);
+  assert.match(html, /data-fd-jfl-deploy-sha>1234567890abcdef<\/code>/);
   assert.match(html, />JFL</);
   assert.match(html, /data-fd-jfl-deploy-time>…<\/span>/);
   assert.doesNotMatch(html, />08-28 05:14Z<\/span>/);

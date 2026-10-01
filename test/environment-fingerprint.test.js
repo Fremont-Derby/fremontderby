@@ -44,6 +44,13 @@ test('host/runtime disagreement is a prominent failure, including production on 
     assert.match(html, /role="alert"/);
     assert.doesNotMatch(html, /data-fd-environment-mismatch="false"/);
   }
+  const decorated = new Response('<html><head></head><body><span data-fd-environment-fingerprint="jfl">JFL</span></body></html>', {
+    headers: { 'content-type': 'text/html' },
+  });
+  const alert = await injectEnvironmentFingerprint(
+    decorated, new Request('https://dru.fremontderby.com/teams'), { ENVIRONMENT: 'jfl' },
+  );
+  assert.match(await alert.text(), /ENVIRONMENT MISMATCH/);
 });
 
 test('fingerprint escapes untrusted metadata, is idempotent, and leaves APIs untouched', async () => {
@@ -73,5 +80,6 @@ test('JFL router includes the marker on a real rendered page', async () => {
   const html = await response.text();
   assert.match(html, /data-fd-modern-shell="true"/);
   assert.match(html, /data-fd-environment-fingerprint="jfl"/);
-  assert.match(html, /JFL · fdc65c14/);
+  assert.match(html, /data-fd-jfl-deploy-sha>fdc65c14<\/code>/);
+  assert.doesNotMatch(html, /class="fd-environment-fingerprint/);
 });

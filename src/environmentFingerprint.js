@@ -33,7 +33,7 @@ export async function injectEnvironmentFingerprint(response, request, env = {}) 
   if (!mismatch && !NON_PRODUCTION.has(runtime)) return response;
 
   const html = await response.text();
-  if (html.includes('data-fd-environment-fingerprint')) {
+  if (!mismatch && html.includes('data-fd-environment-fingerprint')) {
     return new Response(html, { status: response.status, statusText: response.statusText, headers: response.headers });
   }
 
