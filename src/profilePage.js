@@ -105,6 +105,7 @@ export function renderProfilePage(env = {}) {
 </head>
 <body>
   <main class="app">
+    <section data-error-link><h2>Error link</h2><p>A client error keeps its id and a short server code. The stack stays off the page.</p></section>
     <p class="note" data-eligibility-why>Eligibility says why a player can play or why they are blocked.</p>
     <header class="topbar">
       <div class="brand"><span class="mark">P</span><span>Fremont Derby Profile</span></div>
