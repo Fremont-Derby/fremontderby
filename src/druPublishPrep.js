@@ -74,6 +74,10 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
       headers: { ...headers, prefer: 'return=minimal' },
       body: JSON.stringify({ season_id: seasonId, team_id: add.team_id, player_id: add.player_id, role: add.role }),
     });
+    if (add.role === 'captain') {
+      const { ensureDruPracticePhone } = await import('./druPracticePhone.js');
+      await ensureDruPracticePhone(env, add.player_id, fetchImpl);
+    }
   }
   if (plan.seasonPlayers.length) {
     await fetchWithSchema(`${base}/rest/v1/season_players?on_conflict=season_id,player_id`, {
