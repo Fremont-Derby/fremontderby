@@ -122,6 +122,7 @@ test('availability first render and recovery states are task-oriented', () => {
   assert.match(html, /Open Profile and sign in again/);
   assert.match(html, /Check-in could not be loaded/);
   assert.match(html, /Try again/);
+  assert.match(html, /action===loadPage\|\|recovery\.hidden===false/);
   assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
 });
 
