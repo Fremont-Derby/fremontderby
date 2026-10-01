@@ -19,7 +19,7 @@ export function renderNotificationsPage() {
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app">\n    <p data-notice-state="handled">A notice says whether it is still open or already handled.</p>
     <header class="topbar">
       <div class="brand"><span class="mark">9</span><span>Notifications</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
