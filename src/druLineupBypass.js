@@ -32,8 +32,15 @@ export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = 
   return saved.ok ? ids.length : 0;
 }
 
+
+export function duplicateLineupIds(playerIds) {
+  const ids = (playerIds || []).filter(Boolean);
+  return ids.length > 0 && new Set(ids).size !== ids.length;
+}
+
 export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !actorUserId || !teamId) return false;
+  if (duplicateLineupIds(playerIds)) throw new Error('Lineup players must be unique.');
   const conn = service(env);
   if (!conn) return false;
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
