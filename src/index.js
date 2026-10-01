@@ -1571,7 +1571,7 @@ export async function handleSubmitTeamLineupRequest(
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
       const { ensureDruActorCanLockLineup } = await import('./druLineupBypass.js');
-      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId }, fetchImpl);
+      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, playerIds: (body.slots ?? body.lineupSlots ?? body.lineup_slots ?? []).map((slot) => slot?.playerId).filter(Boolean) }, fetchImpl);
     }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
