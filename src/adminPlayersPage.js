@@ -13,6 +13,7 @@ export function renderAdminPlayersPage() {
 </head>
 <body>
   <main class="app">
+    <p class="note" data-no-hard-delete>A player with match history is not hard-deleted. The history stays.</p>
     <header class="head"><div><div class="muted">Admin · League Management</div><h1>Players</h1><div class="muted">Create and manage player identities, league-admin access, competition eligibility, and team membership exceptions without IDs or database edits.</div></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <a class="back" href="/admin">Admin home</a>
