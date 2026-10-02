@@ -35,6 +35,9 @@ function participantFacingError(body, status) {
   const message = typeof body === 'string' ? body : body?.message;
   const normalized = String(message || '').toLowerCase();
 
+  if (/^only the active captain can (view team lineups|submit a lineup)$/.test(normalized)) {
+    return 'Only the active captain can access this team\'s lineup.';
+  }
   if (normalized.includes('lineup player is not eligible')) {
     return 'That player is no longer eligible for this matchup. Refresh the lineup and choose another player.';
   }
