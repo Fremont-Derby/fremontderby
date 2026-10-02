@@ -155,7 +155,7 @@ export function renderNotificationsPage() {
       try{await api('/api/me/notifications/read-all',{method:'POST'});try{window.dispatchEvent(new CustomEvent('fd:notifications-changed'))}catch(_){ }await load()}
       catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
-    load().catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error'));
+    function showNoticeError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Notices could not be loaded.');setStatus(message,'error');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.textContent=message;listEl.append(empty);}load().catch(showNoticeError);
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
   </script>
 </body>
