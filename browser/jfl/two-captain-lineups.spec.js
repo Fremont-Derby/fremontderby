@@ -198,6 +198,8 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     const captainB = await contextB.newPage();
     await assumeCaptain(captainA, 'Admin Captain');
     await assumeCaptain(captainB, 'Regular Captain');
+    expect(await captainB.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
+    expect(await captainB.evaluate(() => innerWidth)).toBeLessThanOrEqual(390);
     await openOwnLineup(captainA, fixture.teamAId, 'Persona Test Team B', fixture.teamAPlayers[0]);
     await openOwnLineup(captainB, fixture.teamBId, 'Persona Test Team A', fixture.teamBPlayers[0]);
 
