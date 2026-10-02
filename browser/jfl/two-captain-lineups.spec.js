@@ -101,6 +101,14 @@ async function chooseAndSubmit(page, players) {
 
 async function openFirstRaceFromLineup(page, teamId) {
   await page.locator('[data-score-link]').click();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await expect.poll(async () => await page.locator('[data-filters]').isVisible()
+      || /could not load your scoring options/i.test(await page.locator('[data-status]').textContent() || '')).toBe(true);
+    if (await page.locator('[data-filters]').isVisible()) break;
+    await expect(page.locator('[data-status]')).toContainText('could not load your scoring options');
+    await page.waitForTimeout(11_000);
+    await page.locator('[data-list] a').filter({ hasText: 'Try again' }).click();
+  }
   await expect(page.locator('[data-filters]')).toBeVisible();
   await page.locator('[data-team]').selectOption(teamId);
   const dates = await page.locator('[data-date] option').evaluateAll((options) =>
@@ -120,29 +128,51 @@ async function openFirstRaceFromLineup(page, teamId) {
   const matchId = await page.locator('[data-race]').inputValue();
   expect(matchId).toBeTruthy();
   await page.locator('[data-list] a.match').click();
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    await expect.poll(async () => page.locator('[data-shared-rack-ledger-scorecard]')
-      .getAttribute('data-load-state')).toMatch(/ready|unavailable/);
-    if (await page.locator('[data-shared-rack-ledger-scorecard]').getAttribute('data-load-state') === 'ready') break;
-    const detail = await page.locator('[data-load-detail]').textContent() || '';
-    const seconds = Number(detail.match(/Wait (\d+) seconds?/i)?.[1]);
-    expect(seconds, detail).toBeGreaterThan(0);
-    await page.waitForTimeout((seconds + 1) * 1000);
-    await page.reload();
-  }
-  await expect(page.locator('[data-shared-rack-ledger-scorecard]')).toHaveAttribute('data-load-state', 'ready');
+  await waitForScorecardReady(page);
   expect(new URL(page.url()).searchParams.get('team')).toBe(teamId);
   expect(await page.evaluate(() => window.fdRackLedgerAdapter.scoringTeamId())).toBe(teamId);
   expect(await page.evaluate(() => window.fdRackLedgerState.ownSide)).toBe(teamId === fixture.teamAId ? 'A' : 'B');
   return matchId;
 }
 
+async function waitForScorecardReady(page) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await expect.poll(async () => page.locator('[data-shared-rack-ledger-scorecard]')
+      .getAttribute('data-load-state')).toMatch(/ready|unavailable/);
+    if (await page.locator('[data-shared-rack-ledger-scorecard]').getAttribute('data-load-state') === 'ready') return;
+    const detail = await page.locator('[data-load-detail]').textContent() || '';
+    const seconds = Number(detail.match(/Wait (\d+) seconds?/i)?.[1]);
+    expect(seconds, detail).toBeGreaterThan(0);
+    await page.waitForTimeout((seconds + 1) * 1000);
+    await page.reload();
+  }
+  throw new Error('Scorecard did not load after bounded UI retries');
+}
+
 async function scoreRack(page, winnerSide) {
   const priorCount = await page.evaluate(() => window.fdRackLedgerState.ownRackCount);
-  await page.locator('[data-add-rack]').click();
-  await page.locator(`[data-rack-${winnerSide.toLowerCase()}]`).click();
-  await expect.poll(async () => page.evaluate(() => window.fdRackLedgerState.ownRackCount))
-    .toBe(priorCount + 1);
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await page.locator('[data-add-rack]').click();
+    await page.locator(`[data-rack-${winnerSide.toLowerCase()}]`).click();
+    await expect.poll(async () => {
+      const count = await page.evaluate(() => window.fdRackLedgerState.ownRackCount);
+      const status = await page.locator('[data-status]').textContent() || '';
+      return count === priorCount + 1 || /Wait before retrying/.test(status);
+    }, { timeout: 30_000 }).toBe(true);
+    const count = await page.evaluate(() => window.fdRackLedgerState.ownRackCount);
+    if (count === priorCount + 1) return;
+    const message = await page.locator('[data-error-message]').textContent() || '';
+    const seconds = Number(message.match(/Wait (\d+) seconds?/i)?.[1]);
+    expect(seconds, message).toBeGreaterThan(0);
+    await page.waitForTimeout((seconds + 1) * 1000);
+    // A successful POST can be followed by a throttled read. Reopen before replaying.
+    await page.reload();
+    await waitForScorecardReady(page);
+    const refreshedCount = await page.evaluate(() => window.fdRackLedgerState.ownRackCount);
+    if (refreshedCount === priorCount + 1) return;
+    expect(refreshedCount).toBe(priorCount);
+  }
+  throw new Error('Rack did not save after bounded UI retries');
 }
 
 test('distinct captains blind-submit, reconcile scoring, and finalize the same JFL matchup', async ({ browser, request }) => {
