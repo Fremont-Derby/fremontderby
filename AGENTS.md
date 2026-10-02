@@ -155,6 +155,27 @@ New implementation cards start with `agent:unclaimed`, `stage:ready`, and `prior
 
 **Human-required exception:** cards labeled `human-required` are owned by a human/project author for dashboard-only work (Cloudflare, Supabase SQL editor, identity provider consoles). They still need `stage:*`, `priority:*`, and `area:*`. They do **not** require an `agent:*` implementation owner while blocked on a human. Agents may automate steps only when repository secrets and workflows already allow it; otherwise leave exact steps on the card and do not close it.
 
+#### Label integrity, ownership, and backlog cleanup
+
+Ownership labels are **live routing state, not taxonomy**. An `agent:*` label means that agent or lane has explicitly accepted current implementation ownership of that card. Do not use `agent:jfl`, `agent:dru`, `agent:codex`, or any other owner label to mean “related to this lane,” “authored by this agent,” “likely future owner,” “review interest,” or “belongs in this agent's backlog.” Never bulk-claim issues to make a queue easier to find.
+
+Before using issue labels to choose work, route a peer pulse, report project status, or begin implementation, perform a label-integrity preflight:
+
+- every open implementation card has exactly one `agent:*` owner label, except the `human-required` exception above;
+- every open implementation card has exactly one `stage:*` label;
+- every open implementation card has exactly one `priority:*` label and at least one `area:*` label;
+- multiple owner labels or multiple lifecycle-stage labels are invalid state and must not be treated as meaningful ownership;
+- a handoff label does not transfer ownership: the outgoing `agent:*` remains until the incoming owner explicitly accepts, then the incoming owner replaces it;
+- static owner/label snapshots written in an issue body or old comment are supporting history only. Current explicit product-owner direction and the live accepted handoff/implementation state determine what the labels should be.
+
+When label state is invalid, reconcile it **before** acting on it. Use the newest unambiguous evidence in this order: explicit product-owner direction; current issue requirements and dependency state; an explicit accepted handoff; the current focused PR/branch and its recorded owner; then the latest durable issue/PR status comment. Do not infer ownership from the issue title, author, assignee, an old branch name, or a stale label snapshot.
+
+Pure issue-metadata cleanup does not need a new implementation card when the correction is deterministic and changes no code, configuration, product behavior, or durable documentation. A trusted maintainer or agent may directly repair obviously stale duplicate owner/stage labels, restore `agent:unclaimed` where no owner has accepted work, or align an issue with explicit current product-owner direction. Leave a short cleanup comment when the reason is not self-evident.
+
+If the correct owner or stage cannot be established from current evidence, **do not guess and do not relabel in bulk**. Leave the ambiguous card unchanged, create or reuse one focused process/backlog-cleanup card, record the uncertain set and why each item is ambiguous, and assign that cleanup card to a single agent/reviewer to reconcile deliberately.
+
+Closed implementation cards should end with one `stage:closed` label after acceptance is satisfied; remove stale `handoff:*`, `blocked`, and duplicate stage labels unless a linked follow-up explicitly carries remaining work. Historical implementation-owner labels may remain on closed cards for provenance, but they must never be interpreted as current backlog ownership.
+
 Lifecycle labels are mutually exclusive. Replace the previous `stage:*` label when state changes; never stack several stages or owner labels. Use `stage:merged` after merge, `stage:verified` only after evidence is recorded, and `stage:closed` immediately before closing the issue. PRs reference the card but do not duplicate its lifecycle labels.
 
 The canonical names, colors, and descriptions live in `.github/collaboration-labels.json` and are synchronized by `.github/workflows/sync-collaboration-labels.yml`. Agents may not invent near-duplicate owner or stage labels. Change the manifest through a tracked governance PR when the system needs to evolve.
