@@ -46,7 +46,7 @@ export async function handleLeagueHouseRequest(request, env = {}, { fetch: fetch
         }),
       });
     }
-    return new Response(renderLeagueHousePage(saved), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+    return new Response(renderLeagueHousePage(saved, { saved: true }), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
   }
   return new Response(renderLeagueHousePage(settings), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
