@@ -66,6 +66,15 @@ export function renderAdminGatewayPage() {
         <a class="card" href="/admin/league-house">
           <strong>League house</strong><span>Set the venue, table size, number of tables, and league night.</span><b>Set house →</b>
         </a>
+        <a class="card" href="/admin/player-stats">
+          <strong>Player season stats</strong><span>Season record and dispute timeline for one player.</span><b>Open stats →</b>
+        </a>
+        <a class="card" href="/messages">
+          <strong>Messages</strong><span>Team chat, league chat, and direct messages.</span><b>Open messages →</b>
+        </a>
+        <a class="card" href="/free-agents">
+          <strong>Free agents</strong><span>Players who can fill in without a team.</span><b>Open free agents →</b>
+        </a>
         <a class="card" data-accent="blue" href="/admin/fargo-reports">
           <strong>Fargo reports</strong><span>See unreported matches, missing Fargo ids, and corrections.</span><b>Open Fargo reports →</b>
         </a>
