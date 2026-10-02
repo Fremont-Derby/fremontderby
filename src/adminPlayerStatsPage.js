@@ -16,7 +16,7 @@ a{color:#9ee5bd} input,button{min-height:44px}</style>
 <section class="panel">
 <label class="muted">Player id<input id="pid" placeholder="From Admin → Players"/></label>
 <button type="button" id="go">Load summary</button>
-<pre id="out" class="muted" style="white-space:pre-wrap">Stats helper: src/playerSeasonStats.js. Wire match feed RPC when ready.</pre>
+<pre id="out" class="muted" style="white-space:pre-wrap">Pick a player id from Admin, Players, then load the summary.</pre>
 </section>
 <script>
 document.getElementById('go').onclick = () => {

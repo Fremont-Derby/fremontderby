@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { href: '/lineup', label: 'Lineup', key: 'lineup' },
   { href: '/availability', label: 'Check in', key: 'availability' },
   { href: '/prizes', label: 'Prizes', key: 'prizes' },
-  { href: '/trades', label: 'Trades', key: 'trades' },
   { href: '/rules', label: 'Rules', key: 'rules' },
   { href: '/demo', label: 'Test Drive the App', key: 'demo' },
   { href: '/scorecard', label: 'Score', key: 'score' },
