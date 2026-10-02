@@ -38,7 +38,6 @@ export function renderAdminSeasonsPage() {
 </head>
 <body>
   <main class="app">\n    <p data-archive="completed">Only a completed or validation season can be archived.</p>
-    <section data-rule-log><h2>League rule decision</h2><label>Rule <input data-rule-name /></label><label>Impact <input data-rule-impact /></label><label>Date <input data-rule-date placeholder="YYYY-MM-DD" /></label><button type="button" data-rule-save>Record decision</button><p data-rule-result></p></section>
     <p class="note" data-smoke-gate>A human gate waits on a real data check, not a shell-only page load.</p>
     <header class="head">
       <div>
@@ -261,7 +260,7 @@ export function renderAdminSeasonsPage() {
       letterIndexEl.replaceChildren();
       setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
     });
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Seasons could not be refreshed.')),'error')),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

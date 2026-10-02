@@ -556,7 +556,7 @@ const context=nextCaptainMatchup(teams);if(context){const team=context.team;cons
         const season=publicSeasons[0]||null;
         renderRegistrationSummary(season);
       }catch{
-        renderRegistrationSummary(null);
+        registrationSummaryEl.textContent = 'Team registration could not be loaded. Refresh and try again.';
       }
     }
     function node(tag,text,className){
