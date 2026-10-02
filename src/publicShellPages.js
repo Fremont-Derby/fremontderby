@@ -33,15 +33,15 @@ export function renderFreeAgentsPage() {
        ${nextMatchSummaryBrowserSource}
        const nextEl = document.querySelector('[data-next-match]');
        fetch('/api/me/matches', { headers: { accept: 'application/json' } })
-         .then((response) => response.json())
+         .then((response) => { if (response.status === 429) throw new Error('busy'); return response.json(); })
          .then((body) => {
            const next = pickNextMatch(body.matches || []);
            nextEl.textContent = next
              ? ('Next match: ' + nextMatchLabel(next))
              : 'No upcoming match published.';
          })
-         .catch(() => {
-           nextEl.textContent = 'Could not load matches.';
+         .catch((error) => {
+           nextEl.textContent = error && error.message === 'busy' ? 'Matches are busy. Wait a moment, then refresh.' : 'Could not load matches.';
          });
        const statusEl = document.querySelector('[data-status]');
        const listEl = document.querySelector('[data-invites]');
