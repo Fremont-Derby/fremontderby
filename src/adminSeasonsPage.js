@@ -264,7 +264,7 @@ export function renderAdminSeasonsPage() {
       letterIndexEl.replaceChildren();
       setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message), 'error');
     });
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Seasons could not be refreshed.')),'error')),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;
