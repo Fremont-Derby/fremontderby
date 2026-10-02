@@ -10,6 +10,7 @@ test('two-captain reset fails closed on the exact isolated JFL QA fixture', () =
   assert.match(reset, /to_regnamespace\('jfl'\).*to_regnamespace\('jfl_private'\)/s);
   assert.match(reset, /s\.purpose = 'qa'/);
   assert.match(reset, /raise exception 'The exact JFL two-captain QA matchup is required'/);
+  assert.match(reset, /raise exception 'JFL two-captain QA reset did not reach its clean state'/);
   assert.match(reset, /^commit;/m);
   assert.doesNotMatch(reset, /\b(public|private|dru|gamma)\./i);
 });

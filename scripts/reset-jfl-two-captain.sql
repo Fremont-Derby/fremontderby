@@ -54,4 +54,26 @@ update jfl.team_matches
 set status = 'scheduled', winner_team_id = null
 where id = '18580000-1300-4000-8000-000000000001';
 
+do $$
+begin
+  if exists (
+    select 1 from jfl_private.team_lineups
+    where team_match_id = '18580000-1300-4000-8000-000000000001'
+  ) or exists (
+    select 1 from jfl.player_matches
+    where team_match_id = '18580000-1300-4000-8000-000000000001'
+  ) or exists (
+    select 1 from jfl.team_match_forfeits
+    where team_match_id = '18580000-1300-4000-8000-000000000001'
+  ) or not exists (
+    select 1 from jfl.team_matches
+    where id = '18580000-1300-4000-8000-000000000001'
+      and status = 'scheduled'
+      and winner_team_id is null
+  ) then
+    raise exception 'JFL two-captain QA reset did not reach its clean state';
+  end if;
+end
+$$;
+
 commit;
