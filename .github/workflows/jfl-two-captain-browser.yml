@@ -1,0 +1,74 @@
+name: Trusted JFL two-captain browser journey
+
+on:
+  push:
+    branches: [fremontderby-jfl]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-jfl-two-captain-browser
+  cancel-in-progress: true
+
+jobs:
+  reset-fixture:
+    if: github.repository == 'Fremont-Derby/fremontderby' && github.ref == 'refs/heads/fremontderby-jfl' && github.actor == 'subiki'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify trusted permanent JFL source
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/fremontderby-jfl | cut -f1)" = "$GITHUB_SHA"
+      - name: Wait for exact deployed JFL SHA, then reset the fixed QA fixture
+        env:
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/reset-jfl-two-captain.mjs
+
+  browser:
+    needs: reset-fixture
+    runs-on:
+      group: fremont-browser
+      labels: [self-hosted, Windows, X64, fremont-browser]
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
+      PLAYWRIGHT_EXPECTED_SHA: ${{ github.sha }}
+      PLAYWRIGHT_BROWSERS_PATH: C:\actions-runner\playwright-browsers
+    defaults:
+      run:
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify trusted permanent JFL source
+        run: |
+          if ((git rev-parse HEAD) -ne $env:GITHUB_SHA) { throw 'Checkout SHA differs from the trusted JFL push.' }
+          $tip = (git ls-remote origin refs/heads/fremontderby-jfl) -split "`t"
+          if ($tip[0] -ne $env:GITHUB_SHA) { throw 'The trusted JFL tip moved before browser execution.' }
+      - name: Install pinned browser test dependency
+        run: npm ci
+      - name: Use pinned Chromium on the trusted runner
+        run: npm run browser:install
+      - name: Run two-captain JFL browser journey
+        run: npm run test:browser:jfl
+      - name: Upload failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jfl-two-captain-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7

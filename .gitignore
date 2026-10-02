@@ -5,3 +5,6 @@ dist/
 .dev.vars.*
 .env
 .env.*
+playwright-report/
+test-results/
+supabase/.temp/
