@@ -42,6 +42,8 @@ After the pulse, resume normal impact-based prioritization.
 
 - DRU identifies the agent lane, not permanent ownership of a product area, file set, or branch.
 - Claim exactly one primary implementation card before editing and record DRU as the implementation owner.
+- Treat peer-pulse and backlog discovery as read-only unless DRU explicitly accepts one specific card or handoff. Never relabel a batch of JFL, unclaimed, human-required, planning, or review cards as `agent:dru` merely because DRU inspected them, could work them later, or wants them in a queue.
+- Before changing an existing card's `agent:*` or `stage:*` label, verify the current accepted owner/stage from the issue, handoff, PR/branch, and recent timeline. Do not run broad owner/stage normalization sweeps from title prefixes, area, age, priority, or lane relevance.
 - Start normal work from current `main` on a focused `dru/issue-<number>-<short-slug>` branch.
 - Treat `fremontderby-dru` as DRU's permanent deployment lane, not as a general implementation branch or shared mutable workspace.
 - Never check out, commit to, push to, merge into, rebase, reset, rename, delete, update, or otherwise mutate a `jfl/*` branch or `fremontderby-jfl`. No handoff creates an exception.
