@@ -10,6 +10,7 @@ import { routeJflModernHome } from './jflModernHome.js';
 import { routeJflModernSchedule } from './jflModernSchedule.js';
 import { routeJflModernStandings } from './jflModernStandings.js';
 import { routeJflModernTeams } from './jflModernTeams.js';
+import { routeJflFreeAgents } from './jflFreeAgentsPage.js';
 import { routeJflNotifications } from './jflNotificationsHttp.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
@@ -138,6 +139,10 @@ const baseRouterEntry = {
     const modernTeamsResponse = routeJflModernTeams(request, env);
     if (modernTeamsResponse) {
       return finalizeBrowserResponse(modernTeamsResponse, url.pathname);
+    }
+    const freeAgentsResponse = routeJflFreeAgents(request, env);
+    if (freeAgentsResponse) {
+      return finalizeBrowserResponse(freeAgentsResponse, url.pathname);
     }
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
