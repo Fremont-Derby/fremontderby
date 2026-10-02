@@ -33,13 +33,13 @@ export function renderAdminPlayerContactPage() {
     <p class="muted">Look up one player at a time. Directory lists never include phone numbers. Reveal only when you need to call a captain.</p>
     <section class="panel">
       <label>Player ID
-        <input data-player-id placeholder="Player id" autocomplete="off" />
+        <input data-player-id placeholder="Paste player id from Admin, Players" autocomplete="off" />
       </label>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button type="button" data-lookup>Check contact readiness</button>
         <button type="button" class="ghost" data-reveal hidden>Show phone number</button>
       </div>
-      <div class="status muted" data-status role="status" aria-live="polite">Player id from the list.</div>
+      <div class="status muted" data-status role="status" aria-live="polite">Enter a player id from the admin player directory.</div>
       <div class="phone" data-phone hidden></div>
     </section>
   </main>
