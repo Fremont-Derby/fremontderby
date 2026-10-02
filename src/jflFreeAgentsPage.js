@@ -35,13 +35,17 @@ export function safeFreeAgentCandidate(row = {}) {
 }
 
 const styles = `<style>
-  .fd-free{width:min(960px,100%);margin:0 auto;padding:28px 16px 110px;color:#f5f1e9}
+  .fd-free{width:min(960px,100%);margin:0 auto;padding:28px 16px 110px;color:#14231a}
   .fd-free h1{font-size:clamp(2rem,5vw,3.2rem);margin:0 0 8px}.fd-free h2{margin:0 0 8px;font-size:1.2rem}
-  .fd-free p{line-height:1.5;color:#c5d1c9}.fd-free__lede{max-width:680px}
+  .fd-free p{line-height:1.5;color:#44544b}.fd-free__lede{max-width:680px}
   .fd-free__steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
-  .fd-free__card,.fd-free__workspace{border:1px solid #385446;border-radius:14px;background:#13251b;padding:18px;min-width:0}
-  .fd-free__card a,.fd-free__action{display:inline-flex;align-items:center;min-height:44px;color:#a8e8c0;font-weight:800}
-  .fd-free__workspace{background:#102018}.fd-free__fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+  .fd-free__card,.fd-free__workspace{border:1px solid #385446;border-radius:14px;padding:18px;min-width:0}
+  .fd-free__card a,.fd-free__action{display:inline-flex;align-items:center;min-height:44px;font-weight:800}
+  .fd-free__card a{color:#145c35}.fd-free__action{color:#a8e8c0}
+  .fd-free__workspace{background:#102018;color:#f5f1e9}
+  .fd-free__workspace h2{color:#f5f1e9!important}.fd-free__workspace p{color:#d5e2d8!important}
+  .fd-free__workspace .fd-free__state,.fd-free__workspace label{color:#f5f1e9!important}
+  .fd-free__fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
   .fd-free label{display:grid;gap:6px;font-weight:700}.fd-free select,.fd-free input{width:100%;min-height:44px;padding:8px;border:1px solid #52705b;border-radius:8px;background:#07150e;color:#fff;font:inherit}
   .fd-free__results{display:grid;gap:9px;list-style:none;margin:14px 0;padding:0}.fd-free__result{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:13px;border:1px solid #355342;border-radius:9px;background:#0b1911}
   .fd-free__result strong{overflow-wrap:anywhere}.fd-free__result span{color:#bad9c5;font-size:.9rem}.fd-free__state{min-height:24px}.fd-free [hidden]{display:none!important}
