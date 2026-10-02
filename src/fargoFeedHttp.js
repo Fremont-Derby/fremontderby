@@ -1,5 +1,4 @@
 import { toFargoFeed } from './fargoFeed.js';
-import { loadHouseSettings } from './leagueHouseHttp.js';
 import { planFargoReports } from './fargoReportStore.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
@@ -31,7 +30,6 @@ export async function loadFinalizedMatches(env, fetchImpl) {
     readJson(await request(`${base}/rest/v1/players?id=in.(${playerIds})&select=id,display_name`, { headers: headers(key) })),
     readJson(await request(`${base}/rest/v1/player_external_identities?provider=eq.fargo&player_id=in.(${playerIds})&select=player_id,external_id`, { headers: headers(key) })),
   ]);
-  const house = await loadHouseSettings(env, fetchImpl);
   const name = Object.fromEntries(players.map((player) => [player.id, player.display_name]));
   const fargo = Object.fromEntries(identities.map((row) => [row.player_id, row.external_id]));
   return matches.map((row) => ({
@@ -44,10 +42,8 @@ export async function loadFinalizedMatches(env, fetchImpl) {
     playerAFargoId: fargo[row.player_a_id] || null,
     playerBFargoId: fargo[row.player_b_id] || null,
     playedOn: row.created_at || null,
-    venue: house.venue || null,
-    tableSize: house.tableSize || null,
-    tableCount: house.tableCount || null,
-    leagueNight: house.leagueNight || null,
+    venue: env.LEAGUE_VENUE || 'Fremont venue',
+    tableSize: env.LEAGUE_TABLE_SIZE || null,
     tableNumber: row.slot_number || null,
     sourceUrl: '/api/fargo/feed',
     racks: racks.filter((rack) => rack.player_match_id === row.id).map((rack) => ({
