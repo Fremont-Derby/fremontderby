@@ -8,7 +8,8 @@ test('phase A rating surfaces wired', () => {
   assert.match(entry, /admin\/rating-health/);
   assert.ok(existsSync(new URL('../src/derbyEstimate.js', import.meta.url)));
   assert.ok(existsSync(new URL('../supabase/migrations/20260816280000_recompute_derby_estimate.sql', import.meta.url)));
-  assert.ok(existsSync(new URL('../docs/spikes/fargo-challonge-publish-142.md', import.meta.url)));
+  assert.ok(existsSync(new URL('../docs/spikes/fargo-reporting-decision.md', import.meta.url)));
+  assert.equal(entry.includes('challonge'), false);
 });
 
 test('phase C modules present', () => {
