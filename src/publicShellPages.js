@@ -46,7 +46,7 @@ export function renderFreeAgentsPage() {
        const statusEl = document.querySelector('[data-status]');
        const listEl = document.querySelector('[data-invites]');
        fetch('/api/me/invitations', { headers: { accept: 'application/json' } })
-         .then((response) => response.json())
+         .then((response) => { if (response.status === 429) throw new Error('busy'); return response.json(); })
          .then((body) => {
            const invites = body.invitations || [];
            if (!invites.length) {
@@ -61,8 +61,8 @@ export function renderFreeAgentsPage() {
            }
            statusEl.textContent = invites.length + ' team invite' + (invites.length === 1 ? '' : 's') + ' waiting.';
          })
-         .catch(() => {
-           statusEl.textContent = 'Could not load invitations. Open Teams to ask a captain.';
+         .catch((error) => {
+           statusEl.textContent = error && error.message === 'busy' ? 'Invites are busy. Wait a moment, then refresh.' : 'Could not load invitations. Open Teams to ask a captain.';
          });
      </script>`,
   );
