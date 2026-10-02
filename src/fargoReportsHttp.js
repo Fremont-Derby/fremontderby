@@ -15,7 +15,8 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
   const key = env?.SUPABASE_SERVICE_ROLE_KEY;
   let rows = [];
   if (base && key) {
-    const response = await fetchImpl(withSupabaseSchema(`${base}/rest/v1/fargo_reports?select=player_match_id,status,payload&order=created_at.desc&limit=100`), {
+    const request = withSupabaseSchema(fetchImpl, env);
+    const response = await request(`${base}/rest/v1/fargo_reports?select=player_match_id,status,payload&order=created_at.desc&limit=100`, {
       headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
     });
     if (response.ok) rows = await response.json();
