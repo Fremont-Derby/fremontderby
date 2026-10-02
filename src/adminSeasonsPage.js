@@ -38,7 +38,6 @@ export function renderAdminSeasonsPage() {
 </head>
 <body>
   <main class="app">\n    <p data-archive="completed">Only a completed or validation season can be archived.</p>
-    <section data-rule-log><h2>League rule decision</h2><label>Rule <input data-rule-name /></label><label>Impact <input data-rule-impact /></label><label>Date <input data-rule-date placeholder="YYYY-MM-DD" /></label><button type="button" data-rule-save>Record decision</button><p data-rule-result></p></section>
     <p class="note" data-smoke-gate>A human gate waits on a real data check, not a shell-only page load.</p>
     <header class="head">
       <div>
@@ -97,9 +96,6 @@ export function renderAdminSeasonsPage() {
     function token() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
-    document.querySelector('[data-rule-save]').addEventListener('click', () => {
-      document.querySelector('[data-rule-result]').textContent = 'This does not save a rule. Published rules stay on Rules.';
-    });
     const normalizeStatusTone = ${normalizeStatusTone.toString()};
     function setStatus(message, tone = '', opts = {}) {
       if (window.fdSetStatus) {
