@@ -251,8 +251,9 @@ export function renderPlayoffsPage() {
       renderBracket(body.rounds||body.schedule||[]);
       if(!quiet) setStatus('Playoffs loaded','ok');
     }
-    document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')));
-    seasonEl.addEventListener('change',()=>loadBracket().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')));
+    function showBracketError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Playoffs could not be loaded.');setStatus(message,'error');bracketEl.innerHTML='<div class="empty"><strong>Playoffs could not be loaded</strong><div>'+message+'</div></div>';}
+    document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch(showBracketError));
+    seasonEl.addEventListener('change',()=>loadBracket().catch(showBracketError));
     document.querySelector('[data-start]').addEventListener('click',async()=>{
       try{
         setStatus('Starting playoffs…');
@@ -269,7 +270,7 @@ export function renderPlayoffsPage() {
         setStatus('Championship advanced','ok');
       }catch(e){setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')}
     });
-    load().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error'));
+    load().catch(showBracketError);
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(()=>{}),{intervalMs:20000,immediate:false});
   </script>
 </body>
