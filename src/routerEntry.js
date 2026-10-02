@@ -1,4 +1,4 @@
-import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
+import { handleFargoExportRequest } from './fargoExportHttp.js';
 import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
 import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
 import { renderAdminSupportPage } from './adminSupportPage.js';
@@ -320,9 +320,9 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
+    if (url.pathname === '/api/admin/fargo/export' && request.method === 'POST') {
       return finalizeBrowserResponse(
-        await handleChallongePublishDryRunRequest(request, env),
+        await handleFargoExportRequest(request, env),
         url.pathname,
       );
     }
