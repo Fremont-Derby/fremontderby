@@ -21,7 +21,7 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     });
     if (response.ok) rows = await response.json();
   }
-  return new Response(renderFargoReportsPage(fargoReportSummary(Array.isArray(rows) ? rows : [])), {
+  return new Response(renderFargoReportsPage(fargoReportSummary(Array.isArray(rows) ? rows : []), { feedUrl: '/api/fargo/feed', reportStore: response && response.ok ? 'ready' : 'unavailable' }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
