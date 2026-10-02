@@ -69,6 +69,7 @@ test('client script parses without injecting notice text into HTML', () => {
   assert.ok(script);
   assert.doesNotThrow(() => new Function(script));
   assert.match(script, /title\.textContent=item\.title/);
+  assert.match(script, /source\.textContent=String\(item\.kind\)/);
   assert.match(script, /body\.textContent=item\.body/);
   assert.match(script, /safeHref\(item\.href\)/);
 });

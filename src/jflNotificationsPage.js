@@ -42,6 +42,7 @@ export function renderJflNotificationsPage() {
   function noticeCard(item) {
     const card = document.createElement('article'); card.className='notice-card'; card.dataset.unread=String(!item.readAt);
     const title=document.createElement('h2'); title.textContent=item.title || 'League notice'; card.append(title);
+    if(item.kind){const source=document.createElement('span');source.className='notice-state';source.textContent=String(item.kind).replaceAll('_',' ');card.append(source)}
     const state=document.createElement('span'); state.className='notice-state'; state.textContent=item.readAt ? 'Read' : 'Unread'; card.append(state);
     const time=document.createElement('time'); const date=new Date(item.createdAt); if(!Number.isNaN(date.getTime())){time.dateTime=date.toISOString();time.textContent=date.toLocaleString();card.append(time)}
     if(item.body){const body=document.createElement('p');body.textContent=item.body;card.append(body)}
