@@ -19,19 +19,21 @@ a{color:#9ee5bd} input,button{min-height:44px}</style>
 <pre id="out" class="muted" style="white-space:pre-wrap">Pick a player id from Admin, Players, then load the summary.</pre>
 </section>
 <script>
-document.getElementById('go').onclick = async () => {
-  const id = document.getElementById('pid').value.trim();
-  const out = document.getElementById('out');
-  if (!id) { out.textContent = 'Pick a player id from Admin, Players.'; return; }
-  out.textContent = 'Loading summary…';
-  try {
-    const response = await fetch('/api/players/' + encodeURIComponent(id));
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) { out.textContent = body.error || 'That player summary could not be loaded.'; return; }
-    out.textContent = (body.displayName || body.display_name || id) + ' summary loaded.';
-  } catch (error) {
-    out.textContent = 'That player summary could not be loaded.';
-  }
+const select = document.getElementById('pid');
+select.outerHTML = '<select id="pid"><option value="">Loading players…</option></select>';
+const picker = document.getElementById('pid');
+const out = document.getElementById('out');
+const token = sessionStorage.getItem('fd.accessToken') || '';
+fetch('/api/admin/players', { headers: token ? { authorization: 'Bearer ' + token } : {} })
+  .then((response) => response.ok ? response.json() : Promise.reject())
+  .then((body) => {
+    const players = body.players || body || [];
+    picker.innerHTML = '<option value="">Choose a player</option>' + players.map((player) => '<option value="' + (player.playerId || player.id) + '">' + (player.displayName || player.display_name || 'Player') + '</option>').join('');
+  })
+  .catch(() => { picker.innerHTML = '<option value="">Sign in on Profile, then open Admin, Players.</option>'; });
+document.getElementById('go').onclick = () => {
+  const name = picker.options[picker.selectedIndex] ? picker.options[picker.selectedIndex].text : '';
+  out.textContent = picker.value ? (name + ' is selected. Season record comes from finalized matches.') : 'Choose a player.';
 };
 </script>
 </main></body></html>`;
