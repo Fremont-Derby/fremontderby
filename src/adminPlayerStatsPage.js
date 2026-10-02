@@ -19,11 +19,19 @@ a{color:#9ee5bd} input,button{min-height:44px}</style>
 <pre id="out" class="muted" style="white-space:pre-wrap">Pick a player id from Admin, Players, then load the summary.</pre>
 </section>
 <script>
-document.getElementById('go').onclick = () => {
+document.getElementById('go').onclick = async () => {
   const id = document.getElementById('pid').value.trim();
-  document.getElementById('out').textContent = id
-    ? ('Player ' + id + ': use Audit for privileged timeline; scorecard for finalized racks.')
-    : 'Player id required';
+  const out = document.getElementById('out');
+  if (!id) { out.textContent = 'Pick a player id from Admin, Players.'; return; }
+  out.textContent = 'Loading summary…';
+  try {
+    const response = await fetch('/api/players/' + encodeURIComponent(id));
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) { out.textContent = body.error || 'That player summary could not be loaded.'; return; }
+    out.textContent = (body.displayName || body.display_name || id) + ' summary loaded.';
+  } catch (error) {
+    out.textContent = 'That player summary could not be loaded.';
+  }
 };
 </script>
 </main></body></html>`;
