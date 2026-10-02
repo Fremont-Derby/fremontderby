@@ -16,7 +16,8 @@ export async function handlePlayerStatsSummaryRequest(request, env = {}, { fetch
   const key = env?.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key) return Response.json({ error: 'Player summary is unavailable.' }, { status: 503 });
   const read = withSupabaseSchema(fetchImpl, env);
-  const response = await read(`${base}/rest/v1/player_matches?or=(player_a_id.eq.${playerId},player_b_id.eq.${playerId})&status=in.(finalized,corrected)&select=id,status,player_a_id,player_b_id,score_a,score_b,created_at&limit=100`, {
+  const id = encodeURIComponent(playerId);
+  const response = await read(`${base}/rest/v1/player_matches?or=(player_a_id.eq.${id},player_b_id.eq.${id})&status=in.(finalized,corrected)&select=id,status,player_a_id,player_b_id,score_a,score_b,created_at&limit=100`, {
     headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
   });
   if (!response.ok) return Response.json({ error: 'Player summary could not be loaded.' }, { status: 503 });
