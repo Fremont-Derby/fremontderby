@@ -32,12 +32,16 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
   }
   let rows = [];
   let reportStore = 'unavailable';
-  if (base && key) {
-    const read = withSupabaseSchema(fetchImpl, env);
-    const response = await read(`${base}/rest/v1/fargo_reports?select=player_match_id,status,payload&order=created_at.desc&limit=100`, {
-      headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
-    });
-    if (response.ok) { rows = await response.json(); reportStore = 'ready'; }
+  try {
+    if (base && key) {
+      const read = withSupabaseSchema(fetchImpl, env);
+      const response = await read(`${base}/rest/v1/fargo_reports?select=player_match_id,status,payload&order=created_at.desc&limit=100`, {
+        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+      });
+      if (response.ok) { rows = await response.json(); reportStore = 'ready'; }
+    }
+  } catch {
+    reportStore = 'unavailable';
   }
   return new Response(renderFargoReportsPage(fargoReportSummary(Array.isArray(rows) ? rows : []), { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
