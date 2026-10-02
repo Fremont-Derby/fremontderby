@@ -1,6 +1,7 @@
 import { authenticateSupabaseUser, AuthError } from './supabaseAuth.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { renderJflNotificationsPage } from './jflNotificationsPage.js';
+import { decorateHtmlWithShell } from './appShell.js';
 
 const readPath = /^\/api\/me\/notifications\/([^/]+)\/read$/;
 
@@ -20,7 +21,7 @@ export function createJflNotificationsRoute({ authenticate = authenticateSupabas
     const pathname = new URL(request.url).pathname;
     if (pathname === '/notifications') {
       if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
-      return new Response(renderJflNotificationsPage(), {
+      return new Response(decorateHtmlWithShell(renderJflNotificationsPage(), pathname), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       });
     }

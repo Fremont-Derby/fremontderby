@@ -15,6 +15,8 @@ test('JFL notices page is real, responsive and never links to retired Trades', a
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Your notices/);
+  assert.match(html, /data-fd-shell/);
+  assert.match(html, /aria-label="Primary navigation"/);
   assert.match(html, /data-mark-all/);
   assert.match(html, /Unread/);
   assert.match(html, /@media\(max-width:600px\)/);
