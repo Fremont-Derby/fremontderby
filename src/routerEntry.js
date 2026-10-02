@@ -12,6 +12,7 @@ import { routeJflModernStandings } from './jflModernStandings.js';
 import { routeJflModernTeams } from './jflModernTeams.js';
 import { routeJflFreeAgents } from './jflFreeAgentsPage.js';
 import { routeJflPlayersDirectory } from './jflPlayersDirectory.js';
+import { routeJflPublicPlayoffs } from './jflPublicPlayoffs.js';
 import { routeJflNotifications } from './jflNotificationsHttp.js';
 import { decorateJflModernShell } from './jflModernShell.js';
 import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
@@ -148,6 +149,10 @@ const baseRouterEntry = {
     const playersDirectoryResponse = routeJflPlayersDirectory(request, env);
     if (playersDirectoryResponse) {
       return finalizeBrowserResponse(playersDirectoryResponse, url.pathname);
+    }
+    const publicPlayoffsResponse = routeJflPublicPlayoffs(request, env);
+    if (publicPlayoffsResponse) {
+      return finalizeBrowserResponse(publicPlayoffsResponse, url.pathname);
     }
     const modernUiCatalogResponse = routeModernUiCatalog(request, env);
     if (modernUiCatalogResponse) {
