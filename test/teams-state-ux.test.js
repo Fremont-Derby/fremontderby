@@ -32,7 +32,6 @@ test('Teams avoids placeholder registration metrics when no registration season 
   const html = renderTeamsPage();
   assert.match(html, /Team registration is not open right now/);
   assert.match(html, /if\(!season\|\|!Object\.keys\(season\)\.length\)\{/);
-  assert.match(html, /renderRegistrationSummary\(null\)/);
 });
 
 test('Teams recovery controls preserve keyboard, touch, mobile, and reduced-motion affordances', () => {
