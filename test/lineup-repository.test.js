@@ -64,6 +64,23 @@ test('lineup repository turns eligibility failures into participant-facing guida
   );
 });
 
+test('lineup repository preserves active-captain denial without exposing database detail', async () => {
+  const { fetch } = createFetch([
+    { status: 400, body: { message: 'Only the active captain can view team lineups' } },
+    { status: 400, body: { message: 'Only the active captain can submit a lineup' } },
+  ]);
+  const repository = createLineupRepository(env, { fetch });
+
+  await assert.rejects(
+    () => repository.listVisibleTeamLineups({ actorUserId: 'captain-user-2', teamId: 'team-1', roundId: 'round-1' }),
+    (error) => error.message === "Only the active captain can access this team's lineup.",
+  );
+  await assert.rejects(
+    () => repository.submitTeamLineup({ actorUserId: 'captain-user-2', teamId: 'team-1', roundId: 'round-1', slots: [] }),
+    (error) => error.message === "Only the active captain can access this team's lineup.",
+  );
+});
+
 test('lineup repository does not expose the Supabase implementation prefix', async () => {
   const { fetch } = createFetch([{ status: 500, body: { message: 'unexpected database detail' } }]);
   const repository = createLineupRepository(env, { fetch });

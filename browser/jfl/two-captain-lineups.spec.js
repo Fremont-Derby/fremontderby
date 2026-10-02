@@ -27,6 +27,28 @@ async function assumeCaptain(page, label) {
   await expect(page.locator('[data-test-persona-banner]')).toContainText(label);
 }
 
+async function readLineupAsCaptain(page, teamId) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const result = await page.evaluate(async ({ teamId, roundId }) => {
+      const token = sessionStorage.getItem('fd.accessToken');
+      const response = await fetch(`/api/teams/${teamId}/rounds/${roundId}/lineup`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const body = await response.json().catch(() => ({}));
+      return {
+        status: response.status,
+        retryAfter: response.headers.get('retry-after'),
+        error: body.error,
+        hasLineups: Object.hasOwn(body, 'lineups'),
+      };
+    }, { teamId, roundId: fixture.roundId });
+    if (result.status !== 429) return result;
+    const seconds = Number(result.retryAfter);
+    await page.waitForTimeout(((Number.isFinite(seconds) && seconds > 0 ? seconds : 15) + 1) * 1000);
+  }
+  throw new Error('Lineup access read remained throttled after bounded retries');
+}
+
 async function waitForCandidate(page, playerId) {
   const candidate = page.locator(`[data-toggle-player="${playerId}"]`);
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -204,6 +226,12 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await assumeCaptain(captainB, 'Regular Captain');
     expect(await captainB.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
     expect(await captainB.evaluate(() => innerWidth)).toBeLessThanOrEqual(390);
+    expect((await readLineupAsCaptain(captainB, fixture.teamBId)).status).toBe(200);
+    expect(await readLineupAsCaptain(captainB, fixture.teamAId)).toMatchObject({
+      status: 403,
+      error: "Only the active captain can access this team's lineup.",
+      hasLineups: false,
+    });
     await openOwnLineup(captainA, fixture.teamAId, 'Persona Test Team B', fixture.teamAPlayers[0]);
     await openOwnLineup(captainB, fixture.teamBId, 'Persona Test Team A', fixture.teamBPlayers[0]);
 

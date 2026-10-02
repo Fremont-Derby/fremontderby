@@ -1657,6 +1657,32 @@ test("visible team lineups handler returns only revealable lineup slots", async 
   });
 });
 
+test("team lineup handlers return a safe 403 for another team's captain", async () => {
+  for (const [method, handler, databaseMessage] of [
+    ["GET", handleListVisibleTeamLineupsRequest, "Only the active captain can view team lineups"],
+    ["POST", handleSubmitTeamLineupRequest, "Only the active captain can submit a lineup"],
+  ]) {
+    const { fetch } = createFetch([
+      { body: { id: "captain-user-2", email: "captain@example.com" } },
+      { status: 400, body: { message: databaseMessage } },
+    ]);
+    const response = await handler(
+      new Request("https://fremontderby.com/api/teams/team-1/rounds/round-1/lineup", {
+        method,
+        headers: { authorization: "Bearer captain-token" },
+        ...(method === "POST" ? { body: JSON.stringify({ slots: [] }) } : {}),
+      }),
+      publishEnv,
+      { teamId: "team-1", roundId: "round-1" },
+      { fetch },
+    );
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), {
+      error: "Only the active captain can access this team's lineup.",
+    });
+  }
+});
+
 test("team lineup route allows only GET and POST", async () => {
   const response = await worker.fetch(
     new Request(
