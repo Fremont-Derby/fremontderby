@@ -14,6 +14,7 @@ export const MODERN_SECONDARY_DESTINATIONS = Object.freeze([
   Object.freeze({ href: '/lineup', label: 'Lineup', key: 'lineup' }),
   Object.freeze({ href: '/standings', label: 'Standings', key: 'standings' }),
   Object.freeze({ href: '/players', label: 'Players', key: 'players' }),
+  Object.freeze({ href: '/playoffs', label: 'Playoffs', key: 'playoffs' }),
   Object.freeze({ href: '/prizes', label: 'Prizes', key: 'prizes' }),
   Object.freeze({ href: '/rules', label: 'Rules', key: 'rules' }),
   Object.freeze({ href: '/demo', label: 'Test drive', key: 'demo' }),
@@ -38,6 +39,7 @@ function routeKey(pathname) {
   if (pathname === '/notifications') return 'notifications';
   if (pathname === '/free-agents') return 'free-agents';
   if (pathname === '/players') return 'players';
+  if (pathname === '/playoffs') return 'playoffs';
   if (pathname === '/messages/moderation') return 'moderation';
   if (pathname === '/admin/players') return 'admin-players';
   if (pathname === '/admin/seasons') return 'admin-seasons';
