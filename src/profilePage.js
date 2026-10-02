@@ -189,6 +189,9 @@ export function renderProfilePage(env = {}) {
             <a href="/admin">Admin home</a>
             <a href="/admin/players">Players</a>
             <a href="/admin/operations">Operations</a>
+            <a href="/admin/player-stats">Player stats</a>
+            <a href="/admin/league-house">League house</a>
+            <a href="/admin/fargo-reports">Fargo reports</a>
             <a href="/messages/moderation">Moderation</a>
           </nav>
         </article>

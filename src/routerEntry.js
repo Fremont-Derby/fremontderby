@@ -325,7 +325,7 @@ export default {
     if (url.pathname === '/admin/league-house' && (request.method === 'GET' || request.method === 'POST')) {
       return finalizeBrowserResponse(await handleLeagueHouseRequest(request, env), url.pathname);
     }
-    if (url.pathname === '/admin/fargo-reports' && request.method === 'GET') {
+    if (url.pathname === '/admin/fargo-reports' && (request.method === 'GET' || request.method === 'POST')) {
       return finalizeBrowserResponse(await handleFargoReportsPage(request, env), url.pathname);
     }
     if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {

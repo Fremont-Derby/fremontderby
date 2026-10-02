@@ -57,6 +57,7 @@ export function renderIntroPage() {
       <a class="button" href="/teams">Teams</a>
       <a class="button" href="/standings">Standings</a>
       <a class="button" href="/players">Players</a>
+      <a class="button" href="/free-agents">Free agents</a>
       <a class="button" href="/playoffs">Playoffs</a>
       <a class="button" href="/rules">Read the rules</a>
     </div>
