@@ -47,8 +47,10 @@ test('runtime captain Lineup keeps the mobile workspace in normal document flow'
   assert.match(html, /data-mobile-lineup-summary/);
   assert.match(html, /data-player-search/);
   assert.match(html, /data-submit/);
+  assert.match(html, /data-mobile-submit/);
   assert.match(html, /data-refresh/);
   assert.match(html, /data-score-link/);
+  assert.match(html, /\.score-link\[hidden\]\{display:none\}/);
   assert.doesNotMatch(html, /\.mobile-lineup-summary\{position:sticky/);
   assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*backdrop-filter/);
 });

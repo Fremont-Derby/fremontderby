@@ -79,7 +79,7 @@ async function chooseAndSubmit(page, players) {
       expect(dialog.type()).toBe('confirm');
       await dialog.accept();
     });
-    await page.locator('[data-submit]').click();
+    await page.locator('[data-submit]:visible, [data-mobile-submit]:visible').click();
     await expect.poll(async () => {
       const selection = await page.locator('[data-own-selection-status]').first().textContent() || '';
       const status = await page.locator('[data-status]').textContent() || '';
@@ -185,12 +185,21 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
   }
 
   const contextA = await browser.newContext();
-  const contextB = await browser.newContext();
+  // Keep the two roles isolated while proving the visiting captain can complete
+  // the real lineup and scoring path on a phone-sized touch viewport.
+  const contextB = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  });
   try {
     const captainA = await contextA.newPage();
     const captainB = await contextB.newPage();
     await assumeCaptain(captainA, 'Admin Captain');
     await assumeCaptain(captainB, 'Regular Captain');
+    expect(await captainB.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
+    expect(await captainB.evaluate(() => innerWidth)).toBeLessThanOrEqual(390);
     await openOwnLineup(captainA, fixture.teamAId, 'Persona Test Team B', fixture.teamAPlayers[0]);
     await openOwnLineup(captainB, fixture.teamBId, 'Persona Test Team A', fixture.teamBPlayers[0]);
 
@@ -198,6 +207,8 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainB.locator('[data-own-selection-status]').first()).toContainText('Not submitted');
     await expect(captainA.locator('[data-opponent]')).toBeHidden();
     await expect(captainB.locator('[data-opponent]')).toBeHidden();
+    await expect(captainA.locator('[data-score-link]')).toBeHidden();
+    await expect(captainB.locator('[data-score-link]')).toBeHidden();
 
     await chooseAndSubmit(captainA, fixture.teamAPlayers);
     await expect(captainA.locator('[data-own-selection-status]').first()).toContainText('Submitted');
@@ -205,6 +216,7 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainB.locator('[data-opponent-lineup-status]')).toHaveText('Submitted');
     await expect(captainB.locator('[data-opponent]')).toBeHidden();
     await expect(captainB.locator('[data-opponent-body]')).toBeEmpty();
+    await expect(captainB.locator('[data-score-link]')).toBeHidden();
 
     await chooseAndSubmit(captainB, fixture.teamBPlayers);
     await expect(captainB.locator('[data-own-selection-status]').first()).toContainText('Locked');
