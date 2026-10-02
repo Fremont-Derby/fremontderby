@@ -97,6 +97,9 @@ export function renderAdminSeasonsPage() {
     function token() {
       return sessionStorage.getItem('fd.accessToken') || '';
     }
+    document.querySelector('[data-rule-save]').addEventListener('click', () => {
+      document.querySelector('[data-rule-result]').textContent = 'This does not save a rule. Published rules stay on Rules.';
+    });
     const normalizeStatusTone = ${normalizeStatusTone.toString()};
     function setStatus(message, tone = '', opts = {}) {
       if (window.fdSetStatus) {
