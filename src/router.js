@@ -175,6 +175,14 @@ export default {
       return htmlResponse(renderDemoSeasonPage(), url.pathname);
     }
 
+    if (url.pathname === '/practice') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return new Response(null, {
+        status: 302,
+        headers: { location: '/demo', 'cache-control': 'no-store' },
+      });
+    }
+
     if (url.pathname === '/sandbox/player') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderPlayerSandboxPage(), url.pathname);
