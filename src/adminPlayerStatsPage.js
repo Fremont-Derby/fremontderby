@@ -16,27 +16,21 @@ a{color:#9ee5bd} input,button{min-height:44px}</style>
 <section class="panel">
 <label class="muted">Player id<input id="pid" placeholder="From Admin → Players"/></label>
 <button type="button" id="go">Load summary</button>
-<pre id="out" class="muted" style="white-space:pre-wrap">Pick a player id from Admin, Players, then load the summary.</pre>
+<pre id="out" class="muted" style="white-space:pre-wrap">Enter the player id, then load the summary.</pre>
 </section>
 <script>
-const select = document.getElementById('pid');
-select.outerHTML = '<select id="pid"><option value="">Loading players…</option></select>';
-const picker = document.getElementById('pid');
+const input = document.getElementById('pid');
 const out = document.getElementById('out');
-const token = sessionStorage.getItem('fd.accessToken') || '';
-fetch('/api/admin/players', { headers: token ? { authorization: 'Bearer ' + token } : {} })
-  .then((response) => response.ok ? response.json() : Promise.reject())
-  .then((body) => {
-    const players = body.players || body || [];
-    picker.innerHTML = '<option value="">Choose a player</option>' + players.map((player) => '<option value="' + (player.playerId || player.id) + '">' + (player.displayName || player.display_name || 'Player') + '</option>').join('');
-  })
-  .catch(() => { picker.innerHTML = '<option value="">Sign in on Profile, then open Admin, Players.</option>'; });
 document.getElementById('go').onclick = async () => {
-  if (!picker.value) { out.textContent = 'Choose a player.'; return; }
+  const id = input.value.trim();
+  if (!id) { out.textContent = 'Enter a player id.'; return; }
   out.textContent = 'Loading summary…';
-  const response = await fetch('/api/admin/player-stats?playerId=' + encodeURIComponent(picker.value), { headers: token ? { authorization: 'Bearer ' + token } : {} });
+  const token = sessionStorage.getItem('fd.accessToken') || '';
+  const response = await fetch('/api/admin/player-stats?playerId=' + encodeURIComponent(id), { headers: token ? { authorization: 'Bearer ' + token } : {} });
   const body = await response.json().catch(() => ({}));
-  out.textContent = response.ok ? ((picker.options[picker.selectedIndex].text) + ': ' + (body.wins || 0) + ' wins, ' + (body.losses || 0) + ' losses, ' + (body.matchesPlayed || 0) + ' matches.') : (body.error || 'Player summary could not be loaded.');
+  out.textContent = response.ok
+    ? (id + ': ' + (body.wins || 0) + ' wins, ' + (body.losses || 0) + ' losses, ' + (body.matchesPlayed || 0) + ' matches.')
+    : (body.error || 'Player summary could not be loaded.');
 };
 </script>
 </main></body></html>`;

@@ -33,13 +33,13 @@ export function renderAdminPlayerContactPage() {
     <p class="muted">Look up one player at a time. Directory lists never include phone numbers. Reveal only when you need to call a captain.</p>
     <section class="panel">
       <label>Player ID
-        <input data-player-id placeholder="Choose a player" autocomplete="off" />
+        <input data-player-id placeholder="Player id" autocomplete="off" />
       </label>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button type="button" data-lookup>Check contact readiness</button>
         <button type="button" class="ghost" data-reveal hidden>Show phone number</button>
       </div>
-      <div class="status muted" data-status role="status" aria-live="polite">Choose a player from the list.</div>
+      <div class="status muted" data-status role="status" aria-live="polite">Player id from the list.</div>
       <div class="phone" data-phone hidden></div>
     </section>
   </main>
@@ -73,9 +73,9 @@ export function renderAdminPlayerContactPage() {
       return body;
     }
     async function lookup(reveal) {
-      const playerId = document.querySelector('[data-player-id]').value.trim();
+      const playerId = idEl.value.trim();
       if (!playerId) {
-        setStatus('Choose a player.', 'error');
+        setStatus('Enter a player id.', 'error');
         return;
       }
       phoneEl.hidden = true;
@@ -102,15 +102,6 @@ export function renderAdminPlayerContactPage() {
         setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message) || 'Lookup failed', 'error');
       }
     }
-    idEl.outerHTML = '<select data-player-id><option value="">Loading players…</option></select>';
-    const picker = document.querySelector('[data-player-id]');
-    fetch('/api/admin/players', { headers: { authorization: 'Bearer ' + token(), accept: 'application/json' } })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((body) => {
-        const players = body.players || [];
-        picker.innerHTML = '<option value="">Choose a player</option>' + players.map((player) => '<option value="' + (player.playerId || player.id) + '">' + (player.displayName || player.display_name || 'Player') + '</option>').join('');
-      })
-      .catch(() => { picker.innerHTML = '<option value="">Sign in on Profile, then open Admin, Players.</option>'; });
     lookupBtn.addEventListener('click', () => lookup(false));
     revealBtn.addEventListener('click', () => lookup(true));
   })();
