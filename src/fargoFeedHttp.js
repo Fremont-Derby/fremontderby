@@ -7,7 +7,7 @@ async function loadFinalizedMatches(env, fetchImpl) {
   const key = env?.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key) return [];
   const response = await fetchImpl(
-    withSupabaseSchema(`${base}/rest/v1/player_matches?status=in.(finalized,corrected)&select=id,status,player_a_id,player_b_id&limit=100`),
+    withSupabaseSchema(`${base}/rest/v1/player_matches?status=in.(finalized,corrected)&select=id,status,player_a_id,player_b_id,winner_side&limit=100`),
     { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } },
   );
   if (!response.ok) return [];
@@ -18,6 +18,7 @@ async function loadFinalizedMatches(env, fetchImpl) {
     playerAId: row.player_a_id,
     playerBId: row.player_b_id,
     racks: [],
+    sourceUrl: '/api/fargo/feed',
   })) : [];
 }
 

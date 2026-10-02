@@ -11,4 +11,5 @@ test('the public Fargo feed includes finalized matches and is not accepted', () 
   assert.equal(feed.acceptedByFargo, false);
   assert.equal(feed.items.length, 1);
   assert.equal(feed.items[0].sent, false);
+  assert.equal(feed.items[0].sourceUrl, '/api/fargo/feed');
 });
