@@ -1,6 +1,7 @@
 import { handleFargoExportRequest } from './fargoExportHttp.js';
 import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
 import { handleFargoFeedRequest } from './fargoFeedHttp.js';
+import { handlePlayerStatsSummaryRequest } from './adminPlayerStatsHttp.js';
 import { handleLeagueHouseRequest } from './leagueHouseHttp.js';
 import { handleFargoReportsPage } from './fargoReportsHttp.js';
 import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
@@ -274,6 +275,9 @@ export default {
       }), url.pathname);
     }
 
+    if (url.pathname === '/api/admin/player-stats' && request.method === 'GET') {
+      return finalizeBrowserResponse(await handlePlayerStatsSummaryRequest(request, env), url.pathname);
+    }
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
