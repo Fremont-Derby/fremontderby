@@ -55,6 +55,7 @@ let bestLive=null,bestLiveScore=-Infinity,bestUpcoming=null,bestUpcomingDistance
       if(!token)throw new Error('Sign in to manage makeup matches.');
       const response=await fetch(path,{...options,headers:{authorization:'Bearer '+token,'content-type':'application/json',...(options.headers||{})}});
       const body=await json(response);
+      if(response.status===429)throw new Error('Makeup is busy. Wait a moment, then try again.');
       if(!response.ok)throw new Error(body.error||'Request failed');
       return body;
     }
