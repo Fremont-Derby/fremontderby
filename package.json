@@ -17,6 +17,11 @@
     "deploy:jfl": "node scripts/deploy-lane.mjs jfl",
     "deploy:dru": "node scripts/deploy-lane.mjs dru",
     "deploy:gamma": "node scripts/deploy-lane.mjs gamma",
-    "labels:check": "node scripts/collaboration-labels.mjs --check"
+    "labels:check": "node scripts/collaboration-labels.mjs --check",
+    "test:browser:jfl": "playwright test browser/jfl",
+    "browser:install": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }
