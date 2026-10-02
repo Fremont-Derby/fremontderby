@@ -322,7 +322,7 @@ export default {
     }
 
     if (url.pathname === '/api/fargo/feed' && request.method === 'GET') {
-      return finalizeBrowserResponse(handleFargoFeedRequest(request), url.pathname);
+      return finalizeBrowserResponse(await handleFargoFeedRequest(request, env), url.pathname);
     }
     if (url.pathname === '/api/admin/fargo/export' && request.method === 'POST') {
       return finalizeBrowserResponse(
