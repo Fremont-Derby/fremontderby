@@ -336,6 +336,7 @@ export function renderProfilePage(env = {}) {
         return api(path, options, false);
       }
       const body = await parseJson(response);
+      if (response.status === 429) throw new Error('Profile is busy. Wait a moment, then try again.');
       if (!response.ok) {
         throw new Error(body.error || 'Request failed');
       }
@@ -608,7 +609,7 @@ export function renderProfilePage(env = {}) {
       }
       if (returnedFromGoogle || token() || isOpenAuthLane()) {
         await loadProfile();
-        if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch(() => {}), { intervalMs: 45000, immediate: false });
+        if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch((error) => setStatus(friendlyErrorMessage(error), 'error')), { intervalMs: 45000, immediate: false });
         await refreshAdminAccess();
       }
     });
