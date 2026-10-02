@@ -13,4 +13,6 @@ test('JFL fixture workflow guards the staging project and rejects production', (
   assert.match(workflow, /github\.ref == 'refs\/heads\/fremontderby-jfl'/);
   assert.match(workflow, /runs-on: ubuntu-latest/);
   assert.doesNotMatch(workflow, /pull_request:/);
+  assert.match(workflow, /SQL output withheld|SQL validation/);
+  assert.doesNotMatch(workflow, /cat \/tmp\/jfl-seed\.log/);
 });

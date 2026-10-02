@@ -50,7 +50,16 @@ jobs:
             sudo apt-get install -y -qq postgresql-client
           fi
           if ! psql "$JFL_DB_URL" -X -v ON_ERROR_STOP=1 -q -f scripts/seed-jfl-two-captain.sql >/tmp/jfl-seed.log 2>&1; then
-            echo 'JFL fixture apply failed; SQL output withheld to protect connection details.'
+            if grep -Eiq 'password authentication failed|no password supplied|role .* does not exist' /tmp/jfl-seed.log; then
+              echo 'JFL fixture apply failed: database authentication.'
+            elif grep -Eiq 'could not translate|could not connect|Network is unreachable|Connection refused|timeout expired|server closed the connection|no route to host' /tmp/jfl-seed.log; then
+              echo 'JFL fixture apply failed: database connection.'
+            elif grep -Eiq 'ERROR:' /tmp/jfl-seed.log; then
+              location="$(grep -oE 'seed-jfl-two-captain.sql:[0-9]+' /tmp/jfl-seed.log | tail -n 1 || true)"
+              echo "JFL fixture apply failed: SQL validation${location:+ at $location}."
+            else
+              echo 'JFL fixture apply failed: unclassified psql error.'
+            fi
             exit 1
           fi
       - name: Verify isolated JFL matchup and eligible rosters
