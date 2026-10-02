@@ -518,7 +518,8 @@ async function readJson(response) {
           }),
         });
         const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.error || 'Finalize failed');
+        if (response.status === 429) throw new Error('Prizes are busy. Wait a moment, then try again.');
+if (!response.ok) throw new Error(body.error || 'Finalize failed');
         await loadPrizes();
         setStatus('Prize payouts finalized', 'ok');
       }));
