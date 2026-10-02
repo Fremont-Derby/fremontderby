@@ -13,7 +13,8 @@ test('unavailable future scorecard hides placeholder scoring UI and offers recov
   assert.match(html, /data-load-state=unavailable\] \.team-score/);
   assert.match(html, /data-load-state=unavailable\] \.race/);
   assert.match(html, /if\(!currentScorecard\)\{showLoadFailure\(error\);return\}/);
-  assert.match(html, /run\(\(\)=>loadAll\(\{quiet:true\}\)\)/);
+  assert.match(html, /async function refreshQuietly\(\)/);
+  assert.match(html, /await loadAll\(\{quiet:true\}\)/);
   assert.match(html, /appEl\.dataset\.loadState='ready';loadRecoveryEl\.hidden=true/);
   assert.match(html, /\[data-load-retry\]'\)\.addEventListener\('click',\(\)=>run\(loadAll\)\)/);
 });

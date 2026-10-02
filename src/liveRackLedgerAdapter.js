@@ -18,6 +18,14 @@ export const liveRackLedgerAdapterSource = String.raw`
       if(!token){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
       return{matchId,scoringTeamId,token};
     }
+    function retryAfterSeconds(response){
+      const value=response.headers?.get('retry-after');
+      const numeric=Number(value);
+      if(value&&Number.isFinite(numeric)&&numeric>0)return Math.min(Math.ceil(numeric),120);
+      const date=value&&Date.parse(value);
+      if(date&&Number.isFinite(date))return Math.min(Math.max(Math.ceil((date-Date.now())/1000),1),120);
+      return 15;
+    }
     async function api(path,options={}){
       const inputs=requireContext();
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
@@ -27,6 +35,13 @@ export const liveRackLedgerAdapterSource = String.raw`
       let body={};
       try{body=await response.json()}catch{}
       if(response.status===401){sessionStorage.removeItem('fd.accessToken');showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
+      if(response.status===429){
+        const seconds=retryAfterSeconds(response);
+        const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
+        failure.status=429;
+        failure.retryAfterSeconds=seconds;
+        throw failure;
+      }
       if(!response.ok){
         const message=body.error||'Request failed';
         if(message==='Score record is already complete'){
