@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import worker from '../src/personaRouterEntry.js';
 
 const LEGACY_SEASON_ID = '8a38a413-0359-a95a-4dc8-383123c7e092';
+const UPCOMING_SEASON_ID = '207abd00-3899-1ef2-d251-2a15efe5edc2';
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -74,4 +75,52 @@ test('JFL schedule still rejects malformed UUID text before touching Supabase', 
   );
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: 'That season or match link is invalid.' });
+});
+
+test('JFL standings accept both stored PostgreSQL season IDs and reject malformed IDs', async () => {
+  const originalFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(typeof input === 'string' ? input : input.url);
+    seen.push(url.pathname);
+    if (url.pathname.endsWith('/rest/v1/rpc/list_public_season_registration')) {
+      return json([
+        { id: LEGACY_SEASON_ID, name: 'Legacy Season', status: 'complete' },
+        { id: UPCOMING_SEASON_ID, name: 'Upcoming Season', status: 'registration' },
+      ]);
+    }
+    if (url.pathname.endsWith('/rest/v1/rpc/list_team_standings')
+      || url.pathname.endsWith('/rest/v1/rpc/list_individual_standings')) return json([]);
+    return json({ message: 'Unexpected request' }, 500);
+  };
+
+  const env = {
+    ENVIRONMENT: 'jfl',
+    SUPABASE_SCHEMA: 'jfl',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-key',
+  };
+  try {
+    for (const seasonId of [LEGACY_SEASON_ID, UPCOMING_SEASON_ID]) {
+      for (const view of ['team-standings', 'individual-standings']) {
+        const response = await worker.fetch(
+          new Request(`https://jfl.fremontderby.com/api/seasons/${seasonId}/${view}`),
+          env,
+        );
+        assert.equal(response.status, 200, `${seasonId} ${view}`);
+        assert.deepEqual(await response.json(), { standings: [] });
+      }
+    }
+    const callsBeforeInvalid = seen.length;
+    for (const badId of ['not-a-uuid', `${LEGACY_SEASON_ID}%27`]) {
+      const response = await worker.fetch(
+        new Request(`https://jfl.fremontderby.com/api/seasons/${badId}/individual-standings`),
+        env,
+      );
+      assert.equal(response.status, 400);
+    }
+    assert.equal(seen.length, callsBeforeInvalid, 'invalid IDs must not touch Supabase');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

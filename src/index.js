@@ -1452,7 +1452,9 @@ export default {
     const seasonPrizesMatch = url.pathname.match(
       /^\/api\/seasons\/([^/]+)\/prizes$/,
     );
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    // PostgreSQL UUID columns accept the full 8-4-4-4-12 hex form. Seeded JFL
+    // seasons use non-RFC version/variant bits but are still real stored IDs.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const requireSeasonUuid = (value) => {
       if (!UUID_RE.test(String(value || ""))) {
         return jsonResponse({ error: "That season or match link is invalid." }, 400);
