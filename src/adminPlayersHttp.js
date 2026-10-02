@@ -73,6 +73,23 @@ export async function handleSetAdminRoleRequest(
       );
     }
 
+    if (body.operation === 'payment-status') {
+      const status = String(body.status || '').toLowerCase();
+      if (status !== 'paid' && status !== 'waived') {
+        return Response.json({ error: 'status must be paid or waived' }, { status: 400 });
+      }
+      if (typeof body.seasonId !== 'string' || !body.seasonId.trim()) {
+        return Response.json({ error: 'seasonId is required' }, { status: 400 });
+      }
+      const result = await repository.setPaymentStatus({
+        actorUserId: actor.id,
+        playerId,
+        seasonId: body.seasonId,
+        status,
+      });
+      return Response.json({ player: result }, { headers: { 'cache-control': 'no-store' } });
+    }
+
     if (body.operation === 'roster-membership') {
       if (typeof body.active !== 'boolean') {
         return Response.json({ error: 'active is required' }, { status: 400 });
@@ -114,8 +131,6 @@ export async function handleSetAdminRoleRequest(
     return errorResponse(error);
   }
 }
-
-
 
 export async function handleRecomputeDerbyEstimateRequest(
   request,

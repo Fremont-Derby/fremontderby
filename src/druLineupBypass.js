@@ -81,3 +81,29 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return true;
 }
+
+export async function ensureDruActorCanScoreTeam(env, { actorUserId, teamId }, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !actorUserId || !teamId) return false;
+  const conn = service(env);
+  if (!conn) return false;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const headers = { apikey: conn.key, authorization: `Bearer ${conn.key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  const teamResponse = await fetchWithSchema(`${conn.base}/rest/v1/teams?id=eq.${teamId}&select=season_id`, { headers });
+  if (!teamResponse.ok) return false;
+  const seasonId = (await teamResponse.json())?.[0]?.season_id;
+  const playerResponse = await fetchWithSchema(`${conn.base}/rest/v1/players?user_id=eq.${actorUserId}&select=id`, { headers });
+  if (!playerResponse.ok || !seasonId) return false;
+  const playerId = (await playerResponse.json())?.[0]?.id;
+  if (!playerId) return false;
+  const now = new Date().toISOString();
+  await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${playerId}&ends_at=is.null`, {
+    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
+  });
+  const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
+    method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
+  });
+  if (!saved.ok) return false;
+  await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: [playerId] }, fetchImpl);
+  return true;
+}
+
