@@ -71,7 +71,7 @@ export function renderAdminOperationsPage(env = {}) {
             body:JSON.stringify({title,body,href:'/notifications'}),
           });
           const json=await response.json().catch(()=>({}));
-          if(!response.ok)throw new Error(json.error||'Broadcast failed');
+          if(response.status===429)throw new Error('Broadcast is busy. Wait a moment, then try again.');if(!response.ok)throw new Error(json.error||'Broadcast failed');
           alert('Sent to '+(json.sent||0)+' players');
         }catch(error){alert(error.message)}
       });
