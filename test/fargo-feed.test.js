@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { toFargoFeed } from '../src/fargoFeed.js';
+
+test('the public Fargo feed includes finalized matches and is not accepted', () => {
+  const feed = toFargoFeed([
+    { status: 'finalized', playerMatchId: 'm1', playerAId: 'a', playerBId: 'b', playerAFargoId: '1', playerBFargoId: '2', racks: [] },
+    { status: 'open', playerMatchId: 'm2' },
+  ], { generatedAt: '2026-10-02T00:00:00Z' });
+  assert.equal(feed.feed, 'fremont-derby-fargo');
+  assert.equal(feed.acceptedByFargo, false);
+  assert.equal(feed.items.length, 1);
+  assert.equal(feed.items[0].sent, false);
+});
