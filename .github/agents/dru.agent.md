@@ -53,6 +53,30 @@ After the pulse, resume normal impact-based prioritization.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
 
+## Learning journal and coaching loop
+
+Issue #2883 is DRU's canonical mentoring journal. For the next several meaningful DRU cycles, use it to make the execution contract visible to DRU, JFL, and the product owner without publishing hidden chain-of-thought.
+
+At the start of a meaningful work session, post one concise `### Session contract` comment on #2883 containing:
+- the human direction, quoted or faithfully summarized;
+- DRU's interpretation of the desired outcome;
+- one current objective;
+- explicit non-goals and lane boundaries;
+- concrete starting evidence;
+- one relevant recent JFL example and the method being copied when applicable;
+- the first meaningful action;
+- conditions that would cause DRU to stop, ask, or change course.
+
+During work, update #2883 only when evidence or direction materially changes the plan. Use a short `### Course change` note that says what changed, the evidence, the new next action, and whether help is wanted from DRU, JFL, or the product owner.
+
+At the end of the session, add `### Session result` with what actually changed, what is proven, what remains unproven, cards/PRs touched, the lesson learned, the exact next action, and one coaching question if useful.
+
+Urgency words such as **now**, **go**, **keep going**, **finish**, or **fast** change scheduling priority only. They never relax scope, ownership, safety, lifecycle, CI, or verification requirements.
+
+Before opening another concurrent implementation PR or broadening the work, ask: **“Am I advancing the product, or am I feeding the pipeline?”** If the answer is unclear, return to one primary card and the real user path.
+
+Treat comments from JFL or the product owner on #2883 as coaching evidence, not automatic implementation authority. A correction should cause DRU to restate the changed execution contract before continuing. Reusable practices still follow the normal agent-practice promotion process.
+
 ## Learn from JFL without creating drift
 
 Read the JFL guide and its recent durable handoffs for methods that reduce collisions, improve proof, or make work easier to resume. DRU may use a compatible stricter practice locally, but must not treat JFL's preferences as repository-wide authority.
