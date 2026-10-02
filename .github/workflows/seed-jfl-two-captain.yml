@@ -5,6 +5,7 @@ on:
     branches: [fremontderby-jfl]
     paths:
       - .github/workflows/seed-jfl-two-captain.yml
+      - scripts/apply-jfl-two-captain.mjs
       - scripts/seed-jfl-two-captain.sql
 
 permissions:
@@ -19,80 +20,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Check exact trusted source and shared staging database target
+      - name: Verify exact trusted JFL source
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Apply and read back JFL-only fixture through staging Management API
         env:
-          JFL_DB_URL: ${{ secrets.GAMMA_DATABASE_URL }}
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --input-type=module -e '
-            const value = process.env.JFL_DB_URL;
-            if (!value) throw new Error("Shared staging database credential is unavailable");
-            const url = new URL(value);
-            if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") {
-              throw new Error("Database URL must use PostgreSQL");
-            }
-            const identity = `${url.hostname} ${url.username}`;
-            if (identity.includes("cpiucsxlkicmlbvdvhww")) {
-              throw new Error("Refusing the production database project");
-            }
-            if (!identity.includes("oqkkvqkerusepyokzbmt")) {
-              throw new Error("Database URL does not identify the JFL shared staging project");
-            }
-          '
-      - name: Apply JFL-only idempotent fixture
-        env:
-          JFL_DB_URL: ${{ secrets.GAMMA_DATABASE_URL }}
-        run: |
-          set -euo pipefail
-          if ! command -v psql >/dev/null; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq postgresql-client
-          fi
-          if ! psql "$JFL_DB_URL" -X -v ON_ERROR_STOP=1 -q -f scripts/seed-jfl-two-captain.sql >/tmp/jfl-seed.log 2>&1; then
-            if grep -Eiq 'password authentication failed|no password supplied|role .* does not exist' /tmp/jfl-seed.log; then
-              echo 'JFL fixture apply failed: database authentication.'
-            elif grep -Eiq 'could not translate|could not connect|Network is unreachable|Connection refused|timeout expired|server closed the connection|no route to host' /tmp/jfl-seed.log; then
-              echo 'JFL fixture apply failed: database connection.'
-            elif grep -Eiq 'ERROR:' /tmp/jfl-seed.log; then
-              location="$(grep -oE 'seed-jfl-two-captain.sql:[0-9]+' /tmp/jfl-seed.log | tail -n 1 || true)"
-              echo "JFL fixture apply failed: SQL validation${location:+ at $location}."
-            else
-              echo 'JFL fixture apply failed: unclassified psql error.'
-            fi
-            exit 1
-          fi
-      - name: Verify isolated JFL matchup and eligible rosters
-        env:
-          JFL_DB_URL: ${{ secrets.GAMMA_DATABASE_URL }}
-        run: |
-          set -euo pipefail
-          result="$(psql "$JFL_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "
-            select count(*)
-            from jfl.team_matches m
-            join jfl.rounds r on r.id = m.round_id
-            where m.id = '18580000-1300-4000-8000-000000000001'
-              and r.stage = 'regular'
-              and m.team_a_id = '18580000-1100-4000-8000-000000000001'
-              and m.team_b_id = '18580000-1100-4000-8000-000000000002';
-          ")"
-          test "$result" = '1'
-          eligible="$(psql "$JFL_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "
-            select count(*)
-            from jfl.team_memberships tm
-            join jfl_private.payment_status ps
-              on ps.season_id = tm.season_id and ps.player_id = tm.player_id
-            where tm.season_id = '18580000-1000-4000-8000-000000000000'
-              and tm.player_id in (
-                '18580000-2000-4000-8000-000000000002',
-                '18580000-2000-4000-8000-000000000003',
-                '18580000-2000-4000-8000-000000000004',
-                '18580000-2000-4000-8000-000000000005',
-                '18580000-2000-4000-8000-000000000006',
-                '18580000-2000-4000-8000-000000000007'
-              )
-              and tm.ends_at is null
-              and ps.status = 'waived';
-          ")"
-          test "$eligible" = '6'
-          echo "JFL fixture present at $GITHUB_SHA; one shared regular matchup and six eligible roster memberships verified."
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/apply-jfl-two-captain.mjs
