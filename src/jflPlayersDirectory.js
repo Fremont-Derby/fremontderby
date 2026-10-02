@@ -10,7 +10,7 @@ export function publicDirectoryRows(individuals = [], teams = []) {
   return (Array.isArray(individuals) ? individuals : []).map((row) => ({
     name: String(row?.display_name || 'Player'),
     team: teamByPlayer.get(row?.player_id) || 'Free agent / no team listed',
-    rank: Number.isFinite(Number(row?.standings_rank)) && row?.standings_rank !== null
+    rank: Number(row?.matches_played) > 0 && Number.isFinite(Number(row?.standings_rank)) && row?.standings_rank !== null
       ? Number(row.standings_rank) : null,
     wins: Number(row?.wins) || 0,
     losses: Number(row?.losses) || 0,
