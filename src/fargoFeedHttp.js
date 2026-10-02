@@ -61,10 +61,12 @@ export async function loadFinalizedMatches(env, fetchImpl) {
 export async function storeFargoReports(env, matches, fetchImpl) {
   const base = stripTrailingSlashes(env?.SUPABASE_URL || '');
   const key = env?.SUPABASE_SERVICE_ROLE_KEY;
-  if (!base || !key) return;
+  if (!base || !key) return { ok: false, reason: 'no database' };
   const request = withSupabaseSchema(fetchImpl, env);
   try {
-    const stored = await readJson(await request(`${base}/rest/v1/fargo_reports?select=player_match_id,revision,status,idempotency_key,payload`, { headers: headers(key) }));
+    const response = await request(`${base}/rest/v1/fargo_reports?select=player_match_id,revision,status,idempotency_key,payload`, { headers: headers(key) });
+    if (!response.ok) return { ok: false, reason: 'report table unavailable' };
+    const stored = await readJson(response);
     for (const match of matches) {
       const rows = stored.filter((row) => row.player_match_id === match.playerMatchId);
       const plan = planFargoReports(match, rows);
@@ -88,8 +90,9 @@ export async function storeFargoReports(env, matches, fetchImpl) {
         }),
       });
     }
+    return { ok: true };
   } catch {
-    // A missing report table must not hide the public feed.
+    return { ok: false, reason: 'report table unavailable' };
   }
 }
 
@@ -98,8 +101,10 @@ export async function handleFargoFeedRequest(request, env = {}, { fetch: fetchIm
     return Response.json({ error: 'Method not allowed' }, { status: 405, headers: { 'cache-control': 'no-store' } });
   }
   const items = matches || await loadFinalizedMatches(env, fetchImpl);
-  if (!matches) await storeFargoReports(env, items, fetchImpl);
-  return Response.json(toFargoFeed(items), {
+  const store = matches ? { ok: false, reason: 'not stored' } : await storeFargoReports(env, items, fetchImpl);
+  const body = toFargoFeed(items);
+  body.reportStore = store?.ok ? 'ready' : 'unavailable';
+  return Response.json(body, {
     headers: { 'cache-control': 'no-store', 'access-control-allow-origin': '*' },
   });
 }
