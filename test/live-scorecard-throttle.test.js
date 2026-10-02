@@ -60,6 +60,32 @@ test('missing Retry-After has a bounded recovery wait and existing sign-in recov
   assert.deepEqual(expired.removed, ['fd.accessToken']);
 });
 
+test('HTTP-date Retry-After and ordinary conflict responses retain distinct recovery paths', async () => {
+  const retryAt = new Date(Date.now() + 30_000).toUTCString();
+  const throttled = adapterWithResponse({
+    status: 429,
+    ok: false,
+    headers: { get: () => retryAt },
+    json: async () => ({}),
+  });
+  await assert.rejects(throttled.adapter.saveRack({ winnerSide: 'B' }), (error) => {
+    assert.equal(error.status, 429);
+    assert.ok(error.retryAfterSeconds >= 28 && error.retryAfterSeconds <= 30);
+    return true;
+  });
+  const conflict = adapterWithResponse({
+    status: 409,
+    ok: false,
+    headers: { get: () => null },
+    json: async () => ({ error: 'Score changed on another device' }),
+  });
+  await assert.rejects(conflict.adapter.saveRack({ winnerSide: 'A' }), (error) => {
+    assert.equal(error.status, 409);
+    assert.equal(error.message, 'Score changed on another device');
+    return true;
+  });
+});
+
 test('background refresh is paced, avoids overlap, and backs off without replaying foreground mutations', () => {
   const source = sharedRackLedgerScorecardControllerSource;
   assert.match(source, /refreshIntervalMs=15000/);
