@@ -73,9 +73,9 @@ export function renderAdminPlayerContactPage() {
       return body;
     }
     async function lookup(reveal) {
-      const playerId = idEl.value.trim();
+      const playerId = document.querySelector('[data-player-id]').value.trim();
       if (!playerId) {
-        setStatus('Enter a player id.', 'error');
+        setStatus('Choose a player.', 'error');
         return;
       }
       phoneEl.hidden = true;
@@ -102,6 +102,15 @@ export function renderAdminPlayerContactPage() {
         setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : error.message) || 'Lookup failed', 'error');
       }
     }
+    idEl.outerHTML = '<select data-player-id><option value="">Loading players…</option></select>';
+    const picker = document.querySelector('[data-player-id]');
+    fetch('/api/admin/players', { headers: { authorization: 'Bearer ' + token(), accept: 'application/json' } })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((body) => {
+        const players = body.players || [];
+        picker.innerHTML = '<option value="">Choose a player</option>' + players.map((player) => '<option value="' + (player.playerId || player.id) + '">' + (player.displayName || player.display_name || 'Player') + '</option>').join('');
+      })
+      .catch(() => { picker.innerHTML = '<option value="">Sign in on Profile, then open Admin, Players.</option>'; });
     lookupBtn.addEventListener('click', () => lookup(false));
     revealBtn.addEventListener('click', () => lookup(true));
   })();
