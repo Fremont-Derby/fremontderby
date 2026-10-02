@@ -51,7 +51,8 @@ from (values
   ('18580000-2000-4000-8000-000000000006'::uuid),
   ('18580000-2000-4000-8000-000000000007'::uuid)
 ) as fixture(player_id)
-on conflict (season_id, player_id) do nothing;
+on conflict (season_id, player_id) do update
+  set status = 'waived', updated_at = now();
 
 insert into jfl.rounds (id, season_id, round_number, stage, scheduled_on, status)
 values ('18580000-1200-4000-8000-000000000001', '18580000-1000-4000-8000-000000000000', 1, 'regular', current_date + 7, 'scheduled')

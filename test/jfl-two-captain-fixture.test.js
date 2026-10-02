@@ -9,7 +9,9 @@ test('JFL two-captain seed publishes one shared regular matchup and eligible ros
   assert.match(sql, /purpose = 'qa'/);
   assert.match(sql, /insert into jfl\.rounds/i);
   assert.match(sql, /insert into jfl\.team_matches/i);
+  assert.match(sql, /insert into jfl\.team_memberships/i);
   assert.match(sql, /insert into jfl_private\.payment_status/i);
+  assert.match(sql, /set status = 'waived'/);
   assert.match(sql, /on conflict \(id\) do nothing/gi);
   assert.doesNotMatch(sql, /insert into (?:gamma|dru|public)\./i);
   assert.doesNotMatch(sql, /delete from|truncate table|drop table/i);
