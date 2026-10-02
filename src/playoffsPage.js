@@ -271,7 +271,7 @@ export function renderPlayoffsPage() {
       }catch(e){setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')}
     });
     load().catch(showBracketError);
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(()=>{}),{intervalMs:20000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(showBracketError),{intervalMs:20000,immediate:false});
   </script>
 </body>
 </html>`;
