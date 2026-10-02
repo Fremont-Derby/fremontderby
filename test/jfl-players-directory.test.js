@@ -7,7 +7,7 @@ import worker from '../src/personaRouterEntry.js';
 test('player directory projects public standings and team context without private fields', () => {
   const rows = publicDirectoryRows([
     { player_id: 'player-1', display_name: 'Alex Cue', standings_rank: 2, wins: 3, losses: 1, matches_played: 4, phone: 'private', payment_status: 'unpaid' },
-    { player_id: 'player-2', display_name: 'Sam Break', standings_rank: null, wins: 0, losses: 0, matches_played: 0 },
+    { player_id: 'player-2', display_name: 'Sam Break', standings_rank: 8, wins: 0, losses: 0, matches_played: 0 },
   ], [{ team_name: 'Side Pockets', roster: [{ playerId: 'player-1', displayName: 'Alex Cue', privatePhone: 'private' }] }]);
   assert.deepEqual(rows, [
     { name: 'Alex Cue', team: 'Side Pockets', rank: 2, wins: 3, losses: 1, matches: 4 },
