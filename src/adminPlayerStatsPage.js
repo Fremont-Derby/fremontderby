@@ -31,9 +31,12 @@ fetch('/api/admin/players', { headers: token ? { authorization: 'Bearer ' + toke
     picker.innerHTML = '<option value="">Choose a player</option>' + players.map((player) => '<option value="' + (player.playerId || player.id) + '">' + (player.displayName || player.display_name || 'Player') + '</option>').join('');
   })
   .catch(() => { picker.innerHTML = '<option value="">Sign in on Profile, then open Admin, Players.</option>'; });
-document.getElementById('go').onclick = () => {
-  const name = picker.options[picker.selectedIndex] ? picker.options[picker.selectedIndex].text : '';
-  out.textContent = picker.value ? (name + ' is selected. Season record comes from finalized matches.') : 'Choose a player.';
+document.getElementById('go').onclick = async () => {
+  if (!picker.value) { out.textContent = 'Choose a player.'; return; }
+  out.textContent = 'Loading summary…';
+  const response = await fetch('/api/admin/player-stats?playerId=' + encodeURIComponent(picker.value), { headers: token ? { authorization: 'Bearer ' + token } : {} });
+  const body = await response.json().catch(() => ({}));
+  out.textContent = response.ok ? ((picker.options[picker.selectedIndex].text) + ': ' + (body.wins || 0) + ' wins, ' + (body.losses || 0) + ' losses, ' + (body.matchesPlayed || 0) + ' matches.') : (body.error || 'Player summary could not be loaded.');
 };
 </script>
 </main></body></html>`;
