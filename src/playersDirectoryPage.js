@@ -219,7 +219,10 @@ export function renderPlayersDirectoryPage() {
         if(!seasons.length) await loadSeasons();
         await loadPlayers(opts);
       }catch(error){
-        setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Could not load directory')),'error');
+        const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Could not load directory');
+        setStatus(message,'error');
+        emptyEl.hidden=false;
+        emptyEl.textContent=message;
       }
     }
     seasonEl.addEventListener('change',()=>boot());
