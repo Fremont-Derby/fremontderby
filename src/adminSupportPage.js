@@ -88,6 +88,9 @@ export function renderAdminSupportPage() {
         list.textContent = error.message || 'Load failed';
       }
     }
+    document.querySelector('[data-triage-save]').addEventListener('click', () => {
+      document.querySelector('[data-triage-result]').textContent = 'This does not link a defect. The queue above is the live list.';
+    });
     filter.addEventListener('change', load);
     load();
   })();
