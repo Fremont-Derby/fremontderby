@@ -156,7 +156,7 @@ export function renderNotificationsPage() {
       catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
     function showNoticeError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Notices could not be loaded.');setStatus(message,'error');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.textContent=message;listEl.append(empty);}load().catch(showNoticeError);
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(showNoticeError),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;
