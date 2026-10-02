@@ -3,6 +3,7 @@ import test from 'node:test';
 import routerEntry from '../src/routerEntry.js';
 import {
   captainFreeAgentContexts,
+  preferredFreeAgentRound,
   safeFreeAgentCandidate,
 } from '../src/jflFreeAgentsPage.js';
 
@@ -45,6 +46,17 @@ test('captain contexts include only unfinished published rounds', () => {
   assert.equal(contexts.length, 1);
   assert.equal(contexts[0].rounds.length, 1);
   assert.equal(contexts[0].rounds[0].roundId, 'round-1');
+});
+
+test('captain search defaults to the next upcoming matchup, not an old unfinalized one', () => {
+  const rounds = [
+    { roundId: 'past', scheduledOn: '2026-09-03' },
+    { roundId: 'next', scheduledOn: '2026-10-08' },
+    { roundId: 'later', scheduledOn: '2026-10-15' },
+  ];
+  assert.equal(preferredFreeAgentRound(rounds, '2026-10-02'), 'next');
+  assert.equal(preferredFreeAgentRound(rounds, '2026-10-16'), 'later');
+  assert.equal(preferredFreeAgentRound([], '2026-10-02'), '');
 });
 
 test('candidate presentation strips private and internal fields', () => {
