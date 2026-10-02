@@ -1,3 +1,15 @@
+export function scorePickerRetryAfterSeconds(value, now = Date.now()) {
+  const numeric = Number(value);
+  if (typeof value === 'string' && value.trim() && Number.isFinite(numeric) && numeric > 0) {
+    return Math.min(Math.ceil(numeric), 120);
+  }
+  const date = typeof value === 'string' ? Date.parse(value) : NaN;
+  if (Number.isFinite(date) && date > now) {
+    return Math.min(Math.max(Math.ceil((date - now) / 1000), 1), 120);
+  }
+  return 15;
+}
+
 export function renderScorePickerPage() {
   return `<!doctype html>
 <html lang="en">
@@ -50,7 +62,31 @@ export function renderScorePickerPage() {
     function renderCaptainPrep(context){raceSelect.disabled=true;setStatus('This matchup is not ready to score yet. You can prepare the blind three now.');emptyState('Prepare your lineup',captainMatchupLabel(context)+' is scheduled. Open the existing lineup workflow to see dated availability, find substitutes, and lock your three. Opponent order stays hidden until both teams submit.',[actionLink('Prepare lineup',lineupHref(context)),actionLink('Open Schedule','/schedule',true)])}
     function renderSelection(){const visible=baseMatches();const captainVisible=baseCaptainContexts();listEl.replaceChildren();if(!visible.length&&!captainVisible.length){setStatus('No scoring options for '+dateLabel(dateSelect.value)+'.');emptyState('Nothing ready for this selection','Choose another date or team above. If you are waiting on a lineup reveal, check Schedule.',[actionLink('Open Schedule','/schedule'),actionLink('Check my team','/teams',true)]);matchupSelect.disabled=true;raceSelect.disabled=true;return}matchupSelect.disabled=false;const matchupId=matchupSelect.value;const races=visible.filter(match=>text(match.team_match_id)===matchupId);if(!races.length){const captainContext=selectedCaptainContext();if(captainContext){renderCaptainPrep(captainContext);return}raceSelect.disabled=true;setStatus('No revealed races for this matchup yet.');emptyState('Waiting on lineup reveal','The matchup is scheduled, but there is no revealed race available to score for this selection.',[actionLink('Open Schedule','/schedule')]);return}raceSelect.disabled=false;const selected=races.find(match=>text(match.player_match_id)===raceSelect.value)||races[0];if(!selected)return;raceSelect.value=text(selected.player_match_id);listEl.append(matchCard(selected));setStatus(races.length+' fixed pairing'+(races.length===1?'':'s')+' revealed. Choose any pairing to score next.','ready')}
     function flattenCaptainContexts(body){const teams=body?.teamManagement?.captain_teams||[];const contexts=[];for(const team of teams){for(const round of team.lineupRounds||[]){contexts.push({...round,teamId:team.teamId,teamName:team.teamName,seasonId:team.seasonId,seasonName:team.seasonName})}}return contexts}
-    async function load(){const accessToken=token();if(!accessToken){setStatus('Sign in to see matches your team can score.');emptyState('Ready when your team is','Sign in with Google and we will show only the matches your team is allowed to score.',[actionLink('Sign in to score','/profile'),actionLink('Open Schedule','/schedule',true)]);return}try{const scorePromise=fetch('/api/me/scorable-matches',{headers:{authorization:'Bearer '+accessToken}});const teamPromise=fetch('/api/me/teams',{headers:{authorization:'Bearer '+accessToken}}).then(async response=>response.ok?response.json():null).catch(()=>null);const [response,teamBody]=await Promise.all([scorePromise,teamPromise]);const body=await response.json();if(response.status===401){sessionStorage.removeItem('fd.accessToken');setStatus('Your sign-in expired. Sign in again to continue.','error');emptyState('Sign in again','Your session ended before we could load your scoring options. No score was changed.',[actionLink('Open Profile to sign in','/profile'),actionLink('Open Schedule','/schedule',true)]);return}if(!response.ok)throw new Error(body.error||'Could not load matches');matches=body.matches||[];captainContexts=flattenCaptainContexts(teamBody);listEl.replaceChildren();if(!matches.length&&!captainContexts.length){setStatus('No match is ready to score yet.');emptyState('Nothing ready to score','Your team may still be waiting on lineups or matchup reveal. Check Schedule first; if your team is missing, review your team status.',[actionLink('Open Schedule','/schedule'),actionLink('Check my team','/teams',true)]);return}populateFilters()}catch(error){setStatus('We could not load your scoring options.','error');emptyState('Could not load matches','Nothing was changed. Try again, or open Profile if you need to refresh your sign-in.',[actionLink('Try again','/scorecard'),actionLink('Open Profile','/profile',true)])}}dateSelect.addEventListener('change',populateMatchups);teamSelect.addEventListener('change',populateMatchups);matchupSelect.addEventListener('change',populateRaces);raceSelect.addEventListener('change',renderSelection);load();
+    ${scorePickerRetryAfterSeconds.toString()}
+    async function load(){
+      const accessToken=token();
+      if(!accessToken){setStatus('Sign in to see matches your team can score.');emptyState('Ready when your team is','Sign in with Google and we will show only the matches your team is allowed to score.',[actionLink('Sign in to score','/profile'),actionLink('Open Schedule','/schedule',true)]);return}
+      try{
+        const headers={authorization:'Bearer '+accessToken};
+        const [response,teamResponse]=await Promise.all([
+          fetch('/api/me/scorable-matches',{headers}),
+          fetch('/api/me/teams',{headers}).catch(()=>null),
+        ]);
+        if(response.status===401){sessionStorage.removeItem('fd.accessToken');setStatus('Your sign-in expired. Sign in again to continue.','error');emptyState('Sign in again','Your session ended before we could load your scoring options. No score was changed.',[actionLink('Open Profile to sign in','/profile'),actionLink('Open Schedule','/schedule',true)]);return}
+        const throttled=response.status===429?response:teamResponse?.status===429?teamResponse:null;
+        if(throttled){const failure=new Error('Score options are temporarily busy');failure.status=429;failure.retryAfterSeconds=scorePickerRetryAfterSeconds(throttled.headers.get('retry-after'));throw failure}
+        let body={};try{body=await response.json()}catch{}
+        if(!response.ok)throw new Error(body.error||'Could not load matches');
+        let teamBody=null;if(teamResponse?.ok){try{teamBody=await teamResponse.json()}catch{}}
+        matches=body.matches||[];captainContexts=flattenCaptainContexts(teamBody);listEl.replaceChildren();
+        if(!matches.length&&!captainContexts.length){setStatus('No match is ready to score yet.');emptyState('Nothing ready to score','Your team may still be waiting on lineups or matchup reveal. Check Schedule first; if your team is missing, review your team status.',[actionLink('Open Schedule','/schedule'),actionLink('Check my team','/teams',true)]);return}
+        populateFilters();
+      }catch(error){
+        if(error.status===429){const wait=error.retryAfterSeconds;setStatus('Too many requests. Wait '+wait+' seconds before trying again.','error');emptyState('Score is temporarily busy','Your matches are safe. Wait '+wait+' seconds, then use Try again.',[actionLink('Try again','/scorecard'),actionLink('Open Schedule','/schedule',true)]);return}
+        setStatus('We could not load your scoring options.','error');emptyState('Could not load matches','Nothing was changed. Try again, or open Profile if you need to refresh your sign-in.',[actionLink('Try again','/scorecard'),actionLink('Open Profile','/profile',true)]);
+      }
+    }
+    dateSelect.addEventListener('change',populateMatchups);teamSelect.addEventListener('change',populateMatchups);matchupSelect.addEventListener('change',populateRaces);raceSelect.addEventListener('change',renderSelection);load();
   </script>
 </body>
 </html>`;
