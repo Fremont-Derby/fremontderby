@@ -103,11 +103,15 @@ async function openFirstRaceFromLineup(page, teamId) {
   await page.locator('[data-score-link]').click();
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await expect.poll(async () => await page.locator('[data-filters]').isVisible()
-      || /could not load your scoring options/i.test(await page.locator('[data-status]').textContent() || '')).toBe(true);
+      || /could not load your scoring options|too many requests/i.test(
+        await page.locator('[data-status]').textContent() || '')).toBe(true);
     if (await page.locator('[data-filters]').isVisible()) break;
-    await expect(page.locator('[data-status]')).toContainText('could not load your scoring options');
-    await page.waitForTimeout(11_000);
-    await page.locator('[data-list] a').filter({ hasText: 'Try again' }).click();
+    const status = await page.locator('[data-status]').textContent() || '';
+    const seconds = /too many requests/i.test(status)
+      ? Number(status.match(/wait (\d+) seconds?/i)?.[1]) : 10;
+    expect(seconds, status).toBeGreaterThan(0);
+    await page.waitForTimeout((seconds + 1) * 1000);
+    await page.getByRole('link', { name: 'Try again' }).click();
   }
   await expect(page.locator('[data-filters]')).toBeVisible();
   await page.locator('[data-team]').selectOption(teamId);
