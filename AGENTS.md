@@ -4,7 +4,21 @@ When directed to **Do work!**, follow `docs/do-work-protocol.md` (canaries first
 
 When directed to run **ChatGPT Work/browser UX production validation**, follow `docs/WORK_BROWSER_UX_VALIDATION.md` and `.github/agents/browser-ux-validation.agent.md`. Treat that mission as blocker-first release preflight for issue #219; it accelerates but does not replace the required two-human captain trial.
 
-When directed to establish or extend **Playwright/self-hosted browser automation**, treat issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` as the authoritative implementation plan. The repository is public: never route `pull_request` code to the persistent self-hosted browser runner, and keep ordinary public PR CI on GitHub-hosted runners. Use **JFL as the default fast browser-automation target**; Gamma is the integrated RC gate only after issue #2527 records a current reconciled baseline. Never wholesale-merge the permanent JFL or DRU branches to update Gamma.
+When directed to establish or extend **Playwright/self-hosted browser automation**, treat issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` as the authoritative implementation plan. The repository is public: never route `pull_request` code to the persistent self-hosted browser runner, and keep ordinary public PR CI on GitHub-hosted runners. Use **JFL as the browser-automation and product-completion target** under #2800. Gamma work is deferred until #2800's JFL exit gate is satisfied; only then reactivate #2527 to establish an integrated RC baseline. Never wholesale-merge the permanent JFL or DRU branches to update Gamma.
+
+## Current product-owner focus — JFL product completeness (#2800)
+
+**Issue #2800 is the controlling near-term product milestone for every autonomous implementation lane.** Until its JFL exit gate is satisfied, optimize the project for completing and proving the real product in JFL, not for Gamma reconciliation or production promotion.
+
+- **JFL = integration and product-completion lane.** JFL owns assembling the complete user experience, validating it on the live JFL environment, and growing the persona-based Playwright journey. Choose the highest-impact missing or broken operator/captain/player user story that blocks a complete real season. Issue #2799 is the core two-captain integration proof and should expand as core stories become functional.
+- **DRU = parallel acceleration lane for #2800.** DRU should independently take portable implementation, investigation, regression, contract, or defect work that materially accelerates JFL product completeness. Prefer coherent work that can be handed to or consumed by JFL. DRU must not spend capacity on Gamma reconciliation, release promotion, or unrelated polish while #2800 has material core-story gaps.
+- **Playwright = continuous JFL proof.** Add browser coverage as stories become usable; do not postpone integration testing until the end. A regression in a previously completed core journey outranks peripheral feature/polish work.
+- **Gamma = dormant until #2800 passes.** Issue #2527 is explicitly deferred. Do not claim, implement, reconcile, or validate Gamma merely because an older issue, label, runbook, or release document calls it P0. After #2800 passes, identify the product-complete JFL baseline and then reactivate #2527.
+- **Human validation is scarce.** Automate functional correctness, role boundaries, state transitions, persistence, mobile-critical paths, and two-captain behavior first. Use humans primarily for comprehension, usability, and product judgment that automation cannot prove.
+
+When choosing work, ask: **“What is the highest-impact missing or broken user story preventing an operator, captain, or player from completing a real season in JFL?”** Work that answer, validate it, update durable GitHub state, and repeat without waiting for the product owner unless a genuinely human-only decision is required.
+
+Do not let the sequential visual onion program block functional completion. #1766/#2156 presentation work is subordinate to #2800 unless a UI problem prevents a core workflow from being completed or understood.
 
 # Fremont Derby Agent Operating Contract
 
