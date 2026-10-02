@@ -1,5 +1,6 @@
 import { handleFargoExportRequest } from './fargoExportHttp.js';
 import { handleFargoFeedRequest } from './fargoFeedHttp.js';
+import { handleFargoReportsPage } from './fargoReportsHttp.js';
 import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
 import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
 import { renderAdminSupportPage } from './adminSupportPage.js';
@@ -323,6 +324,9 @@ export default {
 
     if (url.pathname === '/api/fargo/feed' && request.method === 'GET') {
       return finalizeBrowserResponse(await handleFargoFeedRequest(request, env), url.pathname);
+    }
+    if (url.pathname === '/admin/fargo-reports' && request.method === 'GET') {
+      return finalizeBrowserResponse(await handleFargoReportsPage(request, env), url.pathname);
     }
     if (url.pathname === '/api/admin/fargo/export' && request.method === 'POST') {
       return finalizeBrowserResponse(
