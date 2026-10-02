@@ -99,6 +99,9 @@ jobs:
       - name: Verify JFL public season bootstrap
         if: github.ref == 'refs/heads/fremontderby-jfl'
         run: node scripts/smoke-jfl-season-bootstrap.mjs
+      - name: Verify JFL simulated session and team bootstrap
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        run: node scripts/smoke-jfl-session-health.mjs
       - name: Verify JFL QA evidence ingestion and idempotent retry
         if: github.ref == 'refs/heads/fremontderby-jfl'
         shell: bash
@@ -230,6 +233,7 @@ jobs:
               '- obsolete JFL Supabase binding secrets were cleared if present before deploy;',
               '- the JFL Worker deployed from `fremontderby-jfl` and passed the exact-SHA environment smoke;',
               '- public `/api/seasons` returned HTTP 200 JSON with a seasons array;',
+              '- the JFL-only simulated signed-in session loaded team management JSON;',
               '- `/rules` returned the modern UI marker and `x-fremont-ui-mode: modern`;',
               '- `/rules?ui=legacy` returned without the modern UI marker;',
               '- `/schedule` contains the deployed race enhancer, opening-discipline renderer, and 8/9-first labels.'
