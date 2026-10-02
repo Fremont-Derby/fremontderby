@@ -1,4 +1,5 @@
 import { handleFargoExportRequest } from './fargoExportHttp.js';
+import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
 import { handleFargoFeedRequest } from './fargoFeedHttp.js';
 import { handleLeagueHouseRequest } from './leagueHouseHttp.js';
 import { handleFargoReportsPage } from './fargoReportsHttp.js';
@@ -331,6 +332,12 @@ export default {
     }
     if (url.pathname === '/admin/fargo-reports' && request.method === 'GET') {
       return finalizeBrowserResponse(await handleFargoReportsPage(request, env), url.pathname);
+    }
+    if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
+      return finalizeBrowserResponse(
+        await handleChallongePublishDryRunRequest(request, env),
+        url.pathname,
+      );
     }
     if (url.pathname === '/api/admin/fargo/export' && request.method === 'POST') {
       return finalizeBrowserResponse(
