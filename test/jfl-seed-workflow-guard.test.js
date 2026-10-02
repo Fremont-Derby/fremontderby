@@ -16,6 +16,6 @@ test('JFL fixture workflow guards the staging project and rejects production', (
   assert.doesNotMatch(workflow, /pull_request:/);
   assert.match(workflow, /secrets\.SUPABASE_ACCESS_TOKEN/);
   assert.doesNotMatch(workflow, /GAMMA_DATABASE_URL|PRODUCTION_DATABASE_URL/);
-  assert.match(apply, /read-only/);
+  assert.match(apply, /read_only: readOnly/);
   assert.doesNotMatch(apply, /console\.log\(.*token|JSON\.stringify\(body\)/);
 });

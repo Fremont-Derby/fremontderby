@@ -24,13 +24,13 @@ if (!fixture.includes("to_regnamespace('jfl')")
 async function query(sql, { readOnly = false } = {}) {
   let response;
   try {
-    response = await fetch(`${projectUrl}${readOnly ? '/read-only' : ''}`, {
+    response = await fetch(projectUrl, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${token}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ query: sql }),
+      body: JSON.stringify({ query: sql, read_only: readOnly }),
       signal: AbortSignal.timeout(60_000),
     });
   } catch {
