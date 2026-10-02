@@ -190,7 +190,7 @@ export function renderAdminAuditPage() {
       });
     });
     load().catch((e)=>setStatus(e.message,'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:15000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Audit log could not be refreshed.')),'error')),{intervalMs:15000,immediate:false});
   </script>
 </body>
 </html>`;
