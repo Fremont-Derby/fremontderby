@@ -32,8 +32,12 @@ jobs:
             if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") {
               throw new Error("Database URL must use PostgreSQL");
             }
-            if (!`${url.hostname} ${url.username}`.includes("cpiucsxlkicmlbvdvhww")) {
-              throw new Error("Database URL does not identify the shared staging project");
+            const identity = `${url.hostname} ${url.username}`;
+            if (identity.includes("cpiucsxlkicmlbvdvhww")) {
+              throw new Error("Refusing the production database project");
+            }
+            if (!identity.includes("oqkkvqkerusepyokzbmt")) {
+              throw new Error("Database URL does not identify the JFL shared staging project");
             }
           '
       - name: Apply JFL-only idempotent fixture
