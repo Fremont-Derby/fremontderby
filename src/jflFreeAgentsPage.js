@@ -14,8 +14,14 @@ export function captainFreeAgentContexts(management = {}) {
           roundNumber: Number(round.roundNumber) || 0,
           scheduledOn: String(round.scheduledOn || ''),
           opponentName: String(round.opponentName || 'Opponent'),
-        })),
+        })).sort((left, right) => left.scheduledOn.localeCompare(right.scheduledOn)
+          || left.roundNumber - right.roundNumber),
     }));
+}
+
+export function preferredFreeAgentRound(rounds = [], today = new Date().toISOString().slice(0, 10)) {
+  const upcoming = rounds.find((round) => !round.scheduledOn || round.scheduledOn >= today);
+  return upcoming?.roundId || rounds.at(-1)?.roundId || '';
 }
 
 export function safeFreeAgentCandidate(row = {}) {
@@ -45,6 +51,7 @@ const styles = `<style>
 const script = `<script>
 (() => {
   const contextsFromManagement = (${captainFreeAgentContexts.toString()});
+  const preferredRound = (${preferredFreeAgentRound.toString()});
   const safeCandidate = (${safeFreeAgentCandidate.toString()});
   const root=document.querySelector('[data-free-agents]');
   const state=root.querySelector('[data-free-state]');
@@ -97,6 +104,7 @@ const script = `<script>
   function renderRounds(){
     const team=selectedTeam();roundSelect.replaceChildren();
     for(const round of team?.rounds||[]){const option=new Option('Week '+round.roundNumber+' · '+(round.scheduledOn||'Date TBD')+' · vs '+round.opponentName,round.roundId);roundSelect.append(option)}
+    roundSelect.value=preferredRound(team?.rounds||[]);
     roundSelect.disabled=!roundSelect.options.length;
     loadCandidates();
   }
