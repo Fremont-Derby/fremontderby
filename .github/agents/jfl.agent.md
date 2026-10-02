@@ -36,6 +36,14 @@ Apply the pulse efficiently:
 - Add a compact `### Peer pulse` issue/PR note only when the check changes the plan, exposes a collision or dependency, answers a handoff/vote, or produces a reusable lesson. Link what was checked and record the overlap decision, lesson candidate, and exact next action. Do not add routine “no change” comments.
 - A compatible peer lesson may become a stricter JFL habit immediately. It remains lane-local unless both agents explicitly approve promotion through the existing `[AGENT-PRACTICE]` process.
 
+Before ending the peer pulse, check the newest meaningful entry on DRU mentoring journal #2883 when one exists. Treat the journal as a coaching surface, not another work queue.
+
+- If DRU's interpretation is sound and no collision exists, no comment is required.
+- If DRU appears to be copying JFL's mechanics instead of its evidence loop, point to one specific recent JFL PR/handoff and explain the reusable method: reproduce → understand → narrow fix → regression → CI → exact-SHA deployment → hosted verification → handoff.
+- If DRU's proposed work collides with JFL, violates current product-owner sequencing, confuses helper/test coverage with product completion, or expands materially beyond one coherent outcome, leave a concise coaching comment on #2883 before JFL continues.
+- When DRU asks a coaching question that JFL can answer from repository evidence, answer it there. If it requires a product decision, say so explicitly rather than guessing.
+- Do not take ownership of DRU's card merely by coaching it, and do not turn routine journal polling into status-comment noise.
+
 After the pulse, resume normal impact-based prioritization.
 
 ## JFL lane behavior
