@@ -59,7 +59,7 @@ listEl.append(empty);return}for(const report of reports){const card=node('articl
     async function moderate(card,action){const reportId=card.dataset.reportId;const removeMessage=action==='remove';if(removeMessage&&!window.confirm('Remove this message for all participants and resolve the report?'))return;const resolution=action==='dismiss'?'dismissed':'resolved';const note=card.querySelector('[data-note]').value;setStatus('Saving moderation decision…');await api('/api/admin/chat-reports/'+encodeURIComponent(reportId)+'/resolve',{method:'POST',body:JSON.stringify({resolution,note,removeMessage})});await load();setStatus(removeMessage?'Message removed and report resolved':(resolution==='dismissed'?'Report dismissed':'Report resolved'),'ok')}
     listEl.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(!button)return;const card=button.closest('[data-report-id]');moderate(card,button.dataset.action).catch(error=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error'))});
     load();
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:20000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Moderation could not be refreshed.')),'error')),{intervalMs:20000,immediate:false});
   </script>
 </body>
 </html>`;
