@@ -34,6 +34,8 @@ export function buildFargoExportRecord(match = {}, prior = null) {
     score,
     tableSize: match.tableSize || null,
     tableNumber: match.tableNumber || null,
+    tableCount: match.tableCount || null,
+    leagueNight: match.leagueNight || null,
     playedOn: match.playedOn || null,
     venue: match.venue || null,
     sourceUrl: match.sourceUrl || null,
