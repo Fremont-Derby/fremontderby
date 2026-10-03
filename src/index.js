@@ -2628,6 +2628,13 @@ if (url.pathname === "/standings") {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
+    const druOpenMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/open-scoring$/);
+    if (druOpenMatch && request.method === 'POST') {
+      if (String(env.ENVIRONMENT || '').trim() !== 'dru') return jsonResponse({ error: 'Not found' }, 404);
+      await authenticateSupabaseUser(request, env);
+      const { openDruMatchForScoring } = await import('./druScoreOpen.js');
+      return jsonResponse(await openDruMatchForScoring(env, druOpenMatch[1]));
+    }
     if (url.pathname === "/api/me/profile") {
       if (request.method === "GET") {
         return handleGetOwnProfileRequest(request, env);
