@@ -187,3 +187,9 @@ test("the home line names when, where, cost, and how to join", () => {
   assert.match(src, /function homeLineLabel/);
   assert.match(src, /how to join are missing/);
 });
+
+test("the score hub can name a missing match", () => {
+  const src = readFileSync(new URL("../src/scoreHub.js", import.meta.url), "utf8");
+  assert.match(src, /function scoreHubLabel/);
+  assert.match(src, /No score hub match/);
+});
