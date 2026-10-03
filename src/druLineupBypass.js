@@ -60,7 +60,12 @@ async function clearEmptyDruLineups(fetchWithSchema, conn, teamId, roundId, priv
   if (!lineupResponse.ok || !slotResponse.ok) reject('Lineup could not be read before lock');
   const lineups = await lineupResponse.json();
   const slots = await slotResponse.json();
-  const filled = new Set(slots.filter((slot) => slot.player_id).map((slot) => slot.lineup_id));
+  const counts = new Map();
+  for (const slot of slots) {
+    if (!slot.player_id) continue;
+    counts.set(slot.lineup_id, (counts.get(slot.lineup_id) || 0) + 1);
+  }
+  const filled = new Set([...counts].filter(([, count]) => count >= 3).map(([id]) => id));
   for (const lineup of lineups) {
     if (lineup.round_id !== roundId || filled.has(lineup.id)) continue;
     const removedSlots = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineup.id}`, { method: 'DELETE', headers: privateHeaders });
@@ -100,7 +105,8 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, ro
     });
     if (!membershipSeatOk(saved.status)) reject(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
   }
-  await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
+  const waived = await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
+  if (waived !== roster.length) reject('Lineup players could not be waived');
   return true;
 }
 
