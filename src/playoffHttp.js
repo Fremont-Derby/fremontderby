@@ -37,11 +37,11 @@ export function createPlayoffHttpHandlers({
           const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
           const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
           const key = env.SUPABASE_SERVICE_ROLE_KEY;
-          const response = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&status=eq.finalized&select=status,winner_team_id`, {
+          const response = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&select=status,winner_team_id`, {
             headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
           });
           const rows = response.ok ? await response.json() : [];
-          if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'Score a week and name a winner before playoffs.' }, 409);
+          if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
         }
         const repository = createRepository(env, { fetch: fetchImpl });
         const playoffs = await startSeasonPlayoffsCommand(
