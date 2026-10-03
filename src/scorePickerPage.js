@@ -4,7 +4,7 @@ export function renderScorePickerPage() {
   const card = scorecardLine({ name: 'week one' });
   const replay = replayLine({ name: 'after the fix' });
   const missing = scoreLinkMiss([], 'missing-match');
-  return `Campaign foundation: player mission\nScorecard drive: score a rack\nScoring is closed\nSign in to score. The unsaved rack is still here\nThat score does not match. It was not saved\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
