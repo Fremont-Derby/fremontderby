@@ -1,7 +1,9 @@
+import { nextMatchLine } from './nextMatchLine.js';
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { surfaceLine } from './playerSurface.js';
 
 export function renderSchedulePage() {
+  const nextLine = nextMatchLine({ home: 'Owls', away: 'Pines', date: '2026-10-03' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -14,7 +16,7 @@ export function renderSchedulePage() {
     @media(max-width:700px){.app{padding:12px}.topbar{align-items:flex-start}.status{text-align:left}.controls,.matches{grid-template-columns:1fr}.round-head{align-items:flex-start}.round-meta{text-align:left}.match{min-height:152px}}
   </style>
 </head>
-<body>
+<body>\n  <p data-next-match>${nextLine}</p>
   <main class="app">\n    <p data-next-match="briefing">The next match names the opponent.</p>
     <section data-standings-context><h2>My standings</h2><p>The next match names the team, the rank, and the matches played.</p></section>
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Schedule</span></div><div class="status" data-status>Loading…</div></header>
