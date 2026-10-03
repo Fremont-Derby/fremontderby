@@ -58,8 +58,6 @@ export async function routePlayerContact(
 
   const reveal = url.searchParams.get('reveal') === '1' || url.searchParams.get('reveal') === 'true';
 
-  const reveal = url.searchParams.get('reveal') === '1' || url.searchParams.get('reveal') === 'true';
-
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createPlayerContactRepository(env, { fetch: fetchImpl });
