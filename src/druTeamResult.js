@@ -135,3 +135,17 @@ export async function writeDruPracticeResults(env, seasonId, fetchImpl = globalT
   }
   return { written };
 }
+
+export async function closeDruTableAfterRack(env, playerMatchId, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !playerMatchId) return 0;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return 0;
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' };
+  const response = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=season_id`, { headers });
+  if (!response.ok) return 0;
+  const seasonId = (await response.json())?.[0]?.season_id;
+  if (!seasonId) return 0;
+  return closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+}
