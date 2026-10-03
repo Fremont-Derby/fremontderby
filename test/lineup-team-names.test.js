@@ -211,3 +211,9 @@ test("a scorecard test drive names its step", () => {
   assert.match(src, /function scorecardDriveLabel/);
   assert.match(src, /Scorecard test drive needs a step/);
 });
+
+test("a finished mission says it is complete", () => {
+  const src = readFileSync(new URL("../src/missionComplete.js", import.meta.url), "utf8");
+  assert.match(src, /function missionCompleteLabel/);
+  assert.match(src, /Mission is not complete/);
+});
