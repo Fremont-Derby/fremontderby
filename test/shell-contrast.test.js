@@ -145,3 +145,9 @@ test("a season can name a missing start date", () => {
   assert.match(src, /function seasonDateLabel/);
   assert.match(src, /Season date is not set/);
 });
+
+test("a season can name a missing blackout", () => {
+  const src = readFileSync(new URL("../src/blackoutDate.js", import.meta.url), "utf8");
+  assert.match(src, /function blackoutDateLabel/);
+  assert.match(src, /No blackout date/);
+});
