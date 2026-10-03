@@ -163,8 +163,9 @@ async function chooseAndSubmit(page, players) {
   throw new Error('Lineup did not submit after bounded UI retries');
 }
 
-async function openFirstRaceFromLineup(page, teamId) {
-  await page.locator('[data-score-link]').click();
+async function openFirstRaceFromLineup(page, teamId, requestedRace = null) {
+  if (await page.locator('[data-score-link]').isVisible()) await page.locator('[data-score-link]').click();
+  else await page.goto('/scorecard');
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await expect.poll(async () => await page.locator('[data-filters]').isVisible()
       || /could not load your scoring options|too many requests/i.test(
@@ -193,6 +194,15 @@ async function openFirstRaceFromLineup(page, teamId) {
   }
   expect(found, 'fixed QA matchup is discoverable from the Score filters').toBe(true);
   await page.locator('[data-matchup]').selectOption(fixture.teamMatchId);
+  const races = await page.locator('[data-race] option').evaluateAll((options) =>
+    options.map((option) => ({ id: option.value, label: option.textContent })));
+  expect(races).toHaveLength(3);
+  expect(new Set(races.map((race) => race.id)).size).toBe(3);
+  expect(races.some((race) => race.label.includes('TEST Admin'))).toBe(true);
+  if (requestedRace) {
+    expect(races.map((race) => race.id)).toContain(requestedRace);
+    await page.locator('[data-race]').selectOption(requestedRace);
+  }
   const matchId = await page.locator('[data-race]').inputValue();
   expect(matchId).toBeTruthy();
   await page.locator('[data-list] a.match').click();
@@ -200,7 +210,7 @@ async function openFirstRaceFromLineup(page, teamId) {
   expect(new URL(page.url()).searchParams.get('team')).toBe(teamId);
   expect(await page.evaluate(() => window.fdRackLedgerAdapter.scoringTeamId())).toBe(teamId);
   expect(await page.evaluate(() => window.fdRackLedgerState.ownSide)).toBe(teamId === fixture.teamAId ? 'A' : 'B');
-  return matchId;
+  return { matchId, races: races.map((race) => race.id) };
 }
 
 async function waitForScorecardReady(page) {
@@ -268,6 +278,7 @@ async function correctFirstRack(page) {
 }
 
 test('distinct captains blind-submit, reconcile scoring, and finalize the same JFL matchup', async ({ browser, request }) => {
+  test.setTimeout(12 * 60_000);
   const health = await request.get('/health/environment');
   expect(health.ok()).toBeTruthy();
   const environment = await health.json();
@@ -349,9 +360,10 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainA.locator('[data-opponent-body] .opponent-row').nth(2)).toContainText('TEST Admin');
     await expect(captainA.locator('[data-score-link]')).toBeVisible();
 
-    const matchA = await openFirstRaceFromLineup(captainA, fixture.teamAId);
-    const matchB = await openFirstRaceFromLineup(captainB, fixture.teamBId);
+    const { matchId: matchA, races } = await openFirstRaceFromLineup(captainA, fixture.teamAId);
+    const { matchId: matchB, races: opposingRaces } = await openFirstRaceFromLineup(captainB, fixture.teamBId);
     expect(matchB).toBe(matchA);
+    expect([...opposingRaces].sort()).toEqual([...races].sort());
     await expect(captainA.locator('[data-finalize]')).toBeDisabled();
     await expect(captainB.locator('[data-finalize]')).toBeDisabled();
 
@@ -394,6 +406,42 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainB.locator('[data-race-status]')).toHaveText('finalized');
     await expect(captainA.locator('[data-score-a]')).toHaveText(String(targetA));
     await expect(captainB.locator('[data-score-a]')).toHaveText(String(targetA));
+    const completed = new Map([[matchA, targetA]]);
+    for (const race of races.filter((id) => id !== matchA)) {
+      await openFirstRaceFromLineup(captainA, fixture.teamAId, race);
+      await openFirstRaceFromLineup(captainB, fixture.teamBId, race);
+      await expect(captainA.locator('[data-race-status]')).not.toHaveText('finalized');
+      await expect(captainB.locator('[data-finalize]')).toBeDisabled();
+      const target = Number(await captainA.locator('[data-target-a]').textContent());
+      expect(target).toBeGreaterThan(1);
+      expect(target).toBeLessThanOrEqual(15);
+      for (let rack = 1; rack <= target; rack += 1) {
+        await captainA.waitForTimeout(12_000);
+        await scoreRack(captainA, 'A');
+        await scoreRack(captainB, 'A');
+      }
+      await expect(captainA.locator('[data-reconcile]')).toHaveAttribute('data-state', 'match');
+      await expect(captainB.locator('[data-reconcile]')).toHaveAttribute('data-state', 'match');
+      await captainA.locator('[data-confirm]').click();
+      await expect.poll(async () => captainA.evaluate(() => window.fdRackLedgerState.ownConfirmed)).toBe(true);
+      await expect(captainB.locator('[data-finalize]')).toBeDisabled();
+      await captainB.locator('[data-confirm]').click();
+      await expect.poll(async () => captainB.evaluate(() => window.fdRackLedgerState.ownConfirmed)).toBe(true);
+      await expect(captainB.locator('[data-finalize]')).toBeEnabled();
+      await captainB.locator('[data-finalize]').click();
+      await expect(captainB.locator('[data-race-status]')).toHaveText('finalized');
+      completed.set(race, target);
+    }
+    expect(completed.size).toBe(3);
+    for (const [race, target] of completed) {
+      for (const [page, teamId] of [[captainA, fixture.teamAId], [captainB, fixture.teamBId]]) {
+        await openFirstRaceFromLineup(page, teamId, race);
+        await expect(page.locator('[data-race-status]')).toHaveText('finalized');
+        await expect(page.locator('[data-score-a]')).toHaveText(String(target));
+        await expect(page.locator('[data-score-b]')).toHaveText('0');
+        await expect(page.locator('[data-finalize]')).toBeDisabled();
+      }
+    }
   } finally {
     await contextA.close();
     await contextB.close();
