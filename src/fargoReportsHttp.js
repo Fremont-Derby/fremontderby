@@ -39,6 +39,15 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
         headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
       });
       if (response.ok) { rows = await response.json(); reportStore = 'ready'; }
+      if (!rows.length) {
+        const evidence = await read(`${base}/rest/v1/external_tournament_events?source=eq.other&external_event_id=like.fargo-report:*&select=provenance&limit=100`, {
+          headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'public' },
+        });
+        if (evidence.ok) {
+          rows = (await evidence.json()).map((row) => ({ status: row.provenance?.status || 'not_sent', player_match_id: row.provenance?.playerMatchId, payload: row.provenance || {} }));
+          reportStore = rows.length ? 'ready' : reportStore;
+        }
+      }
     }
   } catch {
     reportStore = 'unavailable';
