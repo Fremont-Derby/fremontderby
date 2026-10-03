@@ -31,12 +31,18 @@ test('CI runs on pull_request without deploying from PR events', () => {
   assert.match(deployBlock, /github\.event_name == 'push'/);
 });
 
-test('PR card contract is automatic and read-only', () => {
+test('PR card contract is automatic, read-only, and executes trusted main governance', () => {
   const yml = read('pr-card-contract.yml');
   assert.match(yml, /pull_request:/);
   assert.doesNotMatch(codeOnly(yml), /CLOUDFLARE_/);
   assert.doesNotMatch(codeOnly(yml), /SUPABASE_/);
   assert.match(yml, /contents:\s*read/);
+  assert.match(yml, /Checkout trusted governance from main/);
+  assert.match(yml, /ref:\s*main/);
+  assert.match(yml, /path:\s*\.governance/);
+  assert.match(yml, /persist-credentials:\s*false/);
+  assert.match(yml, /node \.governance\/scripts\/check-pr-card-contract\.mjs/);
+  assert.match(yml, /\.governance\/scripts\/check-pr-card-contract\.mjs/);
 });
 
 test('Deploy release lanes is workflow_dispatch only with trusted ref gate', () => {
