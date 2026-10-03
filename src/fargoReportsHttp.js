@@ -2,7 +2,7 @@ export function fargoIdLooksValid(value) {
   return /^[0-9]{3,12}$/.test(String(value || '').trim());
 }
 
-import { fargoReportSummary, missingFargoLinks } from './fargoReportStore.js';
+import { fargoReportSummary, missingFargoLinks, withoutMissing } from './fargoReportStore.js';
 import { renderFargoReportsPage } from './fargoReportsPage.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
@@ -71,6 +71,7 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
       summary.unreported = matches.map((match) => ({ status: 'not_sent', player_match_id: match.playerMatchId, payload: { playerAName: match.playerAName, playerBName: match.playerBName } }));
       reportStore = 'ready';
     }
+    summary.unreported = withoutMissing(summary.unreported, summary.missingLinks);
   }
   return new Response(renderFargoReportsPage(summary, { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
