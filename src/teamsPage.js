@@ -1,6 +1,9 @@
+import { addedPlayerLine, captainTransferLine } from './captainLines.js';
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 
 export function renderTeamsPage() {
+  const added = addedPlayerLine({ player: 'Ada', team: 'Owls' });
+  const captain = captainTransferLine({ team: 'Owls', from: 'Ada', to: 'Bea' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +16,7 @@ export function renderTeamsPage() {
     @media(max-width:840px){.app{padding:12px}.topbar{align-items:flex-start}.hub-heading{align-items:flex-start}.hub-grid{grid-template-columns:1fr 1fr}.action-card{min-height:116px}.action-card--primary{grid-column:1/-1;min-height:128px}.setup,.invite-row,.split,.team-choice{grid-template-columns:1fr}.status{text-align:left}.panel{overflow:hidden}table{width:100%;min-width:0;table-layout:fixed}th,td{padding:9px 6px;font-size:.78rem}th{font-size:.67rem}td{overflow-wrap:anywhere;word-break:break-word}.actions{display:grid;grid-template-columns:1fr;gap:6px}.actions button{width:100%;min-height:44px;padding:6px}.transfer{grid-template-columns:1fr}.head-actions{flex-wrap:wrap}.chat-link,.signin{min-height:44px;white-space:normal;text-align:center}.state-actions,.state-actions a,.state-actions button{width:100%}}@media(max-width:390px){.hub-heading{display:grid}.hub-team{justify-self:start}.action-card{padding:11px}.action-card strong{font-size:.92rem}.action-meta{font-size:.72rem}th,td{padding:8px 4px;font-size:.72rem}th{font-size:.62rem}}@media(prefers-reduced-motion:reduce){.action-card{transition:none}.action-card:hover{transform:none}}
   </style>
 </head>
-<body>
+<body>\n  <p data-added-player>${added}</p>\n  <p data-captain-transfer>${captain}</p>
   <main class="app">
     <header class="topbar"><div class="brand"><span class="mark">T</span><span>Fremont Derby Teams</span></div><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></header>
     <section class="page-state" data-page-state role="status" aria-live="polite" aria-atomic="true">
