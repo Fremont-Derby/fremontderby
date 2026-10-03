@@ -19,17 +19,18 @@ if (!databaseUrl.includes(projectRef)) {
   process.exit(1);
 }
 const parsed = new URL(databaseUrl);
-const password = decodeURIComponent(parsed.password || '');
+const decodedPassword = decodeURIComponent(parsed.password || '');
+const rawPassword = parsed.password || '';
 const originalUser = decodeURIComponent(parsed.username || '');
-if (!password || !originalUser) {
+if (!decodedPassword || !originalUser) {
   console.error('Migration apply failed closed.');
   process.exit(1);
 }
-const users = [...new Set([originalUser, `postgres.${projectRef}`])];
+const attempts = [...new Set([decodedPassword, rawPassword])].map((password) => ({ user: `postgres.${projectRef}`, password }));
 console.log(plan.text);
 console.log(`Stored database user is ${originalUser}.`);
 
-function runPsql(file, user) {
+function runPsql(file, user, password) {
   return new Promise((resolve) => {
     const child = spawn('psql', ['-v', 'ON_ERROR_STOP=1', '-f', file], {
       stdio: ['ignore', 'inherit', 'pipe'],
@@ -53,16 +54,16 @@ function runPsql(file, user) {
 
 for (const file of files) {
   let done = false;
-  for (const user of users) {
-    console.log(`Trying ${user}.`);
-    const result = await runPsql(file, user);
+  for (const attempt of attempts) {
+    console.log(`Trying ${attempt.user}.`);
+    const result = await runPsql(file, attempt.user, attempt.password);
     if (result.status === 0) {
       console.log(`Applied ${file}`);
       done = true;
       break;
     }
-    if (/password authentication failed/i.test(result.errorText)) {
-      console.log(`Rejected ${user}.`);
+    if (/password authentication failed|no tenant identifier/i.test(result.errorText)) {
+      console.log(`Rejected ${attempt.user}.`);
       continue;
     }
     if (result.errorText) process.stderr.write(result.errorText);
