@@ -18,3 +18,8 @@ test('the apply plan rejects a browser notification grant', () => {
   });
   assert.equal(plan.ok, false);
 });
+
+test('the apply script gives the plan the migration text', () => {
+  const src = readFileSync(new URL('../scripts/apply-dru-migrations.mjs', import.meta.url), 'utf8');
+  assert.match(src, /sqlTexts: files.map/);
+});

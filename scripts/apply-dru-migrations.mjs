@@ -10,7 +10,7 @@ const files = [
   'supabase/migrations/20261003113000_dru_notification_no_browser_policy.sql',
   'supabase/migrations/20261003043100_dru_admin_phone.sql',
 ];
-const plan = druMigrationApplyPlan({ projectRef, sqlFiles: files });
+const plan = druMigrationApplyPlan({ projectRef, sqlFiles: files, sqlTexts: files.map((file) => readFileSync(file, 'utf8')) });
 if (!plan.ok) {
   console.error(plan.text);
   process.exit(1);
