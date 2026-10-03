@@ -55,3 +55,11 @@ export function assertNoNotificationDump(url) {
   }
   return value;
 }
+
+export function assertNoBrowserNotificationGrant(sql) {
+  const value = String(sql || '');
+  if (/grant\s+select[\s\S]*user_notifications[\s\S]*\b(anon|authenticated)\b/i.test(value)) {
+    throw new Error('DRU notifications cannot grant a browser read.');
+  }
+  return value;
+}
