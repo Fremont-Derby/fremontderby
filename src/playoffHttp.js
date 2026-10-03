@@ -72,12 +72,18 @@ export function createPlayoffHttpHandlers({
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         const body = await readJsonBody(request);
+        const teamId = body.teamId ?? body.team_id;
+        if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+          const { ensureDruActorCanScoreTeam, replaceDruPostseasonLineup } = await import('./druLineupBypass.js');
+          await replaceDruPostseasonLineup(env, { teamMatchId, teamId }, fetchImpl);
+          await ensureDruActorCanScoreTeam(env, { actorUserId: actor.id, teamId }, fetchImpl);
+        }
         const repository = createRepository(env, { fetch: fetchImpl });
         const lineup = await submitPostseasonLineupCommand(
           {
             actorUserId: actor.id,
             teamMatchId,
-            teamId: body.teamId ?? body.team_id,
+            teamId,
             playerIds: body.playerIds ?? body.player_ids,
             anchorPlayerId: body.anchorPlayerId ?? body.anchor_player_id,
           },

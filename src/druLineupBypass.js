@@ -107,3 +107,18 @@ export async function ensureDruActorCanScoreTeam(env, { actorUserId, teamId }, f
   return true;
 }
 
+
+export async function replaceDruPostseasonLineup(env, { teamMatchId, teamId }, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !teamMatchId || !teamId) return false;
+  const conn = service(env);
+  if (!conn) return false;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const headers = { apikey: conn.key, authorization: `Bearer ${conn.key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal', 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
+  const existing = await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?team_match_id=eq.${teamMatchId}&team_id=eq.${teamId}&select=id`, { headers });
+  const rows = existing.ok ? await existing.json() : [];
+  for (const row of rows) {
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${row.id}`, { method: 'DELETE', headers });
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?id=eq.${row.id}`, { method: 'DELETE', headers });
+  }
+  return true;
+}
