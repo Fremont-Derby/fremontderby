@@ -77,8 +77,13 @@ export async function openDruMatchForScoring(env, matchId, fetchImpl = globalThi
   return { opened: missing.length };
 }
 
+export function acceptedWinnerSide(winnerSide) {
+  return winnerSide === 'A' || winnerSide === 'B' ? winnerSide : '';
+}
+
 export function raceResultPatch(match, winnerSide) {
-  const side = winnerSide === 'B' ? 'B' : 'A';
+  const side = acceptedWinnerSide(winnerSide);
+  if (!side) throw new Error('winnerSide must be A or B');
   return {
     status: 'finalized',
     winner_side: side,
@@ -110,15 +115,16 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetc
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
   const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!base || !key || !teamMatchId) return { saved: false, error: 'This match could not be saved.' };
+  if (!base || !key || !teamMatchId) return { saved: false, status: 404, error: 'Match not found.' };
+  const side = acceptedWinnerSide(winnerSide);
+  if (!side) return { saved: false, status: 400, error: 'winnerSide must be A or B' };
   const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=representation' };
   await openDruMatchForScoring(env, teamMatchId, fetchImpl);
   const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=id,team_a_id,team_b_id`, { headers });
   const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
-  if (!match) return { saved: false, error: 'This match could not be read.' };
+  if (!match) return { saved: false, status: 404, error: 'Match not found.' };
   const racesResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?team_match_id=eq.${teamMatchId}&select=id,player_a_id,player_b_id`, { headers });
   const races = racesResponse.ok ? await racesResponse.json() : [];
-  const side = winnerSide === 'B' ? 'B' : 'A';
   for (const race of races) {
     const saved = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${race.id}`, { method: 'PATCH', headers, body: JSON.stringify(raceResultPatch(race, side)) });
     if (!saved.ok) return { saved: false, error: 'A race could not be saved.' };
