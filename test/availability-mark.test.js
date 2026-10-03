@@ -6,5 +6,5 @@ import { renderAvailabilityPage } from '../src/availabilityPage.js';
 test('an availability mark names the status and date', () => {
   assert.equal(availabilityMark({ date: '2026-10-03', status: 'in' }), 'Checked in as in for 2026-10-03.');
   assert.equal(availabilityMark({}), '');
-  assert.doesNotMatch(renderAvailabilityPage(), /Checked in as in for 2026-10-03/);
+  assert.match(renderAvailabilityPage(), /Checked in as in for 2026-10-03/);
 });
