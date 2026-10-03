@@ -71,8 +71,8 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
       summary.unreported = matches.map((match) => ({ status: 'not_sent', player_match_id: match.playerMatchId, payload: { playerAName: match.playerAName, playerBName: match.playerBName } }));
       reportStore = 'ready';
     }
-    summary.unreported = withoutMissing(summary.unreported, summary.missingLinks);
   }
+  summary.unreported = withoutMissing(summary.unreported, summary.missingLinks);
   return new Response(renderFargoReportsPage(summary, { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
