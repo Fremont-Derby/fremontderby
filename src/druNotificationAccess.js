@@ -71,3 +71,11 @@ export function assertNotificationRevoke(sql) {
   }
   return value;
 }
+
+export function assertNotificationRls(sql) {
+  const value = assertNotificationRevoke(sql);
+  if (value.includes('user_notifications') && !/enable row level security/i.test(value)) {
+    throw new Error('DRU notifications must enable row security.');
+  }
+  return value;
+}
