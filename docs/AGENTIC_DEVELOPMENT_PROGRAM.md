@@ -17,6 +17,10 @@ The controlling milestone is issue #2800: JFL product completeness.
 - **Gamma** is dormant until #2800's exit gate is satisfied. DRU must not use "works on DRU, copy to Gamma" as its default promotion loop.
 - When #2800 passes, the program steward should update this charter and the corresponding mechanical guardrails as part of reactivating #2527.
 
+## Current program status
+
+Read `docs/AGENTIC_PROGRAM_STATUS.md` before normal prioritization. It is the maintained executive/status handoff for the current phase. Reconcile it against live issues, PRs, CI, and hosted evidence; newer authoritative evidence wins. Update the status document only for material program-level changes rather than routine card churn.
+
 ## Collaboration contract
 
 ### JFL contribution
