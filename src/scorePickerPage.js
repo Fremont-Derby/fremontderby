@@ -15,7 +15,7 @@ export function renderScorePickerPage() {
   </style>
 </head>
 <body>\n  <p data-scorecard>${card}</p>\n  <p data-replay>${replay}</p>\n  <p data-score-miss>${missing}</p>
-  <main class="app">\n    <p data-live-score="both">The live score names both sides, and a finished match does not offer another rack.</p>
+  <main class="app">
     <p class="note" data-score-fallback>If live scoring fails, write the result down and enter it when the page is back.</p>
     <p class="note" data-score-error>If a score will not save, the match may already be finalized. Check the scorecard status before retrying.</p>
     <header class="head"><div class="muted" style="font-size:.72rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase">League night</div><h1>Score a match</h1><div class="muted">Start with today, then switch dates, teams, matchups, or revealed races when you need a makeup, early match, or another authorized race. Captains can prepare the blind three here before scoring opens. No tokens or database IDs required.</div>
