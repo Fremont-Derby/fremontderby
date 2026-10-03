@@ -1,4 +1,4 @@
-import { fargoReportSummary } from './fargoReportStore.js';
+import { fargoReportSummary, missingFargoLinks } from './fargoReportStore.js';
 import { renderFargoReportsPage } from './fargoReportsPage.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
@@ -43,7 +43,12 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
   } catch {
     reportStore = 'unavailable';
   }
-  return new Response(renderFargoReportsPage(fargoReportSummary(Array.isArray(rows) ? rows : []), { feedUrl: '/api/fargo/feed', saved, reportStore }), {
+  const summary = fargoReportSummary(Array.isArray(rows) ? rows : []);
+  if (!summary.missingLinks.length) {
+    const { loadFinalizedMatches } = await import('./fargoFeedHttp.js');
+    summary.missingLinks = missingFargoLinks(await loadFinalizedMatches(env, fetchImpl));
+  }
+  return new Response(renderFargoReportsPage(summary, { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
