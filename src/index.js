@@ -457,6 +457,10 @@ export async function handleCreateTeamRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { reopenDruPracticeRegistration } = await import('./druFreshSeason.js');
+      await reopenDruPracticeRegistration(env, seasonId, fetchImpl);
+    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const application = await submitTeamApplicationCommand(
       {
@@ -1680,10 +1684,6 @@ export async function handleListSeasonScheduleRequest(
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
-      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
-    }
     const ifNoneMatch = request?.headers?.get?.('if-none-match') || '';
     // WHY: warm polls parallelize exists+version (independent I/O) before any heavy build.
     if (ifNoneMatch) {
@@ -1963,6 +1963,7 @@ export async function handleFinalizePlayerMatchRequest(
 ) {
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    let seasonId = null;
     if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
       const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
       const { privatePostgrestProfile, withSupabaseSchema } = await import('./supabaseSchema.js');
@@ -1995,7 +1996,7 @@ export async function handleFinalizePlayerMatchRequest(
       const seasonResponse = teamMatchId
         ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=season_id`, { headers })
         : null;
-      const seasonId = seasonResponse?.ok ? (await seasonResponse.json())?.[0]?.season_id : null;
+      seasonId = seasonResponse?.ok ? (await seasonResponse.json())?.[0]?.season_id : null;
       const ids = [playerRow?.player_a_id, playerRow?.player_b_id].filter(Boolean);
       const paymentResponse = seasonId && ids.length
         ? await fetchWithSchema(`${base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=in.(${ids.join(',')})&select=player_id,status`, { headers: privateHeaders })
@@ -2012,9 +2013,9 @@ export async function handleFinalizePlayerMatchRequest(
       },
       repository,
     );
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && team?.season_id) {
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && seasonId) {
       const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
-      await closeFinishedDruTeamMatches(env, { seasonId: team.season_id }, fetchImpl);
+      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
     }
 
     return jsonResponse({ match });
