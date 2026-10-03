@@ -126,8 +126,11 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
     headers: privateHeaders,
     body: JSON.stringify({ season_id: match.season_id, round_id: roundId, team_match_id: match.id, team_id: teamId, submitted_by: actorUserId }),
   });
-  if (!lineupResponse.ok) return null;
-  const lineup = (await lineupResponse.json())?.[0];
+  let lineup = lineupResponse.ok ? (await lineupResponse.json())?.[0] : null;
+  if (!lineup?.id) {
+    const existing = await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?team_match_id=eq.${match.id}&team_id=eq.${teamId}&select=id`, { headers: privateHeaders });
+    lineup = existing.ok ? (await existing.json())?.[0] : null;
+  }
   if (!lineup?.id) return null;
   const chosen = (slots || []).filter((slot) => slot?.playerId).slice(0, 4);
   await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineup.id}`, { method: 'DELETE', headers: privateHeaders });
