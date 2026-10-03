@@ -17,4 +17,5 @@ begin
     execute format('drop policy if exists %I on dru.user_notifications', policy_name);
   end loop;
   execute 'revoke all on table dru.user_notifications from public, anon, authenticated';
+  execute 'grant select, insert, update on table dru.user_notifications to service_role';
 end $$;

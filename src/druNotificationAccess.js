@@ -79,3 +79,11 @@ export function assertNotificationRls(sql) {
   }
   return value;
 }
+
+export function assertNotificationWorkerGrant(sql) {
+  const value = assertNotificationRls(sql);
+  if (value.includes('user_notifications') && !/grant select, insert, update on table dru\.user_notifications to service_role/i.test(value)) {
+    throw new Error('DRU notifications must grant the Worker role.');
+  }
+  return value;
+}
