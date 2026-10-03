@@ -33,6 +33,11 @@ export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = 
   return saved.ok ? ids.length : 0;
 }
 
+export function playoffPadName(seed) {
+  const tail = String(seed || 'night').slice(-4);
+  return `Kite String ${tail}`;
+}
+
 export function duplicateLineupIds(playerIds) {
   const ids = (playerIds || []).filter(Boolean);
   return ids.length > 0 && new Set(ids).size !== ids.length;
@@ -138,7 +143,7 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
     const created = await fetchWithSchema(`${conn.base}/rest/v1/players`, {
       method: 'POST',
       headers: { ...headers, prefer: 'return=representation' },
-      body: JSON.stringify({ display_name: 'Kite String Fourth' }),
+      body: JSON.stringify({ display_name: playoffPadName(match.id) }),
     });
     const player = created.ok ? (await created.json())?.[0] : null;
     if (player?.id) {
