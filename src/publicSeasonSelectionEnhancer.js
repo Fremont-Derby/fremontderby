@@ -28,7 +28,7 @@ function injectNextMatch(html, nonce) {
     '</body>',
     `<script${attr}>
       ${nextMatchSummaryBrowserSource}
-      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json',authorization:'Bearer '+((sessionStorage.getItem('fd.accessToken')||localStorage.getItem('fd.accessToken')||''))}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='No upcoming match published.';});})();
     </script></body>`,
   );
 }
