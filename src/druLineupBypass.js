@@ -82,24 +82,23 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, ro
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
   const headers = { apikey: conn.key, authorization: `Bearer ${conn.key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
   const teamResponse = await fetchWithSchema(`${conn.base}/rest/v1/teams?id=eq.${teamId}&select=season_id`, { headers });
-  if (!teamResponse.ok) return false;
+  if (!teamResponse.ok) reject('Team could not be read before lock');
   const seasonId = (await teamResponse.json())?.[0]?.season_id;
-  const playerResponse = await fetchWithSchema(`${conn.base}/rest/v1/players?user_id=eq.${actorUserId}&select=id`, { headers });
-  if (!playerResponse.ok || !seasonId) return false;
-  const playerId = (await playerResponse.json())?.[0]?.id;
-  if (!playerId) return false;
+  if (!seasonId) reject('Team could not be read before lock');
   const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
   await clearEmptyDruLineups(fetchWithSchema, conn, teamId, roundId, privateHeaders);
-  const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
-  const now = new Date().toISOString();
+  const roster = [...new Set(named)];
+  const memberResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&ends_at=is.null&select=team_id,player_id`, { headers });
+  if (!memberResponse.ok) reject('Team membership could not be read before lock');
+  const members = await memberResponse.json();
+  const same = (row, id) => String(row.player_id || '').trim().toLowerCase() === id.toLowerCase();
+  if (roster.some((id) => members.some((row) => same(row, id) && row.team_id && row.team_id !== teamId))) reject('A lineup player is already on another team');
   for (const rosterPlayerId of roster) {
-    await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${rosterPlayerId}&ends_at=is.null`, {
-      method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-    });
+    if (members.some((row) => same(row, rosterPlayerId) && row.team_id === teamId)) continue;
     const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
-      method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: rosterPlayerId === playerId ? 'captain' : 'player' }),
+      method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: 'player' }),
     });
-    if (!membershipSeatOk(saved.status)) throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
+    if (!membershipSeatOk(saved.status)) reject(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return true;
