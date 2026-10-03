@@ -61,3 +61,9 @@ test("a schedule can name a missing round", () => {
   assert.match(src, /function roundStatusLabel/);
   assert.match(src, /Round is not set/);
 });
+
+test("a match can name a missing date", () => {
+  const src = readFileSync(new URL("../src/dateStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function dateStatusLabel/);
+  assert.match(src, /Date is not set/);
+});
