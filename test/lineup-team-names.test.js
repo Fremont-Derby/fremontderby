@@ -193,3 +193,9 @@ test("a stuck mission can be left", () => {
   assert.match(src, /function stuckPathLabel/);
   assert.match(src, /Mission is not stuck/);
 });
+
+test("a campaign names its missions", () => {
+  const src = readFileSync(new URL("../src/campaignFoundation.js", import.meta.url), "utf8");
+  assert.match(src, /function campaignFoundationLabel/);
+  assert.match(src, /Campaign needs missions/);
+});
