@@ -1,3 +1,4 @@
+import { missionIdentityLine, stuckPathLine } from './stuckMission.js';
 import { personaMissionLine, missionChromeLine } from './missionChrome.js';
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
@@ -10,6 +11,8 @@ function browserConfig(env = {}) {
 }
 
 export function renderProfilePage(env = {}) {
+  const identity = missionIdentityLine({ name: 'find my team' });
+  const stuck = stuckPathLine({ stuck: true });
   const mission = personaMissionLine({ name: 'find my next match' });
   const chrome = missionChromeLine({ task: 'find the match', done: 'the match is named', abort: 'stop' });
   return `<!doctype html>
@@ -106,7 +109,7 @@ export function renderProfilePage(env = {}) {
     }
   </style>
 </head>
-<body>\n  <p data-persona-mission>${mission}</p>\n  <p data-mission-chrome>${chrome}</p>
+<body>\n  <p data-mission>${identity}</p>\n  <p data-stuck>${stuck}</p>\n  <p data-persona-mission>${identity}</p>\n  <p data-mission-chrome>${chrome}</p>
   <main class="app">\n    <p data-profile-phone="formatted">A phone number is shown as a formatted number, and eligibility progress counts the requirements met.</p>
     <section data-error-link><h2>Error link</h2><p>A client error keeps its id and a short server code. The stack stays off the page.</p></section>
     <p class="note" data-eligibility-why>Eligibility says why a player can play or why they are blocked.</p>
