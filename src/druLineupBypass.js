@@ -158,14 +158,20 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
     body: JSON.stringify(chosen.map((slot, index) => ({ lineup_id: lineup.id, season_id: match.season_id, round_id: roundId, team_id: teamId, slot_number: index + 1, player_id: slot.playerId, participation_type: 'roster' }))),
   });
   const both = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?round_id=eq.${roundId}&team_id=in.(${match.team_a_id},${match.team_b_id})&select=team_id,slot_number,player_id`, { headers: privateHeaders });
-  const existing = await fetchWithSchema(`${conn.base}/rest/v1/player_matches?team_match_id=eq.${match.id}&select=id`, { headers });
-  const slotRows = both.ok ? await both.json() : [];
-  const already = existing.ok ? await existing.json() : [];
-  if (!already.length && slotRows.length) {
+  if (!both.ok) throw new Error('Playoff lineup slots could not be read.');
+  const existing = await fetchWithSchema(`${conn.base}/rest/v1/player_matches?team_match_id=eq.${match.id}&select=id,player_a_id,player_b_id`, { headers });
+  if (!existing.ok) throw new Error('Playoff races could not be read.');
+  const slotRows = await both.json();
+  const already = await existing.json();
+  const playable = already.filter((row) => row.player_a_id && row.player_b_id);
+  if (!playable.length && slotRows.length) {
+    if (already.length) {
+      await fetchWithSchema(`${conn.base}/rest/v1/player_matches?team_match_id=eq.${match.id}`, { method: 'DELETE', headers });
+    }
     const byTeam = { [match.team_a_id]: [], [match.team_b_id]: [] };
     for (const row of slotRows) byTeam[row.team_id]?.push(row);
-    const a = (byTeam[match.team_a_id] || []).sort((x, y) => x.slot_number - y.slot_number);
-    const b = (byTeam[match.team_b_id] || []).sort((x, y) => x.slot_number - y.slot_number);
+    const a = (byTeam[match.team_a_id] || []).filter((row) => row.player_id).sort((x, y) => x.slot_number - y.slot_number);
+    const b = (byTeam[match.team_b_id] || []).filter((row) => row.player_id).sort((x, y) => x.slot_number - y.slot_number);
     const count = Math.min(a.length, b.length);
     if (count) {
       const saved = await fetchWithSchema(`${conn.base}/rest/v1/player_matches`, {

@@ -18,7 +18,11 @@ test('a practice result waits until both teams are set', () => {
   assert.equal(teamWinnerId({ team_a_id: 'a' }, [{ status: 'finalized', winner_side: 'A' }]), null);
 });
 
-test('playoffs wait until a practice week has a winner', () => {
+test('playoffs wait until all seven regular rounds have winners', () => {
   assert.equal(practicePlayoffsReady([]), false);
-  assert.equal(practicePlayoffsReady([{ status: 'finalized', winner_team_id: 'rail' }]), true);
+  assert.equal(practicePlayoffsReady([{ status: 'finalized', winner_team_id: 'rail' }]), false);
+  const complete = Array.from({ length: 28 }, () => ({ status: 'finalized', winner_team_id: 'rail' }));
+  assert.equal(practicePlayoffsReady(complete), true);
+  complete[3] = { status: 'scheduled', winner_team_id: null };
+  assert.equal(practicePlayoffsReady(complete), false);
 });
