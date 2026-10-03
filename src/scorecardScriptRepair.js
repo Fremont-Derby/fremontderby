@@ -1,4 +1,5 @@
 import { nextMatchSummaryBrowserSource } from './nextMatchSummary.js';
+import { scoreState } from './scoreState.js';
 import { scorecardMatchLabel, seasonsForRequestedMatch } from './druScorecardSeason.js';
 
 const OLD_HOOK = 'filtersEl.hidden=false;populateMatchups();selectRequestedMatch()}';
@@ -23,6 +24,7 @@ export function repairScorecardScript(html) {
   if (!next.includes('function openDruSeason')) {
     next = next.replace('function selectRequestedMatch()', 'function openDruSeason(){' + druScorecardSeasonPickerSource() + '}function selectRequestedMatch()');
   }
+  if (!next.includes('data-score-state')) next = next.replace('</header>', '</header><p data-score-state>'+scoreState({ empty: true }).text+'</p>');
   if (next.includes('data-next-match')) return next;
   next = next.replace('</header>', '</header><p data-next-match>Looking up your next published match\u2026</p>');
   next = next.replace(
