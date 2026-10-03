@@ -109,3 +109,9 @@ test("a team can name missing points", () => {
   assert.match(src, /function pointsStatusLabel/);
   assert.match(src, /Points are missing/);
 });
+
+test("a team can name a missing playoff spot", () => {
+  const src = readFileSync(new URL("../src/playoffStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function playoffStatusLabel/);
+  assert.match(src, /Not in the playoffs/);
+});
