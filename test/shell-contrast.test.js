@@ -205,3 +205,9 @@ test("a team can name a closed returning window", () => {
   assert.match(src, /function returningTeamLabel/);
   assert.match(src, /window is closed/);
 });
+
+test("a player can name a missing free-agent mark", () => {
+  const src = readFileSync(new URL("../src/freeAgent.js", import.meta.url), "utf8");
+  assert.match(src, /function freeAgentLabel/);
+  assert.match(src, /Not a free agent/);
+});
