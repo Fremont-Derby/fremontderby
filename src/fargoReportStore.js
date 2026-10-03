@@ -1,3 +1,9 @@
+
+export function withoutMissing(unreported = [], missing = []) {
+  const ids = new Set(missing.map((row) => row.player_match_id));
+  return unreported.filter((row) => !ids.has(row.player_match_id));
+}
+
 import { buildFargoExportRecord } from './fargoExport.js';
 
 export function planFargoReports(match, stored = []) {
@@ -20,7 +26,7 @@ export function missingFargoLinks(matches = []) {
   return matches.filter((match) => !match.playerAFargoId || !match.playerBFargoId).map((match) => ({
     status: 'needs_review',
     player_match_id: match.playerMatchId,
-    payload: { playerAName: match.playerAName, playerBName: match.playerBName },
+    payload: { playerAName: match.playerAName, playerBName: match.playerBName, playerAId: match.playerAId, playerBId: match.playerBId },
   }));
 }
 
