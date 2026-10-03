@@ -67,3 +67,9 @@ test("a match can name a missing date", () => {
   assert.match(src, /function dateStatusLabel/);
   assert.match(src, /Date is not set/);
 });
+
+test("a match can name a missing makeup date", () => {
+  const src = readFileSync(new URL("../src/makeupStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function makeupStatusLabel/);
+  assert.match(src, /No makeup date/);
+});
