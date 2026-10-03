@@ -9,7 +9,7 @@ const files = [
   'supabase/migrations/20261003043000_dru_notification_rls.sql',
   'supabase/migrations/20261003043100_dru_admin_phone.sql',
 ];
-const regions = ['us-west-1', 'us-west-2', 'us-east-1', 'us-east-2'];
+const regions = ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'eu-central-1', 'ap-southeast-1', 'ap-northeast-1'];
 const plan = druMigrationApplyPlan({ projectRef, sqlFiles: files });
 if (!plan.ok) {
   console.error(plan.text);
@@ -61,7 +61,12 @@ for (const file of plan.files) {
       applied = true;
       break;
     }
-    if (result.errorText && !/Network is unreachable|could not translate|timeout|Connection refused|tenant\/user|ENOTFOUND/i.test(result.errorText)) {
+    const host = new URL(url).hostname;
+    if (/tenant\/user|ENOTFOUND|Network is unreachable|could not translate|timeout|Connection refused/i.test(result.errorText)) {
+      console.log(`Missed ${host}`);
+      continue;
+    }
+    if (result.errorText) {
       process.stderr.write(result.errorText);
       console.error('Migration apply failed closed.');
       process.exit(1);
