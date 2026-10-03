@@ -37,8 +37,7 @@ export async function enhanceTeamsCanonicalActions(response) {
           const banner=document.querySelector('[data-team-highlight]');
           if(!requested||!banner)return;
           banner.hidden=false;
-          banner.textContent='Showing team: '+requested;
-          const nameFor=()=>{const node=document.querySelector('[data-requested-team]');return node&&node.textContent.trim()};
+          banner.textContent='Showing team: '+requested;          const nameFor=()=>{const node=document.querySelector('[data-requested-team]');return node&&node.textContent.trim()};
           const paint=()=>{const name=nameFor();if(name)banner.textContent=name};
           paint();
           const box=document.querySelector('[data-captain-teams]');
