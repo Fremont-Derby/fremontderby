@@ -131,11 +131,11 @@ export async function handleFargoFeedRequest(request, env = {}, { fetch: fetchIm
     return Response.json({ error: 'Method not allowed' }, { status: 405, headers: { 'cache-control': 'no-store' } });
   }
   const items = matches || await loadFinalizedMatches(env, fetchImpl);
-  const store = { ok: true, reason: 'not stored on read' };
+  const store = { ok: false, reason: 'not stored on read' };
   const requested = new URL(request.url).searchParams.get('playerMatchId');
   const { feedForMatch } = await import('./fargoFeed.js');
   const body = feedForMatch(toFargoFeed(items), requested);
-  body.reportStore = store?.ok ? 'ready' : 'unavailable';
+  body.reportStore = store?.ok ? 'ready' : store.reason;
   return Response.json(body, {
     headers: { 'cache-control': 'no-store', 'access-control-allow-origin': '*' },
   });
