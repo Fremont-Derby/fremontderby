@@ -8,6 +8,8 @@ When directed to establish or extend **Playwright/self-hosted browser automation
 
 ## Current product-owner focus — JFL product completeness (#2800)
 
+The durable JFL/DRU collaboration model for this phase is in `docs/AGENTIC_DEVELOPMENT_PROGRAM.md`. Every autonomous JFL/DRU session must treat that charter as required reading subordinate to this file. It defines the shared outcome, lane roles, DRU→JFL handoff model, mentoring loop, program health signals, and continuous-improvement expectations.
+
 **Issue #2800 is the controlling near-term product milestone for every autonomous implementation lane.** Until its JFL exit gate is satisfied, optimize the project for completing and proving the real product in JFL, not for Gamma reconciliation or production promotion.
 
 - **JFL = integration and product-completion lane.** JFL owns assembling the complete user experience, validating it on the live JFL environment, and growing the persona-based Playwright journey. Choose the highest-impact missing or broken operator/captain/player user story that blocks a complete real season. Issue #2799 is the core two-captain integration proof and should expand as core stories become functional.
