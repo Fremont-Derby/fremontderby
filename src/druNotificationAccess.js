@@ -89,7 +89,7 @@ export function assertNotificationWorkerGrant(sql) {
 }
 
 export function assertNotificationContract(sql) {
-  return assertNotificationForce(sql);
+  return assertNotificationComment(sql);
 }
 
 export function assertNotificationDeny(sql) {
@@ -104,6 +104,14 @@ export function assertNotificationForce(sql) {
   const value = assertNotificationDeny(sql);
   if (value.includes('user_notifications') && !/force row level security/i.test(value)) {
     throw new Error('DRU notifications must force row security.');
+  }
+  return value;
+}
+
+export function assertNotificationComment(sql) {
+  const value = assertNotificationForce(sql);
+  if (value.includes('user_notifications') && !/Browser roles are denied/i.test(value)) {
+    throw new Error('DRU notifications must name the browser deny.');
   }
   return value;
 }

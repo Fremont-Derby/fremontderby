@@ -9,5 +9,6 @@ begin
   execute 'revoke all on table dru.user_notifications from public, anon, authenticated';
   execute 'grant select, insert, update on table dru.user_notifications to service_role';
   execute 'create policy dru_notifications_browser_deny on dru.user_notifications as restrictive for all to anon, authenticated using (false)';
+  execute 'comment on table dru.user_notifications is ''Worker-mediated notifications. Browser roles are denied.''';
   execute 'comment on table dru.user_notifications is ''Worker-mediated notifications. Anonymous and authenticated clients have no table grant.''';
 end $$;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { browserCanReadNotifications, notificationAccessContract, assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce } from '../src/druNotificationAccess.js';
+import { browserCanReadNotifications, notificationAccessContract, assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce, assertNotificationComment, assertNotificationComment, assertNotificationComment } from '../src/druNotificationAccess.js';
 
 test('a browser role cannot read DRU notifications', () => {
   const contract = notificationAccessContract();
@@ -63,4 +63,10 @@ test('a notification migration must force row security', () => {
   const sql = 'alter table dru.user_notifications enable row level security; alter table dru.user_notifications force row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications';
   assert.match(assertNotificationForce(sql), /force row level security/);
   assert.throws(() => assertNotificationForce('alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications'), /force row security/);
+});
+
+test('a notification migration must name the browser deny', () => {
+  const sql = "alter table dru.user_notifications enable row level security; alter table dru.user_notifications force row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications; comment on table dru.user_notifications is 'Browser roles are denied'";
+  assert.match(assertNotificationComment(sql), /Browser roles are denied/);
+  assert.throws(() => assertNotificationComment('alter table dru.user_notifications enable row level security; alter table dru.user_notifications force row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications'), /name the browser deny/);
 });
