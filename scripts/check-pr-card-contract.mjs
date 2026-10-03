@@ -13,6 +13,7 @@ const TRACKING_REFERENCE = /\b(?:Tracks|Refs)\s+(?:#(\d+)|https:\/\/github\.com\
 const AUTO_CLOSE_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:#\d+|https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/\d+)\b/i;
 const DRU_JOURNAL_ISSUE = 2883;
 const DRU_JOURNAL_ENFORCEMENT_MIN_PR = 3014;
+const DRU_PROGRAM_CONTRACT_MIN_PR = 999999;
 const DRU_JOURNAL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ISSUE_COMMENT_URL = /https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/issues\/(\d+)#issuecomment-(\d+)/i;
 
@@ -100,6 +101,7 @@ export function validateDruSessionJournalComment({
   comment = {},
   pullRequestAuthor = '',
   pullRequestUpdatedAt = '',
+  requireProgramFields = false,
 } = {}) {
   const errors = [];
   const issueNumber = Number(String(comment.issue_url || '').split('/').pop());
@@ -116,6 +118,21 @@ export function validateDruSessionJournalComment({
     errors.push('Linked DRU journal comment must contain a "### Session contract" heading.');
   }
 
+  if (requireProgramFields) {
+    const journalBody = String(comment.body || '');
+    const requiredFields = [
+      ['Shared objective', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?Shared objective(?:\*\*)?\s*:/i],
+      ['DRU contribution', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?DRU contribution(?:\*\*)?\s*:/i],
+      ['JFL handoff', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?JFL handoff(?:\*\*)?\s*:/i],
+      ['Done when', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?Done when(?:\*\*)?\s*:/i],
+    ];
+    for (const [field, pattern] of requiredFields) {
+      if (!pattern.test(journalBody)) {
+        errors.push(`Linked DRU Session contract must contain "${field}:" for the shared JFL program objective.`);
+      }
+    }
+  }
+
   const commentCreated = Date.parse(comment.created_at || '');
   const pullRequestUpdated = Date.parse(pullRequestUpdatedAt || '');
   if (!Number.isFinite(commentCreated) || !Number.isFinite(pullRequestUpdated)) {
@@ -125,6 +142,23 @@ export function validateDruSessionJournalComment({
   }
 
   return errors;
+}
+
+
+export function validateCurrentProgramTarget({
+  body = '',
+  baseRef = '',
+  pullRequestNumber = 0,
+} = {}) {
+  if (Number(pullRequestNumber) < DRU_PROGRAM_CONTRACT_MIN_PR) return [];
+
+  const owner = sectionContent(body, 'Owner lane / agent');
+  if (/\bDRU\b/i.test(owner) && baseRef === 'fremontderby-gamma') {
+    return [
+      'Gamma is dormant during the #2800 JFL product-completion phase. DRU should hand portable evidence/fixes to JFL instead of opening a Gamma promotion PR.',
+    ];
+  }
+  return [];
 }
 
 
@@ -326,6 +360,11 @@ async function validateEventFile(eventPath) {
   const body = event.pull_request?.body ?? '';
   const cardNumbers = extractTrackingCardNumbers(sectionContent(body, 'Tracking card'), repositoryFullName);
   const errors = validatePullRequestBody(body, repositoryFullName, event.pull_request?.head?.ref ?? '');
+  errors.push(...validateCurrentProgramTarget({
+    body,
+    baseRef: event.pull_request?.base?.ref ?? '',
+    pullRequestNumber,
+  }));
   const journalReference = validateDruSessionJournalReference(body, repositoryFullName, pullRequestNumber);
   errors.push(...journalReference.errors);
 
@@ -340,6 +379,7 @@ async function validateEventFile(eventPath) {
       comment: journalComment,
       pullRequestAuthor: event.pull_request?.user?.login ?? '',
       pullRequestUpdatedAt: event.pull_request?.updated_at ?? '',
+      requireProgramFields: Number(pullRequestNumber) >= DRU_PROGRAM_CONTRACT_MIN_PR,
     }));
   }
 
