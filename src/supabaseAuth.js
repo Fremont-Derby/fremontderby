@@ -3,7 +3,9 @@ import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 export const DRU_AGENT_SENTINEL = 'dru-bypass';
 
 export function druAgentSentinelEnabled(env = {}) {
-  return String(env.ENVIRONMENT || '').trim() === 'dru';
+  if (String(env.ENVIRONMENT || '').trim() !== 'dru') return false;
+  const bypass = String(env.BETA_AUTH_BYPASS || '').trim().toLowerCase();
+  return bypass !== '0' && bypass !== 'false' && bypass !== 'off';
 }
 
 export function isDruAgentSentinel(token, env = {}) {
@@ -110,6 +112,11 @@ export async function authenticateSupabaseUser(
   // Test-lane bypass is only for deliberately unauthenticated automation.
   // Once a caller supplies a bearer token, validate it normally rather than
   // escalating to the shared test actor.
+  if (isDruAgentSentinel(token, env)) {
+    const actor = resolveBetaBypassActor(env);
+    return { ...actor, betaBypass: true };
+  }
+
   if (!token && betaAuthBypassEnabled(env)) {
     return resolveBetaBypassActor(env);
   }
