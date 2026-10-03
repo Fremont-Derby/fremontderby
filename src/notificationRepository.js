@@ -1,3 +1,4 @@
+import { assertWorkerNotificationUrl } from './druNotificationAccess.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 function requireEnv(env, key) {
   const value = env?.[key];
@@ -6,7 +7,7 @@ function requireEnv(env, key) {
 }
 
 async function requestJson(fetchImpl, url, options = {}) {
-  const response = await fetchImpl(url, options);
+  const response = await fetchImpl(assertWorkerNotificationUrl(url), options);
   const text = await response.text();
   let body = {};
   if (text) {
