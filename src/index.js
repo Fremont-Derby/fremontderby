@@ -457,6 +457,10 @@ export async function handleCreateTeamRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { reopenDruPracticeRegistration } = await import('./druFreshSeason.js');
+      await reopenDruPracticeRegistration(env, seasonId, fetchImpl);
+    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const application = await submitTeamApplicationCommand(
       {
