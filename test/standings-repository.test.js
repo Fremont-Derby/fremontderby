@@ -160,6 +160,7 @@ test('standings repository returns a sanitized human-readable season schedule', 
       { id: 'team-1', name: 'Breakers' },
       { id: 'team-2', name: 'Rack Pack' },
     ],
+    [],
   ];
   const fetch = async (url, init) => {
     calls.push({ url, init });
@@ -187,6 +188,8 @@ test('standings repository returns a sanitized human-readable season schedule', 
       teamBName: 'Rack Pack',
       tableNumber: 4,
       status: 'scheduled',
+      winnerTeamId: null,
+      winnerTeamName: null,
       makeupOn: null,
       makeupLocation: null,
       makeupStatus: null,
@@ -199,5 +202,6 @@ test('standings repository returns a sanitized human-readable season schedule', 
   assert.match(calls[0].url, /\/rest\/v1\/rounds\?/);
   assert.match(calls[1].url, /\/rest\/v1\/team_matches\?/);
   assert.match(calls[2].url, /\/rest\/v1\/teams\?/);
+  assert.match(calls[3].url, /\/rest\/v1\/player_matches\?/);
   assert.ok(calls.every((call) => call.init.headers.apikey === 'service-role-secret'));
 });

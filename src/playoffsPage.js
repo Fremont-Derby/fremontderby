@@ -125,14 +125,16 @@ export function renderPlayoffsPage() {
         section.className='round';
         const head=document.createElement('div');
         head.className='round-head';
-        head.innerHTML='<div><div class="kicker">'+stageLabel(round.stage)+'</div><strong>'+(round.scheduledOn||'Date TBD')+'</strong></div>';
+        head.innerHTML='<div><div class="kicker">'+stageLabel(round.stage)+'</div><strong>'+(round.scheduledOn||'Date not set')+'</strong></div>';
         const matches=document.createElement('div');
         matches.className='matches';
         for(const match of (round.matches||[])){
           const card=document.createElement('article');
           card.className='match';
+          const winner=match.winnerTeamName||'';
           card.innerHTML='<div class="muted">Table '+(match.tableNumber||'—')+' · '+(match.status||'scheduled')+'</div>'
-            +'<div class="versus"><strong>'+(match.teamAName||'TBD')+'</strong><span>vs</span><strong>'+(match.teamBName||'TBD')+'</strong></div>';
+            +'<div class="versus"><strong>'+(match.teamAName||'TBD')+'</strong><span>vs</span><strong>'+(match.teamBName||'TBD')+'</strong></div>'
+            +(winner?'<div class="status" data-status>Champion: '+winner+'</div>':'');
           const actions=document.createElement('div');
           actions.className='actions';
           const score=document.createElement('a');

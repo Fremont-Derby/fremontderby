@@ -1585,10 +1585,14 @@ export async function handleSubmitTeamLineupRequest(
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
       const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
-      const playerIds = slots.map((slot) => slot?.playerId).filter(Boolean);
-      if (!playerIds.length) throw new Error('Choose at least one player before locking the lineup');
-      const { ensureDruActorCanLockLineup, lockDruPlayoffLineup } = await import('./druLineupBypass.js');
-      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, playerIds }, fetchImpl);
+      const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup } = await import('./druLineupBypass.js');
+      const playerIds = lineupPlayerIds(slots);
+      if (!lineupSlotsAreComplete(slots) || playerIds.length !== 3) {
+        const error = new Error('Lineup needs three players before it can lock');
+        error.status = 400;
+        throw error;
+      }
+      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, roundId, playerIds, slots }, fetchImpl);
       const playoff = await lockDruPlayoffLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
       if (playoff) return jsonResponse({ lineup: playoff });
     }
@@ -2405,6 +2409,9 @@ if (url.pathname === "/standings") {
       }
     }
 
+    if (url.pathname === "/admin/season-setup") {
+      return Response.redirect(new URL("/season-setup", url), 302);
+    }
     if (url.pathname === "/season-setup") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -2457,6 +2464,10 @@ if (url.pathname === "/standings") {
       });
     }
 
+    if (url.pathname.startsWith("/teams/") && url.pathname !== "/teams/") {
+      const teamId = decodeURIComponent(url.pathname.slice("/teams/".length).split("/")[0] || "");
+      if (teamId) return Response.redirect(new URL("/teams?team=" + encodeURIComponent(teamId), url), 302);
+    }
     if (url.pathname === "/teams") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
