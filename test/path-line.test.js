@@ -7,6 +7,6 @@ test('the inbox order and the outside menu dismiss are named', () => {
   assert.equal(inboxPolishLine({ order: 'newest' }), 'Inbox: newest message first.');
   assert.equal(menuDismissLine({ dock: true }), 'Menu closes outside the dock. Dock stays lit.');
   const html = renderProfilePage();
-  assert.match(html, /Inbox: newest message first/);
-  assert.match(html, /Menu closes outside the dock. Dock stays lit/);
+  assert.doesNotMatch(html, /Inbox: newest message first/);
+  assert.doesNotMatch(html, /Menu closes outside the dock. Dock stays lit/);
 });

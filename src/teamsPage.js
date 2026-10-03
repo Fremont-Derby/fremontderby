@@ -1,7 +1,7 @@
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 
 export function renderTeamsPage() {
-  return `Ada was added to Owls\nCaptain of Owls moved from Ada to Bea\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
