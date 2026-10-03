@@ -196,6 +196,10 @@ export default {
     if (url.pathname === '/notifications') {
       return htmlResponse(renderNotificationsPage());
     }
+    if (url.pathname === '/notices') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderNoticesPage(), url.pathname);
+    }
     if (url.pathname === '/messages') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatPage(env), url.pathname);
