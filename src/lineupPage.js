@@ -6,7 +6,6 @@ import {
 } from './blindLineupComponent.js';
 
 export function renderLineupPage() {
-  const miss = lineupMissLine({ captainTeams: ['Owls', 'Pines'], checkedTeams: ['Owls', 'Pines'], matchFound: false });
   return `<!doctype html>
 <html lang="en">
 <head>
