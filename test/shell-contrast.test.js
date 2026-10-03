@@ -97,3 +97,9 @@ test("a message can name a missing matchup thread", () => {
   assert.match(src, /function messageThreadLabel/);
   assert.match(src, /No matchup thread/);
 });
+
+test("standings can name a missing place", () => {
+  const src = readFileSync(new URL("../src/placeStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function placeStatusLabel/);
+  assert.match(src, /Place is not set/);
+});
