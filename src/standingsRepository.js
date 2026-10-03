@@ -146,7 +146,11 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         season_id: `eq.${seasonId}`,
         order: 'name.asc',
       });
-      const [roundRows, matchRows, teamRows] = await Promise.all([
+      const playerParams = new URLSearchParams({
+        select: 'team_match_id,winner_side,status',
+        season_id: `eq.${seasonId}`,
+      });
+      const [roundRows, matchRows, teamRows, playerRows] = await Promise.all([
         requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, {
           method: 'GET',
           headers,
@@ -159,7 +163,18 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           method: 'GET',
           headers,
         }),
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/player_matches?${playerParams}`, {
+          method: 'GET',
+          headers,
+        }).catch(() => []),
       ]);
+      const winnerByMatch = new Map();
+      for (const row of Array.isArray(playerRows) ? playerRows : []) {
+        if (!['finalized', 'corrected'].includes(row.status) || !['A', 'B'].includes(row.winner_side)) continue;
+        const tally = winnerByMatch.get(row.team_match_id) || { A: 0, B: 0 };
+        tally[row.winner_side] += 1;
+        winnerByMatch.set(row.team_match_id, tally);
+      }
       const teamsById = new Map(
         (Array.isArray(teamRows) ? teamRows : []).map((team) => [team.id, team.name]),
       );
@@ -174,6 +189,8 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           teamBName: teamsById.get(match.team_b_id) ?? 'Team',
           tableNumber: match.table_number,
           status: match.status,
+          winnerTeamId: match.winner_team_id ?? ((winnerByMatch.get(match.id)?.A || 0) === (winnerByMatch.get(match.id)?.B || 0) ? null : ((winnerByMatch.get(match.id)?.A || 0) > (winnerByMatch.get(match.id)?.B || 0) ? match.team_a_id : match.team_b_id)),
+          winnerTeamName: teamsById.get(match.winner_team_id) ?? teamsById.get((winnerByMatch.get(match.id)?.A || 0) === (winnerByMatch.get(match.id)?.B || 0) ? null : ((winnerByMatch.get(match.id)?.A || 0) > (winnerByMatch.get(match.id)?.B || 0) ? match.team_a_id : match.team_b_id)) ?? null,
           makeupOn: match.makeup_on ?? null,
           makeupLocation: match.makeup_location ?? null,
           makeupStatus: match.makeup_status ?? null,

@@ -29,11 +29,20 @@ export async function loadFinalizedMatches(env, fetchImpl) {
   const [racks, players, identities] = await Promise.all([
     readJson(await request(`${base}/rest/v1/player_match_racks?player_match_id=in.(${ids})&select=player_match_id,rack_number,discipline,winner_player_id`, { headers: headers(key) })),
     readJson(await request(`${base}/rest/v1/players?id=in.(${playerIds})&select=id,display_name`, { headers: headers(key) })),
-    readJson(await request(`${base}/rest/v1/player_external_identities?provider=eq.fargo&player_id=in.(${playerIds})&select=player_id,external_id`, { headers: headers(key) })),
+    readJson(await fetchImpl(`${base}/rest/v1/player_external_identities?provider=eq.fargo&player_id=in.(${playerIds})&select=player_id,external_id`, { headers: { ...headers(key), 'accept-profile': 'public' } })),
   ]);
   const house = await loadHouseSettings(env, fetchImpl);
   const name = Object.fromEntries(players.map((player) => [player.id, player.display_name]));
+  let evidence = [];
+  try {
+    evidence = await readJson(await fetchImpl(`${base}/rest/v1/external_tournament_events?source=eq.other&external_event_id=like.fargo-id:*&select=provenance&limit=200`, { headers: { ...headers(key), 'accept-profile': 'public' } }));
+  } catch {
+    evidence = [];
+  }
   const fargo = Object.fromEntries(identities.map((row) => [row.player_id, row.external_id]));
+  for (const row of evidence) {
+    if (row.provenance?.playerId && row.provenance?.fargoId) fargo[row.provenance.playerId] = row.provenance.fargoId;
+  }
   return matches.map((row) => ({
     status: row.status,
     playerMatchId: row.id,
@@ -49,7 +58,7 @@ export async function loadFinalizedMatches(env, fetchImpl) {
     tableCount: house.tableCount || null,
     leagueNight: house.leagueNight || null,
     tableNumber: row.slot_number || null,
-    sourceUrl: '/api/fargo/feed',
+    sourceUrl: `/api/fargo/feed?playerMatchId=${row.id}`,
     racks: racks.filter((rack) => rack.player_match_id === row.id).map((rack) => ({
       number: rack.rack_number,
       discipline: rack.discipline,
@@ -122,16 +131,11 @@ export async function handleFargoFeedRequest(request, env = {}, { fetch: fetchIm
     return Response.json({ error: 'Method not allowed' }, { status: 405, headers: { 'cache-control': 'no-store' } });
   }
   const items = matches || await loadFinalizedMatches(env, fetchImpl);
-  let store = { ok: false, reason: 'not stored' };
-  try {
-    store = matches ? store : await storeFargoReports(env, items, fetchImpl);
-  } catch {
-    store = { ok: false, reason: 'report table unavailable' };
-  }
+  const store = { ok: false, reason: 'not stored on read' };
   const requested = new URL(request.url).searchParams.get('playerMatchId');
   const { feedForMatch } = await import('./fargoFeed.js');
   const body = feedForMatch(toFargoFeed(items), requested);
-  body.reportStore = store?.ok ? 'ready' : 'unavailable';
+  body.reportStore = store?.ok ? 'ready' : store.reason;
   return Response.json(body, {
     headers: { 'cache-control': 'no-store', 'access-control-allow-origin': '*' },
   });
