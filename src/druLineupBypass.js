@@ -155,6 +155,7 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
         body: JSON.stringify({ season_id: match.season_id, team_id: teamId, player_id: player.id, role: 'player' }),
       });
       chosen.push({ playerId: player.id });
+      await waiveDruTeamPayments(env, { seasonId: match.season_id, teamId, playerIds: [player.id] }, fetchImpl);
     }
   }
   await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineup.id}`, { method: 'DELETE', headers: privateHeaders });
