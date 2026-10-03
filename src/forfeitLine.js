@@ -1,4 +1,4 @@
-export function forfeitLine(teamName) {
-  const name = String(teamName || '').trim();
+export function forfeitLine(playerName) {
+  const name = String(playerName || '').trim();
   return name ? `${name} forfeited` : '';
 }
