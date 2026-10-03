@@ -127,3 +127,9 @@ test("a team can name a missing entry", () => {
   assert.match(src, /function entryStatusLabel/);
   assert.match(src, /Not entered/);
 });
+
+test("a team can name a missing payment", () => {
+  const src = readFileSync(new URL("../src/paymentStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function paymentStatusLabel/);
+  assert.match(src, /Not paid/);
+});
