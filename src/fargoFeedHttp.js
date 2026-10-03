@@ -58,14 +58,35 @@ export async function loadFinalizedMatches(env, fetchImpl) {
   }));
 }
 
+
+async function storeFargoEvidence(env, matches, fetchImpl) {
+  const base = stripTrailingSlashes(env?.SUPABASE_URL || '');
+  const key = env?.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return { ok: false, reason: 'no database' };
+  const publicHeaders = { ...headers(key), 'accept-profile': 'public', 'content-profile': 'public', prefer: 'resolution=merge-duplicates,return=minimal' };
+  let wrote = 0;
+  for (const match of matches) {
+    const record = {
+      source: 'other',
+      external_event_id: `fargo-report:${match.playerMatchId}`,
+      name: `${match.playerAName || 'Player A'} vs ${match.playerBName || 'Player B'}`,
+      provenance: { kind: 'fargo-report', status: 'not_sent', playerMatchId: match.playerMatchId, playerAName: match.playerAName, playerBName: match.playerBName, playerAFargoId: match.playerAFargoId || null, playerBFargoId: match.playerBFargoId || null },
+    };
+    const saved = await fetchImpl(`${base}/rest/v1/external_tournament_events?on_conflict=source,external_event_id`, { method: 'POST', headers: publicHeaders, body: JSON.stringify(record) });
+    if (saved.ok) wrote += 1;
+  }
+  return wrote ? { ok: true, reason: 'evidence', wrote } : { ok: false, reason: 'report table unavailable' };
+}
+
 export async function storeFargoReports(env, matches, fetchImpl) {
   const base = stripTrailingSlashes(env?.SUPABASE_URL || '');
   const key = env?.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key) return { ok: false, reason: 'no database' };
   const request = withSupabaseSchema(fetchImpl, env);
   try {
-    const response = await request(`${base}/rest/v1/fargo_reports?select=player_match_id,revision,status,idempotency_key,payload`, { headers: headers(key) });
-    if (!response.ok) return { ok: false, reason: 'report table unavailable' };
+    const publicHeaders = { ...headers(key), 'accept-profile': 'public', 'content-profile': 'public' };
+    const response = await fetchImpl(`${base}/rest/v1/fargo_reports?select=player_match_id,revision,status,idempotency_key,payload`, { headers: publicHeaders });
+    if (!response.ok) return storeFargoEvidence(env, matches, fetchImpl);
     const stored = await readJson(response);
     for (const match of matches) {
       const rows = stored.filter((row) => row.player_match_id === match.playerMatchId);
