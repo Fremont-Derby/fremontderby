@@ -1,4 +1,10 @@
+import { missionLaunchLine, testerPathLine } from './missionLaunch.js';
+import { standingsContextLine, missionTaskLine } from './standingsTask.js';
 export function renderStandingsPage() {
+  const launch = missionLaunchLine({ name: 'find my next match' });
+  const tester = testerPathLine({ preview: false });
+  const place = standingsContextLine({ team: 'Owls', place: 1 });
+  const task = missionTaskLine({ task: 'find my standings' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -12,7 +18,7 @@ export function renderStandingsPage() {
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
   </style>
 </head>
-<body>
+<body>\n  <p data-mission-launch>${launch}</p>\n  <p data-tester-path>${tester}</p>\n  <p data-standings-context>${place}</p>\n  <p data-mission-task>${task}</p>
   <main class="app">
     <section data-qa-runs><h2>QA runs</h2><p>A run shows only when it has an id, a lane, and a pass or fail result.</p></section>
     <header class="topbar"><div class="brand"><span class="mark">9</span><h1 style="margin:0;font-size:1.05rem;font-weight:950">Standings</h1></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
