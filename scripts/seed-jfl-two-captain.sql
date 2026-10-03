@@ -17,6 +17,18 @@ begin
   ) then
     raise exception 'The JFL QA Persona Lab prerequisite is missing';
   end if;
+  if not exists (
+    select 1 from jfl.players
+    where id = '18580000-2000-4000-8000-000000000001'
+      and user_id = '18580000-0000-4000-8000-000000000001'
+  ) or exists (
+    select 1 from jfl.team_memberships
+    where season_id = '18580000-1000-4000-8000-000000000000'
+      and player_id = '18580000-2000-4000-8000-000000000001'
+      and ends_at is null
+  ) then
+    raise exception 'JFL substitute persona must retain its fixed no-team identity';
+  end if;
 end
 $$;
 
@@ -41,9 +53,18 @@ on conflict (id) do nothing;
 
 -- The existing captains and Players A/B plus C/D make three rostered players
 -- per side. A QA waiver satisfies the real lineup eligibility rule.
+-- #2946: reuse the existing no-team synthetic persona for substitute proof.
+-- Availability is deliberately not seeded: the player must check in via UI.
+insert into jfl.season_players (season_id, player_id, participation_type, status)
+values ('18580000-1000-4000-8000-000000000000',
+        '18580000-2000-4000-8000-000000000001', 'free_agent', 'active')
+on conflict (season_id, player_id) do update
+  set participation_type = 'free_agent', status = 'active';
+
 insert into jfl_private.payment_status (season_id, player_id, status)
 select '18580000-1000-4000-8000-000000000000', player_id, 'waived'
 from (values
+  ('18580000-2000-4000-8000-000000000001'::uuid),
   ('18580000-2000-4000-8000-000000000002'::uuid),
   ('18580000-2000-4000-8000-000000000003'::uuid),
   ('18580000-2000-4000-8000-000000000004'::uuid),
