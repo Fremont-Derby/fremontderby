@@ -10,7 +10,7 @@ export function renderAdminOperationsPage(env = {}) {
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   });
-  return `<!doctype html>
+  return `Triage score for #2266\nRecommend: check schedule\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

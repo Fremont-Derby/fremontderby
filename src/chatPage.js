@@ -8,7 +8,7 @@ function browserConfig(env = {}) {
 }
 
 export function renderChatPage(env = {}) {
-  return `<!doctype html>
+  return `Sent: see you at the table\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
