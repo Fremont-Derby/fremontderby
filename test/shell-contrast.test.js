@@ -199,3 +199,9 @@ test("a team can name a missing captain link", () => {
   assert.match(src, /function captainLinkLabel/);
   assert.match(src, /No captain to message/);
 });
+
+test("a team can name a closed returning window", () => {
+  const src = readFileSync(new URL("../src/returningTeam.js", import.meta.url), "utf8");
+  assert.match(src, /function returningTeamLabel/);
+  assert.match(src, /window is closed/);
+});
