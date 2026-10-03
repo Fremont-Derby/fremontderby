@@ -1,3 +1,4 @@
+import { expiredLineupLine } from './expiredLineup.js';
 import {
   sharedBlindLineupControllerSource,
   sharedBlindLineupMarkup,
@@ -5,6 +6,7 @@ import {
 } from './blindLineupComponent.js';
 
 export function renderLineupPage() {
+  const expired = expiredLineupLine({ expired: true });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -18,7 +20,7 @@ export function renderLineupPage() {
     @media(max-width:800px){.topbar{align-items:flex-start}.status{text-align:left}.setup{grid-template-columns:1fr;padding-top:10px}.gate .signin,.gate .load{width:100%}}
   </style>
 </head>
-<body>
+<body>\n  <p data-expired-lineup>${expired}</p>
   <main class="app">\n    <p data-lineup-lock="both">The lineup stays editable until both captains submit, and an edit unsubmits it.</p>
     <section data-mission-path><h2>Tester path</h2><p>Test Drive and fixture preview send the tester to the mission, not the raw preview.</p></section>
     <p class="note" data-what-next>If you are not sure what to do, set your lineup, then open the scorecard for the match.</p>
