@@ -151,3 +151,9 @@ test("a season can name a missing blackout", () => {
   assert.match(src, /function blackoutDateLabel/);
   assert.match(src, /No blackout date/);
 });
+
+test("a season can name a missing venue", () => {
+  const src = readFileSync(new URL("../src/venueStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function venueStatusLabel/);
+  assert.match(src, /Venue is not set/);
+});
