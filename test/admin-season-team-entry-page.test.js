@@ -9,5 +9,6 @@ test('season team admin page distinguishes returning reservation from qualified 
   assert.match(html, /activeTab==='returning'\?'Reserve slot':'Add to season'/);
   assert.match(html, /button\.disabled=!Boolean\(normalized\(row,'canTakeSlot'\)\)/);
   assert.match(html, /entryReason/);
+  assert.match(html, /note\.textContent=reason/);
   assert.match(html, /Assign a captain and add at least 3 players to qualify for a season slot/);
 });
