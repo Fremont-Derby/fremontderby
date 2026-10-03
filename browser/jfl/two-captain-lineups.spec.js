@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { assumePersona } from './persona.js';
 
 const fixture = {
   seasonId: '18580000-1000-4000-8000-000000000000',
@@ -18,16 +19,6 @@ const fixture = {
     '18580000-2000-4000-8000-000000000001',
   ],
 };
-
-async function assumeCaptain(page, label) {
-  await page.goto('/profile');
-  await page.locator('[data-google-sign-in]').click();
-  await page.reload();
-  const selector = page.locator('[data-test-persona-select]');
-  await expect(selector).toBeVisible();
-  await selector.selectOption({ label });
-  await expect(page.locator('[data-test-persona-banner]')).toContainText(label);
-}
 
 async function setQaAvailability(page, value) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -277,15 +268,15 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     const captainB = await contextB.newPage();
     const player = await playerContext.newPage();
     const freeAgent = await freeAgentContext.newPage();
-    await assumeCaptain(player, 'Player A');
+    await assumePersona(player, 'Player A');
     await setQaAvailability(player, 'unsure');
     await setQaAvailability(player, 'available');
     // Existing no-team synthetic persona has an admin role, but these mutations
     // use only its own player availability contract, never admin endpoints.
-    await assumeCaptain(freeAgent, 'Admin — no team');
+    await assumePersona(freeAgent, 'Admin — no team');
     await setQaAvailability(freeAgent, 'unavailable');
-    await assumeCaptain(captainA, 'Admin Captain');
-    await assumeCaptain(captainB, 'Regular Captain');
+    await assumePersona(captainA, 'Admin Captain');
+    await assumePersona(captainB, 'Regular Captain');
     expect(await captainB.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
     expect(await captainB.evaluate(() => innerWidth)).toBeLessThanOrEqual(390);
     expect((await readLineupAsCaptain(captainB, fixture.teamBId)).status).toBe(200);

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { assumePersona } from './persona.js';
 
 const qaSeason = '18580000-1000-4000-8000-000000000000';
 
@@ -27,11 +28,7 @@ test('phone player can retry a throttled date check-in and reopen the saved resp
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   try {
     const page = await context.newPage();
-    await page.goto('/profile');
-    await page.locator('[data-google-sign-in]').click();
-    await page.reload();
-    await page.locator('[data-test-persona-select]').selectOption({ label: 'Player A' });
-    await expect(page.locator('[data-test-persona-banner]')).toContainText('Player A');
+    await assumePersona(page, 'Player A');
     let card = await openCheckin(page);
     const priorState = await card.getAttribute('data-state');
     const endpoint = `**/api/seasons/${qaSeason}/availability/me`;
