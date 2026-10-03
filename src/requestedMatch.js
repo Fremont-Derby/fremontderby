@@ -19,3 +19,8 @@ export function selectRequestedMatch(select, matchId) {
   select.dispatchEvent(new Event('change', { bubbles: true }));
   return true;
 }
+
+export function noticeScoreHref(notice) {
+  const matchId = notice && (notice.match_id || notice.team_match_id || notice.matchId || notice.teamMatchId);
+  return scoreHref(matchId || '');
+}

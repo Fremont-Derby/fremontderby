@@ -58,7 +58,7 @@ export function renderNotificationsPage() {
       const blob=((item.title||'')+' '+(item.body||'')+' '+(item.type||'')+' '+(item.kind||'')).toLowerCase();
       if(blob.includes('ready check')||blob.includes('ready-check')) return '/teams';
       if(blob.includes('lineup')) return '/lineup';
-      if(blob.includes('score')||blob.includes('rack')||blob.includes('match')) return '/scorecard';
+      if(blob.includes('score')||blob.includes('rack')||blob.includes('match')){const matchId=item.match_id||item.team_match_id||item.matchId||item.teamMatchId||'';return matchId?'/scorecard?match='+encodeURIComponent(matchId):'/scorecard';}
       if(blob.includes('trade')) return '/trades';
       if(blob.includes('invite')||blob.includes('invitation')) return '/teams';
       if(blob.includes('availability')||blob.includes('check-in')||blob.includes('check in')) return '/availability';
