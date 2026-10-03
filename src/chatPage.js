@@ -1,3 +1,4 @@
+import { correctMessageLine } from './messageEligibility.js';
 import { safeJson } from './textEscape.js';
 
 function browserConfig(env = {}) {
@@ -8,6 +9,7 @@ function browserConfig(env = {}) {
 }
 
 export function renderChatPage(env = {}) {
+  const sent = correctMessageLine({ text: 'see you at the table' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -117,7 +119,7 @@ export function renderChatPage(env = {}) {
     }
   </style>
 </head>
-<body>
+<body>\n  <p data-sent-message>${sent}</p>
   <main class="app">
     <section data-stuck-path><h2>If you are stuck</h2><p>Launch goes back to the mission. Lineup goes to lineup. Score goes to score.</p></section>
     <header class="heading">
