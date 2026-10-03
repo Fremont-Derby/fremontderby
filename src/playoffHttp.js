@@ -23,6 +23,29 @@ export function playoffStatusForError(error) {
   return rpcErrorStatus(error);
 }
 
+async function nameDruSplitWinners(env, seasonId, fetchImpl) {
+  if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return 0;
+  const { withSupabaseSchema } = await import('./supabaseSchema.js');
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return 0;
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  const response = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&status=eq.finalized&winner_team_id=is.null&select=id,team_a_id`, {
+    headers,
+  });
+  const rows = response.ok ? await response.json() : [];
+  let named = 0;
+  for (const row of rows) {
+    if (!row.team_a_id) continue;
+    const saved = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${row.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ winner_team_id: row.team_a_id }),
+    });
+    if (saved.ok) named += 1;
+  }
+  return named;
+}
+
 export function createPlayoffHttpHandlers({
   authenticate = authenticateSupabaseUser,
   createRepository = createPlayoffRepository,
@@ -32,6 +55,7 @@ export function createPlayoffHttpHandlers({
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+          await nameDruSplitWinners(env, seasonId, fetchImpl);
           const { practicePlayoffsReady } = await import('./druTeamResult.js');
           const { withSupabaseSchema } = await import('./supabaseSchema.js');
           const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
