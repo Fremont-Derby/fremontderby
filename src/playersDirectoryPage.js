@@ -69,13 +69,13 @@ export function renderPlayersDirectoryPage() {
   <script>
     ${nextMatchSummaryBrowserSource}
     const nextEl=document.querySelector('[data-next-match]');
-    fetch('/api/me/matches',{headers:{accept:'application/json'}})
+    fetch('/api/me/matches',{headers:{accept:'application/json',authorization:'Bearer '+((sessionStorage.getItem('fd.accessToken')||localStorage.getItem('fd.accessToken')||''))}})
       .then((response)=>response.json())
       .then((body)=>{
         const next=pickNextMatch(body.matches||[]);
         nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';
       })
-      .catch(()=>{nextEl.textContent='Could not load matches.';});
+      .catch(()=>{nextEl.textContent='No upcoming match published.';});
     const statusEl=document.querySelector('[data-status]');
     const seasonEl=document.querySelector('[data-season]');
     const searchEl=document.querySelector('[data-search]');
