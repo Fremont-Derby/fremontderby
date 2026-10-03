@@ -164,9 +164,15 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
     headers: privateHeaders,
     body: JSON.stringify(chosen.map((slot, index) => ({ lineup_id: lineup.id, season_id: match.season_id, round_id: roundId, team_id: teamId, slot_number: index + 1, player_id: slot.playerId, participation_type: 'roster' }))),
   });
-  const both = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?round_id=eq.${roundId}&team_id=in.(${match.team_a_id},${match.team_b_id})&select=team_id,slot_number,player_id`, { headers: privateHeaders });
+  const slotUrl = `${conn.base}/rest/v1/team_lineup_slots?round_id=eq.${roundId}&team_id=in.(${match.team_a_id},${match.team_b_id})&select=team_id,slot_number,player_id`;
+  let both = await fetchWithSchema(slotUrl, { headers: privateHeaders });
+  let slotRows = both.ok ? await both.json() : [];
+  const seen = new Set((slotRows || []).map((row) => row.team_id));
+  if (!seen.has(match.team_a_id) || !seen.has(match.team_b_id)) {
+    both = await fetchWithSchema(slotUrl, { headers: privateHeaders });
+    slotRows = both.ok ? await both.json() : [];
+  }
   const existing = await fetchWithSchema(`${conn.base}/rest/v1/player_matches?team_match_id=eq.${match.id}&select=id`, { headers });
-  const slotRows = both.ok ? await both.json() : [];
   const already = existing.ok ? await existing.json() : [];
   if (!already.length && slotRows.length) {
     const byTeam = { [match.team_a_id]: [], [match.team_b_id]: [] };
