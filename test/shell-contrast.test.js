@@ -7,3 +7,9 @@ test('the menu contrast can be named', () => {
   assert.match(src, /function shellContrastLabel/);
   assert.match(src, /Menu contrast needs a check/);
 });
+
+test("a profile can name its status", () => {
+  const src = readFileSync(new URL("../src/profileStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function profileStatusLabel/);
+  assert.match(src, /Profile needs a status/);
+});
