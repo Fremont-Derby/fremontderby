@@ -193,3 +193,9 @@ test("the score hub can name a missing match", () => {
   assert.match(src, /function scoreHubLabel/);
   assert.match(src, /No score hub match/);
 });
+
+test("a team can name a missing captain link", () => {
+  const src = readFileSync(new URL("../src/captainLink.js", import.meta.url), "utf8");
+  assert.match(src, /function captainLinkLabel/);
+  assert.match(src, /No captain to message/);
+});
