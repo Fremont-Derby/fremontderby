@@ -1,5 +1,15 @@
 import { resolveTestPersonaActor } from './testPersona.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
+export const DRU_AGENT_SENTINEL = 'dru-bypass';
+
+export function druAgentSentinelEnabled(env = {}) {
+  return String(env.ENVIRONMENT || '').trim() === 'dru';
+}
+
+export function isDruAgentSentinel(token, env = {}) {
+  return druAgentSentinelEnabled(env) && token === DRU_AGENT_SENTINEL;
+}
+
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
