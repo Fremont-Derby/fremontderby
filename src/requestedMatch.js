@@ -29,3 +29,8 @@ export function requestedTeamId(search) {
   const params = new URLSearchParams(search || '');
   return params.get('team') || params.get('team_id') || '';
 }
+
+export function requestedScoreDate(search) {
+  const params = new URLSearchParams(search || '');
+  return params.get('date') || params.get('scheduled_on') || '';
+}
