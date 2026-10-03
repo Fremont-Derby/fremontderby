@@ -199,3 +199,9 @@ test("a campaign names its missions", () => {
   assert.match(src, /function campaignFoundationLabel/);
   assert.match(src, /Campaign needs missions/);
 });
+
+test("test drive is not the mission path", () => {
+  const src = readFileSync(new URL("../src/testDriveReplacement.js", import.meta.url), "utf8");
+  assert.match(src, /function testDriveReplacementLabel/);
+  assert.match(src, /Test Drive is not the path/);
+});
