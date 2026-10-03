@@ -9,7 +9,7 @@ const files = [
   'supabase/migrations/20261003043000_dru_notification_rls.sql',
   'supabase/migrations/20261003043100_dru_admin_phone.sql',
 ];
-const regions = ['us-west-2', 'us-east-1', 'us-east-2', 'eu-west-1', 'eu-central-1', 'ap-southeast-1', 'ap-northeast-1'];
+const regions = ['aws-1-us-east-1', 'aws-1-us-west-2', 'aws-1-us-east-2', 'aws-1-eu-west-1'];
 const plan = druMigrationApplyPlan({ projectRef, sqlFiles: files });
 if (!plan.ok) {
   console.error(plan.text);
@@ -31,7 +31,7 @@ function poolerUrls(raw) {
   return regions.map((region) => {
     const next = new URL(raw);
     next.username = user;
-    next.hostname = `aws-0-${region}.pooler.supabase.com`;
+    next.hostname = `${region}.pooler.supabase.com`;
     next.port = '5432';
     return next.toString();
   });
