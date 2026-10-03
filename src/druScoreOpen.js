@@ -78,11 +78,11 @@ export async function openDruMatchForScoring(env, matchId, fetchImpl = globalThi
 }
 
 export function raceResultPatch(match, winnerSide) {
-  const side = winnerSide === 'B' ? 'B' : 'A';
+  if (winnerSide !== 'A' && winnerSide !== 'B') return null;
   return {
     status: 'finalized',
-    winner_side: side,
-    winner_player_id: side === 'A' ? match.player_a_id : match.player_b_id,
+    winner_side: winnerSide,
+    winner_player_id: winnerSide === 'A' ? match.player_a_id : match.player_b_id,
   };
 }
 
@@ -115,10 +115,12 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetc
   await openDruMatchForScoring(env, teamMatchId, fetchImpl);
   const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=id,team_a_id,team_b_id`, { headers });
   const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
-  if (!match) return { saved: false, error: 'This match could not be read.' };
+  if (!match) return { saved: false, status: 404, error: 'This match could not be read.' };
   const racesResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?team_match_id=eq.${teamMatchId}&select=id,player_a_id,player_b_id`, { headers });
   const races = racesResponse.ok ? await racesResponse.json() : [];
-  const side = winnerSide === 'B' ? 'B' : 'A';
+  const patch = raceResultPatch({ player_a_id: match.team_a_id, player_b_id: match.team_b_id }, winnerSide);
+  if (!patch) return { saved: false, status: 400, error: 'Choose the home or away winner.' };
+  const side = patch.winner_side;
   for (const race of races) {
     const saved = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${race.id}`, { method: 'PATCH', headers, body: JSON.stringify(raceResultPatch(race, side)) });
     if (!saved.ok) return { saved: false, error: 'A race could not be saved.' };

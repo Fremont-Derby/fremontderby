@@ -41,3 +41,8 @@ test('a DRU match save records the team winner without the score list', () => {
   const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.equal(page.includes('scoreDruTeamMatch'), true);
 });
+
+test('a DRU match save rejects a winner that is not home or away', () => {
+  assert.equal(raceResultPatch({ player_a_id: 'home', player_b_id: 'away' }, 'C'), null);
+  assert.equal(raceResultPatch({ player_a_id: 'home', player_b_id: 'away' }, 'A').winner_side, 'A');
+});
