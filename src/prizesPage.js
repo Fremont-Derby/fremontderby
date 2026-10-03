@@ -203,7 +203,7 @@ async function readJson(response) {
       <div class="status" data-status aria-live="polite">Loading seasons…</div>
     </header>
 
-    <form class="controls" data-form>
+    <p data-champion hidden style="margin:8px 0;font-weight:800"></p><form class="controls" data-form>
       <label>Season
         <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
       </label>
@@ -424,7 +424,7 @@ async function readJson(response) {
     }
 
     async function loadSeasons() {
-      setStatus('Loading seasons…');
+      setStatus('Loading seasons…');const paintChampion=()=>{const seasonId=document.querySelector('[data-season-id]')?.value;if(!seasonId)return;fetch('/api/seasons/'+encodeURIComponent(seasonId)+'/schedule',{headers:{accept:'application/json'}}).then((response)=>response.ok?response.json():null).then((body)=>{const rounds=(body&&body.rounds)||[];const final=rounds.find((round)=>round.stage==='championship');const match=final&&(final.matches||[]).find((item)=>item.winnerTeamName);const note=document.querySelector('[data-champion]');if(!note)return;note.hidden=!match;if(match)note.textContent='Champion: '+match.winnerTeamName;}).catch(()=>{});};document.querySelector('[data-season-id]')?.addEventListener('change',paintChampion);setTimeout(paintChampion,1200);
       hideState();
       seasonInput.disabled = true;
       loadButton.disabled = true;
