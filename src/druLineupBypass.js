@@ -136,7 +136,7 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
   if (chosen.length === 3) {
     const created = await fetchWithSchema(`${conn.base}/rest/v1/players`, {
       method: 'POST',
-      headers,
+      headers: { ...headers, prefer: 'return=representation' },
       body: JSON.stringify({ display_name: 'Kite String Fourth' }),
     });
     const player = created.ok ? (await created.json())?.[0] : null;
