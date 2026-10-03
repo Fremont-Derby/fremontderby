@@ -61,13 +61,17 @@ async function waitForCandidate(page, playerId) {
     const seconds = Number(message.match(/wait (\d+) seconds?/)?.[1]);
     expect(seconds).toBeGreaterThan(0);
     await page.waitForTimeout((seconds + 1) * 1000);
-    await page.locator('[data-refresh]').click();
+    if (await page.locator('[data-refresh]').isVisible()) {
+      await page.locator('[data-refresh]').click();
+    } else {
+      await page.reload();
+      await waitForLineupWorkspace(page);
+    }
   }
   await expect(candidate).toBeVisible();
 }
 
-async function openOwnLineup(page, teamId, opposingTeamName, firstPlayerId) {
-  await page.goto('/lineup');
+async function waitForLineupWorkspace(page) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await expect.poll(async () =>
       await page.locator('[data-workspace]').isVisible()
@@ -81,6 +85,11 @@ async function openOwnLineup(page, teamId, opposingTeamName, firstPlayerId) {
     await page.locator('[data-gate-retry]').click();
   }
   await expect(page.locator('[data-workspace]')).toBeVisible();
+}
+
+async function openOwnLineup(page, teamId, opposingTeamName, firstPlayerId) {
+  await page.goto('/lineup');
+  await waitForLineupWorkspace(page);
   await expect(page.locator('[data-team-select]')).toHaveValue(teamId);
   await expect(page.locator('[data-round-select]')).toHaveValue(fixture.roundId);
   await expect(page.locator('[data-opponent-lineup-label]')).toHaveText(opposingTeamName);
