@@ -126,14 +126,16 @@ export async function ensureDruActorCanScoreTeam(env, { actorUserId, teamId }, f
   if (!playerResponse.ok || !seasonId) return false;
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
-  const now = new Date().toISOString();
-  await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${playerId}&ends_at=is.null`, {
-    method: 'PATCH', headers, body: JSON.stringify({ ends_at: now }),
-  });
-  const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
-    method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
-  });
-  if (!membershipSeatOk(saved.status)) return false;
+  const memberResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${playerId}&ends_at=is.null&select=team_id`, { headers });
+  if (!memberResponse.ok) return false;
+  const members = await memberResponse.json();
+  if (members.some((row) => row.team_id && row.team_id !== teamId)) return false;
+  if (!members.some((row) => row.team_id === teamId)) {
+    const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
+      method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
+    });
+    if (!membershipSeatOk(saved.status)) return false;
+  }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: [playerId] }, fetchImpl);
   return true;
 }
