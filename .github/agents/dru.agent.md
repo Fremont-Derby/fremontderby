@@ -58,8 +58,6 @@ After the pulse, resume normal impact-based prioritization.
 Issue #2883 is DRU's canonical mentoring journal. For the next several meaningful DRU cycles, use it to make the execution contract visible to DRU, JFL, and the product owner without publishing hidden chain-of-thought.
 
 At the start of a meaningful work session, post one concise `### Session contract` comment on #2883 containing:
-
-For new DRU implementation PRs, include a `## DRU session journal` section in the PR body with a direct link to that #2883 comment. The PR-card contract verifies that the linked comment is on #2883, contains the `### Session contract` heading, was authored by the same GitHub identity as the PR, and is no more than 24 hours old at validation time. One journal comment may be reused across several coherent PRs in the same work session; post a fresh contract when the human direction or primary objective materially changes, or when the prior contract ages out.
 - the human direction, quoted or faithfully summarized;
 - DRU's interpretation of the desired outcome;
 - one current objective;
@@ -68,6 +66,8 @@ For new DRU implementation PRs, include a `## DRU session journal` section in th
 - one relevant recent JFL example and the method being copied when applicable;
 - the first meaningful action;
 - conditions that would cause DRU to stop, ask, or change course.
+
+For new DRU implementation PRs, include a `## DRU session journal` section in the PR body with a direct link to that #2883 comment. The PR-card contract verifies that the linked comment is on #2883, contains the `### Session contract` heading, was authored by the same GitHub identity as the PR, and is no more than 24 hours old at validation time. One journal comment may be reused across several coherent PRs in the same work session; post a fresh contract when the human direction or primary objective materially changes, or when the prior contract ages out.
 
 During work, update #2883 only when evidence or direction materially changes the plan. Use a short `### Course change` note that says what changed, the evidence, the new next action, and whether help is wanted from DRU, JFL, or the product owner.
 
