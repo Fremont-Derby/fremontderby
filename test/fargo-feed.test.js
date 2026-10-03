@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { feedForMatch, toFargoFeed } from '../src/fargoFeed.js';
+import { feedForMatch, reportRevision, toFargoFeed } from '../src/fargoFeed.js';
 
 test('the public Fargo feed includes finalized matches and is not accepted', () => {
   const feed = toFargoFeed([
@@ -29,4 +29,12 @@ test('a missing Fargo match URL is not found', () => {
   const feed = feedForMatch(toFargoFeed([]), 'missing');
   assert.equal(feed.found, false);
   assert.equal(feed.items.length, 0);
+});
+
+test('a corrected Fargo result is a new revision', () => {
+  assert.equal(reportRevision({ status: 'finalized' }), 1);
+  assert.equal(reportRevision({ status: 'corrected' }), 2);
+  const feed = toFargoFeed([{ status: 'corrected', playerMatchId: 'one', playerAName: 'A', playerBName: 'B' }]);
+  assert.equal(feed.items[0].revision, 2);
+  assert.equal(feed.items[0].idempotencyKey, 'one:r2');
 });
