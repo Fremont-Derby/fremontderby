@@ -73,3 +73,9 @@ test("a match can name a missing makeup date", () => {
   assert.match(src, /function makeupStatusLabel/);
   assert.match(src, /No makeup date/);
 });
+
+test("a match can name an unscored state", () => {
+  const src = readFileSync(new URL("../src/scoreStateLabel.js", import.meta.url), "utf8");
+  assert.match(src, /function scoreStateLabel/);
+  assert.match(src, /Not scored/);
+});
