@@ -80,9 +80,23 @@ const readback = firstRow(await query(`
          '18580000-2000-4000-8000-000000000005',
          '18580000-2000-4000-8000-000000000006',
          '18580000-2000-4000-8000-000000000007'
-       ) and tm.ends_at is null and ps.status = 'waived') as eligible_count;
+       ) and tm.ends_at is null and ps.status = 'waived') as eligible_count,
+    (select count(*)::integer
+     from jfl.season_players sp
+     join jfl_private.payment_status ps
+       on ps.season_id = sp.season_id and ps.player_id = sp.player_id
+     where sp.season_id = '18580000-1000-4000-8000-000000000000'
+       and sp.player_id = '18580000-2000-4000-8000-000000000001'
+       and sp.participation_type = 'free_agent' and sp.status = 'active'
+       and ps.status = 'waived'
+       and not exists (
+         select 1 from jfl.team_memberships tm
+         where tm.season_id = sp.season_id and tm.player_id = sp.player_id
+           and tm.ends_at is null
+       )) as free_agent_count;
 `, { readOnly: true }));
-if (Number(readback?.matchup_count) !== 1 || Number(readback?.eligible_count) !== 6) {
+if (Number(readback?.matchup_count) !== 1 || Number(readback?.eligible_count) !== 6
+  || Number(readback?.free_agent_count) !== 1) {
   throw new Error('JFL QA fixture readback did not meet matchup/eligibility counts');
 }
-console.log(`JFL-only QA fixture verified at ${process.env.GITHUB_SHA}: one matchup, six eligible memberships.`);
+console.log(`JFL-only QA fixture verified at ${process.env.GITHUB_SHA}: one matchup, six eligible memberships, one eligible free agent.`);
