@@ -29,7 +29,7 @@ export async function loadFinalizedMatches(env, fetchImpl) {
   const [racks, players, identities] = await Promise.all([
     readJson(await request(`${base}/rest/v1/player_match_racks?player_match_id=in.(${ids})&select=player_match_id,rack_number,discipline,winner_player_id`, { headers: headers(key) })),
     readJson(await request(`${base}/rest/v1/players?id=in.(${playerIds})&select=id,display_name`, { headers: headers(key) })),
-    readJson(await request(`${base}/rest/v1/player_external_identities?provider=eq.fargo&player_id=in.(${playerIds})&select=player_id,external_id`, { headers: headers(key) })),
+    readJson(await fetchImpl(`${base}/rest/v1/player_external_identities?provider=eq.fargo&player_id=in.(${playerIds})&select=player_id,external_id`, { headers: { ...headers(key), 'accept-profile': 'public' } })),
   ]);
   const house = await loadHouseSettings(env, fetchImpl);
   const name = Object.fromEntries(players.map((player) => [player.id, player.display_name]));
@@ -49,7 +49,7 @@ export async function loadFinalizedMatches(env, fetchImpl) {
     tableCount: house.tableCount || null,
     leagueNight: house.leagueNight || null,
     tableNumber: row.slot_number || null,
-    sourceUrl: '/api/fargo/feed',
+    sourceUrl: `/api/fargo/feed?playerMatchId=${row.id}`,
     racks: racks.filter((rack) => rack.player_match_id === row.id).map((rack) => ({
       number: rack.rack_number,
       discipline: rack.discipline,
