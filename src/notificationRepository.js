@@ -7,7 +7,7 @@ function requireEnv(env, key) {
 }
 
 async function requestJson(fetchImpl, url, options = {}) {
-  const response = await fetchImpl(assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump(url), options);
+  const response = await fetchImpl(assertNoNotificationDump(url), options);
   const text = await response.text();
   let body = {};
   if (text) {

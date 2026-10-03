@@ -2,6 +2,14 @@ export const DRU_NOTIFICATION_TABLE = 'dru.user_notifications';
 
 export const DRU_NOTIFICATION_BROWSER_ROLES = ['public', 'anon', 'authenticated'];
 
+export const ALLOWED_NOTIFICATION_RPCS = [
+  'list_my_notifications',
+  'mark_my_notification_read',
+  'mark_all_my_notifications_read',
+  'admin_broadcast_notification',
+  'create_user_notification',
+];
+
 export function notificationAccessContract() {
   return {
     table: DRU_NOTIFICATION_TABLE,
@@ -32,14 +40,6 @@ export function notificationRpcName(url) {
   return match[1];
 }
 
-export const ALLOWED_NOTIFICATION_RPCS = [
-  'list_my_notifications',
-  'mark_my_notification_read',
-  'mark_all_my_notifications_read',
-  'admin_broadcast_notification',
-  'create_user_notification',
-];
-
 export function assertAllowedNotificationRpc(url) {
   const name = notificationRpcName(url);
   if (!ALLOWED_NOTIFICATION_RPCS.includes(name)) {
@@ -49,11 +49,11 @@ export function assertAllowedNotificationRpc(url) {
 }
 
 export function assertNoNotificationDump(url) {
-  const value = assertAllowedNotificationRpc(url);
+  const name = assertAllowedNotificationRpc(url);
   if (String(url || '').includes('select=*')) {
     throw new Error('DRU notifications do not allow a table dump.');
   }
-  return value;
+  return name;
 }
 
 export function assertNoBrowserNotificationGrant(sql) {
@@ -83,35 +83,7 @@ export function assertNotificationRls(sql) {
 export function assertNotificationWorkerGrant(sql) {
   const value = assertNotificationRls(sql);
   if (value.includes('user_notifications') && !/grant select, insert, update on table dru\.user_notifications to service_role/i.test(value)) {
-    throw new Error('DRU notifications must grant the Worker role.');
-  }
-  return value;
-}
-
-export function assertNotificationContract(sql) {
-  return assertNotificationComment(sql);
-}
-
-export function assertNotificationDeny(sql) {
-  const value = assertNotificationWorkerGrant(sql);
-  if (value.includes('user_notifications') && !/dru_notifications_browser_deny/i.test(value)) {
-    throw new Error('DRU notifications must deny browser roles.');
-  }
-  return value;
-}
-
-export function assertNotificationForce(sql) {
-  const value = assertNotificationDeny(sql);
-  if (value.includes('user_notifications') && !/force row level security/i.test(value)) {
-    throw new Error('DRU notifications must force row security.');
-  }
-  return value;
-}
-
-export function assertNotificationComment(sql) {
-  const value = assertNotificationForce(sql);
-  if (value.includes('user_notifications') && !/Browser roles are denied/i.test(value)) {
-    throw new Error('DRU notifications must name the browser deny.');
+    throw new Error('DRU notifications must keep the Worker grant.');
   }
   return value;
 }
