@@ -102,7 +102,7 @@ export function renderAdminAuditPage() {
         const type=String(event.entityType||event.entity_type||'');
         const id=event.entityId||event.entity_id;
         if(!id) return null;
-        if(type==='team'||type==='team_membership') return '/teams';
+        if(type==='team'||type==='team_membership') return '/admin/season-teams?team='+encodeURIComponent(id);
         if(type==='season'||type==='season_team_slot') return '/admin/seasons';
         if(type==='player'||type==='player_match') return '/admin/players';
         if(type==='team_match') return '/scorecard?match='+encodeURIComponent(id);
@@ -122,7 +122,7 @@ export function renderAdminAuditPage() {
         title.textContent=event.action;
         const meta=document.createElement('div');
         meta.className='meta';
-        meta.textContent=(event.actorDisplayName||'Unknown admin')+' · '+event.entityType+' · '+String(event.entityId||'').slice(0,8);
+        const saved=(event.afterState&&(event.afterState.displayName||event.afterState.display_name))||'';meta.textContent=(event.actorDisplayName||'Unknown admin')+' · '+event.entityType+' · '+String(event.entityId||'').slice(0,8)+(saved?' · '+saved:'');
         left.append(title,meta);
         const when=document.createElement('div');
         when.className='meta';
@@ -190,7 +190,7 @@ export function renderAdminAuditPage() {
       });
     });
     load().catch((e)=>setStatus(e.message,'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:15000,immediate:false});
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Audit log could not be refreshed.')),'error')),{intervalMs:15000,immediate:false});
   </script>
 </body>
 </html>`;

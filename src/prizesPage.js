@@ -1,4 +1,10 @@
 export function renderPrizesPage() {
+
+async function readJson(response) {
+  const text = await response.text();
+  if (!text || text.trim().startsWith('<')) throw new Error('Prizes did not return data. Try again.');
+  return JSON.parse(text);
+}
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -197,7 +203,7 @@ export function renderPrizesPage() {
       <div class="status" data-status aria-live="polite">Loading seasons…</div>
     </header>
 
-    <form class="controls" data-form>
+    <p data-champion hidden style="margin:8px 0;font-weight:800"></p><form class="controls" data-form>
       <label>Season
         <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
       </label>
@@ -276,6 +282,11 @@ export function renderPrizesPage() {
   </main>
 
   <script>
+    async function readJson(response) {
+      const text = await response.text();
+      if (!text || text.trim().startsWith('<')) throw new Error('Prizes did not return data. Try again.');
+      return JSON.parse(text);
+    }
     const form = document.querySelector('[data-form]');
     const seasonInput = document.querySelector('[data-season-id]');
     const loadButton = document.querySelector('[data-load]');
@@ -413,12 +424,12 @@ export function renderPrizesPage() {
     }
 
     async function loadSeasons() {
-      setStatus('Loading seasons…');
+      setStatus('Loading seasons…');const paintChampion=()=>{const seasonId=document.querySelector('[data-season-id]')?.value;if(!seasonId)return;fetch('/api/seasons/'+encodeURIComponent(seasonId)+'/schedule',{headers:{accept:'application/json'}}).then((response)=>response.ok?response.json():null).then((body)=>{const rounds=(body&&body.rounds)||[];const final=rounds.find((round)=>round.stage==='championship');const match=final&&(final.matches||[]).find((item)=>item.winnerTeamName);const note=document.querySelector('[data-champion]');if(!note)return;note.hidden=!match;if(match)note.textContent='Champion: '+match.winnerTeamName;}).catch(()=>{});};document.querySelector('[data-season-id]')?.addEventListener('change',paintChampion);setTimeout(paintChampion,1200);
       hideState();
       seasonInput.disabled = true;
       loadButton.disabled = true;
       const response = await fetch('/api/seasons');
-      const body = await response.json();
+      const body = await readJson(response);
       if (!response.ok) throw new Error(body.error || 'Could not load seasons');
       const seasons = body.seasons || [];
       seasonInput.replaceChildren();
@@ -454,7 +465,7 @@ export function renderPrizesPage() {
       if (!quiet) loadButton.disabled = true;
       try {
         const response = await fetch('/api/seasons/' + encodeURIComponent(seasonId) + '/prizes');
-        const body = await response.json();
+        const body = await readJson(response);
         if (!response.ok) {
           throw new Error(body.error || 'Prize summary failed');
         }
@@ -507,7 +518,8 @@ export function renderPrizesPage() {
           }),
         });
         const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.error || 'Finalize failed');
+        if (response.status === 429) throw new Error('Prizes are busy. Wait a moment, then try again.');
+if (!response.ok) throw new Error(body.error || 'Finalize failed');
         await loadPrizes();
         setStatus('Prize payouts finalized', 'ok');
       }));

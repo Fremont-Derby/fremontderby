@@ -118,6 +118,16 @@ jobs:
           set SECRET_VALUE=%PRODUCTION_SUPABASE_SERVICE_ROLE_KEY%
           node scripts/put-wrangler-secret.mjs SUPABASE_SERVICE_ROLE_KEY
           if errorlevel 1 exit /b 1
+      - name: Remove obsolete DRU override secrets
+        if: matrix.lane == 'dru'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PRESENT_SECRET_NAMES: SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,EXPECTED_SUPABASE_PROJECT_REF,SUPABASE_SERVICE_ROLE_KEY
+        run: |
+          node scripts/cleanup-dru-override-secrets.mjs dru
+          if errorlevel 1 exit /b 1
       - name: Deploy ${{ matrix.lane }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

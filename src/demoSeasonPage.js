@@ -167,6 +167,7 @@ export function renderDemoSeasonPage() {
 </head>
 <body>
   <main>
+    <section data-mission-launch><h2>Start a mission</h2><label>Persona <input data-mission-persona /></label><label>Task <input data-mission-task /></label><button type="button" data-mission-start>Start</button><p data-mission-result></p></section>
     <p class="note" data-plain-launch>A mission starts with the task in plain language, not fixture data.</p>
     <div class="demo-banner">TRY A LEAGUE NIGHT · FICTIONAL PLAYERS AND RESULTS · CANNOT AFFECT THE REAL SEASON</div>
     <section class="hero">
@@ -240,6 +241,8 @@ export function renderDemoSeasonPage() {
     function captainProgress(captain){if(!captain)return'Ready';if(captain.submitted)return'Done';if(captain.formation&&Object.values(captain.formation).some(value=>value!=='pending'))return'In progress';return'Ready'}
     function progress(){const captain=stored(captainKey),player=stored(playerKey);paint(document.querySelector('[data-captain-status]'),captainProgress(captain));const playerState=player&&player.finalized?'Done':player&&((player.A&&player.A.racks&&player.A.racks.length)||(player.B&&player.B.racks&&player.B.racks.length))?'In progress':'Ready';paint(document.querySelector('[data-player-status]'),playerState)}
     document.querySelector('[data-reset-all]').onclick=()=>{sessionStorage.removeItem(captainKey);sessionStorage.removeItem(playerKey);progress()};progress();
+    const start=document.querySelector('[data-mission-start]');
+    if(start)start.onclick=()=>{const persona=(document.querySelector('[data-mission-persona]').value||'').trim();const task=(document.querySelector('[data-mission-task]').value||'').trim();document.querySelector('[data-mission-result]').textContent=persona&&task?('Practice mission started for '+persona+': '+task+'. This does not change the real season.'):'Add a persona and a task first.';};
   </script>
 </body>
 </html>`;

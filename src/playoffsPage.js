@@ -97,7 +97,7 @@ export function renderPlayoffsPage() {
     async function get(path){
       const response=await fetch(path);
       const body=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(body.error||'Request failed');
+      if(!response.ok)throw new Error(body.error||'Playoffs did not return a bracket. Try again.');
       return body;
     }
     async function authApi(path,options={}){
@@ -117,7 +117,7 @@ export function renderPlayoffsPage() {
       const post=rounds.filter((r)=>['semifinal','championship','tiebreaker'].includes(String(r.stage||'')));
       bracketEl.replaceChildren();
       if(!post.length){
-        bracketEl.innerHTML='<div class="empty"><strong style="display:block;margin-bottom:8px">No postseason rounds yet</strong>When an admin starts playoffs, semifinals appear here.<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px"><a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a><a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a><a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a></div></div>';
+        bracketEl.innerHTML='<div class="empty"><strong style="display:block;margin-bottom:8px">No postseason rounds yet</strong>A team qualifies four players from its own matches. When an admin starts playoffs, semifinals appear here.<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px"><a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a><a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a><a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a></div></div>';
         return;
       }
       for(const round of post){
@@ -125,18 +125,20 @@ export function renderPlayoffsPage() {
         section.className='round';
         const head=document.createElement('div');
         head.className='round-head';
-        head.innerHTML='<div><div class="kicker">'+stageLabel(round.stage)+'</div><strong>'+(round.scheduledOn||'Date TBD')+'</strong></div>';
+        head.innerHTML='<div><div class="kicker">'+stageLabel(round.stage)+'</div><strong>'+(round.scheduledOn||'Date not set')+'</strong></div>';
         const matches=document.createElement('div');
         matches.className='matches';
         for(const match of (round.matches||[])){
           const card=document.createElement('article');
           card.className='match';
+          const winner=match.winnerTeamName||'';
           card.innerHTML='<div class="muted">Table '+(match.tableNumber||'—')+' · '+(match.status||'scheduled')+'</div>'
-            +'<div class="versus"><strong>'+(match.teamAName||'TBD')+'</strong><span>vs</span><strong>'+(match.teamBName||'TBD')+'</strong></div>';
+            +'<div class="versus"><strong>'+(match.teamAName||'TBD')+'</strong><span>vs</span><strong>'+(match.teamBName||'TBD')+'</strong></div>'
+            +(winner?'<div class="status" data-status>Champion: '+winner+'</div>':'');
           const actions=document.createElement('div');
           actions.className='actions';
           const score=document.createElement('a');
-          score.href='/scorecard?match='+encodeURIComponent(match.teamMatchId||'');
+          score.href='/scorecard?match='+encodeURIComponent(match.teamMatchId||'')+((match.makeupOn||match.makeup_on)?('&date='+encodeURIComponent(match.makeupOn||match.makeup_on)):'');
           score.textContent=(match.status==='finalized'||match.status==='corrected')?'View final':'Score';
           score.className=(match.status==='finalized'||match.status==='corrected')?'':'primary';
           const msgs=document.createElement('a');
@@ -251,8 +253,9 @@ export function renderPlayoffsPage() {
       renderBracket(body.rounds||body.schedule||[]);
       if(!quiet) setStatus('Playoffs loaded','ok');
     }
-    document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')));
-    seasonEl.addEventListener('change',()=>loadBracket().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')));
+    function showBracketError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Playoffs could not be loaded.');setStatus(message,'error');bracketEl.innerHTML='<div class="empty"><strong>Playoffs could not be loaded</strong><div>'+message+'</div></div>';}
+    document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch(showBracketError));
+    seasonEl.addEventListener('change',()=>loadBracket().catch(showBracketError));
     document.querySelector('[data-start]').addEventListener('click',async()=>{
       try{
         setStatus('Starting playoffs…');
@@ -269,8 +272,8 @@ export function renderPlayoffsPage() {
         setStatus('Championship advanced','ok');
       }catch(e){setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error')}
     });
-    load().catch((e)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(e):e.message),'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(()=>{}),{intervalMs:20000,immediate:false});
+    load().catch(showBracketError);
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>loadBracket(opts).catch(showBracketError),{intervalMs:20000,immediate:false});
   </script>
 </body>
 </html>`;

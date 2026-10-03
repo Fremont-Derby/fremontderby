@@ -119,13 +119,14 @@ export function renderChatPage(env = {}) {
 </head>
 <body>
   <main class="app">
+    <section data-stuck-path><h2>If you are stuck</h2><p>Launch goes back to the mission. Lineup goes to lineup. Score goes to score.</p></section>
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
       <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
     </header>
     <nav aria-label="League destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px">
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
-      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
+      <a data-score-link href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
       <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
       <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Lineup</a>
       <a href="/notifications" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Alerts</a>
@@ -284,7 +285,7 @@ export function renderChatPage(env = {}) {
       clearSession();
       layoutEl.hidden = true;
       hidePageState();
-      const matchupId = new URLSearchParams(location.search).get('matchup');
+      const matchupId = new URLSearchParams(location.search).get('matchup');const scoreLink=document.querySelector('[data-score-link]');if(scoreLink&&matchupId)scoreLink.href='/scorecard?match='+encodeURIComponent(matchupId);
       signedOutTitleEl.textContent = expired ? 'Your sign-in expired' : (matchupId ? 'Sign in to open this matchup thread' : 'Coordinate league night in one place');
       signedOutDetailEl.textContent = expired
         ? 'Sign in again to reopen your conversations. Your messages were not changed.'
@@ -296,7 +297,11 @@ export function renderChatPage(env = {}) {
     }
     async function parseJson(response) {
       const text = await response.text();
+      if (response.status === 429 || /error 1015|you are being rate limited/i.test(text)) {
+        return { error: 'Too many requests. Wait a few seconds and try again.' };
+      }
       if (!text) return {};
+      if (text.trim().startsWith('<')) return { error: 'The page returned HTML instead of message data. Try again.' };
       try { return JSON.parse(text); } catch { return { error: text }; }
     }
     function consumeOAuthCallback() {

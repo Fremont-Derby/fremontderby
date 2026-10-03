@@ -1,4 +1,9 @@
+import { handleFargoExportRequest } from './fargoExportHttp.js';
 import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
+import { handleFargoFeedRequest } from './fargoFeedHttp.js';
+import { handlePlayerStatsSummaryRequest } from './adminPlayerStatsHttp.js';
+import { handleLeagueHouseRequest } from './leagueHouseHttp.js';
+import { handleFargoReportsPage } from './fargoReportsHttp.js';
 import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
 import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
 import { renderAdminSupportPage } from './adminSupportPage.js';
@@ -212,6 +217,10 @@ export default {
 
     requestEnv = env;
     const url = new URL(request.url);
+    if (url.pathname === '/sandbox/war-game' && String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { renderDruWarGamePage } = await import('./druWarGamePage.js');
+      return new Response(renderDruWarGamePage(), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
     const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
@@ -271,6 +280,9 @@ export default {
       }), url.pathname);
     }
 
+    if (url.pathname === '/api/admin/player-stats' && request.method === 'GET') {
+      return finalizeBrowserResponse(await handlePlayerStatsSummaryRequest(request, env), url.pathname);
+    }
     if (url.pathname === '/admin/player-stats') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
       return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
@@ -316,9 +328,24 @@ export default {
       }
     }
 
+    if (url.pathname === '/api/fargo/feed' && request.method === 'GET') {
+      return finalizeBrowserResponse(await handleFargoFeedRequest(request, env), url.pathname);
+    }
+    if (url.pathname === '/admin/league-house' && (request.method === 'GET' || request.method === 'POST')) {
+      return finalizeBrowserResponse(await handleLeagueHouseRequest(request, env), url.pathname);
+    }
+    if (url.pathname === '/admin/fargo-reports' && (request.method === 'GET' || request.method === 'POST')) {
+      return finalizeBrowserResponse(await handleFargoReportsPage(request, env), url.pathname);
+    }
     if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
       return finalizeBrowserResponse(
         await handleChallongePublishDryRunRequest(request, env),
+        url.pathname,
+      );
+    }
+    if (url.pathname === '/api/admin/fargo/export' && request.method === 'POST') {
+      return finalizeBrowserResponse(
+        await handleFargoExportRequest(request, env),
         url.pathname,
       );
     }

@@ -20,6 +20,7 @@ export function renderNotificationsPage() {
 </head>
 <body>
   <main class="app">
+    <section data-mission-order><h2>Mission order</h2><p>The next mission is the first one in the list that is not done.</p></section>
     <header class="topbar">
       <div class="brand"><span class="mark">9</span><span>Notifications</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
@@ -57,7 +58,7 @@ export function renderNotificationsPage() {
       const blob=((item.title||'')+' '+(item.body||'')+' '+(item.type||'')+' '+(item.kind||'')).toLowerCase();
       if(blob.includes('ready check')||blob.includes('ready-check')) return '/teams';
       if(blob.includes('lineup')) return '/lineup';
-      if(blob.includes('score')||blob.includes('rack')||blob.includes('match')) return '/scorecard';
+      if(blob.includes('score')||blob.includes('rack')||blob.includes('match')){const matchId=item.match_id||item.team_match_id||item.matchId||item.teamMatchId||'';if(!matchId) return '/scorecard'; return '/scorecard?match='+encodeURIComponent(matchId);}
       if(blob.includes('trade')) return '/trades';
       if(blob.includes('invite')||blob.includes('invitation')) return '/teams';
       if(blob.includes('availability')||blob.includes('check-in')||blob.includes('check in')) return '/availability';
@@ -154,8 +155,8 @@ export function renderNotificationsPage() {
       try{await api('/api/me/notifications/read-all',{method:'POST'});try{window.dispatchEvent(new CustomEvent('fd:notifications-changed'))}catch(_){ }await load()}
       catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
-    load().catch((error)=>setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error'));
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(()=>{}),{intervalMs:30000,immediate:false});
+    function showNoticeError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Notices could not be loaded.');setStatus(message,'error');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.textContent=message;listEl.append(empty);}load().catch(showNoticeError);
+    if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(showNoticeError),{intervalMs:30000,immediate:false});
   </script>
 </body>
 </html>`;

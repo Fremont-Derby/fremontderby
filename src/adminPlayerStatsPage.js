@@ -16,14 +16,21 @@ a{color:#9ee5bd} input,button{min-height:44px}</style>
 <section class="panel">
 <label class="muted">Player id<input id="pid" placeholder="From Admin → Players"/></label>
 <button type="button" id="go">Load summary</button>
-<pre id="out" class="muted" style="white-space:pre-wrap">Stats helper: src/playerSeasonStats.js. Wire match feed RPC when ready.</pre>
+<pre id="out" class="muted" style="white-space:pre-wrap">Enter the player id, then load the summary.</pre>
 </section>
 <script>
-document.getElementById('go').onclick = () => {
-  const id = document.getElementById('pid').value.trim();
-  document.getElementById('out').textContent = id
-    ? ('Player ' + id + ': use Audit for privileged timeline; scorecard for finalized racks.')
-    : 'Player id required';
+const input = document.getElementById('pid');
+const out = document.getElementById('out');
+document.getElementById('go').onclick = async () => {
+  const id = input.value.trim();
+  if (!id) { out.textContent = 'Enter a player id.'; return; }
+  out.textContent = 'Loading summary…';
+  const token = sessionStorage.getItem('fd.accessToken') || '';
+  const response = await fetch('/api/admin/player-stats?playerId=' + encodeURIComponent(id), { headers: token ? { authorization: 'Bearer ' + token } : {} });
+  const body = await response.json().catch(() => ({}));
+  out.textContent = response.ok
+    ? (id + ': ' + (body.wins || 0) + ' wins, ' + (body.losses || 0) + ' losses, ' + (body.matchesPlayed || 0) + ' matches.')
+    : (body.error || 'Player summary could not be loaded.');
 };
 </script>
 </main></body></html>`;

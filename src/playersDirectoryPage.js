@@ -69,13 +69,13 @@ export function renderPlayersDirectoryPage() {
   <script>
     ${nextMatchSummaryBrowserSource}
     const nextEl=document.querySelector('[data-next-match]');
-    fetch('/api/me/matches',{headers:{accept:'application/json'}})
+    fetch('/api/me/matches',{headers:{accept:'application/json',authorization:'Bearer '+((sessionStorage.getItem('fd.accessToken')||localStorage.getItem('fd.accessToken')||''))}})
       .then((response)=>response.json())
       .then((body)=>{
         const next=pickNextMatch(body.matches||[]);
         nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';
       })
-      .catch(()=>{nextEl.textContent='Could not load matches.';});
+      .catch(()=>{nextEl.textContent='No upcoming match published.';});
     const statusEl=document.querySelector('[data-status]');
     const seasonEl=document.querySelector('[data-season]');
     const searchEl=document.querySelector('[data-search]');
@@ -154,7 +154,7 @@ export function renderPlayersDirectoryPage() {
             const meta=document.createElement('div');
             meta.className='meta';
             const rank=r.standings_rank!=null?('Rank '+r.standings_rank):'Unranked';
-            meta.textContent=rank+' · '+(r.wins||0)+'-'+(r.losses||0)+' · '+(r.win_percentage!=null?Math.round(Number(r.win_percentage)*10)/10+'%':'—');
+            meta.textContent=rank+' · '+(r.wins||0)+'-'+(r.losses||0)+' · '+(r.win_percentage!=null?Math.round(Number(r.win_percentage)*1000)/10+'%':'—');
             left.append(name,meta);
             const mid=document.createElement('div');
             mid.className='meta';
@@ -219,7 +219,10 @@ export function renderPlayersDirectoryPage() {
         if(!seasons.length) await loadSeasons();
         await loadPlayers(opts);
       }catch(error){
-        setStatus((window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Could not load directory')),'error');
+        const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Could not load directory');
+        setStatus(message,'error');
+        emptyEl.hidden=false;
+        emptyEl.textContent=message;
       }
     }
     seasonEl.addEventListener('change',()=>boot());

@@ -41,7 +41,7 @@ function injectNextMatch(html, headers) {
     '</body>',
     `<script${attr}>
       ${nextMatchSummaryBrowserSource}
-      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+      (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;fetch('/api/me/matches',{headers:{accept:'application/json',authorization:'Bearer '+((sessionStorage.getItem('fd.accessToken')||localStorage.getItem('fd.accessToken')||''))}}).then((response)=>response.text().then((text)=>response.status===429||text.trim().startsWith('<')?{matches:[]}:JSON.parse(text))).then((body)=>{const next=pickNextMatch(body.matches||[]);nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='No upcoming match published.';});})();
     </script></body>`,
   );
 }
@@ -113,7 +113,7 @@ function injectFreeAgentInvitations(html, headers) {
         const listEl=document.querySelector('[data-invites]');
         if(!statusEl||!listEl)return;
         fetch('/api/me/invitations',{headers:{accept:'application/json'}})
-          .then((response)=>response.json())
+          .then((response)=>response.text().then((text)=>response.status===429||text.trim().startsWith('<')?{matches:[]}:JSON.parse(text)))
           .then((body)=>{
             const invites=body.invitations||[];
             if(!invites.length){

@@ -1,3 +1,4 @@
+import { personaMissionLine, missionChromeLine } from './missionChrome.js';
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
 import { safeJson } from './textEscape.js';
@@ -9,6 +10,8 @@ function browserConfig(env = {}) {
 }
 
 export function renderProfilePage(env = {}) {
+  const mission = personaMissionLine({ name: 'find my next match' });
+  const chrome = missionChromeLine({ task: 'find the match', done: 'the match is named', abort: 'stop' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -103,8 +106,8 @@ export function renderProfilePage(env = {}) {
     }
   </style>
 </head>
-<body>
-  <main class="app">
+<body>\n  <p data-persona-mission>${mission}</p>\n  <p data-mission-chrome>${chrome}</p>
+  <main class="app">\n    <p data-profile-phone="formatted">A phone number is shown as a formatted number, and eligibility progress counts the requirements met.</p>
     <section data-error-link><h2>Error link</h2><p>A client error keeps its id and a short server code. The stack stays off the page.</p></section>
     <p class="note" data-eligibility-why>Eligibility says why a player can play or why they are blocked.</p>
     <header class="topbar">
@@ -189,6 +192,9 @@ export function renderProfilePage(env = {}) {
             <a href="/admin">Admin home</a>
             <a href="/admin/players">Players</a>
             <a href="/admin/operations">Operations</a>
+            <a href="/admin/player-stats">Player stats</a>
+            <a href="/admin/league-house">League house</a>
+            <a href="/admin/fargo-reports">Fargo reports</a>
             <a href="/messages/moderation">Moderation</a>
           </nav>
         </article>
@@ -297,7 +303,8 @@ export function renderProfilePage(env = {}) {
       try {
         return JSON.parse(textBody);
       } catch {
-        return { message: textBody };
+        function safeServiceMessage(status,text){const body=String(text||'');if(status===401||status===403)return '';if(status===429||body.includes('1015')||body.includes('<html')||body.includes('<!DOCTYPE'))return 'Profile is busy. Wait a moment and try again.';if(body.trim().startsWith('{'))return '';return body.length>180?'Profile could not be loaded. Try again.':''}
+        return { message: safeServiceMessage(response.status, textBody) || 'Profile could not be loaded. Try again.' };
       }
     }
 
@@ -333,6 +340,7 @@ export function renderProfilePage(env = {}) {
         return api(path, options, false);
       }
       const body = await parseJson(response);
+      if (response.status === 429) throw new Error('Profile is busy. Wait a moment, then try again.');
       if (!response.ok) {
         throw new Error(body.error || 'Request failed');
       }
@@ -605,7 +613,7 @@ export function renderProfilePage(env = {}) {
       }
       if (returnedFromGoogle || token() || isOpenAuthLane()) {
         await loadProfile();
-        if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch(() => {}), { intervalMs: 45000, immediate: false });
+        if (window.fdLiveRefresh) window.fdLiveRefresh.register((opts) => loadProfile(opts).catch((error) => setStatus(friendlyErrorMessage(error), 'error')), { intervalMs: 45000, immediate: false });
         await refreshAdminAccess();
       }
     });
