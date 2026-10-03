@@ -19,3 +19,21 @@ test("a player rating can be named", () => {
   assert.match(src, /function ratingStatusLabel/);
   assert.match(src, /Rating is missing/);
 });
+
+test("a profile can name a missing phone", () => {
+  const src = readFileSync(new URL("../src/phoneStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function phoneStatusLabel/);
+  assert.match(src, /Phone is missing/);
+});
+
+test("a profile can name a missing phone", () => {
+  const src = readFileSync(new URL("../src/phoneStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function phoneStatusLabel/);
+  assert.match(src, /Phone is missing/);
+});
+
+test("a profile can name a missing phone", () => {
+  const src = readFileSync(new URL("../src/phoneStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function phoneStatusLabel/);
+  assert.match(src, /Phone is missing/);
+});
