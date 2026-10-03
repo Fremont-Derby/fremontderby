@@ -115,3 +115,9 @@ test("a team can name a missing playoff spot", () => {
   assert.match(src, /function playoffStatusLabel/);
   assert.match(src, /Not in the playoffs/);
 });
+
+test("a player can name a missing waitlist spot", () => {
+  const src = readFileSync(new URL("../src/waitlistStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function waitlistStatusLabel/);
+  assert.match(src, /Not on the waitlist/);
+});
