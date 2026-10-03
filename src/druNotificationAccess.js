@@ -89,5 +89,13 @@ export function assertNotificationWorkerGrant(sql) {
 }
 
 export function assertNotificationContract(sql) {
-  return assertNotificationWorkerGrant(sql);
+  return assertNotificationDeny(sql);
+}
+
+export function assertNotificationDeny(sql) {
+  const value = assertNotificationWorkerGrant(sql);
+  if (value.includes('user_notifications') && !/dru_notifications_browser_deny/i.test(value)) {
+    throw new Error('DRU notifications must deny browser roles.');
+  }
+  return value;
 }

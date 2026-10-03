@@ -1,4 +1,4 @@
-import { assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant } from './druNotificationAccess.js';
+import { assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny } from './druNotificationAccess.js';
 const NON_PROD_REF = 'oqkkvqkerusepyokzbmt';
 
 export function druMigrationApplyPlan({ projectRef, sqlFiles, sqlTexts }) {
@@ -10,7 +10,7 @@ export function druMigrationApplyPlan({ projectRef, sqlFiles, sqlTexts }) {
     return { ok: false, text: 'Migration apply failed closed.' };
   }
   for (const sql of sqlTexts || []) {
-    try { assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant(sql); }
+    try { assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny(sql); }
     catch (error) { return { ok: false, text: error.message }; }
   }
   return { ok: true, text: 'DRU migrations can be applied to the non-production project.', files };
