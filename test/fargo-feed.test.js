@@ -9,6 +9,7 @@ test('the public Fargo feed includes finalized matches and is not accepted', () 
   ], { generatedAt: '2026-10-02T00:00:00Z' });
   assert.equal(feed.feed, 'fremont-derby-fargo');
   assert.equal(feed.acceptedByFargo, false);
+  assert.equal(feed.items[0].reportStatus, 'not_sent');
   assert.equal(feed.items.length, 1);
   assert.equal(feed.items[0].sent, false);
 });
