@@ -154,7 +154,7 @@ export function renderPlayersDirectoryPage() {
             const meta=document.createElement('div');
             meta.className='meta';
             const rank=r.standings_rank!=null?('Rank '+r.standings_rank):'Unranked';
-            meta.textContent=rank+' · '+(r.wins||0)+'-'+(r.losses||0)+' · '+(r.win_percentage!=null?Math.round(Number(r.win_percentage)*10)/10+'%':'—');
+            meta.textContent=rank+' · '+(r.wins||0)+'-'+(r.losses||0)+' · '+(r.win_percentage!=null?Math.round(Number(r.win_percentage)*1000)/10+'%':'—');
             left.append(name,meta);
             const mid=document.createElement('div');
             mid.className='meta';
