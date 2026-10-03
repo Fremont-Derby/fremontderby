@@ -5,6 +5,14 @@ function requireUuidLike(value, label) {
   return value;
 }
 
+function playoffReadyMessage(error) {
+  const message = String(error?.message || '');
+  if (/seven regular-season matchups/i.test(message)) {
+    return new Error('Finish every regular-season table before playoffs.');
+  }
+  return error;
+}
+
 export async function startSeasonPlayoffsCommand(
   { seasonId, actorUserId },
   repository,
@@ -13,10 +21,14 @@ export async function startSeasonPlayoffsCommand(
     throw new Error('Playoff repository is required');
   }
 
-  return repository.startSeasonPlayoffs({
-    seasonId: requireUuidLike(seasonId, 'Season id'),
-    actorUserId: requireUuidLike(actorUserId, 'Actor user id'),
-  });
+  try {
+    return await repository.startSeasonPlayoffs({
+      seasonId: requireUuidLike(seasonId, 'Season id'),
+      actorUserId: requireUuidLike(actorUserId, 'Actor user id'),
+    });
+  } catch (error) {
+    throw playoffReadyMessage(error);
+  }
 }
 
 export async function advanceSeasonToChampionshipCommand(
