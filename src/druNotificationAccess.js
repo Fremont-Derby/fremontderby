@@ -24,3 +24,10 @@ export function assertWorkerNotificationUrl(url) {
   }
   return value;
 }
+
+export function notificationRpcName(url) {
+  const value = assertWorkerNotificationUrl(url);
+  const match = value.match(/\/rpc\/([a-z0-9_]+)/i);
+  if (!match) throw new Error('DRU notifications require a Worker RPC name.');
+  return match[1];
+}

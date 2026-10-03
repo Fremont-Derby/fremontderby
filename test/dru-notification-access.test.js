@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { browserCanReadNotifications, notificationAccessContract, assertWorkerNotificationUrl } from '../src/druNotificationAccess.js';
+import { browserCanReadNotifications, notificationAccessContract, assertWorkerNotificationUrl, notificationRpcName } from '../src/druNotificationAccess.js';
 
 test('a browser role cannot read DRU notifications', () => {
   const contract = notificationAccessContract();
@@ -12,6 +12,11 @@ test('a browser role cannot read DRU notifications', () => {
 });
 
 test('a direct notification table read is rejected', () => {
-  assert.equal(assertWorkerNotificationUrl('/rest/v1/rpc/list_my_notifications'), '/rest/v1/rpc/list_my_notifications');
-  assert.throws(() => assertWorkerNotificationUrl('/rest/v1/user_notifications'), /Worker RPC/);
+  assert.equal(assertWorkerNotificationUrl, notificationRpcName('/rest/v1/rpc/list_my_notifications'), '/rest/v1/rpc/list_my_notifications');
+  assert.throws(() => assertWorkerNotificationUrl, notificationRpcName('/rest/v1/user_notifications'), /Worker RPC/);
+});
+
+test('a notification call names a Worker RPC', () => {
+  assert.equal(notificationRpcName('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
+  assert.throws(() => notificationRpcName('/rest/v1/user_notifications'), /Worker RPC/);
 });
