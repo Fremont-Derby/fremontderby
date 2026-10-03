@@ -1,5 +1,4 @@
-export function standingsContext({ team, rank, played }) {
-  if (!team) return { ok: false, reason: 'Name the team.' };
-  if (!Number.isInteger(rank) || rank < 1) return { ok: false, reason: 'Rank is missing.' };
-  return { ok: true, team, rank, played: played || 0 };
+export function standingsContextLabel(row) {
+  if (!row || !row.teamName) return 'No standings context';
+  return row.teamName + ' is ' + (row.place || 'unranked');
 }
