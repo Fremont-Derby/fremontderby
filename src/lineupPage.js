@@ -1,3 +1,4 @@
+import { lineupMissLine } from './lineupMiss.js';
 import {
   sharedBlindLineupControllerSource,
   sharedBlindLineupMarkup,
@@ -5,6 +6,7 @@ import {
 } from './blindLineupComponent.js';
 
 export function renderLineupPage() {
+  const miss = lineupMissLine({ captainTeams: ['Owls', 'Pines'], checkedTeams: ['Owls', 'Pines'], matchFound: false });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -18,7 +20,7 @@ export function renderLineupPage() {
     @media(max-width:800px){.topbar{align-items:flex-start}.status{text-align:left}.setup{grid-template-columns:1fr;padding-top:10px}.gate .signin,.gate .load{width:100%}}
   </style>
 </head>
-<body>
+<body>\n  <p data-lineup-miss>${miss}</p>
   <main class="app">\n    <p data-lineup-lock="both">The lineup stays editable until both captains submit, and an edit unsubmits it.</p>
     <section data-mission-path><h2>Tester path</h2><p>Test Drive and fixture preview send the tester to the mission, not the raw preview.</p></section>
     <p class="note" data-what-next>If you are not sure what to do, set your lineup, then open the scorecard for the match.</p>
@@ -73,17 +75,18 @@ export function renderLineupPage() {
     ${sharedBlindLineupControllerSource}
     const lineupController=createBlindLineupController(liveLineupAdapter);
     async function loadPage(opts={}){await lineupController.loadPage(opts)}async function bootstrap(){showGate('Loading lineup…','Preparing your lineup workspace.');const body=await meApi('/api/me/teams');captainTeams=body.teamManagement?.captain_teams||[];
-if(requestedMatch){
+if(requestedMatch){let matchedRequested=false;
   for(const team of captainTeams){
     const hit=(team.lineupRounds||[]).find((r)=>String(r.teamMatchId||r.team_match_id||'')===String(requestedMatch));
-    if(hit){
+    if(hit){matchedRequested=true;
       localStorage.setItem('fd.lineupTeamId',team.teamId);
       localStorage.setItem('fd.lineupRoundId',hit.roundId||hit.round_id||'');
       break;
     }
   }
+  if(!matchedRequested)setStatus('That match is not on this lineup list.','error');
 }
-renderTeamOptions();if(!captainTeams.length){showGate('No captained team yet','Create a team or become a captain before building a lineup.',{href:'/teams',label:'Open Teams',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('No captained team available.','muted');return}if(!roundSelect.value){showGate('No lineup matchup yet','Your team does not have a published regular-season matchup ready for lineup entry.',{href:'/schedule',label:'View schedule',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('No published lineup matchup yet.','muted');return}hideGate();await loadPage()}async function startBootstrap(){try{await bootstrap()}catch(error){if(!accessToken()){showGate('Sign in to build a lineup','Your sign-in is missing or expired. Sign in again before lineup controls are shown. The unsaved rack is still on this page.',{href:'/profile',label:'Sign in',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('Sign in required.','muted');return}showGate('Lineup could not load',(window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'We could not load your captain lineup workspace.')),{retry:true});setStatus('Lineup could not load.','error')}}async function run(action){try{await action()}catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}}
+renderTeamOptions();if(!captainTeams.length){showGate('No captained team yet','Create a team or become a captain before building a lineup.',{href:'/teams',label:'Open Teams',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('No captained team available.','muted');return}if(!roundSelect.value){showGate('No lineup matchup yet','Your team does not have a published regular-season matchup ready for lineup entry.',{href:'/schedule',label:'View schedule',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('No published lineup matchup yet.','muted');return}hideGate();await loadPage()}async function startBootstrap(){try{await bootstrap()}catch(error){if(!accessToken()){showGate('Sign in to build a lineup','Your sign-in is missing or expired. Sign in again before lineup controls are shown.',{href:'/profile',label:'Sign in',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('Sign in required.','muted');return}showGate('Lineup could not load',(window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'We could not load your captain lineup workspace.')),{retry:true});setStatus('Lineup could not load.','error')}}async function run(action){try{await action()}catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}}
     statusClose.addEventListener('click',()=>setStatus('Ready.','muted'));gateRetry.addEventListener('click',startBootstrap);form.addEventListener('submit',(event)=>{event.preventDefault();run(loadPage)});teamSelect.addEventListener('change',()=>{renderRoundOptions();if(roundSelect.value)run(loadPage)});roundSelect.addEventListener('change',()=>{if(roundSelect.value){localStorage.setItem('fd.lineupRoundId',roundSelect.value);run(loadPage)}});
     if(!accessToken()){showGate('Sign in to build a lineup','Sign in with Google before captain lineup controls are shown.',{href:'/profile',label:'Sign in',secondaryHref:'/scorecard',secondaryLabel:'Score hub'});setStatus('Sign in required.','muted')}else startBootstrap();
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>run(()=>loadPage(opts)),{intervalMs:15000,immediate:false});
