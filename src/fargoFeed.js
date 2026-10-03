@@ -9,3 +9,8 @@ export function toFargoFeed(matches = [], { generatedAt = new Date().toISOString
     items,
   };
 }
+
+export function feedForMatch(feed, playerMatchId) {
+  if (!playerMatchId) return feed;
+  return { ...feed, items: (feed.items || []).filter((item) => item.playerMatchId === playerMatchId) };
+}
