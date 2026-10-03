@@ -6,9 +6,12 @@ async function openCheckin(page) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await page.goto('/availability');
     const card = page.locator(`[data-group-key^="${qaSeason}|"]`);
-    await expect.poll(async () => await card.locator('[data-value="available"]').isEnabled().catch(() => false)
-      || await page.getByRole('button', { name: 'Try again' }).isVisible()).toBe(true);
-    if (await card.locator('[data-value="available"]').isEnabled().catch(() => false)) return card;
+    await expect.poll(async () =>
+      (await page.locator('[data-status]').getAttribute('data-tone') === 'ok'
+        && await card.locator('[data-value="available"]').isEnabled({ timeout: 1000 }).catch(() => false))
+      || (await page.locator('[data-status]').getAttribute('data-tone') === 'error'
+        && await page.locator('[data-recovery]').getByRole('button', { name: 'Try again' }).isVisible())).toBe(true);
+    if (await page.locator('[data-status]').getAttribute('data-tone') === 'ok') return card;
     await expect(page.locator('[data-status]')).toContainText('temporarily busy');
     await page.waitForTimeout(16_000);
   }
