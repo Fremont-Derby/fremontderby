@@ -128,7 +128,9 @@ export async function handleFargoFeedRequest(request, env = {}, { fetch: fetchIm
   } catch {
     store = { ok: false, reason: 'report table unavailable' };
   }
-  const body = toFargoFeed(items);
+  const requested = new URL(request.url).searchParams.get('playerMatchId');
+  const { feedForMatch } = await import('./fargoFeed.js');
+  const body = feedForMatch(toFargoFeed(items), requested);
   body.reportStore = store?.ok ? 'ready' : 'unavailable';
   return Response.json(body, {
     headers: { 'cache-control': 'no-store', 'access-control-allow-origin': '*' },
