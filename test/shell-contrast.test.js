@@ -43,3 +43,9 @@ test("a team can name a missing captain", () => {
   assert.match(src, /function captainStatusLabel/);
   assert.match(src, /Captain is missing/);
 });
+
+test("a team can name an empty roster", () => {
+  const src = readFileSync(new URL("../src/rosterStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function rosterStatusLabel/);
+  assert.match(src, /Roster is empty/);
+});
