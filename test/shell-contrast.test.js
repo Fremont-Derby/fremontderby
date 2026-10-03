@@ -175,3 +175,9 @@ test("a season can name a missing cost", () => {
   assert.match(src, /function costStatusLabel/);
   assert.match(src, /Cost is not set/);
 });
+
+test("a season can name a closed join", () => {
+  const src = readFileSync(new URL("../src/joinStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function joinStatusLabel/);
+  assert.match(src, /Join is closed/);
+});
