@@ -79,3 +79,9 @@ test("a match can name an unscored state", () => {
   assert.match(src, /function scoreStateLabel/);
   assert.match(src, /Not scored/);
 });
+
+test("a lineup can name its lock", () => {
+  const src = readFileSync(new URL("../src/lineupLock.js", import.meta.url), "utf8");
+  assert.match(src, /function lineupLockLabel/);
+  assert.match(src, /Lineup still open/);
+});
