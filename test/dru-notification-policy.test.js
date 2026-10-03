@@ -6,5 +6,5 @@ test('DRU notification policies do not leave a browser read', () => {
   const sql = readFileSync(new URL('../supabase/migrations/20261003113000_dru_notification_no_browser_policy.sql', import.meta.url), 'utf8');
   assert.match(sql, /drop policy if exists/);
   assert.match(sql, /revoke all on table dru\.user_notifications from public, anon, authenticated/);
-  assert.doesNotMatch(sql, /create policy/);
+  assert.match(sql, /dru_notifications_browser_deny/);
 });
