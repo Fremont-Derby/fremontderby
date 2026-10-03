@@ -49,3 +49,9 @@ test("a team can name an empty roster", () => {
   assert.match(src, /function rosterStatusLabel/);
   assert.match(src, /Roster is empty/);
 });
+
+test("a match can name a missing table", () => {
+  const src = readFileSync(new URL("../src/tableStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function tableStatusLabel/);
+  assert.match(src, /Table is not set/);
+});
