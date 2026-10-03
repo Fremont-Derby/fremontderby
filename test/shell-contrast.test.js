@@ -157,3 +157,9 @@ test("a season can name a missing venue", () => {
   assert.match(src, /function venueStatusLabel/);
   assert.match(src, /Venue is not set/);
 });
+
+test("a season can name a missing table count", () => {
+  const src = readFileSync(new URL("../src/tableCount.js", import.meta.url), "utf8");
+  assert.match(src, /function tableCountLabel/);
+  assert.match(src, /Table count is not set/);
+});
