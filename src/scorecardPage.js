@@ -169,6 +169,7 @@ const liveScorecardEnhancementsScript = `
         const canUndo = Number(state.ownRackCount || 0) > 0 && !state.locked;
         if (canUndo) undoButton.disabled = false;
         undoButton.textContent = state.ownConfirmed ? 'Undo last rack & unlock' : 'Undo last rack';
+        if(state.matchStatus==='finalized'||state.matchStatus==='corrected'){undoButton.hidden=true;const done=document.createElement('p');done.textContent='Match complete';nextRack.appendChild(done);}
         undoButton.classList.remove('ghost');
         if (undoButton.parentElement !== nextRack) nextRack.appendChild(undoButton);
         if (undoButton.dataset.confirmBound === 'true') return;
