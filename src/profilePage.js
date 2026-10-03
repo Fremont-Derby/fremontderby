@@ -12,7 +12,7 @@ function browserConfig(env = {}) {
 export function renderProfilePage(env = {}) {
   const mission = personaMissionLine({ name: 'find my next match' });
   const chrome = missionChromeLine({ task: 'find the match', done: 'the match is named', abort: 'stop' });
-  return `<!doctype html>
+  return `Privacy: phone is stored as a label, not a value\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

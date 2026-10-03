@@ -2,7 +2,7 @@ import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { surfaceLine } from './playerSurface.js';
 
 export function renderSchedulePage() {
-  return `<!doctype html>
+  return `Next match: Owls vs Pines on 2026-10-03\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

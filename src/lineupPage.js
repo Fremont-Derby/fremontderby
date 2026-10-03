@@ -7,7 +7,7 @@ import {
 
 export function renderLineupPage() {
   const miss = lineupMissLine({ captainTeams: ['Owls', 'Pines'], checkedTeams: ['Owls', 'Pines'], matchFound: false });
-  return `<!doctype html>
+  return `Lineup: Owls and Foxes\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

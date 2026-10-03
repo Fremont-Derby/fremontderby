@@ -4,7 +4,7 @@ export function renderScorePickerPage() {
   const card = scorecardLine({ name: 'week one' });
   const replay = replayLine({ name: 'after the fix' });
   const missing = scoreLinkMiss([], 'missing-match');
-  return `<!doctype html>
+  return `That score does not match. It was not saved\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
