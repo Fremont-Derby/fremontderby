@@ -121,3 +121,9 @@ test("a player can name a missing waitlist spot", () => {
   assert.match(src, /function waitlistStatusLabel/);
   assert.match(src, /Not on the waitlist/);
 });
+
+test("a team can name a missing entry", () => {
+  const src = readFileSync(new URL("../src/entryStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function entryStatusLabel/);
+  assert.match(src, /Not entered/);
+});
