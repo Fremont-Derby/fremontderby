@@ -17,6 +17,7 @@ import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { chatHttpHandlers } from './chatHttp.js';
 import { renderChatModerationPage } from './chatModerationPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
+import { renderNoticesPage } from './noticesPage.js';
 import { renderChatPage } from './chatPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
