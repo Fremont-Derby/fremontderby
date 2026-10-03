@@ -198,6 +198,8 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
           racksA: winnerByMatch.get(match.id)?.A || 0,
           racksB: winnerByMatch.get(match.id)?.B || 0,
+          racksA: winnerByMatch.get(match.id)?.A || 0,
+          racksB: winnerByMatch.get(match.id)?.B || 0,
           winnerTeamId: match.winner_team_id ?? null,
           winnerName: match.winner_team_id === match.team_a_id
             ? teamsById.get(match.team_a_id) ?? null
