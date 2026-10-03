@@ -24,6 +24,15 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     const playerId = String(form.get('playerId') || '').trim();
     const fargoId = String(form.get('fargoId') || '').trim();
     const challongeUrl = String(form.get('challongeUrl') || '').trim();
+    const recordMatchId = String(form.get('recordMatchId') || '').trim();
+    if (recordMatchId) {
+      const recorded = await fetchImpl(`${base}/rest/v1/fargo_reports`, {
+        method: 'POST',
+        headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json', 'content-profile': 'public', prefer: 'return=minimal' },
+        body: JSON.stringify({ player_match_id: recordMatchId, status: 'needs_review', payload: { source: 'admin-record' } }),
+      });
+      saved = recorded.ok ? 'Recorded for Fargo. Not accepted.' : 'The race was not recorded.';
+    }
     if (playerId && fargoId && !fargoIdLooksValid(fargoId)) saved = 'Fargo id must be 3 to 12 digits.';
     else if (playerId && fargoId) {
       const savedId = await fetchImpl(`${base}/rest/v1/player_external_identities?on_conflict=provider,external_id`, {
