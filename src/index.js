@@ -1587,8 +1587,10 @@ export async function handleSubmitTeamLineupRequest(
       const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
       const playerIds = slots.map((slot) => slot?.playerId).filter(Boolean);
       if (!playerIds.length) throw new Error('Choose at least one player before locking the lineup');
-      const { ensureDruActorCanLockLineup } = await import('./druLineupBypass.js');
+      const { ensureDruActorCanLockLineup, lockDruPlayoffLineup } = await import('./druLineupBypass.js');
       await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, playerIds }, fetchImpl);
+      const playoff = await lockDruPlayoffLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
+      if (playoff) return jsonResponse({ lineup: playoff });
     }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
