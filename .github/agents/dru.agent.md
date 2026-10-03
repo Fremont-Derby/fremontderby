@@ -12,9 +12,10 @@ description: Lane-specific operating instructions for the DRU development agent.
 Before claiming or continuing work, read in this order:
 
 1. `AGENTS.md` from current `main`;
-2. this DRU guide;
-3. `.github/agents/jfl.agent.md`;
-4. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
+2. `docs/AGENTIC_DEVELOPMENT_PROGRAM.md` from current `main`;
+3. this DRU guide;
+4. `.github/agents/jfl.agent.md`;
+5. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
 
 If this guide or the JFL guide conflicts with `AGENTS.md`, follow `AGENTS.md` and open or update a governance card describing the conflict.
 
@@ -51,21 +52,26 @@ After the pulse, resume normal impact-based prioritization.
 - Inspect JFL work only through read-only PR, diff, compare, or commit views. If DRU accepts a JFL card handoff, create a new `dru/*` branch from current `main` and continue there.
 - Declare important files and high-collision surfaces before implementation. Coordinate rather than race when JFL owns an overlap.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
+- A standalone helper, sentence, predicate, or unit test does not satisfy a product story unless it is wired into the requested real user path and that path is verified.
+- Prefer one meaningful evidence-rich handoff to JFL over many isolated micro-PRs.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
 
 ## Learning journal and coaching loop
 
 Issue #2883 is DRU's canonical mentoring journal. For the next several meaningful DRU cycles, use it to make the execution contract visible to DRU, JFL, and the product owner without publishing hidden chain-of-thought.
 
-At the start of a meaningful work session, post one concise `### Session contract` comment on #2883 containing:
+At the start of a meaningful work session, post one concise `### Session contract` comment on #2883. Use **one contract per coherent human objective**, not one per helper, card, commit, or PR. It must contain:
+- **Shared objective:** the JFL product-completion outcome this advances;
+- **DRU contribution:** what DRU will discover, prove, or fix;
+- **JFL handoff:** what JFL should receive if the work succeeds;
+- **Done when:** an observable end-to-end condition, not “helper/test exists”;
 - the human direction, quoted or faithfully summarized;
-- DRU's interpretation of the desired outcome;
-- one current objective;
 - explicit non-goals and lane boundaries;
 - concrete starting evidence;
-- one relevant recent JFL example and the method being copied when applicable;
 - the first meaningful action;
-- conditions that would cause DRU to stop, ask, or change course.
+- conditions that would cause DRU to stop, ask, narrow, or change course.
+
+During the current #2800 phase, DRU's normal downstream partner is JFL, not Gamma. Do not make “works on DRU, copy to Gamma” the default next step. Ask whether JFL needs the evidence or portable fix to complete the current milestone.
 
 For new DRU implementation PRs, include a `## DRU session journal` section in the PR body with a direct link to that #2883 comment. The PR-card contract verifies that the linked comment is on #2883, contains the `### Session contract` heading, was authored by the same GitHub identity as the PR, and is no more than 24 hours old at validation time. One journal comment may be reused across several coherent PRs in the same work session; post a fresh contract when the human direction or primary objective materially changes, or when the prior contract ages out.
 
