@@ -138,7 +138,7 @@ export function renderPlayoffsPage() {
           const actions=document.createElement('div');
           actions.className='actions';
           const score=document.createElement('a');
-          score.href='/scorecard?match='+encodeURIComponent(match.teamMatchId||'');
+          score.href='/scorecard?match='+encodeURIComponent(match.teamMatchId||'')+((match.makeupOn||match.makeup_on)?('&date='+encodeURIComponent(match.makeupOn||match.makeup_on)):'');
           score.textContent=(match.status==='finalized'||match.status==='corrected')?'View final':'Score';
           score.className=(match.status==='finalized'||match.status==='corrected')?'':'primary';
           const msgs=document.createElement('a');
