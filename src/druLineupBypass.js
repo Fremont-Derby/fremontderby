@@ -34,7 +34,7 @@ export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = 
 }
 
 export function duplicateLineupIds(playerIds) {
-  const ids = (playerIds || []).filter(Boolean);
+  const ids = (playerIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean);
   return ids.length > 0 && new Set(ids).size !== ids.length;
 }
 
