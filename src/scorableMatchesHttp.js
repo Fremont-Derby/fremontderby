@@ -57,6 +57,14 @@ async function listOpenedDruMatches(env, fetchImpl) {
   const roundsResponse = roundIds ? await fetchWithSchema(`${base}/rest/v1/rounds?id=in.(${roundIds})&select=id,round_number,scheduled_on`, { headers }) : null;
   const rounds = roundsResponse && roundsResponse.ok ? await roundsResponse.json() : [];
   const roundByMatch = new Map(matches.map((match) => [match.id, rounds.find((round) => round.id === match.round_id) || {}]));
+  const teamIds = [...new Set(races.flatMap((race) => [race.team_a_id, race.team_b_id]).filter(Boolean))].join(',');
+  const playerIds = [...new Set(races.flatMap((race) => [race.player_a_id, race.player_b_id]).filter(Boolean))].join(',');
+  const teamsResponse = teamIds ? await fetchWithSchema(`${base}/rest/v1/teams?id=in.(${teamIds})&select=id,name`, { headers }) : null;
+  const playersResponse = playerIds ? await fetchWithSchema(`${base}/rest/v1/players?id=in.(${playerIds})&select=id,display_name`, { headers }) : null;
+  const teams = teamsResponse && teamsResponse.ok ? await teamsResponse.json() : [];
+  const players = playersResponse && playersResponse.ok ? await playersResponse.json() : [];
+  const teamName = (id) => teams.find((team) => team.id === id)?.name || 'Team';
+  const playerName = (id) => players.find((player) => player.id === id)?.display_name || 'Player';
   return races.map((race) => {
     const round = roundByMatch.get(race.team_match_id) || {};
     return {
@@ -65,11 +73,11 @@ async function listOpenedDruMatches(env, fetchImpl) {
       slot_number: race.slot_number,
       status: race.status,
       scoring_team_id: race.team_a_id,
-      team_a_name: 'Home',
-      team_b_name: 'Away',
-      scoring_team_name: 'Home',
-      player_a_name: 'Home',
-      player_b_name: 'Away',
+      team_a_name: teamName(race.team_a_id),
+      team_b_name: teamName(race.team_b_id),
+      scoring_team_name: teamName(race.team_a_id),
+      player_a_name: playerName(race.player_a_id),
+      player_b_name: playerName(race.player_b_id),
       round_number: round.round_number || 1,
       scheduled_on: round.scheduled_on || null,
     };

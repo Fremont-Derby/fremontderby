@@ -76,3 +76,30 @@ export async function openDruMatchForScoring(env, matchId, fetchImpl = globalThi
   if (!saved.ok) return { opened: 0, error: 'This match could not be opened for scoring.' };
   return { opened: missing.length };
 }
+
+export function raceResultPatch(match, winnerSide) {
+  const side = winnerSide === 'B' ? 'B' : 'A';
+  return {
+    status: 'finalized',
+    winner_side: side,
+    winner_player_id: side === 'A' ? match.player_a_id : match.player_b_id,
+  };
+}
+
+export async function recordDruRaceResult(env, playerMatchId, winnerSide, fetchImpl = globalThis.fetch) {
+  if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return { saved: false, error: 'Not a DRU lane.' };
+  const { withSupabaseSchema } = await import('./supabaseSchema.js');
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key || !playerMatchId) return { saved: false, error: 'This race could not be saved.' };
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=representation' };
+  const matchResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=id,player_a_id,player_b_id,status`, { headers });
+  if (!matchResponse.ok) return { saved: false, error: 'This race could not be read.' };
+  const match = (await matchResponse.json())?.[0];
+  if (!match) return { saved: false, error: 'This race could not be read.' };
+  const patch = raceResultPatch(match, winnerSide);
+  const saved = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}`, { method: 'PATCH', headers, body: JSON.stringify(patch) });
+  if (!saved.ok) return { saved: false, error: 'This race could not be saved.' };
+  return { saved: true, winnerSide: patch.winner_side };
+}
