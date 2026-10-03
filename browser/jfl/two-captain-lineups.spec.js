@@ -426,6 +426,9 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
         await scoreRack(captainA, 'A');
         await scoreRack(captainB, 'A');
       }
+      // Quiet refresh intentionally pauses in hidden tabs; reopen before cross-captain comparison.
+      await captainA.reload();
+      await waitForScorecardReady(captainA);
       await expect(captainA.locator('[data-reconcile]')).toHaveAttribute('data-state', 'match');
       await expect(captainB.locator('[data-reconcile]')).toHaveAttribute('data-state', 'match');
       await captainA.locator('[data-confirm]').click();
