@@ -166,11 +166,12 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
     const b = (byTeam[match.team_b_id] || []).sort((x, y) => x.slot_number - y.slot_number);
     const count = Math.min(a.length, b.length);
     if (count) {
-      await fetchWithSchema(`${conn.base}/rest/v1/player_matches`, {
+      const saved = await fetchWithSchema(`${conn.base}/rest/v1/player_matches`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(Array.from({ length: count }, (_, index) => ({ team_match_id: match.id, slot_number: index + 1, player_a_id: a[index].player_id, player_b_id: b[index].player_id, status: 'scheduled' }))),
+        body: JSON.stringify(Array.from({ length: count }, (_, index) => ({ season_id: match.season_id, round_id: roundId, team_match_id: match.id, team_a_id: match.team_a_id, team_b_id: match.team_b_id, slot_number: index + 1, player_a_id: a[index].player_id, player_b_id: b[index].player_id, status: 'scheduled' }))),
       });
+      if (!saved.ok) throw new Error(`Playoff races were not created: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
     }
   }
   return { lineupId: lineup.id, teamMatchId: match.id, slots: chosen.length };
