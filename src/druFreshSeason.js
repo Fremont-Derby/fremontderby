@@ -51,3 +51,21 @@ export async function reserveFreshDruSeason(env, { seasonName }, fetchImpl = glo
 }
 
 // registration status is the team-screen gate
+
+export async function reopenDruPracticeRegistration(env, seasonId, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !seasonId) return false;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return false;
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  const season = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, { headers });
+  if (!season.ok) return false;
+  const row = (await season.json())?.[0];
+  if (!row || row.status === 'registration') return true;
+  if (row.status !== 'draft') return false;
+  const saved = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}`, {
+    method: 'PATCH', headers, body: JSON.stringify({ status: 'registration' }),
+  });
+  return saved.ok;
+}
