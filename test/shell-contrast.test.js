@@ -103,3 +103,9 @@ test("standings can name a missing place", () => {
   assert.match(src, /function placeStatusLabel/);
   assert.match(src, /Place is not set/);
 });
+
+test("a team can name missing points", () => {
+  const src = readFileSync(new URL("../src/pointsStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function pointsStatusLabel/);
+  assert.match(src, /Points are missing/);
+});
