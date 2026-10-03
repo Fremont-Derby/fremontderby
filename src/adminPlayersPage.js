@@ -13,7 +13,6 @@ export function renderAdminPlayersPage() {
 </head>
 <body>
   <main class="app">\n    <p data-player-admin="search">Player management searches by name, and an admin can manage only their own league.</p>
-    <section data-secret-scan><h2>Secret scan</h2><p>Generated notes are scanned for token-shaped text before they are saved. A hit blocks the save.</p></section>
     <p class="note" data-no-hard-delete>A player with match history is not hard-deleted. The history stays.</p>
     <header class="head"><div><div class="muted">Admin · League Management</div><h1>Players</h1><div class="muted">Create and manage player identities, league-admin access, competition eligibility, and team membership exceptions without IDs or database edits.</div></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
