@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fremontderby-dru
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply the two DRU migrations
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GAMMA_DATABASE_URL: ${{ secrets.GAMMA_DATABASE_URL }}
           SUPABASE_PROJECT_REF: oqkkvqkerusepyokzbmt
         run: node scripts/apply-dru-migrations.mjs
