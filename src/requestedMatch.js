@@ -24,3 +24,8 @@ export function noticeScoreHref(notice) {
   const matchId = notice && (notice.match_id || notice.team_match_id || notice.matchId || notice.teamMatchId);
   return scoreHref(matchId || '');
 }
+
+export function requestedTeamId(search) {
+  const params = new URLSearchParams(search || '');
+  return params.get('team') || params.get('team_id') || '';
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestedMatchId, scoreHref, noticeScoreHref } from '../src/requestedMatch.js';
+import { requestedMatchId, scoreHref, noticeScoreHref, requestedTeamId } from '../src/requestedMatch.js';
 
 test('the score link match id is read from the query', () => {
   assert.equal(requestedMatchId('?match=abc'), 'abc');
@@ -16,4 +16,9 @@ test('a score link keeps the match and the makeup date', () => {
 test('a score notice keeps its match id', () => {
   assert.equal(noticeScoreHref({ match_id: 'abc' }), '/scorecard?match=abc');
   assert.equal(noticeScoreHref({}), '/scorecard');
+});
+
+test('the score link team id is read from the query', () => {
+  assert.equal(requestedTeamId('?team=team-1'), 'team-1');
+  assert.equal(requestedTeamId(''), '');
 });
