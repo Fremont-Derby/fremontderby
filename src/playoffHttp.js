@@ -31,6 +31,25 @@ export function createPlayoffHttpHandlers({
     async start(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
+        if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+          const { practicePlayoffsReady } = await import('./druTeamResult.js');
+          const { withSupabaseSchema } = await import('./supabaseSchema.js');
+          const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+          const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+          const key = env.SUPABASE_SERVICE_ROLE_KEY;
+          const roundResponse = await fetchWithSchema(`${base}/rest/v1/rounds?season_id=eq.${seasonId}&stage=eq.regular&select=id`, {
+            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+          });
+          const roundIds = roundResponse.ok ? (await roundResponse.json()).map((row) => row.id).filter(Boolean) : [];
+          const matchUrl = roundIds.length
+            ? `${base}/rest/v1/team_matches?season_id=eq.${seasonId}&round_id=in.(${roundIds.join(',')})&select=status,winner_team_id`
+            : `${base}/rest/v1/team_matches?season_id=eq.${seasonId}&select=status,winner_team_id`;
+          const response = await fetchWithSchema(matchUrl, {
+            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+          });
+          const rows = response.ok ? await response.json() : [];
+          if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
+        }
         const repository = createRepository(env, { fetch: fetchImpl });
         const playoffs = await startSeasonPlayoffsCommand(
           { seasonId, actorUserId: actor.id },

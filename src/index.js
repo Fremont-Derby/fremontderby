@@ -214,6 +214,24 @@ export async function handlePublishScheduleRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { ensureDruPracticeTeams } = await import('./druPracticeTeams.js');
+      await ensureDruPracticeTeams(env, { seasonId, actorUserId: actor.id }, fetchImpl);
+      const { prepareDruPracticePublish } = await import('./druPublishPrep.js');
+      await prepareDruPracticePublish(env, seasonId, fetchImpl);
+      const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
+      await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
+      const { practicePublishReady } = await import('./druPublishPrep.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&status=eq.confirmed&select=team_id`, {
+        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'dru_private' },
+      });
+      const ready = practicePublishReady(slots.ok ? (await slots.json()).length : 0);
+      if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
+    }
 
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
     const result = await publishSeasonScheduleCommand(
@@ -242,9 +260,15 @@ export async function handleCreateSeasonSetupRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+    let reservedSeasonId = null;
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const { reserveFreshDruSeason } = await import('./druFreshSeason.js');
+      reservedSeasonId = await reserveFreshDruSeason(env, { seasonName: body.seasonName ?? body.season_name }, fetchImpl);
+    }
     const setup = await saveSeasonSetupCommand(
       {
         actorUserId: actor.id,
+        seasonId: reservedSeasonId,
         seasonName: body.seasonName ?? body.season_name,
         leagueNight: body.leagueNight ?? body.league_night,
         firstRoundDate: body.firstRoundDate ?? body.first_round_date,
@@ -433,6 +457,10 @@ export async function handleCreateTeamRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { reopenDruPracticeRegistration } = await import('./druFreshSeason.js');
+      await reopenDruPracticeRegistration(env, seasonId, fetchImpl);
+    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const application = await submitTeamApplicationCommand(
       {
@@ -576,7 +604,9 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: normalizeApproveDecline(body) ?? body.decision,
+        decision: ({approved:'approve', approve:'approve', deferred:'defer', defer:'defer', rejected:'reject', declined:'reject', reject:'reject'})[
+          String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase()
+        ] ?? (normalizeApproveDecline(body) ?? body.decision),
         reason: body.reason ?? body.note,
       },
       repository,
@@ -596,12 +626,17 @@ export async function handleManageTeamSlotRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    const action = body.action ?? body.decision ?? body.response;
+    if (String(env.ENVIRONMENT || '').trim() === 'dru' && String(action || '') === 'confirm') {
+      const { registerDruSlotRoster } = await import('./druSlotRoster.js');
+      await registerDruSlotRoster(env, slotId, fetchImpl);
+    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const slot = await manageTeamSlotCommand(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action ?? body.decision ?? body.response,
+        action,
         reason: body.reason ?? body.note,
         extensionDays: body.extensionDays ?? body.extension_days,
       },
@@ -1548,6 +1583,19 @@ export async function handleSubmitTeamLineupRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
+      const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
+      const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup } = await import('./druLineupBypass.js');
+      const playerIds = lineupPlayerIds(slots);
+      if (!lineupSlotsAreComplete(slots) || playerIds.length !== 3) {
+        const error = new Error('Lineup needs three players before it can lock');
+        error.status = 400;
+        throw error;
+      }
+      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, roundId, playerIds, slots }, fetchImpl);
+      const playoff = await lockDruPlayoffLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
+      if (playoff) return jsonResponse({ lineup: playoff });
+    }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
       {
@@ -1883,6 +1931,10 @@ export async function handleRecordPlayerMatchRackRequest(
       },
       repository,
     );
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { closeDruTableAfterRack } = await import('./druTeamResult.js');
+      await closeDruTableAfterRack(env, playerMatchId, fetchImpl);
+    }
 
     return jsonResponse({ rack }, 201);
   } catch (error) {
@@ -1919,8 +1971,50 @@ export async function handleFinalizePlayerMatchRequest(
   playerMatchId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
+  let seasonId = null;
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
+      const { privatePostgrestProfile, withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' };
+      const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
+      const playerResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=team_match_id`, { headers });
+      const teamMatchId = playerResponse.ok ? (await playerResponse.json())?.[0]?.team_match_id : null;
+      const teamResponse = teamMatchId
+        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=team_a_id,team_b_id,season_id`, { headers })
+        : null;
+      const team = teamResponse?.ok ? (await teamResponse.json())?.[0] : null;
+      const lineupResponse = team
+        ? await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,player_id`, { headers: privateHeaders })
+        : null;
+      const lineups = lineupResponse?.ok ? await lineupResponse.json() : [];
+      const hasPlayers = (teamId) => (lineups || []).some((row) => row.team_id === teamId && row.player_id);
+      const gate = scoreNeedsBothTeams({
+        teamAId: team?.team_a_id,
+        teamBId: team?.team_b_id,
+        lineupA: team && hasPlayers(team.team_a_id),
+        lineupB: team && hasPlayers(team.team_b_id),
+      });
+      if (!gate.ok) return jsonResponse({ error: gate.text }, 409);
+      const { practiceScoreAllowed } = await import('./scoreFlow.js');
+      const playersResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=player_a_id,player_b_id,team_match_id`, { headers });
+      const playerRow = playersResponse.ok ? (await playersResponse.json())?.[0] : null;
+      const seasonResponse = teamMatchId
+        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=season_id`, { headers })
+        : null;
+      seasonId = seasonResponse?.ok ? (await seasonResponse.json())?.[0]?.season_id : null;
+      const ids = [playerRow?.player_a_id, playerRow?.player_b_id].filter(Boolean);
+      const paymentResponse = seasonId && ids.length
+        ? await fetchWithSchema(`${base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=in.(${ids.join(',')})&select=player_id,status`, { headers: privateHeaders })
+        : null;
+      const payments = paymentResponse?.ok ? await paymentResponse.json() : [];
+      const paid = practiceScoreAllowed(ids.map((id) => (payments || []).find((row) => row.player_id === id)));
+      if (!paid.ok) return jsonResponse({ error: paid.text }, 409);
+    }
     const repository = createScoringRepository(env, { fetch: fetchImpl });
     const match = await finalizePlayerMatchCommand(
       {
@@ -1929,9 +2023,17 @@ export async function handleFinalizePlayerMatchRequest(
       },
       repository,
     );
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && seasonId) {
+      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+    }
 
     return jsonResponse({ match });
   } catch (error) {
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && seasonId) {
+      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+    }
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
@@ -2311,6 +2413,9 @@ if (url.pathname === "/standings") {
       }
     }
 
+    if (url.pathname === "/admin/season-setup") {
+      return Response.redirect(new URL("/season-setup", url), 302);
+    }
     if (url.pathname === "/season-setup") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -2363,6 +2468,10 @@ if (url.pathname === "/standings") {
       });
     }
 
+    if (url.pathname.startsWith("/teams/") && url.pathname !== "/teams/") {
+      const teamId = decodeURIComponent(url.pathname.slice("/teams/".length).split("/")[0] || "");
+      if (teamId) return Response.redirect(new URL("/teams?team=" + encodeURIComponent(teamId), url), 302);
+    }
     if (url.pathname === "/teams") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
