@@ -1,10 +1,42 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { resetJflTwoCaptainFixture } from '../scripts/reset-jfl-two-captain.mjs';
+import { resetJflTwoCaptainFixture, upcomingFixtureDate } from '../scripts/reset-jfl-two-captain.mjs';
 
 const migration = await readFile(new URL('../supabase/migrations/20261002172005_jfl_two_captain_reset_rpc.sql', import.meta.url), 'utf8');
 const fixtureId = '18580000-1300-4000-8000-000000000001';
+const seasonId = '18580000-1000-4000-8000-000000000000';
+const roundId = '18580000-1200-4000-8000-000000000001';
+
+function fixtureFetch(calls, overrides = {}) {
+  let scheduledOn = '2026-10-09';
+  return async (url, options = {}) => {
+    calls.push({ url, options });
+    const path = new URL(url).pathname;
+    if (overrides[path]) return overrides[path](url, options);
+    if (path === '/health/environment') {
+      return Response.json({ environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: 'sha' });
+    }
+    if (path.endsWith('/reset_two_captain_qa')) {
+      return Response.json([{ team_match_id: fixtureId, reset_lineups: 1 }]);
+    }
+    if (path.endsWith('/seasons')) return Response.json([{ id: seasonId, purpose: 'qa' }]);
+    assert.equal(path, '/rest/v1/rounds');
+    const query = new URL(url).searchParams;
+    assert.equal(query.get('id'), `eq.${roundId}`);
+    assert.equal(query.get('season_id'), `eq.${seasonId}`);
+    assert.equal(query.get('stage'), 'eq.regular');
+    assert.equal(query.get('round_number'), 'eq.1');
+    assert.equal(options.headers['accept-profile'], 'jfl');
+    assert.equal(options.headers['content-profile'], 'jfl');
+    if (options.method === 'PATCH') {
+      const body = JSON.parse(options.body);
+      assert.deepEqual(Object.keys(body), ['scheduled_on']);
+      scheduledOn = body.scheduled_on;
+    }
+    return Response.json([{ id: roundId, season_id: seasonId, scheduled_on: scheduledOn }]);
+  };
+}
 
 test('JFL reset RPC is invoker-rights, fixture-scoped, and service-role-only', () => {
   assert.match(migration, /security invoker/i);
@@ -18,16 +50,11 @@ test('JFL reset RPC is invoker-rights, fixture-scoped, and service-role-only', (
 
 test('hosted preflight checks exact live SHA before reset and never exposes the key in errors', async () => {
   const calls = [];
-  const fetchImpl = async (url, options = {}) => {
-    calls.push({ url, options });
-    if (String(url).endsWith('/health/environment')) {
-      return { ok: true, json: async () => ({ environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: 'sha' }) };
-    }
-    return { ok: true, json: async () => ([{ team_match_id: fixtureId, reset_lineups: 1 }]) };
-  };
-  const result = await resetJflTwoCaptainFixture({ fetchImpl, serviceRoleKey: 'test-secret', expectedSha: 'sha' });
+  const fetchImpl = fixtureFetch(calls);
+  const result = await resetJflTwoCaptainFixture({ fetchImpl, serviceRoleKey: 'test-secret', expectedSha: 'sha', now: '2026-10-03T00:00:00Z' });
   assert.equal(result.resetLineups, 1);
-  assert.equal(calls.length, 3);
+  assert.equal(result.scheduledOn, '2026-10-10');
+  assert.equal(calls.length, 7);
   assert.match(calls[1].url, /oqkkvqkerusepyokzbmt\.supabase\.co\/rest\/v1\/rpc\/reset_two_captain_qa$/);
   assert.equal(calls[1].options.headers['content-profile'], 'jfl');
 
@@ -35,4 +62,59 @@ test('hosted preflight checks exact live SHA before reset and never exposes the 
     resetJflTwoCaptainFixture({ fetchImpl: async () => ({ ok: false, status: 403 }), serviceRoleKey: 'test-secret', expectedSha: 'sha' }),
     (error) => !error.message.includes('test-secret'),
   );
+});
+
+test('fixture date uses UTC calendar arithmetic across midnight, year, leap day and DST', () => {
+  for (const [clock, expected] of [
+    ['2026-12-28T23:59:59-08:00', '2027-01-05'],
+    ['2028-02-25T00:00:00Z', '2028-03-03'],
+    ['2026-03-08T01:59:59-08:00', '2026-03-15'],
+    ['2026-11-01T01:59:59-07:00', '2026-11-08'],
+    ['2026-10-03T00:00:00Z', '2026-10-10'],
+    ['2026-10-03T23:59:59Z', '2026-10-10'],
+  ]) assert.equal(upcomingFixtureDate(clock), expected);
+  assert.throws(() => upcomingFixtureDate('invalid'), /valid fixture clock/);
+});
+
+test('date refresh fails closed before calendar writes on wrong purpose or missing round', async () => {
+  for (const [path, rows] of [
+    ['/rest/v1/seasons', [{ id: seasonId, purpose: 'league' }]],
+    ['/rest/v1/seasons', [{ id: 'other', purpose: 'qa' }]],
+    ['/rest/v1/rounds', []],
+    ['/rest/v1/rounds', [{ id: roundId, season_id: 'other' }]],
+  ]) {
+    const calls = [];
+    await assert.rejects(resetJflTwoCaptainFixture({
+      fetchImpl: fixtureFetch(calls, { [path]: () => Response.json(rows) }),
+      serviceRoleKey: 'test-secret', expectedSha: 'sha',
+    }), /fixed JFL QA (?:season|round) is required/);
+    assert.ok(calls.every(({ options }) => options.method !== 'PATCH'));
+  }
+});
+
+test('reset rejects a date write whose persisted value differs', async () => {
+  let reads = 0;
+  const calls = [];
+  await assert.rejects(resetJflTwoCaptainFixture({
+    fetchImpl: fixtureFetch(calls, {
+      '/rest/v1/rounds': (_url, options) => {
+        if (options.method !== 'PATCH') reads += 1;
+        return Response.json([{ id: roundId, season_id: seasonId,
+          scheduled_on: options.method === 'PATCH' ? '2026-10-10' : '2026-10-09' }]);
+      },
+    }), serviceRoleKey: 'test-secret', expectedSha: 'sha', now: '2026-10-03T00:00:00Z',
+  }), /date did not persist/);
+  assert.equal(reads, 2);
+});
+
+test('same-day trusted resets replay safely with the same date and bounded mutations', async () => {
+  const calls = [];
+  const fetchImpl = fixtureFetch(calls);
+  for (const now of ['2026-10-03T00:00:00Z', '2026-10-03T23:59:59Z']) {
+    const result = await resetJflTwoCaptainFixture({ fetchImpl, serviceRoleKey: 'test-secret', expectedSha: 'sha', now });
+    assert.equal(result.scheduledOn, '2026-10-10');
+  }
+  assert.equal(calls.filter(({ options }) => options.method === 'PATCH').length, 2);
+  assert.ok(calls.filter(({ options }) => options.method === 'PATCH').every(({ options }) =>
+    options.body === '{"scheduled_on":"2026-10-10"}'));
 });

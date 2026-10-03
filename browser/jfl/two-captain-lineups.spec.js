@@ -21,9 +21,11 @@ const fixture = {
 };
 
 async function setQaAvailability(page, value) {
+  const scheduledOn = process.env.PLAYWRIGHT_FIXTURE_DATE;
+  expect(scheduledOn, 'Use the date read back by the trusted fixture reset').toMatch(/^\d{4}-\d{2}-\d{2}$/);
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await page.goto('/availability');
-    const card = page.locator(`[data-group-key^="${fixture.seasonId}|"]`);
+    const card = page.locator(`[data-group-key="${fixture.seasonId}|${scheduledOn}"]`);
     const button = card.locator(`[data-value="${value}"]`);
     await expect.poll(async () =>
       (await page.locator('[data-status]').getAttribute('data-tone') === 'ok'
@@ -40,6 +42,7 @@ async function setQaAvailability(page, value) {
         && new URL(result.url()).pathname === `/api/seasons/${fixture.seasonId}/availability/me`),
       button.click(),
     ]);
+    expect(response.request().postDataJSON()).toEqual({ date: scheduledOn, status: value });
     if (response.status() === 429) {
       await expect(button).toBeEnabled();
       const seconds = Number(response.headers()['retry-after']);
@@ -50,7 +53,11 @@ async function setQaAvailability(page, value) {
     await expect(card).toHaveAttribute('data-state', value);
     await expect(button).toBeEnabled();
     await page.waitForTimeout(12_000);
+    const savedRead = page.waitForResponse((result) => result.request().method() === 'GET'
+      && new URL(result.url()).pathname === `/api/seasons/${fixture.seasonId}/availability/me`
+      && new URL(result.url()).searchParams.get('date') === scheduledOn);
     await page.reload();
+    expect((await savedRead).status()).toBe(200);
     await expect(button).toBeEnabled();
     await expect(card).toHaveAttribute('data-state', value);
     return;

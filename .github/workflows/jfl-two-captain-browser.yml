@@ -16,6 +16,8 @@ jobs:
     if: github.repository == 'Fremont-Derby/fremontderby' && github.ref == 'refs/heads/fremontderby-jfl' && github.actor == 'subiki'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      scheduled_on: ${{ steps.prepare.outputs.scheduled_on }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +31,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git ls-remote origin refs/heads/fremontderby-jfl | cut -f1)" = "$GITHUB_SHA"
       - name: Wait for exact deployed JFL SHA, then reset the fixed QA fixture
+        id: prepare
         env:
           STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/reset-jfl-two-captain.mjs
@@ -42,6 +45,7 @@ jobs:
     env:
       PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
       PLAYWRIGHT_EXPECTED_SHA: ${{ github.sha }}
+      PLAYWRIGHT_FIXTURE_DATE: ${{ needs.reset-fixture.outputs.scheduled_on }}
       PLAYWRIGHT_BROWSERS_PATH: C:\actions-runner\playwright-browsers
     defaults:
       run:
