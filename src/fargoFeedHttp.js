@@ -65,7 +65,7 @@ async function storeFargoEvidence(env, matches, fetchImpl) {
   if (!base || !key) return { ok: false, reason: 'no database' };
   const publicHeaders = { ...headers(key), 'accept-profile': 'public', 'content-profile': 'public', prefer: 'resolution=merge-duplicates,return=minimal' };
   let wrote = 0;
-  for (const match of matches) {
+  for (const match of matches.slice(0, 5)) {
     const record = {
       source: 'other',
       external_event_id: `fargo-report:${match.playerMatchId}`,
@@ -122,7 +122,12 @@ export async function handleFargoFeedRequest(request, env = {}, { fetch: fetchIm
     return Response.json({ error: 'Method not allowed' }, { status: 405, headers: { 'cache-control': 'no-store' } });
   }
   const items = matches || await loadFinalizedMatches(env, fetchImpl);
-  const store = matches ? { ok: false, reason: 'not stored' } : await storeFargoReports(env, items, fetchImpl);
+  let store = { ok: false, reason: 'not stored' };
+  try {
+    store = matches ? store : await storeFargoReports(env, items, fetchImpl);
+  } catch {
+    store = { ok: false, reason: 'report table unavailable' };
+  }
   const body = toFargoFeed(items);
   body.reportStore = store?.ok ? 'ready' : 'unavailable';
   return Response.json(body, {
