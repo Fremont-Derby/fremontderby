@@ -36,7 +36,7 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
         headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json', 'content-profile': 'public', 'accept-profile': 'public', prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({ source: 'other', external_event_id: `fargo-id:${playerId}`, name: 'Fargo id', provenance: { kind: 'fargo-id', playerId, fargoId } }),
       });
-      saved = savedId.ok || evidence.ok ? 'Fargo id saved.' : 'Fargo id was not saved.';
+      saved = savedId.ok || evidence.ok ? `Fargo id saved for ${playerId}.` : `Fargo id was not saved for ${playerId}.`;
     }
     if (challongeUrl) saved = saved || 'Challonge link noted. A live send still needs a Challonge key.';
   }
