@@ -148,6 +148,8 @@ export function createDualScoringHttpHandlers({
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const body = await readJsonBody(request);
         const scoringTeamId = scoringTeamFromRequest(request, body);
+        const { ensureDruActorCanScoreTeam } = await import('./druLineupBypass.js');
+        await ensureDruActorCanScoreTeam(env, { actorUserId: actor.id, teamId: scoringTeamId }, fetchImpl);
         const openingDiscipline = body.openingDiscipline ?? body.opening_discipline;
         if (openingDiscipline) {
           const setup = await setPlayerMatchOpeningDisciplineCommand({

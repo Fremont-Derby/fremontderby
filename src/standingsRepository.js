@@ -137,7 +137,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         order: 'scheduled_on.asc,round_number.asc',
       });
       const matchParams = new URLSearchParams({
-        select: 'id,round_id,team_a_id,team_b_id,table_number,status,makeup_on,makeup_location,makeup_status,makeup_note,makeup_proposed_by_team_id',
+        select: 'id,round_id,team_a_id,team_b_id,table_number,status,winner_team_id,makeup_on,makeup_location,makeup_status,makeup_note,makeup_proposed_by_team_id',
         season_id: `eq.${seasonId}`,
         order: 'round_id.asc,table_number.asc',
       });
@@ -146,7 +146,11 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         season_id: `eq.${seasonId}`,
         order: 'name.asc',
       });
-      const [roundRows, matchRows, teamRows] = await Promise.all([
+      const playerParams = new URLSearchParams({
+        select: 'team_match_id,winner_side,status',
+        season_id: `eq.${seasonId}`,
+      });
+      const [roundRows, matchRows, teamRows, playerRows] = await Promise.all([
         requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, {
           method: 'GET',
           headers,
@@ -159,7 +163,18 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           method: 'GET',
           headers,
         }),
+        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/player_matches?${playerParams}`, {
+          method: 'GET',
+          headers,
+        }).catch(() => []),
       ]);
+      const winnerByMatch = new Map();
+      for (const row of Array.isArray(playerRows) ? playerRows : []) {
+        if (!['finalized', 'corrected'].includes(row.status) || !['A', 'B'].includes(row.winner_side)) continue;
+        const tally = winnerByMatch.get(row.team_match_id) || { A: 0, B: 0 };
+        tally[row.winner_side] += 1;
+        winnerByMatch.set(row.team_match_id, tally);
+      }
       const teamsById = new Map(
         (Array.isArray(teamRows) ? teamRows : []).map((team) => [team.id, team.name]),
       );
@@ -174,11 +189,19 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           teamBName: teamsById.get(match.team_b_id) ?? 'Team',
           tableNumber: match.table_number,
           status: match.status,
+          winnerTeamId: match.winner_team_id ?? ((winnerByMatch.get(match.id)?.A || 0) === (winnerByMatch.get(match.id)?.B || 0) ? null : ((winnerByMatch.get(match.id)?.A || 0) > (winnerByMatch.get(match.id)?.B || 0) ? match.team_a_id : match.team_b_id)),
+          winnerTeamName: teamsById.get(match.winner_team_id) ?? teamsById.get((winnerByMatch.get(match.id)?.A || 0) === (winnerByMatch.get(match.id)?.B || 0) ? null : ((winnerByMatch.get(match.id)?.A || 0) > (winnerByMatch.get(match.id)?.B || 0) ? match.team_a_id : match.team_b_id)) ?? null,
           makeupOn: match.makeup_on ?? null,
           makeupLocation: match.makeup_location ?? null,
           makeupStatus: match.makeup_status ?? null,
           makeupNote: match.makeup_note ?? null,
           makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
+          winnerTeamId: match.winner_team_id ?? null,
+          winnerName: match.winner_team_id === match.team_a_id
+            ? teamsById.get(match.team_a_id) ?? null
+            : match.winner_team_id === match.team_b_id
+              ? teamsById.get(match.team_b_id) ?? null
+              : null,
         });
         matchesByRoundId.set(match.round_id, matches);
       }

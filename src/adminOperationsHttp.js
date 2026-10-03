@@ -262,7 +262,8 @@ export async function handleAdminOperationsRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createAdminOperationsRepository(env, { fetch: fetchImpl });
-    const raw = await repository.getOverview({ actorUserId: actor.id });
+    const seasonId = new URL(request.url).searchParams.get('season');
+    const raw = await repository.getOverview({ actorUserId: actor.id, seasonId });
     return Response.json(
       { overview: buildAdminOperationsOverview(raw, environmentReadiness(env)) },
       { headers: { 'cache-control': 'no-store' } },

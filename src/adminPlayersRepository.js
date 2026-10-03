@@ -1,4 +1,4 @@
-import { withSupabaseSchema } from './supabaseSchema.js';
+import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
@@ -142,6 +142,33 @@ export function createAdminPlayersRepository(
         competitionEligible: Boolean(row?.competition_eligible ?? eligible),
         ineligibilityReason: row?.ineligibility_reason ?? null,
       };
+    },
+
+
+    async setPaymentStatus({ actorUserId, playerId, seasonId, status }) {
+      if (!actorUserId) throw new Error('Sign in from Profile to use league admin tools.');
+      const headers = {
+        apikey: serviceRoleKey,
+        authorization: `Bearer ${serviceRoleKey}`,
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'content-profile': privatePostgrestProfile(env?.ENVIRONMENT),
+        'accept-profile': privatePostgrestProfile(env?.ENVIRONMENT),
+        prefer: 'resolution=merge-duplicates,return=minimal',
+      };
+      await requestJson(fetchImpl, `${baseUrl}/rest/v1/payment_status?on_conflict=season_id,player_id`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify([{
+          season_id: seasonId,
+          player_id: playerId,
+          status,
+          amount_due_cents: 0,
+          amount_paid_cents: 0,
+          updated_at: new Date().toISOString(),
+        }]),
+      });
+      return { playerId, seasonId, paymentStatus: status };
     },
 
     async setRosterMembership({

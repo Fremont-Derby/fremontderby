@@ -163,7 +163,7 @@ export function createAdminOperationsRepository(
   }
 
   return {
-    async getOverview({ actorUserId }) {
+    async getOverview({ actorUserId, seasonId }) {
       // Reuse the existing trusted admin-only RPC as the authorization boundary
       // before any service-role aggregate is returned to the caller.
       await rpc('list_chat_message_reports', {
@@ -171,7 +171,12 @@ export function createAdminOperationsRepository(
         result_limit: 1,
       });
 
-      const activeSeasons = await table(
+      const requestedSeason = seasonId
+        ? await table('seasons', `select=id,name,status,updated_at&id=eq.${encodeURIComponent(seasonId)}&limit=1`)
+        : { rows: [] };
+      const activeSeasons = requestedSeason.rows.length
+        ? requestedSeason
+        : await table(
         'seasons',
         'select=id,name,status,updated_at&status=eq.active&order=updated_at.desc&limit=1',
       );
