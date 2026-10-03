@@ -42,6 +42,9 @@ After the pulse, resume normal impact-based prioritization.
 
 - DRU identifies the agent lane, not permanent ownership of a product area, file set, or branch.
 - Claim exactly one primary implementation card before editing and record DRU as the implementation owner.
+- Treat peer-pulse and backlog discovery as read-only unless DRU explicitly accepts one specific card or handoff. Never relabel a batch of JFL, unclaimed, human-required, planning, or review cards as `agent:dru` merely because DRU inspected them, could work them later, or wants them in a queue.
+- Before changing an existing card's `agent:*` or `stage:*` label, verify the current accepted owner/stage from the issue, handoff, PR/branch, and recent timeline. Do not run broad owner/stage normalization sweeps from title prefixes, area, age, priority, or lane relevance.
+- When the product owner assigns DRU a backlog-cleanup or reconciliation card, that ownership applies only to the cleanup card itself. It does not make DRU the implementation owner of the cards being audited; preserve or restore each audited card's independently supported owner.
 - Start normal work from current `main` on a focused `dru/issue-<number>-<short-slug>` branch.
 - Treat `fremontderby-dru` as DRU's permanent deployment lane, not as a general implementation branch or shared mutable workspace.
 - Never check out, commit to, push to, merge into, rebase, reset, rename, delete, update, or otherwise mutate a `jfl/*` branch or `fremontderby-jfl`. No handoff creates an exception.
@@ -49,6 +52,30 @@ After the pulse, resume normal impact-based prioritization.
 - Declare important files and high-collision surfaces before implementation. Coordinate rather than race when JFL owns an overlap.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
+
+## Learning journal and coaching loop
+
+Issue #2883 is DRU's canonical mentoring journal. For the next several meaningful DRU cycles, use it to make the execution contract visible to DRU, JFL, and the product owner without publishing hidden chain-of-thought.
+
+At the start of a meaningful work session, post one concise `### Session contract` comment on #2883 containing:
+- the human direction, quoted or faithfully summarized;
+- DRU's interpretation of the desired outcome;
+- one current objective;
+- explicit non-goals and lane boundaries;
+- concrete starting evidence;
+- one relevant recent JFL example and the method being copied when applicable;
+- the first meaningful action;
+- conditions that would cause DRU to stop, ask, or change course.
+
+During work, update #2883 only when evidence or direction materially changes the plan. Use a short `### Course change` note that says what changed, the evidence, the new next action, and whether help is wanted from DRU, JFL, or the product owner.
+
+At the end of the session, add `### Session result` with what actually changed, what is proven, what remains unproven, cards/PRs touched, the lesson learned, the exact next action, and one coaching question if useful.
+
+Urgency words such as **now**, **go**, **keep going**, **finish**, or **fast** change scheduling priority only. They never relax scope, ownership, safety, lifecycle, CI, or verification requirements.
+
+Before opening another concurrent implementation PR or broadening the work, ask: **“Am I advancing the product, or am I feeding the pipeline?”** If the answer is unclear, return to one primary card and the real user path.
+
+Treat comments from JFL or the product owner on #2883 as coaching evidence, not automatic implementation authority. A correction should cause DRU to restate the changed execution contract before continuing. Reusable practices still follow the normal agent-practice promotion process.
 
 ## Learn from JFL without creating drift
 
