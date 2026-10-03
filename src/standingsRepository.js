@@ -148,7 +148,6 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
       });
       const playerParams = new URLSearchParams({
         select: 'team_match_id,winner_side,status',
-        season_id: `eq.${seasonId}`,
       });
       const [roundRows, matchRows, teamRows, playerRows] = await Promise.all([
         requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, {
@@ -196,8 +195,6 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           makeupStatus: match.makeup_status ?? null,
           makeupNote: match.makeup_note ?? null,
           makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
-          racksA: winnerByMatch.get(match.id)?.A || 0,
-          racksB: winnerByMatch.get(match.id)?.B || 0,
           racksA: winnerByMatch.get(match.id)?.A || 0,
           racksB: winnerByMatch.get(match.id)?.B || 0,
           winnerTeamId: match.winner_team_id ?? null,
