@@ -192,6 +192,8 @@ test('standings repository returns a sanitized human-readable season schedule', 
       makeupStatus: null,
       makeupNote: null,
       makeupProposedByTeamId: null,
+      winnerTeamId: null,
+      winnerName: null,
     }],
   }]);
   assert.match(calls[0].url, /\/rest\/v1\/rounds\?/);
