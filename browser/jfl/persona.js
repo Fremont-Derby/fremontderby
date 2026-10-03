@@ -5,14 +5,22 @@ import { expect } from '@playwright/test';
 export async function assumePersona(page, label) {
   let throttle = null;
   let retries = 0;
+  let navigationEpoch = 0;
+  let switchNavigation = null;
+  const observeNavigation = (frame) => {
+    if (frame === page.mainFrame()) navigationEpoch += 1;
+  };
   const observe = (response) => {
     const path = new URL(response.url()).pathname;
+    if (path === '/api/test-persona' && response.request().method() === 'POST'
+      && response.status() >= 200 && response.status() < 300) switchNavigation = navigationEpoch;
     if (response.status() === 429 && (path === '/api/test-persona' || path === '/profile')) {
       const seconds = Number(response.headers()['retry-after']);
       throttle = Number.isFinite(seconds) && seconds > 0 ? seconds : 15;
     }
   };
   page.on('response', observe);
+  page.on('framenavigated', observeNavigation);
   try {
     await page.goto('/profile');
     let didSignIn = false;
@@ -38,13 +46,16 @@ export async function assumePersona(page, label) {
         // An unrelated prior profile read may have throttled while this control
         // loaded successfully. Only a new switch failure triggers its retry.
         throttle = null;
+        switchNavigation = null;
         await selector.selectOption({ label });
         let switched = false;
         await expect.poll(async () => {
-          switched = await banner.isVisible() && (await banner.textContent()).includes(label);
+          switched = switchNavigation !== null && navigationEpoch > switchNavigation
+            && await banner.isVisible() && (await banner.textContent()).includes(label);
           return switched || throttle !== null;
         }).toBe(true);
         if (switched) {
+          await page.waitForLoadState('domcontentloaded');
           await expect(banner).toContainText(label);
           return { retries };
         }
@@ -62,5 +73,6 @@ export async function assumePersona(page, label) {
     throw new Error('Persona setup remained throttled after bounded Profile retries');
   } finally {
     page.off('response', observe);
+    page.off('framenavigated', observeNavigation);
   }
 }
