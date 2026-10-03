@@ -1,7 +1,7 @@
 import { availabilityChoiceLabel } from './availabilityChoice.js';
 export function renderAvailabilityPage() {
   const choice = availabilityChoiceLabel({ date: '2026-10-03', round: 'Round 1', role: 'player', status: 'in' });
-  return `Checked in as in for 2026-10-03\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
