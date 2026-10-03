@@ -163,7 +163,7 @@ async function chooseAndSubmit(page, players) {
   throw new Error('Lineup did not submit after bounded UI retries');
 }
 
-async function openFirstRaceFromLineup(page, teamId, requestedRace = null) {
+async function openFirstRaceFromLineup(page, teamId, requestedRace = null, expectedCount = 3) {
   if (await page.locator('[data-score-link]').isVisible()) await page.locator('[data-score-link]').click();
   else await page.goto('/scorecard');
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -196,9 +196,15 @@ async function openFirstRaceFromLineup(page, teamId, requestedRace = null) {
   await page.locator('[data-matchup]').selectOption(fixture.teamMatchId);
   const races = await page.locator('[data-race] option').evaluateAll((options) =>
     options.map((option) => ({ id: option.value, label: option.textContent })));
-  expect(races).toHaveLength(3);
-  expect(new Set(races.map((race) => race.id)).size).toBe(3);
-  expect(races.some((race) => race.label.includes('TEST Admin'))).toBe(true);
+  expect(races).toHaveLength(expectedCount);
+  expect(new Set(races.map((race) => race.id)).size).toBe(expectedCount);
+  if (expectedCount === 3) expect(races.some((race) => race.label.includes('TEST Admin'))).toBe(true);
+  const links = new Map();
+  for (const race of races) {
+    await page.locator('[data-race]').selectOption(race.id);
+    links.set(race.id, await page.locator('[data-list] a.match').getAttribute('href'));
+  }
+  await page.locator('[data-race]').selectOption(requestedRace || races[0].id);
   if (requestedRace) {
     expect(races.map((race) => race.id)).toContain(requestedRace);
     await page.locator('[data-race]').selectOption(requestedRace);
@@ -210,7 +216,7 @@ async function openFirstRaceFromLineup(page, teamId, requestedRace = null) {
   expect(new URL(page.url()).searchParams.get('team')).toBe(teamId);
   expect(await page.evaluate(() => window.fdRackLedgerAdapter.scoringTeamId())).toBe(teamId);
   expect(await page.evaluate(() => window.fdRackLedgerState.ownSide)).toBe(teamId === fixture.teamAId ? 'A' : 'B');
-  return { matchId, races: races.map((race) => race.id) };
+  return { matchId, races: races.map((race) => race.id), links };
 }
 
 async function waitForScorecardReady(page) {
@@ -360,8 +366,8 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainA.locator('[data-opponent-body] .opponent-row').nth(2)).toContainText('TEST Admin');
     await expect(captainA.locator('[data-score-link]')).toBeVisible();
 
-    const { matchId: matchA, races } = await openFirstRaceFromLineup(captainA, fixture.teamAId);
-    const { matchId: matchB, races: opposingRaces } = await openFirstRaceFromLineup(captainB, fixture.teamBId);
+    const { matchId: matchA, races, links: linksA } = await openFirstRaceFromLineup(captainA, fixture.teamAId);
+    const { matchId: matchB, races: opposingRaces, links: linksB } = await openFirstRaceFromLineup(captainB, fixture.teamBId);
     expect(matchB).toBe(matchA);
     expect([...opposingRaces].sort()).toEqual([...races].sort());
     await expect(captainA.locator('[data-finalize]')).toBeDisabled();
@@ -408,8 +414,8 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainB.locator('[data-score-a]')).toHaveText(String(targetA));
     const completed = new Map([[matchA, targetA]]);
     for (const race of races.filter((id) => id !== matchA)) {
-      await openFirstRaceFromLineup(captainA, fixture.teamAId, race);
-      await openFirstRaceFromLineup(captainB, fixture.teamBId, race);
+      await openFirstRaceFromLineup(captainA, fixture.teamAId, race, 3 - completed.size);
+      await openFirstRaceFromLineup(captainB, fixture.teamBId, race, 3 - completed.size);
       await expect(captainA.locator('[data-race-status]')).not.toHaveText('finalized');
       await expect(captainB.locator('[data-finalize]')).toBeDisabled();
       const target = Number(await captainA.locator('[data-target-a]').textContent());
@@ -434,8 +440,10 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     }
     expect(completed.size).toBe(3);
     for (const [race, target] of completed) {
-      for (const [page, teamId] of [[captainA, fixture.teamAId], [captainB, fixture.teamBId]]) {
-        await openFirstRaceFromLineup(page, teamId, race);
+      for (const [page, links] of [[captainA, linksA], [captainB, linksB]]) {
+        // Preserve the real UI-issued link: finalized races leave the active Score picker.
+        await page.goto(links.get(race));
+        await waitForScorecardReady(page);
         await expect(page.locator('[data-race-status]')).toHaveText('finalized');
         await expect(page.locator('[data-score-a]')).toHaveText(String(target));
         await expect(page.locator('[data-score-b]')).toHaveText('0');
