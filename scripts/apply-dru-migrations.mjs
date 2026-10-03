@@ -61,7 +61,7 @@ for (const file of plan.files) {
       applied = true;
       break;
     }
-    if (result.errorText && !/Network is unreachable|could not translate|timeout|Connection refused/i.test(result.errorText)) {
+    if (result.errorText && !/Network is unreachable|could not translate|timeout|Connection refused|tenant\/user|ENOTFOUND/i.test(result.errorText)) {
       process.stderr.write(result.errorText);
       console.error('Migration apply failed closed.');
       process.exit(1);
