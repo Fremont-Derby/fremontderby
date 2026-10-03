@@ -1,5 +1,5 @@
 function matchTime(match) {
-  const raw = match?.starts_at || match?.startAt || match?.match_date || match?.date || match?.scheduled_at;
+  const raw = match?.starts_at || match?.startAt || match?.match_date || match?.date || match?.scheduled_at || match?.scheduled_on;
   if (!raw) return null;
   const value = Date.parse(raw);
   return Number.isFinite(value) ? value : null;
