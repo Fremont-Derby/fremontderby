@@ -2,7 +2,7 @@ import { designSystemStyles } from './designSystem.js';
 import { livePageRefreshScript } from './livePageRefresh.js';
 
 export function renderNotificationsPage() {
-  return `Inbox: newest message first\n<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
