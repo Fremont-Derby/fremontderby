@@ -12,7 +12,7 @@ function browserConfig(env = {}) {
 export function renderProfilePage(env = {}) {
   const mission = personaMissionLine({ name: 'find my next match' });
   const chrome = missionChromeLine({ task: 'find the match', done: 'the match is named', abort: 'stop' });
-  return `find my next match is complete\nTeam Owls: you are player\nEligible: payment set and availability set\nInbox: newest message first\nMenu closes outside the dock. Dock stays lit\nCampaign: player mission\nPrivacy: phone is stored as a label, not a value\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
