@@ -33,7 +33,12 @@ export async function loadFinalizedMatches(env, fetchImpl) {
   ]);
   const house = await loadHouseSettings(env, fetchImpl);
   const name = Object.fromEntries(players.map((player) => [player.id, player.display_name]));
-  const evidence = await readJson(await fetchImpl(`${base}/rest/v1/external_tournament_events?source=eq.other&external_event_id=like.fargo-id:*&select=provenance&limit=200`, { headers: { ...headers(key), 'accept-profile': 'public' } }));
+  let evidence = [];
+  try {
+    evidence = await readJson(await fetchImpl(`${base}/rest/v1/external_tournament_events?source=eq.other&external_event_id=like.fargo-id:*&select=provenance&limit=200`, { headers: { ...headers(key), 'accept-profile': 'public' } }));
+  } catch {
+    evidence = [];
+  }
   const fargo = Object.fromEntries(identities.map((row) => [row.player_id, row.external_id]));
   for (const row of evidence) {
     if (row.provenance?.playerId && row.provenance?.fargoId) fargo[row.provenance.playerId] = row.provenance.fargoId;
