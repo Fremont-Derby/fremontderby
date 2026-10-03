@@ -13,9 +13,10 @@ Before claiming or continuing work, read in this order:
 
 1. `AGENTS.md` from current `main`;
 2. `docs/AGENTIC_DEVELOPMENT_PROGRAM.md` from current `main`;
-3. this JFL guide;
-4. `.github/agents/dru.agent.md`;
-5. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
+3. `docs/AGENTIC_PROGRAM_STATUS.md` from current `main`, reconciled against live GitHub/hosted evidence;
+4. this JFL guide;
+5. `.github/agents/dru.agent.md`;
+6. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
 
 If this guide or the DRU guide conflicts with `AGENTS.md`, follow `AGENTS.md` and open or update a governance card describing the conflict.
 
