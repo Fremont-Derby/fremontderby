@@ -33,6 +33,13 @@ export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = 
   return saved.ok ? ids.length : 0;
 }
 
+export function playoffRacesOpened(slotRows, races, teamAId, teamBId) {
+  const sides = new Set((slotRows || []).map((row) => row.team_id));
+  if (!sides.has(teamAId) || !sides.has(teamBId)) return { ok: true, text: 'Waiting for the other lineup.' };
+  if (Array.isArray(races) && races.length) return { ok: true, text: 'Playoff races are open.' };
+  return { ok: false, text: 'Playoff races were not created.' };
+}
+
 export function duplicateLineupIds(playerIds) {
   const ids = (playerIds || []).filter(Boolean);
   return ids.length > 0 && new Set(ids).size !== ids.length;
@@ -182,5 +189,9 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
       if (!saved.ok) throw new Error(`Playoff races were not created: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
     }
   }
-  return { lineupId: lineup.id, teamMatchId: match.id, slots: chosen.length };
+  const opened = await fetchWithSchema(`${conn.base}/rest/v1/player_matches?team_match_id=eq.${match.id}&select=id`, { headers });
+  const races = opened.ok ? await opened.json() : [];
+  const openedGate = playoffRacesOpened(slotRows, races, match.team_a_id, match.team_b_id);
+  if (!openedGate.ok) throw new Error(openedGate.text);
+  return { lineupId: lineup.id, teamMatchId: match.id, slots: chosen.length, races: Array.isArray(races) ? races.length : 0 };
 }
