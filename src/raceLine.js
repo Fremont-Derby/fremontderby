@@ -1,5 +1,4 @@
-export function raceLine(races) {
-  const n = Number(races) || 0;
-  if (n < 3 || n > 9) return 'Race not set';
-  return `Race to ${n}`;
+export function raceLine(to) {
+  const n = Number(to) || 0;
+  return n ? `Race to ${n}` : 'Race not set';
 }
