@@ -87,3 +87,7 @@ export function assertNotificationWorkerGrant(sql) {
   }
   return value;
 }
+
+export function assertNotificationContract(sql) {
+  return assertNotificationWorkerGrant(sql);
+}
