@@ -495,8 +495,10 @@ export default {
     if (adminStartPlayoffsMatch) {
       if (request.method !== 'POST') return methodNotAllowed();
       if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-        const { closeOpenDruPracticeMatches } = await import('./druTeamResult.js');
-        await closeOpenDruPracticeMatches(env, decodeURIComponent(adminStartPlayoffsMatch[1]));
+        const { closeOpenDruPracticeMatches, writeDruPracticeResults } = await import('./druTeamResult.js');
+        const seasonId = decodeURIComponent(adminStartPlayoffsMatch[1]);
+        await writeDruPracticeResults(env, seasonId);
+        await closeOpenDruPracticeMatches(env, seasonId);
       }
       return playoffHttpHandlers.start(
         request,
