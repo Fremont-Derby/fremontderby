@@ -37,3 +37,9 @@ test("a profile can name a missing phone", () => {
   assert.match(src, /function phoneStatusLabel/);
   assert.match(src, /Phone is missing/);
 });
+
+test("a team can name a missing captain", () => {
+  const src = readFileSync(new URL("../src/captainStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function captainStatusLabel/);
+  assert.match(src, /Captain is missing/);
+});
