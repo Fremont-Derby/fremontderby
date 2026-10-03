@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertNotificationContract } from '../src/druNotificationAccess.js';
+import { assertNotificationWorkerGrant } from '../src/druNotificationAccess.js';
 
 test('DRU notification reads stay on the Worker', () => {
   const sql = readFileSync(new URL('../supabase/migrations/20261003043000_dru_notification_rls.sql', import.meta.url), 'utf8');
@@ -18,6 +18,6 @@ test('both DRU notification migrations meet the Worker contract', () => {
     '../supabase/migrations/20261003043000_dru_notification_rls.sql',
     '../supabase/migrations/20261003113000_dru_notification_no_browser_policy.sql',
   ]) {
-    assert.equal(typeof assertNotificationContract(readFileSync(new URL(file, import.meta.url), 'utf8')), 'string');
+    assert.equal(typeof assertNotificationWorkerGrant(readFileSync(new URL(file, import.meta.url), 'utf8')), 'string');
   }
 });
