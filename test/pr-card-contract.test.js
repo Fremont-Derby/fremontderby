@@ -371,25 +371,25 @@ test('blocks new DRU-to-Gamma promotion during the JFL completion phase', () => 
   assert.deepEqual(validateCurrentProgramTarget({
     body: druBody,
     baseRef: 'fremontderby-gamma',
-    pullRequestNumber: 999999,
+    enforceProgramContract: false,
   }), []);
 
   assert.deepEqual(validateCurrentProgramTarget({
     body: druBody,
     baseRef: 'fremontderby-jfl',
-    pullRequestNumber: 1000000,
+    enforceProgramContract: true,
   }), []);
 
   const blocked = validateCurrentProgramTarget({
     body: druBody,
     baseRef: 'fremontderby-gamma',
-    pullRequestNumber: 1000000,
+    enforceProgramContract: true,
   });
   assert.ok(blocked.some((error) => error.includes('Gamma is dormant')));
 
   assert.deepEqual(validateCurrentProgramTarget({
     body: validBody({ 'Owner lane / agent': 'JFL' }),
     baseRef: 'fremontderby-gamma',
-    pullRequestNumber: 1000000,
+    enforceProgramContract: true,
   }), []);
 });
