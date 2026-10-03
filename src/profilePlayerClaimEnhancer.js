@@ -24,7 +24,7 @@ const script = `<script data-player-claim-script>
   const status=root.querySelector('[data-player-claim-status]');
   const results=root.querySelector('[data-player-claim-results]');
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
-  async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
+  function safeServiceMessage(status,text){const raw=String(text||'');const html=/<!doctype|<html/i.test(raw);if(status===401||status===403)return 'Sign in again to continue.';if(status===429||html||raw.includes('1015'))return 'Profile is busy. Wait a moment and try again.';return 'Profile could not be loaded. Try again.'}async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:safeServiceMessage(response.status,text)}}}
   async function request(path,options={},retry=true){
     const accessToken=token();if(!accessToken)throw new Error('Sign in to claim a player.');
     const response=await fetch(path,{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json',...(options.headers||{})}});

@@ -300,7 +300,7 @@ export function renderProfilePage(env = {}) {
       try {
         return JSON.parse(textBody);
       } catch {
-        return { message: textBody };
+        return { error: (response.status === 401 || response.status === 403) ? 'Sign in again to continue.' : (/<!doctype|<html/i.test(textBody) || response.status === 429 || textBody.includes('1015') ? 'Profile is busy. Wait a moment and try again.' : 'Profile could not be loaded. Try again.') };
       }
     }
 
