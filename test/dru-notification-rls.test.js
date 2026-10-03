@@ -10,6 +10,7 @@ test('DRU notification reads stay on the Worker', () => {
   assert.match(sql, /grant select, insert, update on table dru\.user_notifications to service_role/);
   assert.doesNotMatch(sql, /grant select on table dru\.user_notifications to anon/);
   assert.match(sql, /dru_notifications_browser_deny/);
+  assert.match(sql, /with check \(false\)/);
 });
 
 test('both DRU notification migrations meet the Worker contract', () => {
