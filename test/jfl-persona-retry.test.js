@@ -6,11 +6,11 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../browser/jfl/persona.js', import.meta.url), 'utf8')
   .replace(/^import[^\n]+\n/, '').replace('export async function', 'async function');
 
-function harness(getStatuses, postStatuses = [200], retryAfter = '10', flapBanner = false, delayNavigation = false) {
+function harness(getStatuses, postStatuses = [200], retryAfter = '10', flapBanner = false, delayNavigation = false, initialBanner = '') {
   let observer;
   let navigationObserver;
   let control = false;
-  let banner = '';
+  let banner = initialBanner;
   const delays = [];
   let reloads = 0;
   let bannerChecks = 0;
@@ -118,6 +118,13 @@ test('persona authorization denial is not treated as throttling', async () => {
     assert.equal(state.reloads(), 1);
     assert.equal(state.cleaned(), true);
   }
+});
+
+test('an old matching persona banner cannot mask a denied switch', async () => {
+  const state = harness([200], [403], '10', false, false, 'Player A');
+  await assert.rejects(state.run(), /setup predicate failed/);
+  assert.deepEqual(state.delays, []);
+  assert.equal(state.cleaned(), true);
 });
 
 test('persona recovery refuses to shorten a cooldown beyond its bounded budget', async () => {
