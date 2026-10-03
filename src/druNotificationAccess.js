@@ -31,3 +31,19 @@ export function notificationRpcName(url) {
   if (!match) throw new Error('DRU notifications require a Worker RPC name.');
   return match[1];
 }
+
+export const ALLOWED_NOTIFICATION_RPCS = [
+  'list_my_notifications',
+  'mark_my_notification_read',
+  'mark_all_my_notifications_read',
+  'admin_broadcast_notification',
+  'create_user_notification',
+];
+
+export function assertAllowedNotificationRpc(url) {
+  const name = notificationRpcName(url);
+  if (!ALLOWED_NOTIFICATION_RPCS.includes(name)) {
+    throw new Error('DRU notifications do not allow that RPC.');
+  }
+  return name;
+}
