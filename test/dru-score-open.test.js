@@ -41,3 +41,11 @@ test('a DRU match save records the team winner without the score list', () => {
   const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.equal(page.includes('scoreDruTeamMatch'), true);
 });
+
+test('a captain disagreement is not blocked by the notice link', () => {
+  const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  const start = page.indexOf('handleTeamMatchDisputeRequest');
+  const block = page.slice(start, start + 1200);
+  assert.equal(block.includes('href: null'), true);
+  assert.equal(block.includes('The disagreement still counts'), true);
+});
