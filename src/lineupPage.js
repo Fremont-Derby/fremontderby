@@ -75,7 +75,7 @@ export function renderLineupPage() {
     async function loadPage(opts={}){await lineupController.loadPage(opts)}async function bootstrap(){showGate('Loading lineup…','Preparing your lineup workspace.');const body=await meApi('/api/me/teams');captainTeams=body.teamManagement?.captain_teams||[];
 if(requestedMatch){
   for(const team of captainTeams){
-    const hit=(team.lineupRounds||[]).find((r)=>String(r.teamMatchId||r.team_match_id||'')===String(requestedMatch));
+    const hit=(team.lineupRounds||[]).find((r)=>String(r.teamMatchId||r.team_match_id||'')===String(requestedMatch));if(!hit)setStatus('That match is not on this lineup list.','error');
     if(hit){
       localStorage.setItem('fd.lineupTeamId',team.teamId);
       localStorage.setItem('fd.lineupRoundId',hit.roundId||hit.round_id||'');
