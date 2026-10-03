@@ -1,4 +1,5 @@
 import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
+import { raceFinished } from './druCloseTable.js';
 
 function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
@@ -6,7 +7,7 @@ function druOnly(env) {
 
 export function teamWinnerId(match, playerMatches, forfeits = []) {
   if (!match?.team_a_id || !match?.team_b_id) return null;
-  const rows = (playerMatches || []).filter((row) => ['finalized', 'corrected'].includes(row.status) && ['A', 'B'].includes(row.winner_side));
+  const rows = (playerMatches || []).filter(raceFinished);
   if (!rows.length || rows.length !== (playerMatches || []).length) return null;
   let a = 0;
   let b = 0;
