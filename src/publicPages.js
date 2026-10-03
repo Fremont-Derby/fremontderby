@@ -34,7 +34,6 @@ function pageShell(title, body) {
 export function renderIntroPage() {
   return pageShell('Welcome', `
     <div class="eyebrow">Cash league · 8 teams · 12 weeks · flexible calendar</div>
-    <div data-e2e-deploy="835-gamma" class="e2e-deploy-marker" style="display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;padding:6px 12px;border-radius:999px;border:1px solid #7ec8a3;background:linear-gradient(90deg,#0f2a1c,#1a2818);color:#b8f0d0;font-size:.78rem;font-weight:800;letter-spacing:.04em">E2E gamma→main · #835</div>
     <h1>Fremont Derby</h1>
     <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
     <ul>
