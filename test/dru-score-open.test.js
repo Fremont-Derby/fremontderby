@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { finishRemainingLabel, mergeScorableMatches, openScoringLabel, raceInserts, scoreRowsForMatch } from '../src/druScoreOpen.js';
+import { finishRemainingLabel, mergeScorableMatches, openScoringLabel, raceInserts, raceResultPatch, scoreRowsForMatch } from '../src/druScoreOpen.js';
 
 test('a scheduled match can be opened for scoring without a captain login', () => {
   assert.equal(openScoringLabel(), 'Open this match for scoring');
@@ -22,4 +23,14 @@ test('opening a match writes a race for each paired roster player', () => {
   assert.equal(rows[0].player_a_id, 'a1');
   assert.equal(rows[1].player_b_id, 'b2');
   assert.equal(rows[0].status, 'scheduled');
+});
+
+test('a DRU race save records the winning side without the captain rack route', () => {
+  const patch = raceResultPatch({ player_a_id: 'home-player', player_b_id: 'away-player' }, 'B');
+  assert.equal(patch.winner_side, 'B');
+  assert.equal(patch.winner_player_id, 'away-player');
+  assert.equal(patch.status, 'finalized');
+  const page = readFileSync(new URL('../src/scorePickerPage.js', import.meta.url), 'utf8');
+  assert.match(page, /won/);
+  assert.match(page, /\/api\/dru\/player-matches\//);
 });
