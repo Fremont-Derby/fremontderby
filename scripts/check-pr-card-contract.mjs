@@ -149,8 +149,9 @@ export function validateCurrentProgramTarget({
   body = '',
   baseRef = '',
   pullRequestNumber = 0,
+  enforceProgramContract = Number(pullRequestNumber) >= DRU_PROGRAM_CONTRACT_MIN_PR,
 } = {}) {
-  if (Number(pullRequestNumber) < DRU_PROGRAM_CONTRACT_MIN_PR) return [];
+  if (!enforceProgramContract) return [];
 
   const owner = sectionContent(body, 'Owner lane / agent');
   if (/\bDRU\b/i.test(owner) && baseRef === 'fremontderby-gamma') {
