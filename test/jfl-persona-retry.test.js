@@ -6,12 +6,13 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../browser/jfl/persona.js', import.meta.url), 'utf8')
   .replace(/^import[^\n]+\n/, '').replace('export async function', 'async function');
 
-function harness(getStatuses, postStatuses = [200], retryAfter = '10') {
+function harness(getStatuses, postStatuses = [200], retryAfter = '10', flapBanner = false) {
   let observer;
   let control = false;
   let banner = '';
   const delays = [];
   let reloads = 0;
+  let bannerChecks = 0;
   const response = (status) => ({
     status: () => status,
     url: () => 'https://jfl.fremontderby.com/api/test-persona',
@@ -30,7 +31,8 @@ function harness(getStatuses, postStatuses = [200], retryAfter = '10') {
     waitForTimeout: async (duration) => { delays.push(duration); },
     locator: (selector) => ({
       isVisible: async () => selector === '[data-google-sign-in]' ? true
-        : selector === '[data-test-persona-select]' ? control : Boolean(banner),
+        : selector === '[data-test-persona-select]' ? control
+          : Boolean(banner) && (!flapBanner || ++bannerChecks % 2 === 1),
       click: async () => {},
       textContent: async () => banner,
       selectOption: async ({ label }) => {
@@ -59,6 +61,14 @@ test('persona GET throttle honors cooldown and verifies identity after UI retry'
   assert.equal(result.retries, 1);
   assert.deepEqual(state.delays, [11_000]);
   assert.equal(state.reloads(), 2);
+  assert.equal(state.cleaned(), true);
+});
+
+test('persona reload does not invalidate an already-observed identity predicate', async () => {
+  const state = harness([200], [200], '10', true);
+  const result = await state.run();
+  assert.equal(result.retries, 0);
+  assert.deepEqual(state.delays, []);
   assert.equal(state.cleaned(), true);
 });
 

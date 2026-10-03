@@ -20,23 +20,31 @@ export async function assumePersona(page, label) {
     const selector = page.locator('[data-test-persona-select]');
     const banner = page.locator('[data-test-persona-banner]');
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      await expect.poll(async () => await selector.isVisible()
-        || (!didSignIn && await signIn.isVisible()) || throttle !== null).toBe(true);
+      let controlReady = false;
+      await expect.poll(async () => {
+        controlReady = await selector.isVisible();
+        return controlReady || (!didSignIn && await signIn.isVisible()) || throttle !== null;
+      }).toBe(true);
       if (!didSignIn && await signIn.isVisible()) {
         await signIn.click();
         didSignIn = true;
         await page.reload();
-        await expect.poll(async () => await selector.isVisible() || throttle !== null).toBe(true);
+        await expect.poll(async () => {
+          controlReady = await selector.isVisible();
+          return controlReady || throttle !== null;
+        }).toBe(true);
       }
-      if (await selector.isVisible()) {
+      if (controlReady) {
         // An unrelated prior profile read may have throttled while this control
         // loaded successfully. Only a new switch failure triggers its retry.
         throttle = null;
         await selector.selectOption({ label });
-        await expect.poll(async () =>
-          (await banner.isVisible() && (await banner.textContent()).includes(label))
-          || throttle !== null).toBe(true);
-        if (await banner.isVisible() && (await banner.textContent()).includes(label)) {
+        let switched = false;
+        await expect.poll(async () => {
+          switched = await banner.isVisible() && (await banner.textContent()).includes(label);
+          return switched || throttle !== null;
+        }).toBe(true);
+        if (switched) {
           await expect(banner).toContainText(label);
           return { retries };
         }
