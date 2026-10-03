@@ -5,6 +5,7 @@ import {
   extractTrackingCardNumbers,
   findTrackingCardConflicts,
   validateAgentBranchOwnership,
+  validateCurrentProgramTarget,
   validateDruSessionJournalComment,
   validateDruSessionJournalReference,
   validatePullRequestBody,
@@ -323,4 +324,72 @@ test('verifies DRU journal author, issue, heading, and freshness', () => {
     pullRequestUpdatedAt: '2026-10-03T07:00:00Z',
   });
   assert.ok(wrongHeading.some((error) => error.includes('### Session contract')));
+});
+
+
+test('requires shared program fields on new DRU session contracts', () => {
+  const base = {
+    issue_url: 'https://api.github.com/repos/subiki/fremontderby/issues/2883',
+    user: { login: 'ctf-gooo-003' },
+    created_at: '2026-10-03T20:00:00Z',
+  };
+
+  const missing = validateDruSessionJournalComment({
+    comment: {
+      ...base,
+      body: '### Session contract\n- Human direction: keep going',
+    },
+    pullRequestAuthor: 'ctf-gooo-003',
+    pullRequestUpdatedAt: '2026-10-03T20:30:00Z',
+    requireProgramFields: true,
+  });
+  assert.ok(missing.some((error) => error.includes('Shared objective')));
+  assert.ok(missing.some((error) => error.includes('DRU contribution')));
+  assert.ok(missing.some((error) => error.includes('JFL handoff')));
+  assert.ok(missing.some((error) => error.includes('Done when')));
+
+  assert.deepEqual(validateDruSessionJournalComment({
+    comment: {
+      ...base,
+      body: [
+        '### Session contract',
+        '- **Shared objective:** captains complete a real JFL match.',
+        '- **DRU contribution:** reproduce the first scoring blocker on DRU.',
+        '- **JFL handoff:** reproduction, regression, and portable patch.',
+        '- **Done when:** the real DRU path is verified and JFL has adoption evidence.',
+      ].join('\n'),
+    },
+    pullRequestAuthor: 'ctf-gooo-003',
+    pullRequestUpdatedAt: '2026-10-03T20:30:00Z',
+    requireProgramFields: true,
+  }), []);
+});
+
+test('blocks new DRU-to-Gamma promotion during the JFL completion phase', () => {
+  const druBody = validBody({ 'Owner lane / agent': 'DRU' });
+
+  assert.deepEqual(validateCurrentProgramTarget({
+    body: druBody,
+    baseRef: 'fremontderby-gamma',
+    enforceProgramContract: false,
+  }), []);
+
+  assert.deepEqual(validateCurrentProgramTarget({
+    body: druBody,
+    baseRef: 'fremontderby-jfl',
+    enforceProgramContract: true,
+  }), []);
+
+  const blocked = validateCurrentProgramTarget({
+    body: druBody,
+    baseRef: 'fremontderby-gamma',
+    enforceProgramContract: true,
+  });
+  assert.ok(blocked.some((error) => error.includes('Gamma is dormant')));
+
+  assert.deepEqual(validateCurrentProgramTarget({
+    body: validBody({ 'Owner lane / agent': 'JFL' }),
+    baseRef: 'fremontderby-gamma',
+    enforceProgramContract: true,
+  }), []);
 });

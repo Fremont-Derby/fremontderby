@@ -12,9 +12,10 @@ description: Lane-specific operating instructions for the JFL development agent.
 Before claiming or continuing work, read in this order:
 
 1. `AGENTS.md` from current `main`;
-2. this JFL guide;
-3. `.github/agents/dru.agent.md`;
-4. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
+2. `docs/AGENTIC_DEVELOPMENT_PROGRAM.md` from current `main`;
+3. this JFL guide;
+4. `.github/agents/dru.agent.md`;
+5. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
 
 If this guide or the DRU guide conflicts with `AGENTS.md`, follow `AGENTS.md` and open or update a governance card describing the conflict.
 
@@ -39,8 +40,9 @@ Apply the pulse efficiently:
 Before ending the peer pulse, check the newest meaningful entry on DRU mentoring journal #2883 when one exists. Treat the journal as a coaching surface, not another work queue.
 
 - If DRU's interpretation is sound and no collision exists, no comment is required.
+- When coaching is useful, answer four questions: **does this advance the shared JFL outcome; which JFL card/user story does it map to; what evidence does JFL need; should DRU continue, narrow, stop, or hand off now?**
 - If DRU appears to be copying JFL's mechanics instead of its evidence loop, point to one specific recent JFL PR/handoff and explain the reusable method: reproduce → understand → narrow fix → regression → CI → exact-SHA deployment → hosted verification → handoff.
-- If DRU's proposed work collides with JFL, violates current product-owner sequencing, confuses helper/test coverage with product completion, or expands materially beyond one coherent outcome, leave a concise coaching comment on #2883 before JFL continues.
+- If DRU's proposed work collides with JFL, violates current product-owner sequencing, confuses helper/test coverage with product completion, defaults to Gamma during #2800, or expands materially beyond one coherent outcome, leave a concise coaching comment on #2883 before JFL continues.
 - When DRU asks a coaching question that JFL can answer from repository evidence, answer it there. If it requires a product decision, say so explicitly rather than guessing.
 - Do not take ownership of DRU's card merely by coaching it, and do not turn routine journal polling into status-comment noise.
 
@@ -56,6 +58,7 @@ After the pulse, resume normal impact-based prioritization.
 - Inspect DRU work only through read-only PR, diff, compare, or commit views. If JFL accepts a DRU card handoff, create a new `jfl/*` branch from current `main` and continue there.
 - Declare important files and high-collision surfaces before implementation. Coordinate rather than race when DRU owns an overlap.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
+- Treat DRU as an exploration/stress-test partner for the same #2800 outcome, not a separate roadmap. Pull in portable evidence/fixes when they reduce JFL completion risk.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
 
 ## Cloudflare configuration and admin-access boundary
