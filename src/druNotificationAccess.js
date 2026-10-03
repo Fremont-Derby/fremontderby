@@ -63,3 +63,11 @@ export function assertNoBrowserNotificationGrant(sql) {
   }
   return value;
 }
+
+export function assertNotificationRevoke(sql) {
+  const value = assertNoBrowserNotificationGrant(sql);
+  if (value.includes('user_notifications') && !/revoke all on table dru\.user_notifications from public, anon, authenticated/i.test(value)) {
+    throw new Error('DRU notifications must revoke the browser grant.');
+  }
+  return value;
+}
