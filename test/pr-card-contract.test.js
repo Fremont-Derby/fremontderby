@@ -5,6 +5,8 @@ import {
   extractTrackingCardNumbers,
   findTrackingCardConflicts,
   validateAgentBranchOwnership,
+  validateDruSessionJournalComment,
+  validateDruSessionJournalReference,
   validatePullRequestBody,
   validateTrackingCardLabels,
 } from '../scripts/check-pr-card-contract.mjs';
@@ -238,4 +240,87 @@ test('rejects ambiguous JFL and DRU co-ownership', () => {
     'jfl/issue-629-immutable-agent-branches',
   );
   assert.deepEqual(errors, ['Owner lane / agent must name only one of JFL or DRU.']);
+});
+
+
+test('grandfathers DRU PRs created before the journal gate', () => {
+  const result = validateDruSessionJournalReference(
+    validBody({ 'Owner lane / agent': 'DRU' }),
+    REPOSITORY,
+    3013,
+  );
+  assert.deepEqual(result, { errors: [], commentId: null });
+});
+
+test('requires a direct #2883 comment link for new DRU PRs', () => {
+  const missing = validateDruSessionJournalReference(
+    validBody({ 'Owner lane / agent': 'DRU' }),
+    REPOSITORY,
+    3014,
+  );
+  assert.ok(missing.errors.some((error) => error.includes('DRU session journal')));
+
+  const wrongIssue = validateDruSessionJournalReference(
+    validBody({
+      'Owner lane / agent': 'DRU',
+      'DRU session journal': 'https://github.com/subiki/fremontderby/issues/999#issuecomment-12345',
+    }),
+    REPOSITORY,
+    3014,
+  );
+  assert.ok(wrongIssue.errors.some((error) => error.includes('#2883')));
+
+  const valid = validateDruSessionJournalReference(
+    validBody({
+      'Owner lane / agent': 'DRU',
+      'DRU session journal': 'https://github.com/subiki/fremontderby/issues/2883#issuecomment-5964637419',
+    }),
+    REPOSITORY,
+    3014,
+  );
+  assert.deepEqual(valid, { errors: [], commentId: 5964637419 });
+});
+
+test('does not impose the DRU journal section on JFL or other lanes', () => {
+  assert.deepEqual(validateDruSessionJournalReference(
+    validBody({ 'Owner lane / agent': 'JFL' }),
+    REPOSITORY,
+    9999,
+  ), { errors: [], commentId: null });
+});
+
+test('verifies DRU journal author, issue, heading, and freshness', () => {
+  const validComment = {
+    issue_url: 'https://api.github.com/repos/subiki/fremontderby/issues/2883',
+    user: { login: 'ctf-gooo-003' },
+    body: '### Session contract\n- Current objective: one real DRU blocker.',
+    created_at: '2026-10-03T06:00:00Z',
+  };
+
+  assert.deepEqual(validateDruSessionJournalComment({
+    comment: validComment,
+    pullRequestAuthor: 'ctf-gooo-003',
+    pullRequestUpdatedAt: '2026-10-03T07:00:00Z',
+  }), []);
+
+  const wrongAuthor = validateDruSessionJournalComment({
+    comment: validComment,
+    pullRequestAuthor: 'someone-else',
+    pullRequestUpdatedAt: '2026-10-03T07:00:00Z',
+  });
+  assert.ok(wrongAuthor.some((error) => error.includes('same GitHub identity')));
+
+  const stale = validateDruSessionJournalComment({
+    comment: validComment,
+    pullRequestAuthor: 'ctf-gooo-003',
+    pullRequestUpdatedAt: '2026-10-04T07:00:01Z',
+  });
+  assert.ok(stale.some((error) => error.includes('older than 24 hours')));
+
+  const wrongHeading = validateDruSessionJournalComment({
+    comment: { ...validComment, body: 'Session contract: one blocker' },
+    pullRequestAuthor: 'ctf-gooo-003',
+    pullRequestUpdatedAt: '2026-10-03T07:00:00Z',
+  });
+  assert.ok(wrongHeading.some((error) => error.includes('### Session contract')));
 });
