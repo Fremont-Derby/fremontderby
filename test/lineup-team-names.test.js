@@ -205,3 +205,9 @@ test("test drive is not the mission path", () => {
   assert.match(src, /function testDriveReplacementLabel/);
   assert.match(src, /Test Drive is not the path/);
 });
+
+test("a scorecard test drive names its step", () => {
+  const src = readFileSync(new URL("../src/scorecardDrive.js", import.meta.url), "utf8");
+  assert.match(src, /function scorecardDriveLabel/);
+  assert.match(src, /Scorecard test drive needs a step/);
+});
