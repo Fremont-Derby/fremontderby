@@ -1,4 +1,3 @@
-export function stuckRecovery(step) {
-  const paths = { launch: '/mission', lineup: '/lineup', score: '/score' };
-  return paths[step] || null;
+export function stuckPathLabel(mission) {
+  return mission && mission.stuck ? 'Leave this mission and start again' : 'Mission is not stuck';
 }

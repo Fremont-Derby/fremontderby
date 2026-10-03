@@ -187,3 +187,9 @@ test("a mission names the player", () => {
   assert.match(src, /function missionIdentityLabel/);
   assert.match(src, /Mission needs a player name/);
 });
+
+test("a stuck mission can be left", () => {
+  const src = readFileSync(new URL("../src/stuckPath.js", import.meta.url), "utf8");
+  assert.match(src, /function stuckPathLabel/);
+  assert.match(src, /Mission is not stuck/);
+});
