@@ -146,11 +146,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         season_id: `eq.${seasonId}`,
         order: 'name.asc',
       });
-      const playerParams = new URLSearchParams({
-        select: 'team_match_id,winner_side,status',
-        season_id: `eq.${seasonId}`,
-      });
-      const [roundRows, matchRows, teamRows, playerRows] = await Promise.all([
+      const [roundRows, matchRows, teamRows] = await Promise.all([
         requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rounds?${roundParams}`, {
           method: 'GET',
           headers,
@@ -163,11 +159,18 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           method: 'GET',
           headers,
         }),
-        requestJson(fetchImpl, `${supabaseUrl}/rest/v1/player_matches?${playerParams}`, {
+      ]);
+      const matchIds = (Array.isArray(matchRows) ? matchRows : []).map((match) => match.id).filter(Boolean);
+      const playerParams = new URLSearchParams({
+        select: 'team_match_id,winner_side,status',
+        team_match_id: `in.(${matchIds.join(',')})`,
+      });
+      const playerRows = matchIds.length
+        ? await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/player_matches?${playerParams}`, {
           method: 'GET',
           headers,
-        }).catch(() => []),
-      ]);
+        }).catch(() => [])
+        : [];
       const winnerByMatch = new Map();
       for (const row of Array.isArray(playerRows) ? playerRows : []) {
         if (!['finalized', 'corrected'].includes(row.status) || !['A', 'B'].includes(row.winner_side)) continue;
@@ -196,6 +199,8 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           makeupStatus: match.makeup_status ?? null,
           makeupNote: match.makeup_note ?? null,
           makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
+          racksA: winnerByMatch.get(match.id)?.A || 0,
+          racksB: winnerByMatch.get(match.id)?.B || 0,
           winnerTeamId: match.winner_team_id ?? null,
           winnerName: match.winner_team_id === match.team_a_id
             ? teamsById.get(match.team_a_id) ?? null
