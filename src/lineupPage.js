@@ -1,5 +1,3 @@
-import { lineupTeamsLine } from './lineupTeams.js';
-import { lineupMissLine } from './lineupMiss.js';
 import {
   sharedBlindLineupControllerSource,
   sharedBlindLineupMarkup,
@@ -7,8 +5,6 @@ import {
 } from './blindLineupComponent.js';
 
 export function renderLineupPage() {
-  const teams = lineupTeamsLine({ teamA: 'Owls', teamB: 'Foxes' });
-  const miss = lineupMissLine({ captainTeams: ['Owls', 'Pines'], checkedTeams: ['Owls', 'Pines'], matchFound: false });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -22,7 +18,7 @@ export function renderLineupPage() {
     @media(max-width:800px){.topbar{align-items:flex-start}.status{text-align:left}.setup{grid-template-columns:1fr;padding-top:10px}.gate .signin,.gate .load{width:100%}}
   </style>
 </head>
-<body>\n  <p data-lineup-teams>${teams}</p>\n  <p data-lineup-miss>${miss}</p>
+<body>
   <main class="app">\n    <p data-lineup-lock="both">The lineup stays editable until both captains submit, and an edit unsubmits it.</p>
     <section data-mission-path><h2>Tester path</h2><p>Test Drive and fixture preview send the tester to the mission, not the raw preview.</p></section>
     <p class="note" data-what-next>If you are not sure what to do, set your lineup, then open the scorecard for the match.</p>

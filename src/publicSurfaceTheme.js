@@ -1,5 +1,3 @@
-import { publicSurfaceFailure } from './publicSurfaceFailure.js';
-export const failedSurfaceLine = publicSurfaceFailure({ ok: false, name: 'DRU schedule', status: 500 });
 const PUBLIC_SURFACES = new Map([
   ['/rules', 'rules'],
   ['/demo', 'test-drive'],
