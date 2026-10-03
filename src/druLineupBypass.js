@@ -107,3 +107,34 @@ export async function ensureDruActorCanScoreTeam(env, { actorUserId, teamId }, f
   return true;
 }
 
+
+export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, slots = [] }, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !teamId || !roundId) return null;
+  const conn = service(env);
+  if (!conn) return null;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const headers = { apikey: conn.key, authorization: `Bearer ${conn.key}`, accept: 'application/json', 'content-type': 'application/json' };
+  const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'return=representation' };
+  const roundResponse = await fetchWithSchema(`${conn.base}/rest/v1/rounds?id=eq.${roundId}&select=id,stage,season_id`, { headers });
+  const round = roundResponse.ok ? (await roundResponse.json())?.[0] : null;
+  if (!round || !['semifinal', 'final', 'playoff'].includes(round.stage)) return null;
+  const matchResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_matches?round_id=eq.${roundId}&or=(team_a_id.eq.${teamId},team_b_id.eq.${teamId})&select=id,season_id,team_a_id,team_b_id`, { headers });
+  const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
+  if (!match) return null;
+  const lineupResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?on_conflict=team_match_id,team_id`, {
+    method: 'POST',
+    headers: privateHeaders,
+    body: JSON.stringify({ season_id: match.season_id, round_id: roundId, team_match_id: match.id, team_id: teamId, submitted_by: actorUserId }),
+  });
+  if (!lineupResponse.ok) return null;
+  const lineup = (await lineupResponse.json())?.[0];
+  if (!lineup?.id) return null;
+  const chosen = (slots || []).filter((slot) => slot?.playerId).slice(0, 4);
+  await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineup.id}`, { method: 'DELETE', headers: privateHeaders });
+  await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots`, {
+    method: 'POST',
+    headers: privateHeaders,
+    body: JSON.stringify(chosen.map((slot, index) => ({ lineup_id: lineup.id, season_id: match.season_id, round_id: roundId, team_id: teamId, slot_number: index + 1, player_id: slot.playerId, participation_type: 'roster' }))),
+  });
+  return { lineupId: lineup.id, teamMatchId: match.id, slots: chosen.length };
+}
