@@ -7,6 +7,7 @@ begin
     return;
   end if;
   execute 'alter table dru.user_notifications enable row level security';
+  execute 'alter table dru.user_notifications force row level security';
   for policy_name in
     select pol.polname
     from pg_policy pol

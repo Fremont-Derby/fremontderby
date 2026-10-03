@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { browserCanReadNotifications, notificationAccessContract, assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny } from '../src/druNotificationAccess.js';
+import { browserCanReadNotifications, notificationAccessContract, assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce } from '../src/druNotificationAccess.js';
 
 test('a browser role cannot read DRU notifications', () => {
   const contract = notificationAccessContract();
@@ -12,49 +12,55 @@ test('a browser role cannot read DRU notifications', () => {
 });
 
 test('a direct notification table read is rejected', () => {
-  assert.equal(assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/rpc/list_my_notifications'), '/rest/v1/rpc/list_my_notifications');
-  assert.throws(() => assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/user_notifications'), /Worker RPC/);
+  assert.equal(assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/rpc/list_my_notifications'), '/rest/v1/rpc/list_my_notifications');
+  assert.throws(() => assertWorkerNotificationUrl, notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/user_notifications'), /Worker RPC/);
 });
 
 test('a notification call names a Worker RPC', () => {
-  assert.equal(notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
-  assert.throws(() => notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/user_notifications'), /Worker RPC/);
+  assert.equal(notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
+  assert.throws(() => notificationRpcName, assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/user_notifications'), /Worker RPC/);
 });
 
 test('only the known notification RPCs are allowed', () => {
-  assert.equal(assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
-  assert.throws(() => assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/rpc/read_all_notifications'), /do not allow/);
+  assert.equal(assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
+  assert.throws(() => assertAllowedNotificationRpc, assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/rpc/read_all_notifications'), /do not allow/);
 });
 
 test('a notification table dump is rejected', () => {
-  assert.equal(assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
-  assert.throws(() => assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('/rest/v1/rpc/list_my_notifications?select=*'), /table dump/);
+  assert.equal(assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/rpc/list_my_notifications'), 'list_my_notifications');
+  assert.throws(() => assertNoNotificationDump, assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('/rest/v1/rpc/list_my_notifications?select=*'), /table dump/);
 });
 
 test('a browser notification grant is rejected', () => {
-  assert.equal(assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('revoke all on table dru.user_notifications from anon'), 'revoke all on table dru.user_notifications from anon');
-  assert.throws(() => assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('grant select on table dru.user_notifications to anon'), /browser read/);
+  assert.equal(assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('revoke all on table dru.user_notifications from anon'), 'revoke all on table dru.user_notifications from anon');
+  assert.throws(() => assertNoBrowserNotificationGrant, assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('grant select on table dru.user_notifications to anon'), /browser read/);
 });
 
 test('a notification migration must revoke the browser grant', () => {
-  assert.match(assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('revoke all on table dru.user_notifications from public, anon, authenticated'), /revoke all/);
-  assert.throws(() => assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('comment on table dru.user_notifications is \'open\''), /must revoke/);
+  assert.match(assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('revoke all on table dru.user_notifications from public, anon, authenticated'), /revoke all/);
+  assert.throws(() => assertNotificationRevoke, assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('comment on table dru.user_notifications is \'open\''), /must revoke/);
 });
 
 test('a notification migration must enable row security', () => {
   const sql = 'alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated';
-  assert.match(assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny(sql), /row level security/);
-  assert.throws(() => assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny('revoke all on table dru.user_notifications from public, anon, authenticated'), /row security/);
+  assert.match(assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce(sql), /row level security/);
+  assert.throws(() => assertNotificationRls, assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('revoke all on table dru.user_notifications from public, anon, authenticated'), /row security/);
 });
 
 test('a notification migration must grant the Worker role', () => {
   const sql = 'alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role';
-  assert.match(assertNotificationWorkerGrant, assertNotificationDeny(sql), /service_role/);
-  assert.throws(() => assertNotificationWorkerGrant, assertNotificationDeny('alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated'), /Worker role/);
+  assert.match(assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce(sql), /service_role/);
+  assert.throws(() => assertNotificationWorkerGrant, assertNotificationDeny, assertNotificationForce('alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated'), /Worker role/);
 });
 
 test('a notification migration must deny browser roles', () => {
   const sql = 'alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications';
-  assert.match(assertNotificationDeny(sql), /browser_deny/);
-  assert.throws(() => assertNotificationDeny('alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role'), /deny browser/);
+  assert.match(assertNotificationDeny, assertNotificationForce(sql), /browser_deny/);
+  assert.throws(() => assertNotificationDeny, assertNotificationForce('alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role'), /deny browser/);
+});
+
+test('a notification migration must force row security', () => {
+  const sql = 'alter table dru.user_notifications enable row level security; alter table dru.user_notifications force row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications';
+  assert.match(assertNotificationForce(sql), /force row level security/);
+  assert.throws(() => assertNotificationForce('alter table dru.user_notifications enable row level security; revoke all on table dru.user_notifications from public, anon, authenticated; grant select, insert, update on table dru.user_notifications to service_role; create policy dru_notifications_browser_deny on dru.user_notifications'), /force row security/);
 });

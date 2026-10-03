@@ -89,13 +89,21 @@ export function assertNotificationWorkerGrant(sql) {
 }
 
 export function assertNotificationContract(sql) {
-  return assertNotificationDeny(sql);
+  return assertNotificationForce(sql);
 }
 
 export function assertNotificationDeny(sql) {
   const value = assertNotificationWorkerGrant(sql);
   if (value.includes('user_notifications') && !/dru_notifications_browser_deny/i.test(value)) {
     throw new Error('DRU notifications must deny browser roles.');
+  }
+  return value;
+}
+
+export function assertNotificationForce(sql) {
+  const value = assertNotificationDeny(sql);
+  if (value.includes('user_notifications') && !/force row level security/i.test(value)) {
+    throw new Error('DRU notifications must force row security.');
   }
   return value;
 }
