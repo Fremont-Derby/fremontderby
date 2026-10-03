@@ -1,3 +1,7 @@
+export function fargoIdLooksValid(value) {
+  return /^[0-9]{3,12}$/.test(String(value || '').trim());
+}
+
 import { fargoReportSummary, missingFargoLinks } from './fargoReportStore.js';
 import { renderFargoReportsPage } from './fargoReportsPage.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
@@ -20,13 +24,14 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     const playerId = String(form.get('playerId') || '').trim();
     const fargoId = String(form.get('fargoId') || '').trim();
     const challongeUrl = String(form.get('challongeUrl') || '').trim();
-    if (playerId && fargoId) {
-      await write(`${base}/rest/v1/player_external_identities`, {
+    if (playerId && fargoId && !fargoIdLooksValid(fargoId)) saved = 'Fargo id must be 3 to 12 digits.';
+    else if (playerId && fargoId) {
+      const savedId = await fetchImpl(`${base}/rest/v1/player_external_identities?on_conflict=player_id,provider`, {
         method: 'POST',
-        headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json', prefer: 'resolution=merge-duplicates' },
+        headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json', 'content-profile': 'public', 'accept-profile': 'public', prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({ player_id: playerId, provider: 'fargo', external_id: fargoId }),
       });
-      saved = 'Fargo id saved.';
+      saved = savedId.ok ? 'Fargo id saved.' : 'Fargo id was not saved.';
     }
     if (challongeUrl) saved = saved || 'Challonge link noted. A live send still needs a Challonge key.';
   }
@@ -36,7 +41,7 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     if (base && key) {
       const read = withSupabaseSchema(fetchImpl, env);
       const response = await read(`${base}/rest/v1/fargo_reports?select=player_match_id,status,payload&order=created_at.desc&limit=100`, {
-        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'public' },
       });
       if (response.ok) { rows = await response.json(); reportStore = 'ready'; }
       if (!rows.length) {
@@ -53,9 +58,14 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     reportStore = 'unavailable';
   }
   const summary = fargoReportSummary(Array.isArray(rows) ? rows : []);
-  if (!summary.missingLinks.length) {
+  if (!summary.missingLinks.length || !summary.unreported.length) {
     const { loadFinalizedMatches } = await import('./fargoFeedHttp.js');
-    summary.missingLinks = missingFargoLinks(await loadFinalizedMatches(env, fetchImpl));
+    const matches = await loadFinalizedMatches(env, fetchImpl);
+    if (!summary.missingLinks.length) summary.missingLinks = missingFargoLinks(matches);
+    if (!summary.unreported.length) {
+      summary.unreported = matches.map((match) => ({ status: 'not_sent', player_match_id: match.playerMatchId, payload: { playerAName: match.playerAName, playerBName: match.playerBName } }));
+      reportStore = 'ready';
+    }
   }
   return new Response(renderFargoReportsPage(summary, { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
