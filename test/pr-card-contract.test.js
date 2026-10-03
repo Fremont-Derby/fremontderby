@@ -393,3 +393,12 @@ test('blocks new DRU-to-Gamma promotion during the JFL completion phase', () => 
     enforceProgramContract: true,
   }), []);
 });
+
+
+test('PR-card workflow executes authoritative governance from main', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const workflow = await readFile(new URL('../.github/workflows/pr-card-contract.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /uses: actions\/checkout@v4[\s\S]*?with:\s*\n\s+ref: main/);
+  assert.match(workflow, /pull_request:/);
+  assert.doesNotMatch(workflow, /pull_request_target:/);
+});
