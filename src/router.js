@@ -201,6 +201,11 @@ export default {
       return htmlResponse(renderChatPage(env), url.pathname);
     }
 
+    if (url.pathname === '/notices') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderNoticesPage(), url.pathname);
+    }
+
     if (url.pathname === '/messages/moderation') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatModerationPage(env), url.pathname);
