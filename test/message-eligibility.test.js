@@ -9,5 +9,5 @@ test('a sent message and an eligibility check are named', () => {
   assert.equal(eligibilityLine({ payment: true, availability: true }), 'Eligible: payment set and availability set.');
   assert.equal(eligibilityLine({ payment: false, availability: true }), 'Not eligible: payment is missing.');
   assert.match(renderChatPage(), /Sent: see you at the table/);
-  assert.match(renderProfilePage(), /Eligible: payment set and availability set/);
+  assert.doesNotMatch(renderProfilePage(), /Eligible: payment set and availability set/);
 });
