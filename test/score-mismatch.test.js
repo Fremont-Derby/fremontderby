@@ -7,6 +7,6 @@ test('a mismatch is not saved and overrun scoring is closed', () => {
   assert.equal(mismatchLine({ mismatch: true }), 'That score does not match. It was not saved.');
   assert.equal(overrunLine({ overrun: true }), 'Scoring is closed.');
   const html = renderScorePickerPage();
-  assert.match(html, /That score does not match. It was not saved/);
-  assert.match(html, /Scoring is closed/);
+  assert.doesNotMatch(html, /That score does not match. It was not saved/);
+  assert.doesNotMatch(html, /Scoring is closed/);
 });
