@@ -38,3 +38,9 @@ test('a corrected Fargo result is a new revision', () => {
   assert.equal(feed.items[0].revision, 2);
   assert.equal(feed.items[0].idempotencyKey, 'one:r2');
 });
+
+test('a Fargo feed item with no Fargo id needs review', () => {
+  const feed = toFargoFeed([{ status: 'finalized', playerMatchId: 'one', playerAName: 'A', playerBName: 'B' }]);
+  assert.equal(feed.items[0].reportStatus, 'needs_review');
+  assert.equal(feed.acceptedByFargo, false);
+});
