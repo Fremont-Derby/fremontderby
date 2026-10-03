@@ -27,3 +27,20 @@ test('a practice lineup rejects a repeated player', () => {
   assert.equal(duplicateLineupIds(['a', 'b']), false);
   assert.equal(duplicateLineupIds(['a', 'a']), true);
 });
+
+test('a padded playoff player is waived before scoring', async () => {
+  let posted = null;
+  const count = await waiveDruTeamPayments({
+    ENVIRONMENT: 'dru',
+    SUPABASE_SCHEMA: 'dru',
+    SUPABASE_URL: 'https://example.test',
+    SUPABASE_SERVICE_ROLE_KEY: 'service',
+  }, { seasonId: 'season-1', teamId: 'team-1', playerIds: ['fourth'] }, async (url, init) => {
+    if (String(url).includes('team_memberships')) return new Response('[]', { status: 200 });
+    posted = JSON.parse(init.body);
+    return new Response('', { status: 201 });
+  });
+  assert.equal(count, 1);
+  assert.equal(posted[0].player_id, 'fourth');
+  assert.equal(posted[0].status, 'waived');
+});
