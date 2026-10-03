@@ -1,6 +1,54 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { renderAvailabilityPage } from '../src/availabilityPage.js';
+
+function saveHarness(api) {
+  const html = renderAvailabilityPage();
+  const source = html.slice(html.indexOf('async function saveAvailability('), html.indexOf('function choiceTeamName('));
+  const card = { enabled: true, state: 'unsure', message: '', tone: '' };
+  const context = vm.createContext({
+    signedApi: api,
+    accessToken: () => context.token,
+    token: 'synthetic-session',
+    setRowEnabled: (row, enabled) => { row.enabled = enabled; },
+    setRowState: (row, state) => { row.state = state; },
+    setRowMessage: (row, message, tone) => { row.message = message; row.tone = tone; },
+    updateNeedsResponseStatus: () => {},
+  });
+  vm.runInContext(source, context);
+  return { context, card, save: () => context.saveAvailability({ seasonId: 'qa', scheduledOn: '2026-10-08' }, card, 'available') };
+}
+
+test('failed check-in save retains prior state and permits an in-place retry', async () => {
+  for (const message of ['Check-in is temporarily busy. Wait a moment and try again.', 'Network unavailable']) {
+    let fail = true;
+    const harness = saveHarness(async () => {
+      if (fail) throw new Error(message);
+      return { availability: { availability_status: 'available' } };
+    });
+    await assert.rejects(harness.save(), { message });
+    assert.equal(harness.card.enabled, true);
+    assert.equal(harness.card.state, 'unsure');
+    assert.equal(harness.card.message, message);
+    assert.equal(harness.card.tone, 'error');
+    fail = false;
+    await harness.save();
+    assert.equal(harness.card.enabled, true);
+    assert.equal(harness.card.state, 'available');
+    assert.equal(harness.card.tone, 'ok');
+  }
+});
+
+test('expired sign-in keeps check-in mutation disabled after a failed save', async () => {
+  const harness = saveHarness(async () => {
+    harness.context.token = '';
+    throw new Error('Your sign-in expired. Open Profile and sign in again.');
+  });
+  await assert.rejects(harness.save(), /Your sign-in expired/);
+  assert.equal(harness.card.enabled, false);
+  assert.equal(harness.card.state, 'unsure');
+});
 
 test('availability page uses signed-in human-readable league-night list', () => {
   const html = renderAvailabilityPage();
