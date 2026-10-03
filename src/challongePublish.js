@@ -113,7 +113,6 @@ export function candidateFromStoredMatch(match = {}) {
     playedOn: match.playedOn,
   };
 }
-
 export async function publishPlayerMatchCandidateA(env, match, { dryRun = false, fetchImpl = globalThis.fetch } = {}) {
   const plan = buildCandidateATournament(match);
   if (dryRun || !challongeConfigured(env)) {
