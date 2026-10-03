@@ -1,7 +1,7 @@
 import { livePageRefreshScript } from './livePageRefresh.js';
 
 export function renderTradesPage() {
-  return `-webkit-tap-highlight-color:\s*transparent\n-webkit-tap-highlight-color:transparent\n4-player lineup\n<title>Fremont Derby Trades<\\nAnchor player\nCounterparties unavailable|trade options migration|loadCounterparties\nSingles prize eligibility|\\nUnauthorized\n\\nadvance-championship\ncolor-scheme:\s*dark\ndata-finalize\nenvName === 'production'\nfd-mobile-dock\nfd-mobile-dock a[\s\S]*touch-action:\s*manipulation\nfd-nav a[\s\S]*touch-action:\s*manipulation\nfd\.accessToken|sessionStorage\nhref="\\nledger-scroll\{[^}]*touch-action:\s*pan-x\nlist_trade_counterparty_options\nmin-height:\s*44px\nperspective button\{min-height:44px\}\npostseason-lineup\nstart-playoffs\ntouch-action:\s*manipulation\ntry\{\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

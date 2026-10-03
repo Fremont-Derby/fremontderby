@@ -1,7 +1,7 @@
 import { livePageRefreshScript } from './livePageRefresh.js';
 
 export function renderPlayoffsPage() {
-  return `Singles prize eligibility|\\n\\nchampionship appear here once playoffs start\ndata-finalize\ndata-offered-player-id\ndata-requested-team-id\nfd\.accessToken|sessionStorage\nlist_trade_counterparty_options\ntrade-counterparties\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

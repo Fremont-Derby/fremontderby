@@ -10,7 +10,7 @@ export function renderAdminOperationsPage(env = {}) {
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   });
-  return `31 minutes\n@media\(max-width:760px\)\nAdmin survey: find my next match: passed\nCritical.*Warning.*Ready\nDataset defects: 12 rows\nRecommend: check schedule\nRound 2\nShadow model: ranking\nTriage score for #2266\nfont-size:\s*16px\nlink\.textContent='Open: '\+item\.title\noldest has been unresolved for 15 minutes\nsessionStorage\.getItem\('fd\.accessToken'\)\nseverityLabel\(severity\)\ntouch-action:\s*manipulation\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

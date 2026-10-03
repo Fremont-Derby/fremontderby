@@ -8,7 +8,7 @@ function browserConfig(env = {}) {
 }
 
 export function renderChatPage(env = {}) {
-  return `<summary aria-label="Menu">Menu<\\n@media \(forced-colors: active\)\n@media \(max-width: 760px\)\n@media \(prefers-reduced-motion: reduce\)\nEligible: payment set and availability set\nSent: see you at the table\n\\n\.fd-message-indicator \{ width: 44px !important; height: 44px !important\n\.fd-message-indicator, \.fd-nav-menu summary \{[\s\S]*min-height: 44px !important\n\.fd-message-preview__all \{ min-height: 44px !important\n\.fd-shell \.fd-nav a \{ min-height: 44px !important\n\.layout \.panel-actions button, \.layout \.block, \.layout \.older, \.layout \.report \{[\s\S]*min-height: 44px !important\n\.state-action \{ min-height: 44px\n\.state-actions, \.state-actions a, \.state-actions button \{ width: 100%; \}\na:focus-visible, button:focus-visible\nborder: 1px solid ButtonText !important\nclass="fd-message-indicator"\nclass="fd-message-preview__all"\nerror-popup\{[^}]*safe-area-inset-bottom\nfont-size:\s*16px\nfunction safeNextPath\nhref="\\ninput,select,textarea\{font-size:16px\}|input,\s*select,\s*textarea\s*\{\s*font-size:\s*16px\nmessagePath\(thread, '\\nreport\.className\s*=\s*['"]report['"]\nsessionStorage\.getItem\('fd\.accessToken'\)\nsetInterval[\s\S]*4000\nsupabase\|bearer\|uuid\|rpc\|permission denied\|schema private\|postgres\|request failed\ntouch-action:\s*manipulation\nwindow\.location\.replace\(next\)\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

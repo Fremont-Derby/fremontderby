@@ -2,7 +2,7 @@ import { designSystemStyles } from './designSystem.js';
 
 /** In-app design catalog (Storybook-lite). Not for league players; agents/ops use /design-system. */
 export function renderDesignSystemCatalogPage() {
-  return `--line:\s*var\(--fd-border\)\n\\ncould not complete\ncould not complete that action\nsign-in expired\ntokenRemapStyles\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

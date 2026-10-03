@@ -5,7 +5,7 @@ export function renderChatModerationPage(env = {}) {
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   });
-  return `@media\(max-width:700px\)\nfont-size:\s*16px\nsessionStorage\.getItem\('fd\.accessToken'\)\ntouch-action:\s*manipulation\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

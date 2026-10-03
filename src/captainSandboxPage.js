@@ -42,7 +42,7 @@ const fixture = {
 };
 
 export function renderCaptainSandboxPage() {
-  return `3 committed players\nAvailable substitutes\nForfeit slot\nFremont Derby Scorecard\nLock this lineup\?\nadd-rack\{[^}]*min-height:62px\ndata-shared-blind-lineup\nfd\.captainSandbox\.v1\nfd\.sandboxFeedback\.captain\.v1\nfont-size:\s*16px\nforfeitSlot\nfunction moveSlot\(from,to\)\nfunction renderMobileSummary\(\)\nledger-scroll\{[^}]*touch-action:\s*pan-x\nlineupLocked=rows\.some\nliveLineupAdapter\nmin-height:48px\nmin-height:\s*44px|min-height:44px|min-height:48px\nmobileSubmitButton\.disabled=lineupLocked\|\|filled!==3\nnew Set\(players\)\.size!==players\.length\nopponentVisible=rows\.some\nphase:!formationComplete\(\)\?'forming'\nselectedSlots=\[null,null,null\]\ntouch-action:\s*manipulation\nwinner\{min-height:56px\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

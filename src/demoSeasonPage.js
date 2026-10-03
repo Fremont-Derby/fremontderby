@@ -105,7 +105,7 @@ function renderPlayerRows() {
 }
 
 export function renderDemoSeasonPage() {
-  return `3 active players\\n4 postseason players\\n<th>W-L<\\nForm team \+ lineup\nJamie Park \(sub\)\nRound 7\nSeason champion: Break Room Bandits\ncannot affect the real season\neach team maintains its own rack history\nfd\.captainSandbox\.v1\nfd\.playerSandbox\.v1\nfictional players and results\nfont-size:\s*16px\ntouch-action:\s*manipulation\n<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
