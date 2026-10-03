@@ -44,7 +44,8 @@ export function createPlayoffHttpHandlers({
           const matchUrl = roundIds.length
             ? `${base}/rest/v1/team_matches?season_id=eq.${seasonId}&round_id=in.(${roundIds.join(',')})&select=status,winner_team_id`
             : `${base}/rest/v1/team_matches?season_id=eq.${seasonId}&select=status,winner_team_id`;
-          const response = await fetchWithSchema(matchUrl, {            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+          const response = await fetchWithSchema(matchUrl, {
+            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
           });
           const rows = response.ok ? await response.json() : [];
           if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);

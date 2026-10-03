@@ -26,7 +26,8 @@ export function teamWinnerId(match, playerMatches, forfeits = []) {
 
 export function practicePlayoffsReady(matches) {
   const rows = matches || [];
-  return rows.length >= 28 && rows.every((row) => row.status === 'finalized' && row.winner_team_id);}
+  return rows.length >= 28 && rows.every((row) => row.status === 'finalized' && row.winner_team_id);
+}
 
 export async function closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId) return 0;

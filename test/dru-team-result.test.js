@@ -24,4 +24,5 @@ test('playoffs wait until all seven regular rounds have winners', () => {
   const complete = Array.from({ length: 28 }, () => ({ status: 'finalized', winner_team_id: 'rail' }));
   assert.equal(practicePlayoffsReady(complete), true);
   complete[3] = { status: 'scheduled', winner_team_id: null };
-  assert.equal(practicePlayoffsReady(complete), false);});
+  assert.equal(practicePlayoffsReady(complete), false);
+});

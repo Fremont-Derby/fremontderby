@@ -217,7 +217,9 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
   if (!playable.length && slotRows.length) {
     if (already.length) {
       await fetchWithSchema(`${conn.base}/rest/v1/player_matches?team_match_id=eq.${match.id}`, { method: 'DELETE', headers });
-    }    const byTeam = { [match.team_a_id]: [], [match.team_b_id]: [] };
+    }
+
+    const byTeam = { [match.team_a_id]: [], [match.team_b_id]: [] };
     for (const row of slotRows) byTeam[row.team_id]?.push(row);
     const a = (byTeam[match.team_a_id] || []).filter((row) => row.player_id).sort((x, y) => x.slot_number - y.slot_number);
     const b = (byTeam[match.team_b_id] || []).filter((row) => row.player_id).sort((x, y) => x.slot_number - y.slot_number);
