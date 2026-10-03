@@ -133,3 +133,9 @@ test("a team can name a missing payment", () => {
   assert.match(src, /function paymentStatusLabel/);
   assert.match(src, /Not paid/);
 });
+
+test("a player can name unfinished trial nights", () => {
+  const src = readFileSync(new URL("../src/trialNight.js", import.meta.url), "utf8");
+  assert.match(src, /function trialNightLabel/);
+  assert.match(src, /trial nights/);
+});
