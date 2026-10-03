@@ -8,5 +8,5 @@ test('DRU notification policies do not leave a browser read', () => {
   assert.match(sql, /revoke all on table dru\.user_notifications from public, anon, authenticated/);
   assert.match(sql, /grant select, insert, update on table dru\.user_notifications to service_role/);
   assert.match(sql, /force row level security/);
-  assert.doesNotMatch(sql, /create policy/);
+  assert.match(sql, /dru_notifications_browser_deny/);
 });
