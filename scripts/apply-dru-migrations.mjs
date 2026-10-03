@@ -9,7 +9,7 @@ const files = [
   'supabase/migrations/20261003043000_dru_notification_rls.sql',
   'supabase/migrations/20261003043100_dru_admin_phone.sql',
 ];
-const regions = ['aws-1-us-east-1', 'aws-1-us-west-2', 'aws-1-us-east-2', 'aws-1-eu-west-1'];
+const regions = ['aws-1-us-west-2'];
 const plan = druMigrationApplyPlan({ projectRef, sqlFiles: files });
 if (!plan.ok) {
   console.error(plan.text);
@@ -27,7 +27,7 @@ function redact(text) {
 function poolerUrls(raw) {
   const url = new URL(raw);
   if (!url.hostname.startsWith('db.')) return [raw];
-  const user = url.username.includes('.') ? url.username : `${url.username}.${projectRef}`;
+  const user = `postgres.${projectRef}`;
   return regions.map((region) => {
     const next = new URL(raw);
     next.username = user;
