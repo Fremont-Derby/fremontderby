@@ -98,6 +98,22 @@ async function challongeRequest(env, path, { method = 'GET', body = null, fetchI
 /**
  * Dry-run or live publish. When dryRun/missing key, returns plan only.
  */
+
+export function candidateFromStoredMatch(match = {}) {
+  const racks = Array.isArray(match.racks) ? match.racks : [];
+  return {
+    playerMatchId: match.playerMatchId,
+    playerAName: match.playerAName,
+    playerBName: match.playerBName,
+    playerAFargoId: match.playerAFargoId,
+    playerBFargoId: match.playerBFargoId,
+    racksA: racks.filter((rack) => rack.winnerId === match.playerAId).length,
+    racksB: racks.filter((rack) => rack.winnerId === match.playerBId).length,
+    discipline: racks[0]?.discipline || '8-ball',
+    playedOn: match.playedOn,
+  };
+}
+
 export async function publishPlayerMatchCandidateA(env, match, { dryRun = false, fetchImpl = globalThis.fetch } = {}) {
   const plan = buildCandidateATournament(match);
   if (dryRun || !challongeConfigured(env)) {
