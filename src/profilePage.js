@@ -300,7 +300,8 @@ export function renderProfilePage(env = {}) {
       try {
         return JSON.parse(textBody);
       } catch {
-        return { message: textBody };
+        const { safeServiceMessage } = await import('./safeServiceMessage.js');
+        return { message: safeServiceMessage(response.status, textBody) || 'Profile could not be loaded. Try again.' };
       }
     }
 
