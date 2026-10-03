@@ -21,7 +21,12 @@ jobs:
     name: pr-card-contract
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout trusted governance from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .governance
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -29,7 +34,7 @@ jobs:
         id: contract
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/check-pr-card-contract.mjs
+        run: node .governance/scripts/check-pr-card-contract.mjs
       - name: Verify referenced cards are open repository issues
         uses: actions/github-script@v7
         env:
@@ -38,7 +43,7 @@ jobs:
           script: |
             const { pathToFileURL } = require('url');
             const { validateTrackingCardLabels } = await import(pathToFileURL(
-              `${process.env.GITHUB_WORKSPACE}/scripts/check-pr-card-contract.mjs`
+              `${process.env.GITHUB_WORKSPACE}/.governance/scripts/check-pr-card-contract.mjs`
             ).href);
             const uniqueNumbers = JSON.parse(process.env.TRACKING_CARD_NUMBERS || '[]');
 
