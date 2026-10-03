@@ -211,3 +211,9 @@ test("a player can name a missing free-agent mark", () => {
   assert.match(src, /function freeAgentLabel/);
   assert.match(src, /Not a free agent/);
 });
+
+test("a player can name a missing rating review", () => {
+  const src = readFileSync(new URL("../src/ratingReview.js", import.meta.url), "utf8");
+  assert.match(src, /function ratingReviewLabel/);
+  assert.match(src, /Rating review is clear/);
+});
