@@ -1963,9 +1963,9 @@ export async function handleFinalizePlayerMatchRequest(
   playerMatchId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
+  let seasonId = null;
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    let seasonId = null;
     if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
       const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
       const { privatePostgrestProfile, withSupabaseSchema } = await import('./supabaseSchema.js');
@@ -2022,6 +2022,10 @@ export async function handleFinalizePlayerMatchRequest(
 
     return jsonResponse({ match });
   } catch (error) {
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && seasonId) {
+      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+    }
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
