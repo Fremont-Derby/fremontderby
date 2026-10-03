@@ -3,7 +3,6 @@ import { standingsContextLine, missionTaskLine } from './standingsTask.js';
 export function renderStandingsPage() {
   const launch = missionLaunchLine({ name: 'find my next match' });
   const tester = testerPathLine({ preview: false });
-  const place = standingsContextLine({ team: 'Owls', place: 1 });
   const task = missionTaskLine({ task: 'find my standings' });
   return `<!doctype html>
 <html lang="en">
