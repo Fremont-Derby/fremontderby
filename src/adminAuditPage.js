@@ -2,7 +2,7 @@ import { designSystemStyles } from './designSystem.js';
 import { livePageRefreshScript } from './livePageRefresh.js';
 
 export function renderAdminAuditPage() {
-  return `<!DOCTYPE html>
+  return `\\nadmin\.broadcast_notification\naudit_webhook_outbox\nchat\.moderate\nlist_admin_audit_events\nwrite_admin_audit_event\n<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

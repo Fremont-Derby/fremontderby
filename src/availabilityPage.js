@@ -1,7 +1,7 @@
 import { availabilityChoiceLabel } from './availabilityChoice.js';
 export function renderAvailabilityPage() {
   const choice = availabilityChoiceLabel({ date: '2026-10-03', round: 'Round 1', role: 'player', status: 'in' });
-  return `<!doctype html>
+  return `2026-10-03 · Round 1 · player · in\nChecked in as in for 2026-10-03\nDEBOUNCE_MS\nWeekly check-in\n\.actions\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\n\.recovery-actions\{display:grid;grid-template-columns:1fr\}\nbutton:focus-visible,select:focus-visible,\.signin:focus-visible,\.retry:focus-visible\nbutton\.setAttribute\('aria-pressed',String\(button\.dataset\.availabilityStatus===value\)\)\nbutton\[aria-pressed="true"\]::after\{content:' ✓'\nconst onOrAfterToday=\(context\)=>\nconst quiet = reason !== 'manual'\ndata-fd-live-refresh-script\nelse if\(remembered&&contexts\.some\nelse showRecovery\('Availability could not be loaded'\nfailCount\nfdConditionalFetch\nfdLiveRefresh\.register\nfdLiveRefresh\.register\(\(opts\)\nfont-size:\s*16px\nfunction setAvailabilityState\(value\)\nfunction showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}\nhref="\\nif-none-match\nif\(!accessToken\(\)\)\{if\(quiet\)return;setStatus\('Sign in to check in for league night\.'\nif\(message\.startsWith\('Your sign-in expired'\)\)showRecovery\nloadSchedule\(opts\)\nonline\npageshow\nrememberedContext&&onOrAfterToday\(rememberedContext\)\nrenderContext\(\)\{const context=selectedContext\(\);setAvailabilityState\(null\)\nsessionStorage\.getItem\('fd\.accessToken'\)\nsetAvailabilityState\(value\);setStatus\('Availability saved for '\nsetInterval\ntouch-action:\s*manipulation\nvisibilitychange\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

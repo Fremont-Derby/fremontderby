@@ -5,7 +5,7 @@ async function readJson(response) {
   if (!text || text.trim().startsWith('<')) throw new Error('Prizes did not return data. Try again.');
   return JSON.parse(text);
 }
-  return `<!doctype html>
+  return `-webkit-tap-highlight-color:\s*transparent\n-webkit-tap-highlight-color:transparent\n4-player lineup\n:focus-visible|:focus\n<label>Season\s*<select[^>]*data-season-id disabled>\n<title>Fremont Derby Prizes<\\n@media \(max-width: 760px\)\nAnchor player\nSingles prize eligibility|\\n\\nadvance-championship\nbutton\s*\{[\s\S]*?min-height:\s*44px\ncaptain_teams\ncolor-scheme:\s*dark\ndata-offered-player-id\ndata-requested-team-id\nfd-mobile-dock\nfd-mobile-dock a[\s\S]*touch-action:\s*manipulation\nfd-nav a[\s\S]*touch-action:\s*manipulation\nfd\.accessToken|sessionStorage\nledger-scroll\{[^}]*touch-action:\s*pan-x\nlist_trade_counterparty_options\nmin-height:\s*44px\nperspective button\{min-height:44px\}\npostseason-lineup\nselect\s*\{[\s\S]*?min-height:\s*44px\nstart-playoffs\ntbody, tr, td \{ display: block; width: 100%; \}\ntd:nth-child\(4\)::before \{ content: 'Amount'; \}\ntouch-action:\s*manipulation\ntouch-action:manipulation\ntrade-counterparties\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

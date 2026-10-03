@@ -1,5 +1,5 @@
 export function renderSeasonSetupPage() {
-  return `<!doctype html>
+  return `Viewing.*season.*read only\n\\nconst locked=Boolean\(currentSeasonId\)&&!isEditableSeason\(\)\neditableSeasonStatuses=new Set\(\['new','draft','registration'\]\)\nfont-size:\s*16px\nfor\(const field of setupInputs\)field\.disabled=locked\nhistory\.replaceState\nseasonSelector\.addEventListener\('change'\nseason\.name\+' — '\+season\.status\nseasons\.find\(\(season\)=>editableSeasonStatuses\.has\(season\.status\)\)\nsessionStorage\.getItem\('fd\.accessToken'\)\ntouch-action:\s*manipulation\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

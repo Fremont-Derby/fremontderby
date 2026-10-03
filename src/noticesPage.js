@@ -2,7 +2,7 @@ import { rackAttentionLine } from './rackAttentionLine.js';
 
 export function renderNoticesPage() {
   const oneRack = rackAttentionLine(1);
-  return `<!doctype html>
+  return `1 rack needs attention\nhref="\\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

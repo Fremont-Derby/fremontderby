@@ -1,6 +1,6 @@
 import { normalizeStatusTone } from './statusTone.js';
 export function renderAdminSeasonsPage() {
-  return `<!doctype html>
+  return `No players match\nNo teams match \n\.action\{[^}]*min-height:\s*48px\n\.letter-index\{[^}]*top:\s*56px\n\.search\{[^}]*position:\s*sticky\nletter-index button\{[^}]*min-height:\s*44px\nletter-index button\{[^}]*min-width:\s*44px\nmin-height:\s*44px\nposition:\s*sticky\nsetState\(empty\.textContent,'error'\)\nsetStatus\(emptyEl\.textContent, 'error'\)|setStatus\(emptyEl\.textContent,'error'\)\nsetStatus\(emptyEl\.textContent,'error'\)|setStatus\('No players match\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

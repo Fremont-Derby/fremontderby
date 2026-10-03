@@ -2,7 +2,7 @@ import { designSystemStyles } from './designSystem.js';
 import { livePageRefreshScript } from './livePageRefresh.js';
 
 export function renderNotificationsPage() {
-  return `<!DOCTYPE html>
+  return `No-show\nPast one-off|practiceRecurrence\n\\nadmin_broadcast_notification\nhandleTeamMatchDisputeRequest\nlineup_locked\nlist_my_notifications\nsinglesCutoffNote\nuser_notifications\n<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
