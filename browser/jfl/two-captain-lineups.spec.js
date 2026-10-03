@@ -243,6 +243,30 @@ async function scoreRack(page, winnerSide) {
   throw new Error('Rack did not save after bounded UI retries');
 }
 
+async function correctFirstRack(page) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await page.locator('[data-ledger] .rack-edit[data-edit-rack="1"]').click();
+    await expect(page.locator('[data-edit-panel]')).toBeVisible();
+    await page.locator('[data-edit-result="L"]').click();
+    await expect.poll(async () =>
+      await page.locator('[data-reconcile]').getAttribute('data-state') === 'match'
+      || /Wait before retrying/.test(await page.locator('[data-status]').textContent() || '')).toBe(true);
+    if (await page.locator('[data-reconcile]').getAttribute('data-state') === 'match') return;
+    const message = await page.locator('[data-error-message]').textContent() || '';
+    const seconds = Number(message.match(/Wait (\d+) seconds?/i)?.[1]);
+    expect(seconds, message).toBeGreaterThan(0);
+    console.info(`Rack correction readback recovery after HTTP429; cooldown=${seconds + 1}s.`);
+    await page.waitForTimeout((seconds + 1) * 1000);
+    // The correction POST may already have succeeded. Reread before replaying
+    // the UI action so a throttled follow-up GET never duplicates a saved edit.
+    await page.reload();
+    await waitForScorecardReady(page);
+    if (await page.locator('[data-reconcile]').getAttribute('data-state') === 'match') return;
+    await expect(page.locator('[data-reconcile]')).toHaveAttribute('data-state', 'mismatch');
+  }
+  throw new Error('Rack correction did not reconcile after bounded UI recovery');
+}
+
 test('distinct captains blind-submit, reconcile scoring, and finalize the same JFL matchup', async ({ browser, request }) => {
   const health = await request.get('/health/environment');
   expect(health.ok()).toBeTruthy();
@@ -340,9 +364,7 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainA.locator('[data-finalize]')).toBeDisabled();
     await expect(captainB.locator('[data-finalize]')).toBeDisabled();
 
-    await captainB.locator('[data-ledger] .rack-edit[data-edit-rack="1"]').click();
-    await expect(captainB.locator('[data-edit-panel]')).toBeVisible();
-    await captainB.locator('[data-edit-result="L"]').click();
+    await correctFirstRack(captainB);
     await expect(captainB.locator('[data-reconcile]')).toHaveAttribute('data-state', 'match');
     await expect(captainA.locator('[data-reconcile]')).toHaveAttribute('data-state', 'match', { timeout: 30_000 });
 
