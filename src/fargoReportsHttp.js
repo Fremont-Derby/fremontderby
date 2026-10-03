@@ -36,7 +36,7 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     if (base && key) {
       const read = withSupabaseSchema(fetchImpl, env);
       const response = await read(`${base}/rest/v1/fargo_reports?select=player_match_id,status,payload&order=created_at.desc&limit=100`, {
-        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'public' },
       });
       if (response.ok) { rows = await response.json(); reportStore = 'ready'; }
       if (!rows.length) {
@@ -53,9 +53,14 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     reportStore = 'unavailable';
   }
   const summary = fargoReportSummary(Array.isArray(rows) ? rows : []);
-  if (!summary.missingLinks.length) {
+  if (!summary.missingLinks.length || !summary.unreported.length) {
     const { loadFinalizedMatches } = await import('./fargoFeedHttp.js');
-    summary.missingLinks = missingFargoLinks(await loadFinalizedMatches(env, fetchImpl));
+    const matches = await loadFinalizedMatches(env, fetchImpl);
+    if (!summary.missingLinks.length) summary.missingLinks = missingFargoLinks(matches);
+    if (!summary.unreported.length) {
+      summary.unreported = matches.map((match) => ({ status: 'not_sent', player_match_id: match.playerMatchId, payload: { playerAName: match.playerAName, playerBName: match.playerBName } }));
+      reportStore = 'ready';
+    }
   }
   return new Response(renderFargoReportsPage(summary, { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
