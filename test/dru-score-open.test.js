@@ -41,3 +41,8 @@ test('a DRU match save records the team winner without the score list', () => {
   const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.equal(page.includes('scoreDruTeamMatch'), true);
 });
+
+test('a saved DRU match is not scored again', () => {
+  const page = readFileSync(new URL('../src/druScoreOpen.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('This match is already saved'), true);
+});
