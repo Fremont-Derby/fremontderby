@@ -24,7 +24,7 @@ const script = `<script data-player-claim-script>
   const status=root.querySelector('[data-player-claim-status]');
   const results=root.querySelector('[data-player-claim-results]');
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
-  async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
+  async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{const { safeServiceMessage } = await import('./safeServiceMessage.js'); return { error: safeServiceMessage(response.status, text) || 'Profile could not be loaded. Try again.' };}}
   async function request(path,options={},retry=true){
     const accessToken=token();if(!accessToken)throw new Error('Sign in to claim a player.');
     const response=await fetch(path,{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json',...(options.headers||{})}});
