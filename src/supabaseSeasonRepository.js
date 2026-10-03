@@ -84,6 +84,10 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
     },
 
     async getSeason(seasonId) {
+      if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+        const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+        await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+      }
       const url = `${supabaseUrl}/rest/v1/seasons?id=eq.${encodeFilterValue(seasonId)}&select=id,status,first_round_date,round_interval_days,default_table_numbers`;
       const rows = await requestJson(fetchImpl, url, {
         method: 'GET',
