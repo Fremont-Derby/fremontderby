@@ -34,3 +34,10 @@ test('a DRU race save records the winning side without the captain rack route', 
   assert.match(page, /won/);
   assert.match(page, /\/api\/dru\/player-matches\//);
 });
+
+test('a DRU match save records the team winner without the score list', () => {
+  const patch = raceResultPatch({ player_a_id: 'home-player', player_b_id: 'away-player' }, 'A');
+  assert.equal(patch.winner_side, 'A');
+  const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('scoreDruTeamMatch'), true);
+});

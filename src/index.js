@@ -2636,7 +2636,7 @@ if (url.pathname === "/standings") {
       return jsonResponse(await openDruMatchForScoring(env, druOpenMatch[1]));
     }
 
-    const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/score$/);
+const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/score$/);
     if (druScoreRace && request.method === 'POST') {
       if (String(env.ENVIRONMENT || '').trim() !== 'dru') return jsonResponse({ error: 'Not found' }, 404);
       await authenticateSupabaseUser(request, env);
@@ -2644,6 +2644,16 @@ if (url.pathname === "/standings") {
       const { recordDruRaceResult } = await import('./druScoreOpen.js');
       return jsonResponse(await recordDruRaceResult(env, druScoreRace[1], body.winnerSide));
     }
+
+    const druScoreMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/score$/);
+    if (druScoreMatch && request.method === 'POST') {
+      if (String(env.ENVIRONMENT || '').trim() !== 'dru') return jsonResponse({ error: 'Not found' }, 404);
+      await authenticateSupabaseUser(request, env);
+      const body = await request.json().catch(() => ({}));
+      const { scoreDruTeamMatch } = await import('./druScoreOpen.js');
+      return jsonResponse(await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide));
+    }
+
     if (url.pathname === "/api/me/profile") {
       if (request.method === "GET") {
         return handleGetOwnProfileRequest(request, env);
