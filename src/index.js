@@ -1927,6 +1927,10 @@ export async function handleRecordPlayerMatchRackRequest(
       },
       repository,
     );
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { closeDruTableAfterRack } = await import('./druTeamResult.js');
+      await closeDruTableAfterRack(env, playerMatchId, fetchImpl);
+    }
 
     return jsonResponse({ rack }, 201);
   } catch (error) {
