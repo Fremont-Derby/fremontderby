@@ -181,3 +181,9 @@ test("a season can name a closed join", () => {
   assert.match(src, /function joinStatusLabel/);
   assert.match(src, /Join is closed/);
 });
+
+test("the home line names when, where, cost, and how to join", () => {
+  const src = readFileSync(new URL("../src/homeLine.js", import.meta.url), "utf8");
+  assert.match(src, /function homeLineLabel/);
+  assert.match(src, /how to join are missing/);
+});
