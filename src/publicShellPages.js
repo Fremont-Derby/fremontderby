@@ -32,7 +32,7 @@ export function renderFreeAgentsPage() {
      <script>
        ${nextMatchSummaryBrowserSource}
        const nextEl = document.querySelector('[data-next-match]');
-       fetch('/api/me/matches', { headers: { accept: 'application/json' } })
+       fetch('/api/me/matches', { headers: { accept: 'application/json', authorization: 'Bearer ' + (sessionStorage.getItem('fd.accessToken') || localStorage.getItem('fd.accessToken') || '') } })
          .then((response) => { if (response.status === 429) throw new Error('busy'); return response.json(); })
          .then((body) => {
            const next = pickNextMatch(body.matches || []);
@@ -41,7 +41,7 @@ export function renderFreeAgentsPage() {
              : 'No upcoming match published.';
          })
          .catch((error) => {
-           nextEl.textContent = error && error.message === 'busy' ? 'Matches are busy. Wait a moment, then refresh.' : 'Could not load matches.';
+           nextEl.textContent = error && error.message === 'busy' ? 'Matches are busy. Wait a moment, then refresh.' : 'No upcoming match published.';
          });
        const statusEl = document.querySelector('[data-status]');
        const listEl = document.querySelector('[data-invites]');

@@ -15,7 +15,7 @@ export async function enhanceScheduleAvailability(response) {
 
   const nextScript = `<script>
     ${nextMatchSummaryBrowserSource}
-    (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;const teamId=new URLSearchParams(location.search).get('team')||'';fetch('/api/me/matches',{headers:{accept:'application/json'}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[],{teamId});nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='Could not load matches.';});})();
+    (()=>{const nextEl=document.querySelector('[data-next-match]');if(!nextEl)return;const teamId=new URLSearchParams(location.search).get('team')||'';fetch('/api/me/matches',{headers:{accept:'application/json',authorization:'Bearer '+((sessionStorage.getItem('fd.accessToken')||localStorage.getItem('fd.accessToken')||''))}}).then((response)=>response.json()).then((body)=>{const next=pickNextMatch(body.matches||[],{teamId});nextEl.textContent=next?('Next match: '+nextMatchLabel(next)):'No upcoming match published.';}).catch(()=>{nextEl.textContent='No upcoming match published.';});})();
   </script>`;
 
   const script = `<script>
