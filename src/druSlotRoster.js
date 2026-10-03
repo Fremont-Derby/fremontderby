@@ -29,7 +29,16 @@ export async function registerDruSlotRoster(env, slotId, fetchImpl = globalThis.
     { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } },
   );
   if (!members.ok) return 0;
-  const rows = await members.json();
+  let rows = await members.json();
+  if ((Array.isArray(rows) ? rows.length : 0) < 4) {
+    const { prepareDruPracticePublish } = await import('./druPublishPrep.js');
+    await prepareDruPracticePublish(env, slot.season_id, fetchImpl);
+    const again = await fetchWithSchema(
+      `${base}/rest/v1/team_memberships?team_id=eq.${encodeURIComponent(slot.team_id)}&season_id=eq.${encodeURIComponent(slot.season_id)}&ends_at=is.null&select=player_id`,
+      { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } },
+    );
+    if (again.ok) rows = await again.json();
+  }
   let written = 0;
   for (const row of Array.isArray(rows) ? rows : []) {
     if (!row?.player_id) continue;
