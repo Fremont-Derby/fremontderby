@@ -169,3 +169,9 @@ test("a season can name a missing play night", () => {
   assert.match(src, /function nightStatusLabel/);
   assert.match(src, /Play night is not set/);
 });
+
+test("a season can name a missing cost", () => {
+  const src = readFileSync(new URL("../src/costStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function costStatusLabel/);
+  assert.match(src, /Cost is not set/);
+});
