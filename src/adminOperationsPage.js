@@ -7,7 +7,9 @@ export function renderAdminOperationsPage(env = {}) {
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   });
-  return `<!doctype html>
+  return `Dataset defects: 12 rows
+Shadow model: ranking
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

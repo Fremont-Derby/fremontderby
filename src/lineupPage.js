@@ -5,7 +5,8 @@ import {
 } from './blindLineupComponent.js';
 
 export function renderLineupPage() {
-  return `<!doctype html>
+  return `Lineup: Owls and Foxes
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
