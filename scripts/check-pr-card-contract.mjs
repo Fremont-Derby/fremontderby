@@ -13,7 +13,7 @@ const TRACKING_REFERENCE = /\b(?:Tracks|Refs)\s+(?:#(\d+)|https:\/\/github\.com\
 const AUTO_CLOSE_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:#\d+|https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/\d+)\b/i;
 const DRU_JOURNAL_ISSUE = 2883;
 const DRU_JOURNAL_ENFORCEMENT_MIN_PR = 3014;
-const DRU_PROGRAM_CONTRACT_MIN_PR = 999999;
+const DRU_PROGRAM_CONTRACT_MIN_PR = 3193;
 const DRU_JOURNAL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ISSUE_COMMENT_URL = /https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/issues\/(\d+)#issuecomment-(\d+)/i;
 
