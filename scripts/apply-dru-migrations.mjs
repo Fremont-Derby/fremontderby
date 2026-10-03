@@ -20,15 +20,16 @@ if (!databaseUrl.includes(projectRef)) {
 }
 const parsed = new URL(databaseUrl);
 const password = decodeURIComponent(parsed.password || '');
-if (!password) {
+const originalUser = decodeURIComponent(parsed.username || '');
+if (!password || !originalUser) {
   console.error('Migration apply failed closed.');
   process.exit(1);
 }
-const user = `postgres.${projectRef}`;
+const users = [...new Set([originalUser, `postgres.${projectRef}`])];
 console.log(plan.text);
-console.log(`Using pooler user postgres.${projectRef} on aws-1-us-west-2.`);
+console.log(`Stored database user is ${originalUser}.`);
 
-function runPsql(file) {
+function runPsql(file, user) {
   return new Promise((resolve) => {
     const child = spawn('psql', ['-v', 'ON_ERROR_STOP=1', '-f', file], {
       stdio: ['ignore', 'inherit', 'pipe'],
@@ -51,12 +52,26 @@ function runPsql(file) {
 }
 
 for (const file of files) {
-  const result = await runPsql(file);
-  if (result.status !== 0) {
+  let done = false;
+  for (const user of users) {
+    console.log(`Trying ${user}.`);
+    const result = await runPsql(file, user);
+    if (result.status === 0) {
+      console.log(`Applied ${file}`);
+      done = true;
+      break;
+    }
+    if (/password authentication failed/i.test(result.errorText)) {
+      console.log(`Rejected ${user}.`);
+      continue;
+    }
     if (result.errorText) process.stderr.write(result.errorText);
     console.error('Migration apply failed closed.');
     process.exit(1);
   }
-  console.log(`Applied ${file}`);
+  if (!done) {
+    console.error('Migration apply failed closed.');
+    process.exit(1);
+  }
 }
 console.log('DRU migrations applied.');
