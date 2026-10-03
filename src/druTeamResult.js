@@ -35,7 +35,7 @@ export async function closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl =
   if (!base || !key) return 0;
   const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
   const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
-  const matchesResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&status=neq.finalized&select=id,team_a_id,team_b_id,status`, { headers });
+  const matchesResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&or=(status.neq.finalized,winner_team_id.is.null)&select=id,team_a_id,team_b_id,status,winner_team_id`, { headers });
   if (!matchesResponse.ok) return 0;
   const matches = await matchesResponse.json();
   if (!matches?.length) return 0;
