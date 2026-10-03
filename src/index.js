@@ -1967,6 +1967,7 @@ export async function handleFinalizePlayerMatchRequest(
 ) {
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    let seasonId = null;
     if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
       const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
       const { privatePostgrestProfile, withSupabaseSchema } = await import('./supabaseSchema.js');
