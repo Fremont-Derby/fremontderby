@@ -1,4 +1,5 @@
 import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
+import { emptyLineupIds, membershipSeatOk } from './druReadyQueue.js';
 
 function druOnly(env) {
   return String(env?.ENVIRONMENT || '').trim() === 'dru';
@@ -12,7 +13,6 @@ function service(env) {
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   return base && key ? { base, key } : null;
-
 }
 
 export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
@@ -33,10 +33,24 @@ export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = 
   return saved.ok ? ids.length : 0;
 }
 
-
 export function duplicateLineupIds(playerIds) {
   const ids = (playerIds || []).filter(Boolean);
   return ids.length > 0 && new Set(ids).size !== ids.length;
+}
+
+async function clearEmptyDruLineups(fetchWithSchema, conn, teamId, privateHeaders) {
+  const lineupResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?team_id=eq.${teamId}&select=id`, { headers: privateHeaders });
+  const lineups = lineupResponse.ok ? await lineupResponse.json() : [];
+  const slotResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?team_id=eq.${teamId}&select=lineup_id,player_id`, { headers: privateHeaders });
+  const slots = slotResponse.ok ? await slotResponse.json() : [];
+  const rows = [
+    ...lineups.map((lineup) => ({ id: lineup.id, lineup_id: lineup.id })),
+    ...slots,
+  ];
+  for (const lineupId of emptyLineupIds(rows)) {
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
+    await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
+  }
 }
 
 export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, playerIds = [] }, fetchImpl = globalThis.fetch) {
@@ -54,19 +68,7 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
   const playerId = (await playerResponse.json())?.[0]?.id;
   if (!playerId) return false;
   const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
-  const slotResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?team_id=eq.${teamId}&select=lineup_id,player_id`, { headers: privateHeaders });
-  const slots = slotResponse.ok ? await slotResponse.json() : [];
-  const byLineup = new Map();
-  for (const slot of slots) {
-    const rows = byLineup.get(slot.lineup_id) || [];
-    rows.push(slot);
-    byLineup.set(slot.lineup_id, rows);
-  }
-  for (const [lineupId, rows] of byLineup) {
-    if (rows.some((slot) => slot.player_id)) continue;
-    await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
-    await fetchWithSchema(`${conn.base}/rest/v1/team_lineups?id=eq.${lineupId}`, { method: 'DELETE', headers: privateHeaders });
-  }
+  await clearEmptyDruLineups(fetchWithSchema, conn, teamId, privateHeaders);
   const roster = [...new Set([playerId, ...playerIds.filter(Boolean)])];
   const now = new Date().toISOString();
   for (const rosterPlayerId of roster) {
@@ -76,7 +78,7 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, pl
     const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
       method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: rosterPlayerId, role: rosterPlayerId === playerId ? 'captain' : 'player' }),
     });
-    if (!saved.ok) throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
+    if (!membershipSeatOk(saved.status)) throw new Error(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
   }
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
   return true;
@@ -102,11 +104,10 @@ export async function ensureDruActorCanScoreTeam(env, { actorUserId, teamId }, f
   const saved = await fetchWithSchema(`${conn.base}/rest/v1/team_memberships`, {
     method: 'POST', headers, body: JSON.stringify({ season_id: seasonId, team_id: teamId, player_id: playerId, role: 'captain' }),
   });
-  if (!saved.ok) return false;
+  if (!membershipSeatOk(saved.status)) return false;
   await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: [playerId] }, fetchImpl);
   return true;
 }
-
 
 export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, slots = [] }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !teamId || !roundId) return null;
