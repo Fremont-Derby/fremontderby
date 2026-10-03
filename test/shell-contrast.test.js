@@ -91,3 +91,9 @@ test("a player can name a missing check-in", () => {
   assert.match(src, /function checkInLabel/);
   assert.match(src, /Not checked in/);
 });
+
+test("a message can name a missing matchup thread", () => {
+  const src = readFileSync(new URL("../src/messageThread.js", import.meta.url), "utf8");
+  assert.match(src, /function messageThreadLabel/);
+  assert.match(src, /No matchup thread/);
+});
