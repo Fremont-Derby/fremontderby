@@ -139,3 +139,9 @@ test("a player can name unfinished trial nights", () => {
   assert.match(src, /function trialNightLabel/);
   assert.match(src, /trial nights/);
 });
+
+test("a season can name a missing start date", () => {
+  const src = readFileSync(new URL("../src/seasonDate.js", import.meta.url), "utf8");
+  assert.match(src, /function seasonDateLabel/);
+  assert.match(src, /Season date is not set/);
+});
