@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 const fixture = {
+  seasonId: '18580000-1000-4000-8000-000000000000',
+  freeAgentId: '18580000-2000-4000-8000-000000000001',
   roundId: '18580000-1200-4000-8000-000000000001',
   teamMatchId: '18580000-1300-4000-8000-000000000001',
   teamAId: '18580000-1100-4000-8000-000000000001',
@@ -13,7 +15,7 @@ const fixture = {
   teamBPlayers: [
     '18580000-2000-4000-8000-000000000003',
     '18580000-2000-4000-8000-000000000005',
-    '18580000-2000-4000-8000-000000000007',
+    '18580000-2000-4000-8000-000000000001',
   ],
 };
 
@@ -25,6 +27,44 @@ async function assumeCaptain(page, label) {
   await expect(selector).toBeVisible();
   await selector.selectOption({ label });
   await expect(page.locator('[data-test-persona-banner]')).toContainText(label);
+}
+
+async function setQaAvailability(page, value) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await page.goto('/availability');
+    const card = page.locator(`[data-group-key^="${fixture.seasonId}|"]`);
+    const button = card.locator(`[data-value="${value}"]`);
+    await expect.poll(async () =>
+      (await page.locator('[data-status]').getAttribute('data-tone') === 'ok'
+        && await button.isEnabled({ timeout: 1000 }).catch(() => false))
+      || (await page.locator('[data-status]').getAttribute('data-tone') === 'error'
+        && await page.locator('[data-recovery]').getByRole('button', { name: 'Try again' }).isVisible())).toBe(true);
+    if (await page.locator('[data-status]').getAttribute('data-tone') !== 'ok') {
+      await expect(page.locator('[data-status]')).toContainText('temporarily busy');
+      await page.waitForTimeout(16_000);
+      continue;
+    }
+    const [response] = await Promise.all([
+      page.waitForResponse((result) => result.request().method() === 'PUT'
+        && new URL(result.url()).pathname === `/api/seasons/${fixture.seasonId}/availability/me`),
+      button.click(),
+    ]);
+    if (response.status() === 429) {
+      await expect(button).toBeEnabled();
+      const seconds = Number(response.headers()['retry-after']);
+      await page.waitForTimeout(((Number.isFinite(seconds) && seconds > 0 ? seconds : 15) + 1) * 1000);
+      continue;
+    }
+    expect(response.status()).toBe(200);
+    await expect(card).toHaveAttribute('data-state', value);
+    await expect(button).toBeEnabled();
+    await page.waitForTimeout(12_000);
+    await page.reload();
+    await expect(button).toBeEnabled();
+    await expect(card).toHaveAttribute('data-state', value);
+    return;
+  }
+  throw new Error('QA player availability did not save after bounded UI retries');
 }
 
 async function readLineupAsCaptain(page, teamId) {
@@ -52,6 +92,7 @@ async function readLineupAsCaptain(page, teamId) {
 async function waitForCandidate(page, playerId) {
   const candidate = page.locator(`[data-toggle-player="${playerId}"]`);
   for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (playerId === fixture.freeAgentId) await page.locator('[data-candidate-tab="subs"]').click();
     await expect.poll(async () =>
       await candidate.isVisible()
       || /Too many requests/.test((await page.locator('[data-status]').textContent()) || ''),
@@ -102,6 +143,7 @@ async function chooseAndSubmit(page, players) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     if ((await page.locator('[data-slot-count]').textContent()) !== '3 / 3') {
       for (const playerId of players) {
+        await page.locator(`[data-candidate-tab="${playerId === fixture.freeAgentId ? 'subs' : 'roster'}"]`).click();
         await page.locator(`[data-toggle-player="${playerId}"]`).click();
       }
     }
@@ -228,9 +270,20 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     isMobile: true,
     hasTouch: true,
   });
+  const playerContext = await browser.newContext();
+  const freeAgentContext = await browser.newContext();
   try {
     const captainA = await contextA.newPage();
     const captainB = await contextB.newPage();
+    const player = await playerContext.newPage();
+    const freeAgent = await freeAgentContext.newPage();
+    await assumeCaptain(player, 'Player A');
+    await setQaAvailability(player, 'unsure');
+    await setQaAvailability(player, 'available');
+    // Existing no-team synthetic persona has an admin role, but these mutations
+    // use only its own player availability contract, never admin endpoints.
+    await assumeCaptain(freeAgent, 'Admin — no team');
+    await setQaAvailability(freeAgent, 'unavailable');
     await assumeCaptain(captainA, 'Admin Captain');
     await assumeCaptain(captainB, 'Regular Captain');
     expect(await captainB.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
@@ -243,6 +296,14 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     });
     await openOwnLineup(captainA, fixture.teamAId, 'Persona Test Team B', fixture.teamAPlayers[0]);
     await openOwnLineup(captainB, fixture.teamBId, 'Persona Test Team A', fixture.teamBPlayers[0]);
+
+    await captainB.locator('[data-candidate-tab="subs"]').click();
+    await expect(captainB.locator(`[data-toggle-player="${fixture.freeAgentId}"]`)).toHaveCount(0);
+    await setQaAvailability(freeAgent, 'available');
+    await openOwnLineup(captainB, fixture.teamBId, 'Persona Test Team A', fixture.teamBPlayers[0]);
+    await captainB.locator('[data-candidate-tab="subs"]').click();
+    await waitForCandidate(captainB, fixture.freeAgentId);
+    await expect(captainB.locator(`[data-toggle-player="${fixture.freeAgentId}"]`)).toBeEnabled();
 
     await expect(captainA.locator('[data-own-selection-status]').first()).toContainText('Not submitted');
     await expect(captainB.locator('[data-own-selection-status]').first()).toContainText('Not submitted');
@@ -260,6 +321,8 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainB.locator('[data-score-link]')).toBeHidden();
 
     await chooseAndSubmit(captainB, fixture.teamBPlayers);
+    await expect(captainB.locator('[data-mobile-lineup-slots]')).toContainText('TEST Admin');
+    await expect(captainB.locator('[data-slots] .slot').nth(2)).toContainText('Substitute');
     await expect(captainB.locator('[data-own-selection-status]').first()).toContainText('Locked');
     await expect(captainB.locator('[data-opponent]')).toBeVisible();
     await expect(captainB.locator('[data-opponent-body] .opponent-row')).toHaveCount(3);
@@ -268,6 +331,7 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await openOwnLineup(captainA, fixture.teamAId, 'Persona Test Team B', fixture.teamAPlayers[0]);
     await expect(captainA.locator('[data-own-selection-status]').first()).toContainText('Locked');
     await expect(captainA.locator('[data-opponent-body] .opponent-row')).toHaveCount(3);
+    await expect(captainA.locator('[data-opponent-body] .opponent-row').nth(2)).toContainText('TEST Admin');
     await expect(captainA.locator('[data-score-link]')).toBeVisible();
 
     const matchA = await openFirstRaceFromLineup(captainA, fixture.teamAId);
@@ -320,5 +384,7 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
   } finally {
     await contextA.close();
     await contextB.close();
+    await playerContext.close();
+    await freeAgentContext.close();
   }
 });
