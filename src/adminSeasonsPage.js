@@ -37,8 +37,7 @@ export function renderAdminSeasonsPage() {
   @media(max-width:720px){.app{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}}</style>
 </head>
 <body>
-  <main class="app">\n    <p data-archive="completed">Only a completed or validation season can be archived.</p>
-    <p class="note" data-smoke-gate>A human gate waits on a real data check, not a shell-only page load.</p>
+  <main class="app">
     <header class="head">
       <div>
         <div class="muted">Admin · League Management</div>

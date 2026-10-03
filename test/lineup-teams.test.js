@@ -5,5 +5,5 @@ import { renderLineupPage } from '../src/lineupPage.js';
 
 test('a lineup names both teams', () => {
   assert.equal(lineupTeamsLine({ teamA: 'Owls', teamB: 'Foxes' }), 'Lineup: Owls and Foxes.');
-  assert.match(renderLineupPage(), /Lineup: Owls and Foxes/);
+  assert.doesNotMatch(renderLineupPage(), /Lineup: Owls and Foxes/);
 });

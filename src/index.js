@@ -226,7 +226,7 @@ export async function handlePublishScheduleRequest(
       const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
       const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
       const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&status=eq.confirmed&select=team_id`, {
+      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&team_id=not.is.null&select=team_id`, {
         headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'dru_private' },
       });
       const ready = practicePublishReady(slots.ok ? (await slots.json()).length : 0);
