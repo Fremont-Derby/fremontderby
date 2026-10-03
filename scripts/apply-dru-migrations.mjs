@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import { druMigrationApplyPlan } from '../src/druMigrationApply.js';
 
 const projectRef = process.env.SUPABASE_PROJECT_REF || '';
-const token = process.env.SUPABASE_ACCESS_TOKEN || '';
+const databaseUrl = process.env.DRU_DATABASE_URL || process.env.GAMMA_DATABASE_URL || '';
 const files = [
   'supabase/migrations/20261003043000_dru_notification_rls.sql',
   'supabase/migrations/20261003043100_dru_admin_phone.sql',
@@ -13,26 +14,25 @@ if (!plan.ok) {
   console.error(plan.text);
   process.exit(1);
 }
-if (!token) {
+if (!databaseUrl.includes(projectRef)) {
   console.error('Migration apply failed closed.');
   process.exit(1);
 }
 console.log(plan.text);
 for (const file of plan.files) {
-  const query = readFileSync(file, 'utf8');
-  const response = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'User-Agent': 'fremont-dru-migration',
-    },
-    body: JSON.stringify({ query }),
+  const code = await new Promise((resolve) => {
+    const child = spawn('psql', [databaseUrl, '-v', 'ON_ERROR_STOP=1', '-f', file], { stdio: ['ignore', 'inherit', 'pipe'] });
+    let errorText = '';
+    child.stderr.on('data', (chunk) => {
+      errorText += String(chunk).replace(databaseUrl, '[redacted]');
+    });
+    child.on('exit', (status) => {
+      if (errorText) process.stderr.write(errorText);
+      resolve(status || 0);
+    });
   });
-  if (!response.ok) {
-    const text = await response.text();
-    console.error(`Migration apply failed closed. HTTP ${response.status}: ${text.slice(0, 180)}`);
+  if (code !== 0) {
+    console.error('Migration apply failed closed.');
     process.exit(1);
   }
   console.log(`Applied ${file}`);
