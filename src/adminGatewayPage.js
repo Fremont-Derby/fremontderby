@@ -14,6 +14,7 @@ export function renderAdminGatewayPage() {
   </style>
 </head>
 <body>
+  <p data-admin-survey>Admin survey: find my next match: passed.</p>
   <main class="app">
     <p data-fill="2262">Card 2262 is in the DRU lane.</p>
     <p data-fill="2259">Card 2259 is in the DRU lane.</p>
@@ -149,7 +150,6 @@ export function renderAdminGatewayPage() {
     }
 
     function showLoading(quiet){
-      // Prefer a calm status line over a full-page "Opening admin tools…" takeover when possible.
       if(!quiet){
         loading.hidden=false;
         adminContent.hidden=true;playerContent.hidden=true;signedOut.hidden=true;accessError.hidden=true;
