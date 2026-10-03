@@ -85,3 +85,40 @@ export async function closeOpenDruPracticeMatches(env, seasonId, fetchImpl = glo
   }
   return closed;
 }
+
+export async function writeDruPracticeResults(env, seasonId, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !seasonId) return 0;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return 0;
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=minimal' };
+  const matchesResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&select=id,team_a_id,team_b_id`, { headers });
+  if (!matchesResponse.ok) return 0;
+  const matches = await matchesResponse.json();
+  if (!matches?.length) return 0;
+  const ids = matches.map((match) => match.id).join(',');
+  const existingResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?team_match_id=in.(${ids})&select=id,team_match_id,slot_number,status`, { headers });
+  const existing = existingResponse.ok ? await existingResponse.json() : [];
+  let written = 0;
+  for (const row of existing) {
+    if (row.status === 'finalized') continue;
+    const saved = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${row.id}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ status: 'finalized', winner_side: 'A' }),
+    });
+    if (saved.ok) written += 1;
+  }
+  const have = new Set(existing.map((row) => `${row.team_match_id}:${row.slot_number}`));
+  const inserts = [];
+  for (const match of matches) {
+    for (const slot of [1, 2, 3]) {
+      if (have.has(`${match.id}:${slot}`)) continue;
+      inserts.push({ team_match_id: match.id, slot_number: slot, status: 'finalized', winner_side: 'A' });
+    }
+  }
+  if (inserts.length) {
+    const saved = await fetchWithSchema(`${base}/rest/v1/player_matches`, { method: 'POST', headers, body: JSON.stringify(inserts) });
+    if (saved.ok) written += inserts.length;
+  }
+  return written;
+}
