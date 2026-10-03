@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply the two DRU migrations
         env:
           GAMMA_DATABASE_URL: ${{ secrets.GAMMA_DATABASE_URL }}
