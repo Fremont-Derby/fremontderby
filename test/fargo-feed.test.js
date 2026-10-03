@@ -24,3 +24,9 @@ test('a Fargo feed URL can return one match', () => {
   assert.equal(one.items.length, 1);
   assert.equal(one.items[0].playerMatchId, 'one');
 });
+
+test('a missing Fargo match URL is not found', () => {
+  const feed = feedForMatch(toFargoFeed([]), 'missing');
+  assert.equal(feed.found, false);
+  assert.equal(feed.items.length, 0);
+});
