@@ -1,4 +1,4 @@
-import { fargoReportSummary } from './fargoReportStore.js';
+import { fargoReportSummary, missingFargoLinks } from './fargoReportStore.js';
 import { renderFargoReportsPage } from './fargoReportsPage.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
@@ -39,11 +39,25 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
         headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
       });
       if (response.ok) { rows = await response.json(); reportStore = 'ready'; }
+      if (!rows.length) {
+        const evidence = await read(`${base}/rest/v1/external_tournament_events?source=eq.other&external_event_id=like.fargo-report:*&select=provenance&limit=100`, {
+          headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'public' },
+        });
+        if (evidence.ok) {
+          rows = (await evidence.json()).map((row) => ({ status: row.provenance?.status || 'not_sent', player_match_id: row.provenance?.playerMatchId, payload: row.provenance || {} }));
+          reportStore = rows.length ? 'ready' : reportStore;
+        }
+      }
     }
   } catch {
     reportStore = 'unavailable';
   }
-  return new Response(renderFargoReportsPage(fargoReportSummary(Array.isArray(rows) ? rows : []), { feedUrl: '/api/fargo/feed', saved, reportStore }), {
+  const summary = fargoReportSummary(Array.isArray(rows) ? rows : []);
+  if (!summary.missingLinks.length) {
+    const { loadFinalizedMatches } = await import('./fargoFeedHttp.js');
+    summary.missingLinks = missingFargoLinks(await loadFinalizedMatches(env, fetchImpl));
+  }
+  return new Response(renderFargoReportsPage(summary, { feedUrl: '/api/fargo/feed', saved, reportStore }), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
