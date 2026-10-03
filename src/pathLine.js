@@ -1,8 +1,8 @@
-export function shortPathLine(path = {}) {
-  if (!path.name) return '';
-  return `Short path: ${path.name}.`;
+export function inboxPolishLine(inbox = {}) {
+  if (!inbox.order) return '';
+  return `Inbox: ${inbox.order} message first.`;
 }
-export function publicProofLine(proof = {}) {
-  if (!proof.name) return '';
-  return `Public proof: ${proof.name}.`;
+export function menuDismissLine(menu = {}) {
+  if (!menu.dock) return '';
+  return 'Menu closes outside the dock. Dock stays lit.';
 }

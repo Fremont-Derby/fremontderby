@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { shortPathLine, publicProofLine } from '../src/pathLine.js';
+import { inboxPolishLine, menuDismissLine } from '../src/pathLine.js';
 import { renderProfilePage } from '../src/profilePage.js';
 
-test('a short path and a public proof are named', () => {
-  assert.equal(shortPathLine({ name: 'check in' }), 'Short path: check in.');
-  assert.equal(publicProofLine({ name: 'standings' }), 'Public proof: standings.');
+test('the inbox order and the outside menu dismiss are named', () => {
+  assert.equal(inboxPolishLine({ order: 'newest' }), 'Inbox: newest message first.');
+  assert.equal(menuDismissLine({ dock: true }), 'Menu closes outside the dock. Dock stays lit.');
   const html = renderProfilePage();
-  assert.match(html, /Short path: check in/);
-  assert.match(html, /Public proof: standings/);
+  assert.match(html, /Inbox: newest message first/);
+  assert.match(html, /Menu closes outside the dock. Dock stays lit/);
 });
