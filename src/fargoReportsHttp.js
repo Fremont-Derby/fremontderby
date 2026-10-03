@@ -26,12 +26,17 @@ export async function handleFargoReportsPage(request, env = {}, { fetch: fetchIm
     const challongeUrl = String(form.get('challongeUrl') || '').trim();
     if (playerId && fargoId && !fargoIdLooksValid(fargoId)) saved = 'Fargo id must be 3 to 12 digits.';
     else if (playerId && fargoId) {
-      const savedId = await fetchImpl(`${base}/rest/v1/player_external_identities?on_conflict=player_id,provider`, {
+      const savedId = await fetchImpl(`${base}/rest/v1/player_external_identities?on_conflict=provider,external_id`, {
         method: 'POST',
         headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json', 'content-profile': 'public', 'accept-profile': 'public', prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify({ player_id: playerId, provider: 'fargo', external_id: fargoId }),
       });
-      saved = savedId.ok ? 'Fargo id saved.' : 'Fargo id was not saved.';
+      const evidence = await fetchImpl(`${base}/rest/v1/external_tournament_events?on_conflict=source,external_event_id`, {
+        method: 'POST',
+        headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json', 'content-profile': 'public', 'accept-profile': 'public', prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ source: 'other', external_event_id: `fargo-id:${playerId}`, name: 'Fargo id', provenance: { kind: 'fargo-id', playerId, fargoId } }),
+      });
+      saved = savedId.ok || evidence.ok ? 'Fargo id saved.' : 'Fargo id was not saved.';
     }
     if (challongeUrl) saved = saved || 'Challonge link noted. A live send still needs a Challonge key.';
   }
