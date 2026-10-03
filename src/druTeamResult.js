@@ -62,3 +62,26 @@ export async function closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl =
   }
   return closed;
 }
+
+export async function closeOpenDruPracticeMatches(env, seasonId, fetchImpl = globalThis.fetch) {
+  if (!druOnly(env) || !seasonId) return 0;
+  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+  const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) return 0;
+  const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=representation' };
+  const matchesResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?season_id=eq.${seasonId}&status=neq.finalized&select=id,team_a_id`, { headers });
+  if (!matchesResponse.ok) return 0;
+  const matches = await matchesResponse.json();
+  if (!matches?.length) return 0;
+  let closed = 0;
+  for (const match of matches) {
+    const saved = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${match.id}`, {
+      method: 'PATCH',
+      headers: { ...headers, prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'finalized', winner_team_id: match.team_a_id }),
+    });
+    if (saved.ok) closed += 1;
+  }
+  return closed;
+}
