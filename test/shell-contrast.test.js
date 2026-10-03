@@ -55,3 +55,9 @@ test("a match can name a missing table", () => {
   assert.match(src, /function tableStatusLabel/);
   assert.match(src, /Table is not set/);
 });
+
+test("a schedule can name a missing round", () => {
+  const src = readFileSync(new URL("../src/roundStatus.js", import.meta.url), "utf8");
+  assert.match(src, /function roundStatusLabel/);
+  assert.match(src, /Round is not set/);
+});
