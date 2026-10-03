@@ -37,7 +37,12 @@ export async function enhanceTeamsCanonicalActions(response) {
           const banner=document.querySelector('[data-team-highlight]');
           if(!requested||!banner)return;
           banner.hidden=false;
-          banner.textContent='Showing team: '+requested;
+          banner.textContent='Selected team';
+          const nameFor=()=>{const node=document.querySelector('[data-requested-team]');return node&&node.textContent.trim()};
+          const paint=()=>{const name=nameFor();if(name)banner.textContent=name};
+          paint();
+          const box=document.querySelector('[data-captain-teams]');
+          if(box) new MutationObserver(paint).observe(box,{childList:true,subtree:true});
           const mark=(node)=>{
             const team={id:node.getAttribute('data-team-id')||node.dataset.teamId||'',name:node.textContent||''};
             if(isRequestedTeam(team,requested)) node.setAttribute('data-requested-team','true');

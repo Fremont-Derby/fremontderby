@@ -174,6 +174,8 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           teamBName: teamsById.get(match.team_b_id) ?? 'Team',
           tableNumber: match.table_number,
           status: match.status,
+          winnerTeamId: match.winner_team_id ?? null,
+          winnerTeamName: teamsById.get(match.winner_team_id) ?? null,
           makeupOn: match.makeup_on ?? null,
           makeupLocation: match.makeup_location ?? null,
           makeupStatus: match.makeup_status ?? null,
