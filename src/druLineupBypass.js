@@ -60,12 +60,15 @@ async function clearEmptyDruLineups(fetchWithSchema, conn, teamId, roundId, priv
   if (!lineupResponse.ok || !slotResponse.ok) reject('Lineup could not be read before lock');
   const lineups = await lineupResponse.json();
   const slots = await slotResponse.json();
-  const counts = new Map();
+  const players = new Map();
   for (const slot of slots) {
-    if (!slot.player_id) continue;
-    counts.set(slot.lineup_id, (counts.get(slot.lineup_id) || 0) + 1);
+    const id = String(slot.player_id || '').trim().toLowerCase();
+    if (!id) continue;
+    const seen = players.get(slot.lineup_id) || new Set();
+    seen.add(id);
+    players.set(slot.lineup_id, seen);
   }
-  const filled = new Set([...counts].filter(([, count]) => count >= 3).map(([id]) => id));
+  const filled = new Set([...players].filter(([, seen]) => seen.size >= 3).map(([id]) => id));
   for (const lineup of lineups) {
     if (lineup.round_id !== roundId || filled.has(lineup.id)) continue;
     const removedSlots = await fetchWithSchema(`${conn.base}/rest/v1/team_lineup_slots?lineup_id=eq.${lineup.id}`, { method: 'DELETE', headers: privateHeaders });
