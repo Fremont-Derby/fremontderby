@@ -1,5 +1,5 @@
 export function renderAvailabilityPage() {
-  return `<!doctype html>
+  return `2026-10-03 · Round 1 · player · in\n<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />

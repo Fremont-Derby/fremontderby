@@ -5,7 +5,7 @@ import {
 } from './blindLineupComponent.js';
 
 export function renderLineupPage() {
-  return `Lineup: Owls and Foxes
+  return `This match is not on your teams\nLineup: Owls and Foxes
 <!doctype html>
 <html lang="en">
 <head>
