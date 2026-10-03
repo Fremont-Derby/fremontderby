@@ -83,11 +83,9 @@ export function renderAvailabilityPage() {
     async function loadPage(opts={}){const quiet=Boolean(opts&&opts.quiet);if(!accessToken()){if(quiet)return;setStatus('Sign in to check in for league night.');showRecovery('Check in for league night','Sign in to tell your captain if you will be there. Doing this in the morning of a night match helps lineups get built on time.','signin');return}if(!quiet){showRecovery('Finding your next league night…','Loading your upcoming rounds so you can check in.');setStatus('Loading check-in…')}try{await loadContexts();await loadTeamChoices();showWorkspace();setStatus('Check-in ready','ok')}finally{if(statusEl&&/loading check-in/i.test(statusEl.textContent||''))statusEl.textContent='Check-in ready'}}
     async function run(action){try{await action()}catch(error){const message=(window.fdFriendlyError?window.fdFriendlyError(error):(error?.message||'Availability could not be loaded.'));setStatus(message,'error');if(message.startsWith('Your sign-in expired'))showRecovery('Your sign-in expired','Sign in again to keep your availability tied to the correct player.','expired');else showRecovery('Availability could not be loaded','Your choices were not changed. Try loading the page again.','retry')}}
     contextSelect.addEventListener('change',renderContext);for(const button of buttons)button.addEventListener('click',()=>run(()=>saveAvailability(button.dataset.availabilityStatus)));teamChoiceList.addEventListener('click',(event)=>{const button=event.target.closest('[data-choose-team]');if(button)run(()=>saveTeamChoice(button.dataset.teamMatch,button.dataset.chooseTeam))});
-    run(loadPage);setTimeout(()=>{if(statusEl&&/loading check-in/i.test(statusEl.textContent||''))statusEl.textContent='Check-in took too long. Try again.'},9000);
+    run(loadPage);setTimeout(()=>{if(statusEl&&/loading check-in/i.test(statusEl.textContent||''))statusEl.textContent='Check-in took too long. Try again.'},9000);const scoreLink=document.querySelector('[data-score-link]');const scoreDate=new URLSearchParams(location.search).get('date');if(scoreLink&&scoreDate)scoreLink.href='/scorecard?date='+encodeURIComponent(scoreDate);
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>run(()=>loadPage(opts)),{intervalMs:45000,immediate:false});
   </script>
 </body>
 </html>`;
 }
-
-;(()=>{const link=document.querySelector('[data-score-link]');const date=new URLSearchParams(location.search).get('date');if(link&&date)link.href='/scorecard?date='+encodeURIComponent(date);})();
