@@ -6,6 +6,7 @@ const projectRef = process.env.SUPABASE_PROJECT_REF || '';
 const token = process.env.SUPABASE_ACCESS_TOKEN || '';
 const files = [
   'supabase/migrations/20261003043000_dru_notification_rls.sql',
+  'supabase/migrations/20261003113000_dru_notification_no_browser_policy.sql',
   'supabase/migrations/20261003043100_dru_admin_phone.sql',
 ];
 const plan = druMigrationApplyPlan({ projectRef, sqlFiles: files });
