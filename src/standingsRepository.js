@@ -137,7 +137,7 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
         order: 'scheduled_on.asc,round_number.asc',
       });
       const matchParams = new URLSearchParams({
-        select: 'id,round_id,team_a_id,team_b_id,table_number,status,makeup_on,makeup_location,makeup_status,makeup_note,makeup_proposed_by_team_id',
+        select: 'id,round_id,team_a_id,team_b_id,table_number,status,winner_team_id,makeup_on,makeup_location,makeup_status,makeup_note,makeup_proposed_by_team_id',
         season_id: `eq.${seasonId}`,
         order: 'round_id.asc,table_number.asc',
       });
@@ -179,6 +179,12 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           makeupStatus: match.makeup_status ?? null,
           makeupNote: match.makeup_note ?? null,
           makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
+          winnerTeamId: match.winner_team_id ?? null,
+          winnerName: match.winner_team_id === match.team_a_id
+            ? teamsById.get(match.team_a_id) ?? null
+            : match.winner_team_id === match.team_b_id
+              ? teamsById.get(match.team_b_id) ?? null
+              : null,
         });
         matchesByRoundId.set(match.round_id, matches);
       }
