@@ -21,7 +21,11 @@ jobs:
     name: pr-card-contract
     runs-on: ubuntu-latest
     steps:
+      # Governance is authoritative on main even when the PR targets a permanent lane.
+      # The triggering pull_request event remains the untrusted metadata under validation.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
