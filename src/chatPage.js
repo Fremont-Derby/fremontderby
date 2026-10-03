@@ -119,7 +119,6 @@ export function renderChatPage(env = {}) {
 </head>
 <body>
   <main class="app">
-    <section data-stuck-path><h2>If you are stuck</h2><p>Launch goes back to the mission. Lineup goes to lineup. Score goes to score.</p></section>
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
       <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
