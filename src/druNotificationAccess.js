@@ -47,3 +47,11 @@ export function assertAllowedNotificationRpc(url) {
   }
   return name;
 }
+
+export function assertNoNotificationDump(url) {
+  const value = assertAllowedNotificationRpc(url);
+  if (String(url || '').includes('select=*')) {
+    throw new Error('DRU notifications do not allow a table dump.');
+  }
+  return value;
+}
