@@ -18,7 +18,7 @@ async function openMessages(browser, request, mobile) {
     expect(await health.json()).toMatchObject({ environment: 'jfl', ok: true,
       expectedSupabaseSchema: 'jfl', versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
   }
-  const context = await browser.newContext({ baseURL: sourceMode ? 'http://messages.test' :
+  const context = await browser.newContext({ baseURL: sourceMode ? 'https://messages.test' :
     process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
     viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 900 },
     isMobile: mobile, hasTouch: mobile });
@@ -30,6 +30,7 @@ async function openMessages(browser, request, mobile) {
   let holdNext = false;
   let older = false;
   const writes = [];
+  const sends = [];
   await context.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -37,6 +38,10 @@ async function openMessages(browser, request, mobile) {
     const respond = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
     if (route.request().method() !== 'GET') {
       writes.push(path);
+      if (path.endsWith('/messages')) {
+        sends.push({ path, body: route.request().postDataJSON(), route });
+        return;
+      }
       expect(path.endsWith('/messages/read'), 'Never send real message writes in this regression').toBe(true);
       return respond({});
     }
@@ -67,7 +72,7 @@ async function openMessages(browser, request, mobile) {
   if (sourceMode) {
     const html = await (await injectTestPersonaControls(await injectMessagesTheme(new Response(decorateHtmlWithShell(renderChatPage(), '/messages'),
       { headers: { 'content-type': 'text/html' } })))).text();
-    await page.route('http://messages.test/messages', route => route.fulfill({ contentType: 'text/html', body: html }));
+    await page.route('https://messages.test/messages', route => route.fulfill({ contentType: 'text/html', body: html }));
   }
   await page.goto('/messages');
   await expect(page.locator('[data-message-list]')).toContainText('A current');
@@ -75,7 +80,7 @@ async function openMessages(browser, request, mobile) {
     const root = mobile ? '.fd-mobile-inbox' : '[data-thread-list]';
     await page.locator(`${root} [data-thread-key="team:${id}"]`).click();
   };
-  return { context, page, held, writes, select, hold: () => { holdNext = true; }, paginate: () => { older = true; } };
+  return { context, page, held, writes, sends, select, hold: () => { holdNext = true; }, paginate: () => { older = true; } };
 }
 
 async function settleResponse(page, response) {
@@ -85,6 +90,65 @@ async function settleResponse(page, response) {
 }
 
 for (const mobile of [false, true]) {
+  test(`same-conversation send recovers after denial and completes once (${mobile ? 'phone' : 'desktop'})`, async ({ browser, request }) => {
+    const fixture = await openMessages(browser, request, mobile);
+    try {
+      const input = fixture.page.locator('[data-message-input]');
+      await input.fill('Retry only after denial');
+      await input.press('Enter');
+      await expect.poll(() => fixture.sends.length).toBe(1);
+      await fixture.sends[0].route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Messaging unavailable"}' });
+      await expect(fixture.page.locator('[data-status]')).toHaveText('Messaging unavailable');
+      await expect(input).toHaveValue('Retry only after denial');
+      await expect(input).toBeEnabled();
+      await input.press('Enter');
+      await expect.poll(() => fixture.sends.length).toBe(2);
+      await fixture.sends[1].route.fulfill({ status: 200, contentType: 'application/json', body: '{"message":{}}' });
+      await expect(fixture.page.locator('[data-status]')).toHaveText('Sent');
+      await expect(input).toHaveValue('');
+      await expect(input).toBeEnabled();
+      expect(fixture.sends.every(send => send.path.includes(teamA))).toBe(true);
+      expect(fixture.sends[0].body.clientMessageId).not.toBe(fixture.sends[1].body.clientMessageId);
+    } finally { await fixture.context.close(); }
+  });
+  for (const returnsToA of [false, true]) {
+    for (const fails of [false, true]) {
+      test(`pending send ${fails ? 'failure' : 'success'} preserves ${returnsToA ? 'A-B-A' : 'another conversation'} draft (${mobile ? 'phone' : 'desktop'})`, async ({ browser, request }) => {
+        const fixture = await openMessages(browser, request, mobile);
+        try {
+          const input = fixture.page.locator('[data-message-input]');
+          await input.fill('A outgoing');
+          await input.press('Enter');
+          await expect.poll(() => fixture.sends.length).toBe(1);
+          expect(fixture.sends[0].path).toContain(teamA);
+          expect(fixture.sends[0].body.body).toBe('A outgoing');
+          // A second form event while the POST is held must not duplicate it.
+          await fixture.page.locator('[data-composer]').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+          await fixture.select(teamB);
+          await expect(fixture.page.locator('[data-message-list]')).toContainText('B current');
+          await input.fill('B unsent draft');
+          await input.press('Enter');
+          expect(fixture.sends).toHaveLength(1);
+          if (returnsToA) {
+            await fixture.select(teamA);
+            await expect(fixture.page.locator('[data-message-list]')).toContainText('A current');
+            await input.fill('A revised unsent draft');
+          }
+          const completed = fixture.page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/messages'));
+          await fixture.sends[0].route.fulfill({ status: fails ? 403 : 200, contentType: 'application/json',
+            body: fails ? '{"error":"Messaging unavailable"}' : '{"message":{}}' });
+          await settleResponse(fixture.page, await completed);
+          await expect(input).toHaveValue(returnsToA ? 'A revised unsent draft' : 'B unsent draft');
+          await expect(input).toBeEnabled();
+          await expect(fixture.page.locator('[data-composer] button')).toBeEnabled();
+          await expect(fixture.page.locator('[data-chat-name]')).toHaveText(returnsToA ? 'Regression Team A' : 'Regression Team B');
+          await expect(fixture.page.locator('[data-status]')).toContainText(fails ? 'Regression Team A' : 'Messages loaded');
+          if (fails) await expect(fixture.page.locator('[data-status]')).toContainText('could not be confirmed');
+          expect(fixture.sends).toHaveLength(1);
+        } finally { await fixture.context.close(); }
+      });
+    }
+  }
   test(`pending history cannot block or overwrite a new conversation (${mobile ? 'phone' : 'desktop'})`, async ({ browser, request }) => {
     const fixture = await openMessages(browser, request, mobile);
     try {
