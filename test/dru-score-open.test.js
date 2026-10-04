@@ -46,3 +46,9 @@ test('a reused team name says it belongs to another night', () => {
   const page = readFileSync(new URL('../src/adminSeasonTeamsHttp.js', import.meta.url), 'utf8');
   assert.equal(page.includes('already used on another night'), true);
 });
+
+test('a lineup link for one season does not lock another night', () => {
+  const page = readFileSync(new URL('../src/lineupPage.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('window.fdLineupSeason'), true);
+  assert.equal(page.includes('team.seasonId===window.fdLineupSeason'), true);
+});
