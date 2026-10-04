@@ -12,6 +12,7 @@ const jflMigrationPath = new URL(
 );
 
 function assertNineColumnEditWrapper(sql, schema, privateSchema) {
+  sql = sql.replace(/\r\n/g, '\n');
   const returnShape = sql.match(/returns table\(([\s\S]*?)\)\nlanguage plpgsql/i)?.[1] || '';
   const columns = returnShape
     .split(',')
@@ -34,4 +35,13 @@ test('public checked rack edit wrapper returns exactly the underlying nine-colum
 
 test('JFL checked rack edit wrapper returns exactly the underlying nine-column edit shape', async () => {
   assertNineColumnEditWrapper(await readFile(jflMigrationPath, 'utf8'), 'jfl', 'jfl_private');
+});
+
+test('checked rack edit contract accepts LF and CRLF but rejects malformed shapes', async () => {
+  const source = (await readFile(jflMigrationPath, 'utf8')).replace(/\r\n/g, '\n');
+  for (const sql of [source, source.replace(/\n/g, '\r\n')]) {
+    assertNineColumnEditWrapper(sql, 'jfl', 'jfl_private');
+    assert.throws(() => assertNineColumnEditWrapper(sql.replace('previous_winner_side text,', ''), 'jfl', 'jfl_private'));
+    assert.throws(() => assertNineColumnEditWrapper(sql.replace('previous_winner_side text', 'record_complete boolean'), 'jfl', 'jfl_private'));
+  }
 });
