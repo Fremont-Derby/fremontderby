@@ -420,6 +420,9 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainA.locator('[data-score-a]')).toHaveText(String(targetA));
     await expect(captainB.locator('[data-score-a]')).toHaveText(String(targetA));
     const completed = new Map([[matchA, targetA]]);
+    await captainA.goto('/scorecard');
+    await expect(captainA.locator('[data-qa-result-state]')).toHaveText('1 of 3 races finalized');
+    await expect(captainA.locator('[data-qa-team-result]')).toContainText('No team winner yet');
     for (const race of races.filter((id) => id !== matchA)) {
       await openFirstRaceFromLineup(captainA, fixture.teamAId, race, 3 - completed.size);
       await openFirstRaceFromLineup(captainB, fixture.teamBId, race, 3 - completed.size);
@@ -460,6 +463,20 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
         await expect(page.locator('[data-finalize]')).toBeDisabled();
       }
     }
+    for (const page of [captainA, captainB]) {
+      await page.goto('/scorecard');
+      await expect(page.locator('[data-qa-result-state]')).toHaveText('Matchup complete');
+      await expect(page.locator('[data-qa-team-result]')).toHaveText('Team A wins 3–0');
+      await expect(page.locator('[data-qa-result-races] tr')).toHaveCount(3);
+      await expect(page.locator('[data-qa-result-races]')).toContainText('TEST Admin');
+    }
+    const deniedResults = await player.evaluate(async () => {
+      const response = await fetch('/api/me/jfl-qa-results', {
+        headers: { authorization: 'Bearer '+sessionStorage.getItem('fd.accessToken') },
+      });
+      return { status: response.status, hasRaces: Object.hasOwn(await response.json(), 'races') };
+    });
+    expect(deniedResults).toEqual({ status: 403, hasRaces: false });
   } finally {
     await contextA.close();
     await contextB.close();

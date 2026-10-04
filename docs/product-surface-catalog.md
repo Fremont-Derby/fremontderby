@@ -35,7 +35,7 @@ This is the canonical index connecting **audiences → user stories → function
 | `/schedule` | Public visitor / player / captain | See league dates/matchups and mark personal dated availability | Canonical schedule/availability surface under #370; normal public season inputs exclude QA-purpose seasons after PR #561; shared default-season policy shipped in PR #566 |
 | `/availability` | Player / captain | Transitional standalone availability editor | Duplicate transitional runtime surface; retire under #370 |
 | `/lineup` | Captain | Build and commit the team's blind lineup | Canonical lineup surface; Score may hand an unrevealed captain matchup here; Test Drive shares the production component |
-| `/scorecard` | Player / captain / team scorer | Select authorized league-night context and continue to lineup preparation or scoring | Canonical flexible Score hub under #371 |
+| `/scorecard` | Player / captain / team scorer | Select authorized league-night context and continue to lineup preparation or scoring | Canonical flexible Score hub under #371; JFL-only fixed synthetic matchup result continuation under #2979 is private to its active captains, not a public season/standings input |
 | `/scorecard/live` | Player / team scorer | Operate active team-owned rack-ledger scoring | Canonical focused live-scoring child; physical/two-human proof remains #326 |
 | `/messages` | Player / captain / admin-support participant | Coordinate league/team/direct communication | Canonical communication surface; matchup chat is deprecated under #78 |
 | `/messages/moderation` | Moderator / league admin | Review and resolve reported messages | Canonical moderation surface; separate from Admin Support |
