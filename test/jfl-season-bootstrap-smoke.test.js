@@ -31,12 +31,13 @@ test('JFL deployment smoke rejects 405, HTML, malformed JSON, and wrong shape', 
   }
 });
 
-test('JFL permanent-branch deploy checks season bootstrap before recording success', () => {
+test('JFL permanent-branch deploy checks season bootstrap after exact-commit smoke', () => {
   const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const exactCommit = workflow.indexOf('name: Verify deployed lane and exact commit');
   const gate = workflow.indexOf('name: Verify JFL public season bootstrap');
-  const proof = workflow.indexOf('name: Record JFL deployment proof');
-  assert.ok(gate > workflow.indexOf('name: Verify deployed lane and exact commit'));
-  assert.ok(proof > gate);
-  assert.match(workflow.slice(gate, proof), /if: github\.ref == 'refs\/heads\/fremontderby-jfl'/);
-  assert.match(workflow.slice(gate, proof), /node scripts\/smoke-jfl-season-bootstrap\.mjs/);
+  assert.ok(exactCommit > 0 && gate > exactCommit);
+  const nextGate = workflow.indexOf('name: Verify JFL simulated session and team bootstrap', gate);
+  assert.ok(nextGate > gate);
+  assert.match(workflow.slice(gate, nextGate), /if: github\.ref == 'refs\/heads\/fremontderby-jfl'/);
+  assert.match(workflow.slice(gate, nextGate), /node scripts\/smoke-jfl-season-bootstrap\.mjs/);
 });
