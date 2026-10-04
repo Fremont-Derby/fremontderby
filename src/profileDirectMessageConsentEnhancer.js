@@ -3,7 +3,7 @@ const card = `<article class="panel" data-dm-consent>
   <form style="display:grid;gap:12px;padding:12px" data-dm-consent-form>
     <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" data-dm-consent-toggle disabled style="width:24px;height:24px" /> Allow direct messages</label>
     <p>Direct messages are off until you choose to enable them. Both people must opt in. Turning this off stops new direct messages, including in existing conversations. Your private message history and block/report tools remain available.</p>
-    <p>Your schedule, lineup, scoring and required league notices remain available with direct messages off. General and team chat settings are being handled separately.</p>
+    <p>Your schedule, lineup, scoring and required league notices remain available with direct messages off. This setting controls direct messages only.</p>
     <button class="primary" type="submit" data-dm-consent-save disabled>Save messaging privacy</button>
     <button type="button" data-dm-consent-reload>Reload messaging privacy</button>
     <div role="status" aria-live="polite" data-dm-consent-status>Sign in to load messaging privacy.</div>
