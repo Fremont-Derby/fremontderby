@@ -32,6 +32,8 @@ import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
 import { enhanceProfileContact } from './profileContactEnhancer.js';
 import { routeDirectMessageConsent } from './directMessageConsentHttp.js';
+import { routeSocialChatConsent } from './socialChatConsentHttp.js';
+import { enhanceProfileSocialChatConsent } from './profileSocialChatConsentEnhancer.js';
 import { enhanceProfileDirectMessageConsent } from './profileDirectMessageConsentEnhancer.js';
 import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
@@ -175,6 +177,8 @@ const baseRouterEntry = {
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
     const consentResponse = await routeDirectMessageConsent(request, env);
     if (consentResponse) return consentResponse;
+    const socialConsentResponse = await routeSocialChatConsent(request, env);
+    if (socialConsentResponse) return socialConsentResponse;
     const playerContactResponse = await routePlayerContact(request, env);
     if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
@@ -202,7 +206,8 @@ const baseRouterEntry = {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
       const withConsent = env.ENVIRONMENT === 'jfl' ? await enhanceProfileDirectMessageConsent(withContact) : withContact;
-      const withPlayerClaim = await enhanceProfilePlayerClaim(withConsent);
+      const withSocialConsent = env.ENVIRONMENT === 'jfl' ? await enhanceProfileSocialChatConsent(withConsent) : withConsent;
+      const withPlayerClaim = await enhanceProfilePlayerClaim(withSocialConsent);
       return finalizeBrowserResponse(await injectJflSimulatedGoogleAuth(withPlayerClaim, env), url.pathname);
     }
     const resultResponse = url.pathname === '/scorecard' && request.method === 'GET'

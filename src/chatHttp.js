@@ -56,6 +56,7 @@ function statusForError(error) {
   if (/membership is required|No team chat access/i.test(error.message)) return 403;
   if (/Direct messages are blocked|Both players must participate/i.test(error.message)) return 403;
   if (/Direct messaging unavailable/i.test(error.message)) return 403;
+  if (/Social chat unavailable/i.test(error.message)) return 403;
   if (/League chat access|Active season participation|League admin access/i.test(error.message)) return 403;
   if (/Matchup chat access|matchup team membership|Completed matchup chats/i.test(error.message)) return 403;
   if (/Player profile is required/i.test(error.message)) return 409;
