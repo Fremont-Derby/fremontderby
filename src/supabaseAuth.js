@@ -1,17 +1,4 @@
-import { resolveTestPersonaActor } from './testPersona.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
-export const DRU_AGENT_SENTINEL = 'dru-bypass';
-
-export function druAgentSentinelEnabled(env = {}) {
-  if (String(env.ENVIRONMENT || '').trim() !== 'dru') return false;
-  const bypass = String(env.BETA_AUTH_BYPASS || '').trim().toLowerCase();
-  return bypass !== '0' && bypass !== 'false' && bypass !== 'off';
-}
-
-export function isDruAgentSentinel(token, env = {}) {
-  return druAgentSentinelEnabled(env) && token === DRU_AGENT_SENTINEL;
-}
-
 export class AuthError extends Error {
   constructor(message, status = 401) {
     super(message);
@@ -19,6 +6,8 @@ export class AuthError extends Error {
     this.status = status;
   }
 }
+
+export const DRU_AGENT_SENTINEL = 'dru-bypass';
 
 function requireEnvValue(env, name) {
   const value = env?.[name];
@@ -75,6 +64,14 @@ export function betaAuthBypassEnabled(env = {}) {
   return true;
 }
 
+export function druAgentSentinelEnabled(env = {}) {
+  return String(env.ENVIRONMENT || '').trim() === 'dru' && betaAuthBypassEnabled(env);
+}
+
+export function isDruAgentSentinel(token, env = {}) {
+  return druAgentSentinelEnabled(env) && token === DRU_AGENT_SENTINEL;
+}
+
 export function resolveBetaBypassActor(env = {}) {
   const environment = String(env.ENVIRONMENT || '').trim();
   const defaults = TEST_LANE_DEFAULT_ACTORS[environment] || null;
@@ -94,10 +91,6 @@ export function resolveBetaBypassActor(env = {}) {
   };
 }
 
-function maybeAssumeTestPersona(request, env, user) {
-  return resolveTestPersonaActor(request, env, user) || user;
-}
-
 export async function authenticateSupabaseUser(
   request,
   env,
@@ -109,14 +102,13 @@ export async function authenticateSupabaseUser(
 
   const token = bearerToken(request);
 
+  if (isDruAgentSentinel(token, env)) {
+    return resolveBetaBypassActor(env);
+  }
+
   // Test-lane bypass is only for deliberately unauthenticated automation.
   // Once a caller supplies a bearer token, validate it normally rather than
   // escalating to the shared test actor.
-  if (isDruAgentSentinel(token, env)) {
-    const actor = resolveBetaBypassActor(env);
-    return { ...actor, betaBypass: true };
-  }
-
   if (!token && betaAuthBypassEnabled(env)) {
     return resolveBetaBypassActor(env);
   }
@@ -145,8 +137,8 @@ export async function authenticateSupabaseUser(
     throw new AuthError('Authenticated user is missing an id');
   }
 
-  return maybeAssumeTestPersona(request, env, {
+  return {
     id: user.id,
     email: user.email ?? null,
-  });
+  };
 }

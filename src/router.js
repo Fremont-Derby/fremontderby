@@ -17,8 +17,8 @@ import { renderCaptainSandboxPage } from './captainSandboxPage.js';
 import { chatHttpHandlers } from './chatHttp.js';
 import { renderChatModerationPage } from './chatModerationPage.js';
 import { renderNotificationsPage } from './notificationsPage.js';
-import { renderNoticesPage } from './noticesPage.js';
 import { renderChatPage } from './chatPage.js';
+import { renderNoticesPage } from './noticesPage.js';
 import { renderDemoSeasonPage } from './demoSeasonPage.js';
 import { dualScoringHttpHandlers } from './dualScoringHttp.js';
 import { playoffHttpHandlers } from './playoffHttp.js';
@@ -196,13 +196,14 @@ export default {
     if (url.pathname === '/notifications') {
       return htmlResponse(renderNotificationsPage());
     }
-    if (url.pathname === '/notices') {
-      if (request.method !== 'GET') return methodNotAllowed();
-      return htmlResponse(renderNoticesPage(), url.pathname);
-    }
     if (url.pathname === '/messages') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderChatPage(env), url.pathname);
+    }
+
+    if (url.pathname === '/notices') {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return htmlResponse(renderNoticesPage(), url.pathname);
     }
 
     if (url.pathname === '/messages/moderation') {

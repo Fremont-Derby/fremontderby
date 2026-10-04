@@ -57,11 +57,21 @@ export function createAdminSeasonTeamsHttpHandlers({
     createPrepared(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const body = await readJson(request);
-        const team = await createPreparedAdminSeasonTeamCommand({
-          actorUserId: actor.id,
-          seasonId,
-          teamName: body.teamName ?? body.team_name,
-        }, repository);
+        let team;
+        try {
+          team = await createPreparedAdminSeasonTeamCommand({
+            actorUserId: actor.id,
+            seasonId,
+            teamName: body.teamName ?? body.team_name,
+          }, repository);
+        } catch (error) {
+          if (error.status === 409 || /duplicate|already exists|unique/i.test(String(error.message || ''))) {
+            const next = new Error('That team name is already used on another night. Pick another name.');
+            next.status = 409;
+            throw next;
+          }
+          throw error;
+        }
         // Prepared rows are seed-only until captain + minimum roster qualify for a slot (#624).
         return Response.json({
           team,
