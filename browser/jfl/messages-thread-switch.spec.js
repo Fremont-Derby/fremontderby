@@ -112,42 +112,42 @@ for (const mobile of [false, true]) {
     } finally { await fixture.context.close(); }
   });
   for (const returnsToA of [false, true]) {
-  for (const fails of [false, true]) {
-    test(`pending send ${fails ? 'failure' : 'success'} preserves ${returnsToA ? 'A-B-A' : 'another conversation'} draft (${mobile ? 'phone' : 'desktop'})`, async ({ browser, request }) => {
-      const fixture = await openMessages(browser, request, mobile);
-      try {
-        const input = fixture.page.locator('[data-message-input]');
-        await input.fill('A outgoing');
-        await input.press('Enter');
-        await expect.poll(() => fixture.sends.length).toBe(1);
-        expect(fixture.sends[0].path).toContain(teamA);
-        expect(fixture.sends[0].body.body).toBe('A outgoing');
-        // A second form event while the POST is held must not duplicate it.
-        await fixture.page.locator('[data-composer]').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-        await fixture.select(teamB);
-        await expect(fixture.page.locator('[data-message-list]')).toContainText('B current');
-        await input.fill('B unsent draft');
-        await input.press('Enter');
-        expect(fixture.sends).toHaveLength(1);
-        if (returnsToA) {
-          await fixture.select(teamA);
-          await expect(fixture.page.locator('[data-message-list]')).toContainText('A current');
-          await input.fill('A revised unsent draft');
-        }
-        const completed = fixture.page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/messages'));
-        await fixture.sends[0].route.fulfill({ status: fails ? 403 : 200, contentType: 'application/json',
-          body: fails ? '{"error":"Messaging unavailable"}' : '{"message":{}}' });
-        await settleResponse(fixture.page, await completed);
-        await expect(input).toHaveValue(returnsToA ? 'A revised unsent draft' : 'B unsent draft');
-        await expect(input).toBeEnabled();
-        await expect(fixture.page.locator('[data-composer] button')).toBeEnabled();
-        await expect(fixture.page.locator('[data-chat-name]')).toHaveText(returnsToA ? 'Regression Team A' : 'Regression Team B');
-        await expect(fixture.page.locator('[data-status]')).toContainText(fails ? 'Regression Team A' : 'Messages loaded');
-        if (fails) await expect(fixture.page.locator('[data-status]')).toContainText('could not be confirmed');
-        expect(fixture.sends).toHaveLength(1);
-      } finally { await fixture.context.close(); }
-    });
-  }
+    for (const fails of [false, true]) {
+      test(`pending send ${fails ? 'failure' : 'success'} preserves ${returnsToA ? 'A-B-A' : 'another conversation'} draft (${mobile ? 'phone' : 'desktop'})`, async ({ browser, request }) => {
+        const fixture = await openMessages(browser, request, mobile);
+        try {
+          const input = fixture.page.locator('[data-message-input]');
+          await input.fill('A outgoing');
+          await input.press('Enter');
+          await expect.poll(() => fixture.sends.length).toBe(1);
+          expect(fixture.sends[0].path).toContain(teamA);
+          expect(fixture.sends[0].body.body).toBe('A outgoing');
+          // A second form event while the POST is held must not duplicate it.
+          await fixture.page.locator('[data-composer]').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+          await fixture.select(teamB);
+          await expect(fixture.page.locator('[data-message-list]')).toContainText('B current');
+          await input.fill('B unsent draft');
+          await input.press('Enter');
+          expect(fixture.sends).toHaveLength(1);
+          if (returnsToA) {
+            await fixture.select(teamA);
+            await expect(fixture.page.locator('[data-message-list]')).toContainText('A current');
+            await input.fill('A revised unsent draft');
+          }
+          const completed = fixture.page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/messages'));
+          await fixture.sends[0].route.fulfill({ status: fails ? 403 : 200, contentType: 'application/json',
+            body: fails ? '{"error":"Messaging unavailable"}' : '{"message":{}}' });
+          await settleResponse(fixture.page, await completed);
+          await expect(input).toHaveValue(returnsToA ? 'A revised unsent draft' : 'B unsent draft');
+          await expect(input).toBeEnabled();
+          await expect(fixture.page.locator('[data-composer] button')).toBeEnabled();
+          await expect(fixture.page.locator('[data-chat-name]')).toHaveText(returnsToA ? 'Regression Team A' : 'Regression Team B');
+          await expect(fixture.page.locator('[data-status]')).toContainText(fails ? 'Regression Team A' : 'Messages loaded');
+          if (fails) await expect(fixture.page.locator('[data-status]')).toContainText('could not be confirmed');
+          expect(fixture.sends).toHaveLength(1);
+        } finally { await fixture.context.close(); }
+      });
+    }
   }
   test(`pending history cannot block or overwrite a new conversation (${mobile ? 'phone' : 'desktop'})`, async ({ browser, request }) => {
     const fixture = await openMessages(browser, request, mobile);
