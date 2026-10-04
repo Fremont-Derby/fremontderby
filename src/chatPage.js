@@ -233,6 +233,7 @@ export function renderChatPage(env = {}) {
     let candidates = [];
     let currentKey = '';
     let loadingMessages = false;
+    let conversationEpoch = 0;
     let displayedMessages = [];
     let canLoadOlder = false;
     let reachedConversationStart = false;
@@ -545,11 +546,11 @@ export function renderChatPage(env = {}) {
       const thread = currentThread();
       if (!thread || loadingMessages) return;
       loadingMessages = true;
-      const selectedKey = thread.key;
+      const selectedEpoch = conversationEpoch;
       try {
         if (!quiet) setStatus('Loading messages…');
         const body = await api(messagePath(thread) + '?limit=50');
-        if (selectedKey !== currentKey) return;
+        if (selectedEpoch !== conversationEpoch) return;
         const messages = Array.isArray(body.messages) ? body.messages : [];
         if (quiet) {
           const byId = new Map(displayedMessages.map((message) => [message.message_id, message]));
@@ -564,9 +565,12 @@ export function renderChatPage(env = {}) {
         }
         renderMessages(displayedMessages);
         await markRead(thread, displayedMessages);
+        if (selectedEpoch !== conversationEpoch) return;
         if (!quiet) setStatus('Messages loaded', 'ok');
+      } catch (error) {
+        if (selectedEpoch === conversationEpoch) throw error;
       } finally {
-        loadingMessages = false;
+        if (selectedEpoch === conversationEpoch) loadingMessages = false;
       }
     }
     async function loadOlderMessages() {
@@ -576,10 +580,12 @@ export function renderChatPage(env = {}) {
       loadingMessages = true;
       loadOlderButtonEl.disabled = true;
       const priorHeight = messageListEl.scrollHeight;
+      const selectedEpoch = conversationEpoch;
       try {
         const query = '?limit=50&before=' + encodeURIComponent(oldest.created_at)
           + '&beforeMessageId=' + encodeURIComponent(oldest.message_id);
         const body = await api(messagePath(thread) + query);
+        if (selectedEpoch !== conversationEpoch) return;
         const older = Array.isArray(body.messages) ? body.messages : [];
         const byId = new Map([...older, ...displayedMessages].map((message) => [message.message_id, message]));
         displayedMessages = [...byId.values()].sort((a, b) =>
@@ -589,12 +595,20 @@ export function renderChatPage(env = {}) {
         renderMessages(displayedMessages, { keepPosition: true });
         messageListEl.scrollTop = messageListEl.scrollHeight - priorHeight;
         setStatus(older.length ? 'Older messages loaded' : 'Beginning of conversation', 'ok');
+      } catch (error) {
+        if (selectedEpoch === conversationEpoch) throw error;
       } finally {
-        loadingMessages = false;
-        loadOlderButtonEl.disabled = false;
+        if (selectedEpoch === conversationEpoch) {
+          loadingMessages = false;
+          loadOlderButtonEl.disabled = false;
+        }
       }
     }
     async function selectThread(key) {
+      // Each selection owns its own requests, including A -> B -> A.
+      conversationEpoch += 1;
+      loadingMessages = false;
+      loadOlderButtonEl.disabled = false;
       currentKey = key || '';
       const thread = currentThread();
       chatNameEl.textContent = thread ? thread.name : 'Select a conversation';
@@ -609,6 +623,7 @@ export function renderChatPage(env = {}) {
       displayedMessages = [];
       canLoadOlder = false;
       reachedConversationStart = false;
+      renderMessages([]);
       renderThreads();
       if (!thread) {
         const actions = candidates.length
