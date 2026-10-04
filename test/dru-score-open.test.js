@@ -41,3 +41,8 @@ test('a DRU match save records the team winner without the score list', () => {
   const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.equal(page.includes('scoreDruTeamMatch'), true);
 });
+
+test('a reused team name says it belongs to another night', () => {
+  const page = readFileSync(new URL('../src/adminSeasonTeamsHttp.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('already used on another night'), true);
+});
