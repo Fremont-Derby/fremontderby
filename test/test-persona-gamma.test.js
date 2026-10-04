@@ -73,8 +73,6 @@ test('Gamma rejects missing operator allowlist and arbitrary persona keys', asyn
 });
 
 test('Gamma POST sets an environment-bound secure persona cookie and server auth assumes that actor', async () => {
-  const config = JSON.parse(await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8'));
-  if (config.name === 'fremontderby-dru') return;
   const setResponse = await routeTestPersona(
     request('/api/test-persona', {
       method: 'POST',
@@ -148,11 +146,6 @@ test('production auth ignores a Gamma persona cookie and remains the real authen
 
 test('Wrangler keeps production on canonical router and enables persona wrapper only for Gamma', async () => {
   const config = JSON.parse(await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8'));
-  if (config.name === 'fremontderby-dru') {
-    assert.equal(config.main, 'src/routerEntry.js');
-    assert.match(JSON.stringify(config.routes || []), /dru\.fremontderby\.com/);
-    return;
-  }
   assert.equal(config.main, 'src/routerEntry.js');
   assert.equal(config.vars.ENVIRONMENT, 'production');
   assert.equal(config.vars.TEST_PERSONA_OPERATOR_USER_IDS, undefined);
