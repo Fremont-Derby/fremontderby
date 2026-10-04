@@ -51,7 +51,7 @@ export function raceInserts(match, homeIds, awayIds) {
 }
 
 export async function openDruMatchForScoring(env, matchId, fetchImpl = globalThis.fetch) {
-  if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return { opened: 0, error: 'Not a DRU lane.' };
+  if (!['dru', 'gamma'].includes(String(env?.ENVIRONMENT || '').trim())) return { opened: 0, error: 'Not a scoring lane.' };
   const { withSupabaseSchema } = await import('./supabaseSchema.js');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
   const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -91,7 +91,7 @@ export function raceResultPatch(match, winnerSide) {
 }
 
 export async function recordDruRaceResult(env, playerMatchId, winnerSide, fetchImpl = globalThis.fetch) {
-  if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return { saved: false, error: 'Not a DRU lane.' };
+  if (!['dru', 'gamma'].includes(String(env?.ENVIRONMENT || '').trim())) return { saved: false, error: 'Not a scoring lane.' };
   const { withSupabaseSchema } = await import('./supabaseSchema.js');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
   const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -109,7 +109,7 @@ export async function recordDruRaceResult(env, playerMatchId, winnerSide, fetchI
 }
 
 export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetchImpl = globalThis.fetch) {
-  if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return { saved: false, error: 'Not a DRU lane.' };
+  if (!['dru', 'gamma'].includes(String(env?.ENVIRONMENT || '').trim())) return { saved: false, error: 'Not a scoring lane.' };
   const { withSupabaseSchema } = await import('./supabaseSchema.js');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
   const base = String(env.SUPABASE_URL || '').replace(/\/$/, '');
