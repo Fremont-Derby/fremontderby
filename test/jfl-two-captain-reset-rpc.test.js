@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { resetJflTwoCaptainFixture, upcomingFixtureDate } from '../scripts/reset-jfl-two-captain.mjs';
+import { resetJflTwoCaptainFixture as resetFixture, upcomingFixtureDate, waitForExactJflHealth } from '../scripts/reset-jfl-two-captain.mjs';
+
+function readiness(options) {
+  let elapsed = 0;
+  return waitForExactJflHealth({ ...options, clock: () => elapsed,
+    sleep: async (ms) => { elapsed += ms; }, timeoutMs: 60_000 });
+}
+
+function resetJflTwoCaptainFixture(options) {
+  return resetFixture({ ...options, waitForHealth: readiness });
+}
 
 const migration = await readFile(new URL('../supabase/migrations/20261002172005_jfl_two_captain_reset_rpc.sql', import.meta.url), 'utf8');
 const fixtureId = '18580000-1300-4000-8000-000000000001';
@@ -54,14 +64,85 @@ test('hosted preflight checks exact live SHA before reset and never exposes the 
   const result = await resetJflTwoCaptainFixture({ fetchImpl, serviceRoleKey: 'test-secret', expectedSha: 'sha', now: '2026-10-03T00:00:00Z' });
   assert.equal(result.resetLineups, 1);
   assert.equal(result.scheduledOn, '2026-10-10');
-  assert.equal(calls.length, 7);
-  assert.match(calls[1].url, /oqkkvqkerusepyokzbmt\.supabase\.co\/rest\/v1\/rpc\/reset_two_captain_qa$/);
-  assert.equal(calls[1].options.headers['content-profile'], 'jfl');
+  assert.equal(calls.length, 8);
+  assert.match(calls[2].url, /oqkkvqkerusepyokzbmt\.supabase\.co\/rest\/v1\/rpc\/reset_two_captain_qa$/);
+  assert.equal(calls[2].options.headers['content-profile'], 'jfl');
 
   await assert.rejects(
     resetJflTwoCaptainFixture({ fetchImpl: async () => ({ ok: false, status: 403 }), serviceRoleKey: 'test-secret', expectedSha: 'sha' }),
     (error) => !error.message.includes('test-secret'),
   );
+});
+
+test('alternating old/exact deployment resets readiness streak before any mutation', async () => {
+  const calls = [];
+  const versions = ['old', 'sha', 'old', 'sha', 'sha', 'sha'];
+  const phases = [];
+  await resetJflTwoCaptainFixture({
+    fetchImpl: fixtureFetch(calls, { '/health/environment': () => Response.json({
+      environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: versions.shift(),
+    }) }), serviceRoleKey: 'test-secret', expectedSha: 'sha', onPhase: (phase) => phases.push(phase),
+  });
+  assert.equal(calls.findIndex(({ options }) => options.method === 'POST'), 5);
+  assert.equal(calls.filter(({ options }) => options.method === 'POST').length, 1);
+  assert.equal(versions.length, 0);
+  assert.match(phases[0], /pre-reset-health; mutationState=not-started/);
+  assert.match(phases.at(-1), /complete; mutationState=reset-and-date-confirmed/);
+});
+
+test('readiness timeout performs zero mutations and reports pre-reset state', async () => {
+  const calls = [];
+  await assert.rejects(resetJflTwoCaptainFixture({
+    fetchImpl: fixtureFetch(calls, { '/health/environment': () => Response.json({
+      environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: 'old',
+    }) }), serviceRoleKey: 'test-secret', expectedSha: 'sha',
+  }), /phase=pre-reset-health; mutationState=not-started: Exact JFL deployment did not stabilize/);
+  assert.equal(calls.length, 5);
+  assert.ok(calls.every(({ options }) => !options.method));
+});
+
+test('wrong environment/schema/readiness fails immediately without writes', async () => {
+  for (const invalid of [{ environment: 'dru' }, { expectedSupabaseSchema: 'public' }, { ok: false }]) {
+    const calls = [];
+    await assert.rejects(resetJflTwoCaptainFixture({
+      fetchImpl: fixtureFetch(calls, { '/health/environment': () => Response.json({
+        environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: 'sha', ...invalid,
+      }) }), serviceRoleKey: 'test-secret', expectedSha: 'sha',
+    }), /phase=pre-reset-health; mutationState=not-started: JFL health failed/);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test('post-reset identity change fails without retrying writes and reports confirmed date', async () => {
+  const calls = [];
+  let reads = 0;
+  await assert.rejects(resetJflTwoCaptainFixture({
+    fetchImpl: fixtureFetch(calls, { '/health/environment': () => Response.json({
+      environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true,
+      versionTag: ++reads <= 2 ? 'sha' : 'old',
+    }) }), serviceRoleKey: 'test-secret', expectedSha: 'sha',
+  }), /phase=post-reset-health; mutationState=reset-and-date-confirmed: The live JFL environment is not the requested exact SHA/);
+  assert.equal(reads, 3);
+  assert.equal(calls.filter(({ options }) => options.method === 'POST').length, 1);
+  assert.equal(calls.filter(({ options }) => options.method === 'PATCH').length, 1);
+});
+
+test('transport failures identify uncertain mutation outcome without exposing private error text', async () => {
+  for (const [path, phase, state] of [
+    ['/health/environment', 'pre-reset-health', 'not-started'],
+    ['/rest/v1/rpc/reset_two_captain_qa', 'reset-rpc', 'reset-outcome-unknown'],
+    ['/rest/v1/rounds', 'fixture-date', 'reset-confirmed-date-unconfirmed'],
+  ]) {
+    const calls = [];
+    await assert.rejects(resetJflTwoCaptainFixture({
+      fetchImpl: fixtureFetch(calls, { [path]: () => { throw new Error('private test-secret response'); } }),
+      serviceRoleKey: 'test-secret', expectedSha: 'sha',
+    }), (error) => {
+      assert.equal(error.message, `JFL QA reset failed phase=${phase}; mutationState=${state}: Request or response validation failed`);
+      return true;
+    });
+    assert.ok(calls.filter(({ options }) => options.method === 'POST').length <= 1);
+  }
 });
 
 test('fixture date uses UTC calendar arithmetic across midnight, year, leap day and DST', () => {

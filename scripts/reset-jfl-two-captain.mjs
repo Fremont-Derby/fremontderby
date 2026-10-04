@@ -58,58 +58,93 @@ async function readExactJflHealth(fetchImpl, expectedSha) {
   if (!response.ok) throw new Error(`JFL health returned HTTP ${response.status}`);
   const health = await response.json();
   if (health.environment !== 'jfl' || health.expectedSupabaseSchema !== 'jfl'
-    || health.ok !== true || health.versionTag !== expectedSha) {
+    || health.ok !== true) {
+    throw new Error('JFL health failed environment/schema/readiness validation');
+  }
+  if (health.versionTag !== expectedSha) {
     throw new Error('The live JFL environment is not the requested exact SHA');
   }
 }
 
-export async function resetJflTwoCaptainFixture({ fetchImpl = fetch, serviceRoleKey, expectedSha, now = new Date() }) {
+export async function waitForExactJflHealth({ fetchImpl = fetch, expectedSha,
+  clock = Date.now, sleep = delay, timeoutMs = 12 * 60_000 }) {
+  const deadline = clock() + timeoutMs;
+  let consecutive = 0;
+  while (true) {
+    try {
+      await readExactJflHealth(fetchImpl, expectedSha);
+      consecutive += 1;
+      if (consecutive === 2) return;
+    } catch (error) {
+      consecutive = 0;
+      if (error.message !== 'The live JFL environment is not the requested exact SHA'
+        && !/^JFL health returned HTTP/.test(error.message)) throw error;
+    }
+    if (clock() >= deadline) throw new Error('Exact JFL deployment did not stabilize before the browser preflight deadline');
+    await sleep(Math.min(15_000, Math.max(0, deadline - clock())));
+  }
+}
+
+export async function resetJflTwoCaptainFixture({ fetchImpl = fetch, serviceRoleKey, expectedSha,
+  now = new Date(), waitForHealth = waitForExactJflHealth, onPhase = () => {} }) {
   if (!serviceRoleKey || !expectedSha) throw new Error('Staging key and exact JFL SHA are required');
   const scheduledOn = upcomingFixtureDate(now);
-  await readExactJflHealth(fetchImpl, expectedSha);
-  const response = await fetchImpl(`${stagingUrl}/rest/v1/rpc/reset_two_captain_qa`, {
-    method: 'POST',
-    headers: {
-      apikey: serviceRoleKey,
-      authorization: `Bearer ${serviceRoleKey}`,
-      'content-profile': 'jfl',
-      accept: 'application/json',
-      'content-type': 'application/json',
-    },
-    body: '{}',
-  });
-  if (!response.ok) throw new Error(`Staging-only QA reset returned HTTP ${response.status}`);
-  const rows = await response.json();
-  if (!Array.isArray(rows) || rows.length !== 1 || rows[0]?.team_match_id !== fixtureId
-    || !Number.isInteger(rows[0]?.reset_lineups)) {
-    throw new Error('Staging-only QA reset did not return the fixed matchup');
+  let phase = 'pre-reset-health';
+  let mutationState = 'not-started';
+  const report = () => onPhase(`JFL QA reset phase=${phase}; mutationState=${mutationState}`);
+  try {
+    report();
+    await waitForHealth({ fetchImpl, expectedSha });
+    phase = 'reset-rpc';
+    mutationState = 'reset-outcome-unknown';
+    report();
+    const response = await fetchImpl(`${stagingUrl}/rest/v1/rpc/reset_two_captain_qa`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        authorization: `Bearer ${serviceRoleKey}`,
+        'content-profile': 'jfl',
+        accept: 'application/json',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    });
+    if (!response.ok) throw new Error(`Staging-only QA reset returned HTTP ${response.status}`);
+    const rows = await response.json();
+    if (!Array.isArray(rows) || rows.length !== 1 || rows[0]?.team_match_id !== fixtureId
+      || !Number.isInteger(rows[0]?.reset_lineups)) {
+      throw new Error('Staging-only QA reset did not return the fixed matchup');
+    }
+    // The RPC above verifies the exact QA matchup and its two fixed teams before
+    // any calendar write. A partial failure prevents the browser job from starting;
+    // a subsequent trusted reset can safely replay both steps.
+    phase = 'fixture-date';
+    mutationState = 'reset-confirmed-date-unconfirmed';
+    report();
+    await prepareFixtureDate(fetchImpl, serviceRoleKey, scheduledOn);
+    phase = 'post-reset-health';
+    mutationState = 'reset-and-date-confirmed';
+    report();
+    await readExactJflHealth(fetchImpl, expectedSha);
+    phase = 'complete';
+    report();
+    return { resetLineups: rows[0].reset_lineups, scheduledOn };
+  } catch (error) {
+    // Only our constant diagnostics are safe to print. Fetch/JSON errors can
+    // contain private response data or credentials; never surface their text.
+    const safeMessage = /^(?:JFL health returned HTTP \d+$|JFL health failed environment\/schema\/readiness validation$|The live JFL environment is not the requested exact SHA$|Exact JFL deployment did not stabilize before the browser preflight deadline$|Staging-only QA reset (?:returned HTTP \d+|did not return the fixed matchup)$|JFL QA date preparation (?:returned HTTP \d+|returned invalid rows)$|The fixed JFL QA (?:season is required for date preparation|round is required for date preparation|date did not persist)$)/.test(error.message)
+      ? error.message : 'Request or response validation failed';
+    throw new Error(`JFL QA reset failed phase=${phase}; mutationState=${mutationState}: ${safeMessage}`);
   }
-  // The RPC above verifies the exact QA matchup and its two fixed teams before
-  // any calendar write. A partial failure prevents the browser job from starting;
-  // a subsequent trusted reset can safely replay both steps.
-  await prepareFixtureDate(fetchImpl, serviceRoleKey, scheduledOn);
-  await readExactJflHealth(fetchImpl, expectedSha);
-  return { resetLineups: rows[0].reset_lineups, scheduledOn };
 }
 
 async function main() {
   const expectedSha = process.env.GITHUB_SHA || '';
   const serviceRoleKey = process.env.STAGING_SUPABASE_SERVICE_ROLE_KEY || '';
   if (!expectedSha || !serviceRoleKey) throw new Error('Trusted JFL SHA and staging key are required');
-  const deadline = Date.now() + 12 * 60_000;
-  while (true) {
-    try {
-      await readExactJflHealth(fetch, expectedSha);
-      break;
-    } catch (error) {
-      if (error.message !== 'The live JFL environment is not the requested exact SHA'
-        && !/^JFL health returned HTTP/.test(error.message)) throw error;
-      if (Date.now() >= deadline) throw new Error('Exact JFL deployment did not appear before the browser preflight deadline');
-      await delay(15_000);
-    }
-  }
-  // Once the deployment is present, a reset is attempted exactly once.
-  const result = await resetJflTwoCaptainFixture({ serviceRoleKey, expectedSha });
+  // Readiness polling is part of the reset preflight, avoiding a separate
+  // single-read gate followed by an unbounded deployment-transition race.
+  const result = await resetJflTwoCaptainFixture({ serviceRoleKey, expectedSha, onPhase: console.log });
   if (process.env.GITHUB_OUTPUT) {
     await appendFile(process.env.GITHUB_OUTPUT, `scheduled_on=${result.scheduledOn}\n`);
   }
