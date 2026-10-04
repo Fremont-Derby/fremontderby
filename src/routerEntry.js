@@ -19,6 +19,8 @@ import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
 import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
+import { routeJflQaResults } from './jflQaResultsHttp.js';
+import { enhanceJflQaResults } from './jflQaResultsEnhancer.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
@@ -121,6 +123,8 @@ async function finalizeBrowserResponse(response, pathname) {
 const baseRouterEntry = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const qaResults = await routeJflQaResults(request, env);
+    if (qaResults) return qaResults;
     const notificationsResponse = await routeJflNotifications(request, env);
     if (notificationsResponse) return finalizeBrowserResponse(notificationsResponse, url.pathname);
     const jflSeasonScheduleResponse = await routeJflSeasonSchedule(request, env);
@@ -196,7 +200,9 @@ const baseRouterEntry = {
       const withPlayerClaim = await enhanceProfilePlayerClaim(withContact);
       return finalizeBrowserResponse(await injectJflSimulatedGoogleAuth(withPlayerClaim, env), url.pathname);
     }
-    const finalized = await finalizeBrowserResponse(reconciled, url.pathname);
+    const resultResponse = url.pathname === '/scorecard' && request.method === 'GET'
+      ? await enhanceJflQaResults(reconciled, env) : reconciled;
+    const finalized = await finalizeBrowserResponse(resultResponse, url.pathname);
     return decorateModernUiSliceResponse(finalized, request, env);
   },
 };
