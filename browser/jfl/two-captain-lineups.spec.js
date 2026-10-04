@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
+import { readQaResultsAccess } from './qa-results-access.js';
 
 const fixture = {
   seasonId: '18580000-1000-4000-8000-000000000000',
@@ -470,13 +471,9 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
       await expect(page.locator('[data-qa-result-races] tr')).toHaveCount(3);
       await expect(page.locator('[data-qa-result-races]')).toContainText('TEST Admin');
     }
-    const deniedResults = await player.evaluate(async () => {
-      const response = await fetch('/api/me/jfl-qa-results', {
-        headers: { authorization: 'Bearer '+sessionStorage.getItem('fd.accessToken') },
-      });
-      return { status: response.status, hasRaces: Object.hasOwn(await response.json(), 'races') };
-    });
-    expect(deniedResults).toEqual({ status: 403, hasRaces: false });
+    const deniedResults = await readQaResultsAccess(player);
+    expect(deniedResults).toEqual({ status: 403, hasRaces: false,
+      error: 'Only an active captain of this QA matchup can read its results.' });
   } finally {
     await contextA.close();
     await contextB.close();
