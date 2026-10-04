@@ -226,7 +226,7 @@ export async function handlePublishScheduleRequest(
       const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
       const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
       const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&status=eq.confirmed&select=team_id`, {
+      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&team_id=not.is.null&select=team_id`, {
         headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'dru_private' },
       });
       const ready = practicePublishReady(slots.ok ? (await slots.json()).length : 0);
@@ -1005,16 +1005,20 @@ export async function handleTeamMatchDisputeRequest(
     const body = await readJsonBody(request);
     const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
     const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
-    // Store a packet notice for the requesting user (audit trail in their inbox).
-    await notificationRepository.createUserNotification({
-      recipientUserId: actor.id,
-      kind: 'dispute_request',
-      title: 'Dispute submitted',
-      body: note || 'Match dispute submitted for admin review.',
-      href: '/scorecard?match=' + encodeURIComponent(teamMatchId),
-      teamMatchId,
-      actorUserId: actor.id,
-    });
+    // A notice is a trail. A bad link must not block the disagreement.
+    try {
+      await notificationRepository.createUserNotification({
+        recipientUserId: actor.id,
+        kind: 'dispute_request',
+        title: 'Dispute submitted',
+        body: note || 'Match dispute submitted for admin review.',
+        href: null,
+        teamMatchId,
+        actorUserId: actor.id,
+      });
+    } catch {
+      // The disagreement still counts.
+    }
     // Best-effort: also post matchup chat if available.
     try {
       const chatRepository = createChatRepository(env, { fetch: fetchImpl });
@@ -2626,6 +2630,33 @@ if (url.pathname === "/standings") {
         return handleSaveOwnStandingAvailabilityRequest(request, env);
       }
       return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    const druOpenMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/open-scoring$/);
+    if (druOpenMatch && request.method === 'POST') {
+      if (!['dru', 'gamma'].includes(String(env.ENVIRONMENT || '').trim())) return jsonResponse({ error: 'Not found' }, 404);
+      await authenticateSupabaseUser(request, env);
+      const { openDruMatchForScoring } = await import('./druScoreOpen.js');
+      return jsonResponse(await openDruMatchForScoring(env, druOpenMatch[1]));
+    }
+
+const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/score$/);
+    if (druScoreRace && request.method === 'POST') {
+      if (!['dru', 'gamma'].includes(String(env.ENVIRONMENT || '').trim())) return jsonResponse({ error: 'Not found' }, 404);
+      await authenticateSupabaseUser(request, env);
+      const body = await request.json().catch(() => ({}));
+      const { recordDruRaceResult } = await import('./druScoreOpen.js');
+      return jsonResponse(await recordDruRaceResult(env, druScoreRace[1], body.winnerSide));
+    }
+
+    const druScoreMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/score$/);
+    if (druScoreMatch && request.method === 'POST') {
+      if (!['dru', 'gamma'].includes(String(env.ENVIRONMENT || '').trim())) return jsonResponse({ error: 'Not found' }, 404);
+      await authenticateSupabaseUser(request, env);
+      const body = await request.json().catch(() => ({}));
+      const { scoreDruTeamMatch } = await import('./druScoreOpen.js');
+      const scored = await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide);
+      return jsonResponse(scored, scored.status || (scored.saved ? 200 : 400));
     }
 
     if (url.pathname === "/api/me/profile") {
