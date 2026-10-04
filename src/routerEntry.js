@@ -31,6 +31,8 @@ import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
 import { enhanceProfileContact } from './profileContactEnhancer.js';
+import { routeDirectMessageConsent } from './directMessageConsentHttp.js';
+import { enhanceProfileDirectMessageConsent } from './profileDirectMessageConsentEnhancer.js';
 import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
@@ -171,6 +173,8 @@ const baseRouterEntry = {
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
+    const consentResponse = await routeDirectMessageConsent(request, env);
+    if (consentResponse) return consentResponse;
     const playerContactResponse = await routePlayerContact(request, env);
     if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
@@ -197,7 +201,8 @@ const baseRouterEntry = {
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
-      const withPlayerClaim = await enhanceProfilePlayerClaim(withContact);
+      const withConsent = env.ENVIRONMENT === 'jfl' ? await enhanceProfileDirectMessageConsent(withContact) : withContact;
+      const withPlayerClaim = await enhanceProfilePlayerClaim(withConsent);
       return finalizeBrowserResponse(await injectJflSimulatedGoogleAuth(withPlayerClaim, env), url.pathname);
     }
     const resultResponse = url.pathname === '/scorecard' && request.method === 'GET'

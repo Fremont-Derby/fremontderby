@@ -1,0 +1,43 @@
+name: Direct message consent browser regression
+on:
+  pull_request:
+    paths:
+      - 'src/directMessageConsentHttp.js'
+      - 'src/profileDirectMessageConsentEnhancer.js'
+      - 'src/routerEntry.js'
+      - 'browser/jfl/direct-message-consent.spec.js'
+      - '.github/workflows/direct-message-consent-browser.yml'
+  push:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'src/directMessageConsentHttp.js'
+      - 'src/profileDirectMessageConsentEnhancer.js'
+      - 'src/routerEntry.js'
+      - 'browser/jfl/direct-message-consent.spec.js'
+      - '.github/workflows/direct-message-consent-browser.yml'
+permissions:
+  contents: read
+jobs:
+  consent-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PLAYWRIGHT_CONSENT_SOURCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test browser/jfl/direct-message-consent.spec.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: consent-browser-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
