@@ -60,6 +60,8 @@ After the pulse, resume normal impact-based prioritization.
 - Declare important files and high-collision surfaces before implementation. Coordinate rather than race when DRU owns an overlap.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - Treat DRU as an exploration/stress-test partner for the same #2800 outcome, not a separate roadmap. Pull in portable evidence/fixes when they reduce JFL completion risk.
+- During #2800, JFL is the default **production-remediation, integration, and verification lane** for DRU findings that matter to the real product. Independently reproduce the finding on current JFL, then implement the smallest production-safe fix/regression; do not blindly cherry-pick DRU code or inherit DRU-only test actors, bypasses, fixtures, or assumptions.
+- For auth, RLS, scoring, migrations, shared APIs, and data-integrity findings, prefer JFL ownership of the canonical product fix unless an existing card/owner or explicit product-owner decision says otherwise. Return the repaired behavior to DRU for adversarial retest when practical.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
 
 ## Cloudflare configuration and admin-access boundary
