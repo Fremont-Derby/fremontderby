@@ -234,6 +234,7 @@ export function renderChatPage(env = {}) {
     let currentKey = '';
     let loadingMessages = false;
     let conversationEpoch = 0;
+    let sendingMessage = false;
     let displayedMessages = [];
     let canLoadOlder = false;
     let reachedConversationStart = false;
@@ -615,7 +616,7 @@ export function renderChatPage(env = {}) {
       chatSeasonEl.textContent = thread ? thread.season : '';
       const canSend = Boolean(thread && thread.canSend !== false);
       messageInputEl.disabled = !canSend;
-      sendButtonEl.disabled = !canSend;
+      sendButtonEl.disabled = !canSend || sendingMessage;
       messageInputEl.placeholder = canSend ? 'Write a message' : 'Messaging unavailable';
       blockButtonEl.hidden = !thread || thread.type !== 'direct' || (thread.canSend === false && !thread.blockedByMe);
       blockButtonEl.textContent = thread?.blockedByMe ? 'Unblock' : 'Block';
@@ -720,16 +721,23 @@ export function renderChatPage(env = {}) {
     async function sendMessage() {
       const thread = currentThread();
       const body = messageInputEl.value.trim();
-      if (!thread || !body || thread.canSend === false) return;
+      if (!thread || !body || thread.canSend === false || sendingMessage) return;
+      const selectedEpoch = conversationEpoch;
+      sendingMessage = true;
       messageInputEl.disabled = true;
       sendButtonEl.disabled = true;
       setStatus('Sending…');
       try {
         await api(messagePath(thread), { method: 'POST', body: JSON.stringify({ body, clientMessageId: crypto.randomUUID() }) });
+        if (selectedEpoch !== conversationEpoch) return;
         messageInputEl.value = '';
-        await loadThreads({ preserveSelection: true });
-        setStatus('Sent', 'ok');
+        await loadMessages();
+        if (selectedEpoch === conversationEpoch) setStatus('Sent', 'ok');
+      } catch (error) {
+        if (selectedEpoch === conversationEpoch || error?.code === 'session_expired' || error?.code === 'session_required') throw error;
+        setStatus('Send to ' + thread.name + ' could not be confirmed. Check that conversation before retrying.', 'error');
       } finally {
+        sendingMessage = false;
         const latestThread = currentThread();
         const enabled = Boolean(latestThread && latestThread.canSend !== false);
         messageInputEl.disabled = !enabled;
