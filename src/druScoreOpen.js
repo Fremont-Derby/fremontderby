@@ -82,12 +82,11 @@ export function acceptedWinnerSide(winnerSide) {
 }
 
 export function raceResultPatch(match, winnerSide) {
-  const side = acceptedWinnerSide(winnerSide);
-  if (!side) throw new Error('winnerSide must be A or B');
+  if (winnerSide !== 'A' && winnerSide !== 'B') return null;
   return {
     status: 'finalized',
-    winner_side: side,
-    winner_player_id: side === 'A' ? match.player_a_id : match.player_b_id,
+    winner_side: winnerSide,
+    winner_player_id: winnerSide === 'A' ? match.player_a_id : match.player_b_id,
   };
 }
 
