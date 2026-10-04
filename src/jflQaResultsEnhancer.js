@@ -11,7 +11,7 @@ export async function enhanceJflQaResults(response, env) {
       const data=await response.json();status.textContent=data.result.label;
       box.querySelector('[data-qa-team-result]').textContent=data.result.state==='complete'?'Team '+data.result.winnerSide.toUpperCase()+' wins '+data.result.winsA+'–'+data.result.winsB:'Matchup not complete. No team winner yet.';
       const body=box.querySelector('[data-qa-result-races]');body.replaceChildren();
-      for(const race of data.races){const tr=document.createElement('tr');for(const value of [race.slotNumber,race.scoreA??'—',race.scoreB??'—',race.status]){const td=document.createElement('td');td.textContent=String(value);tr.append(td)}body.append(tr)}
+      for(const race of data.races){const tr=document.createElement('tr');for(const value of ['Pairing '+race.slotNumber+' · '+race.playerAName+' vs '+race.playerBName,race.scoreA??'—',race.scoreB??'—',race.status]){const td=document.createElement('td');td.textContent=String(value);tr.append(td)}body.append(tr)}
       }catch{box.hidden=false;status.textContent='Results temporarily unavailable. Try Refresh results.'}}
     box.querySelector('[data-qa-result-refresh]').addEventListener('click',load);load();})();
   </script>`;

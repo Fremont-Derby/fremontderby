@@ -12,14 +12,24 @@ async function readFixedResults(env, fetchImpl) {
   const scopedFetch = withSupabaseSchema(fetchImpl, env);
   const headers = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` };
   const params = new URLSearchParams({
-    select: 'slot_number,status,score_a,score_b,winner_side',
+    select: 'slot_number,status,score_a,score_b,winner_side,player_a_id,player_b_id',
     season_id: `eq.${QA_SEASON}`, team_match_id: `eq.${QA_MATCH}`, order: 'slot_number.asc',
   });
   const response = await scopedFetch(`${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/player_matches?${params}`, { headers });
   if (!response.ok) throw new Error('Unable to read QA results');
   const rows = await response.json();
   if (!Array.isArray(rows)) throw new Error('Invalid result response');
+  const ids = [...new Set(rows.flatMap((row) => [row.player_a_id, row.player_b_id]))];
+  if (ids.some((id) => typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id))) throw new Error('Invalid player result');
+  const names = new Map();
+  if (ids.length) {
+    const playerParams = new URLSearchParams({ select: 'id,display_name', id: `in.(${ids.join(',')})` });
+    const players = await scopedFetch(`${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/players?${playerParams}`, { headers });
+    if (!players.ok) throw new Error('Unable to read result names');
+    for (const player of await players.json()) names.set(player.id, player.display_name);
+  }
   return rows.map((row) => ({ slotNumber: row.slot_number, status: row.status,
+    playerAName: names.get(row.player_a_id) || 'Player', playerBName: names.get(row.player_b_id) || 'Player',
     scoreA: row.score_a, scoreB: row.score_b, winnerSide: String(row.winner_side || '').toLowerCase() }));
 }
 
