@@ -38,6 +38,8 @@ create table jfl.social_chat_consent (
   primary key(user_id,channel)
 );
 alter table jfl.social_chat_consent enable row level security;
+create policy "Browser roles cannot access social chat consent"
+on jfl.social_chat_consent for all to anon,authenticated using(false) with check(false);
 revoke all on jfl.social_chat_consent from public,anon,authenticated;
 grant select,insert,update on jfl.social_chat_consent to service_role;
 
