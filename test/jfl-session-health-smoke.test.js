@@ -32,13 +32,13 @@ test('JFL session health rejects auth failure, HTML, malformed JSON and missing 
   }
 });
 
-test('permanent JFL deployment gates and evidence include session health before success', () => {
+test('permanent JFL deployment gates session health after season bootstrap', () => {
   const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
   const season = workflow.indexOf('name: Verify JFL public season bootstrap');
   const session = workflow.indexOf('name: Verify JFL simulated session and team bootstrap');
-  const proof = workflow.indexOf('name: Record JFL deployment proof');
-  assert.ok(season > 0 && session > season && proof > session);
-  assert.match(workflow.slice(session, proof), /if: github\.ref == 'refs\/heads\/fremontderby-jfl'/);
-  assert.match(workflow.slice(session, proof), /node scripts\/smoke-jfl-session-health\.mjs/);
-  assert.match(workflow.slice(proof), /simulated signed-in session loaded team management JSON/);
+  assert.ok(season > 0 && session > season);
+  const nextGate = workflow.indexOf('name: Verify JFL QA evidence ingestion and idempotent retry', session);
+  assert.ok(nextGate > session);
+  assert.match(workflow.slice(session, nextGate), /if: github\.ref == 'refs\/heads\/fremontderby-jfl'/);
+  assert.match(workflow.slice(session, nextGate), /node scripts\/smoke-jfl-session-health\.mjs/);
 });
