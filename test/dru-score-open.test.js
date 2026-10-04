@@ -59,4 +59,9 @@ test('a captain disagreement is not blocked by the notice link', () => {
   const block = page.slice(start, start + 1200);
   assert.equal(block.includes('href: null'), true);
   assert.equal(block.includes('The disagreement still counts'), true);
+
+test('a saved DRU match is not scored again', () => {
+  const page = readFileSync(new URL('../src/druScoreOpen.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('This match is already saved'), true);
+});
 });

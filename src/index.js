@@ -2656,7 +2656,7 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       const body = await request.json().catch(() => ({}));
       const { scoreDruTeamMatch } = await import('./druScoreOpen.js');
       const scored = await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide);
-      return jsonResponse(scored, scored.status || 200);
+      return jsonResponse(scored, scored.status || (scored.saved ? 200 : 400));
     }
 
     if (url.pathname === "/api/me/profile") {
