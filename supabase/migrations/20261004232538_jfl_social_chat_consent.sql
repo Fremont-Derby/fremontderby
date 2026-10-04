@@ -186,7 +186,7 @@ begin
     latest.created_at desc nulls last,
     season.created_at desc;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.get_my_team_chat_inbox(actor_user_id uuid)
  RETURNS TABLE(team_id uuid, team_name text, season_id uuid, season_name text, member_role text, last_message_body text, last_message_at timestamp with time zone, unread_count bigint)
@@ -241,7 +241,7 @@ begin
   group by t.id, t.name, s.id, s.name, tm.role, latest.body, latest.created_at
   order by latest.created_at desc nulls last, t.name;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.list_league_chat_messages(actor_user_id uuid, target_season_id uuid, before_created_at timestamp with time zone DEFAULT NULL::timestamp with time zone, before_message_id uuid DEFAULT NULL::uuid, result_limit integer DEFAULT 50)
  RETURNS TABLE(message_id uuid, season_id uuid, author_player_id uuid, author_display_name text, body text, created_at timestamp with time zone, is_own boolean)
@@ -293,7 +293,7 @@ begin
   ) page
   order by page.created_at, page.message_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.list_team_chat_messages(actor_user_id uuid, target_team_id uuid, before_created_at timestamp with time zone DEFAULT NULL::timestamp with time zone, result_limit integer DEFAULT 50)
  RETURNS TABLE(message_id uuid, team_id uuid, author_player_id uuid, author_display_name text, body text, created_at timestamp with time zone, is_own boolean)
@@ -361,7 +361,7 @@ begin
   ) page
   order by page.created_at, page.message_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.mark_league_chat_read(actor_user_id uuid, target_season_id uuid, read_through_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
  RETURNS TABLE(season_id uuid, player_id uuid, last_read_at timestamp with time zone)
@@ -394,7 +394,7 @@ begin
     jfl.league_chat_reads.player_id,
     jfl.league_chat_reads.last_read_at;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.mark_team_chat_read(actor_user_id uuid, target_team_id uuid, read_through_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
  RETURNS TABLE(team_id uuid, player_id uuid, last_read_at timestamp with time zone)
@@ -438,7 +438,7 @@ begin
   where read_state.team_id = target_team_id
     and read_state.player_id = actor_player_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.send_league_chat_message(actor_user_id uuid, target_season_id uuid, message_body text, message_client_id uuid DEFAULT NULL::uuid)
  RETURNS TABLE(message_id uuid, season_id uuid, author_player_id uuid, author_display_name text, body text, created_at timestamp with time zone, is_own boolean)
@@ -481,7 +481,7 @@ begin
     saved_message.author_player_id, actor_player.display_name,
     saved_message.body, saved_message.created_at, true;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION jfl.send_team_chat_message(actor_user_id uuid, target_team_id uuid, message_body text, message_client_id uuid DEFAULT NULL::uuid)
  RETURNS TABLE(message_id uuid, team_id uuid, author_player_id uuid, author_display_name text, body text, created_at timestamp with time zone, is_own boolean)
@@ -541,7 +541,7 @@ begin
     saved_message.author_player_id, actor_player.display_name,
     saved_message.body, saved_message.created_at, true;
 end;
-$function$
+$function$;
 
 notify pgrst,'reload schema';
 commit;
