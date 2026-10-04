@@ -17,6 +17,8 @@ import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
 import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
+import { routeJflQaResults } from './jflQaResultsHttp.js';
+import { enhanceJflQaResults } from './jflQaResultsEnhancer.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
@@ -135,6 +137,8 @@ export default {
     }
 
     const url = new URL(request.url);
+    const qaResults = await routeJflQaResults(request, env);
+    if (qaResults) return qaResults;
     // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
     if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
       const meta = env.CF_VERSION_METADATA || {};
@@ -277,6 +281,9 @@ export default {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
       return finalizeBrowserResponse(await enhanceProfilePlayerClaim(withContact), url.pathname);
+    }
+    if (url.pathname === '/scorecard' && request.method === 'GET') {
+      return finalizeBrowserResponse(await enhanceJflQaResults(reconciled, env), url.pathname);
     }
     return finalizeBrowserResponse(reconciled, url.pathname);
   },
