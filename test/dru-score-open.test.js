@@ -41,3 +41,9 @@ test('a DRU match save records the team winner without the score list', () => {
   const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.equal(page.includes('scoreDruTeamMatch'), true);
 });
+
+test('a lineup link for one season does not lock another night', () => {
+  const page = readFileSync(new URL('../src/lineupPage.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('window.fdLineupSeason'), true);
+  assert.equal(page.includes('team.seasonId===window.fdLineupSeason'), true);
+});
