@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { routeSocialChatConsent } from '../src/socialChatConsentHttp.js';
 import { handleSendTeamMessageRequest, handleSendLeagueMessageRequest } from '../src/chatHttp.js';
 
 const env = { ENVIRONMENT: 'jfl', SUPABASE_URL: 'https://test.supabase.co',
   SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SERVICE_ROLE_KEY: 'server-test' };
+test('captured chat function definitions are terminated as migration statements', () => {
+  const sql = readFileSync('supabase/migrations/20261004232538_jfl_social_chat_consent.sql', 'utf8');
+  assert.equal((sql.match(/\$function\$;/g) || []).length, 8);
+  assert.doesNotMatch(sql, /\n\$function\$\r?\n/);
+});
 const req = (channel, method = 'GET', body) => new Request('https://jfl.test/api/me/social-chat-consent/' + channel,
   { method, headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
