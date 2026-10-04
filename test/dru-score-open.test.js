@@ -41,3 +41,32 @@ test('a DRU match save records the team winner without the score list', () => {
   const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.equal(page.includes('scoreDruTeamMatch'), true);
 });
+
+test('a reused team name says it belongs to another night', () => {
+  const page = readFileSync(new URL('../src/adminSeasonTeamsHttp.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('already used on another night'), true);
+});
+
+test('a lineup link for one season does not lock another night', () => {
+  const page = readFileSync(new URL('../src/lineupPage.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('window.fdLineupSeason'), true);
+  assert.equal(page.includes('team.seasonId===window.fdLineupSeason'), true);
+});
+
+test('a captain disagreement is not blocked by the notice link', () => {
+  const page = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  const start = page.indexOf('handleTeamMatchDisputeRequest');
+  const block = page.slice(start, start + 1200);
+  assert.equal(block.includes('href: null'), true);
+  assert.equal(block.includes('The disagreement still counts'), true);
+});
+
+test('a saved DRU match is not scored again', () => {
+  const page = readFileSync(new URL('../src/druScoreOpen.js', import.meta.url), 'utf8');
+  assert.equal(page.includes('This match is already saved'), true);
+});
+
+test('a DRU match save rejects a winner that is not home or away', () => {
+  assert.equal(raceResultPatch({ player_a_id: 'home', player_b_id: 'away' }, 'C'), null);
+  assert.equal(raceResultPatch({ player_a_id: 'home', player_b_id: 'away' }, 'A').winner_side, 'A');
+});

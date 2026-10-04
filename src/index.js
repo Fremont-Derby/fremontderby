@@ -1005,16 +1005,20 @@ export async function handleTeamMatchDisputeRequest(
     const body = await readJsonBody(request);
     const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
     const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
-    // Store a packet notice for the requesting user (audit trail in their inbox).
-    await notificationRepository.createUserNotification({
-      recipientUserId: actor.id,
-      kind: 'dispute_request',
-      title: 'Dispute submitted',
-      body: note || 'Match dispute submitted for admin review.',
-      href: '/scorecard?match=' + encodeURIComponent(teamMatchId),
-      teamMatchId,
-      actorUserId: actor.id,
-    });
+    // A notice is a trail. A bad link must not block the disagreement.
+    try {
+      await notificationRepository.createUserNotification({
+        recipientUserId: actor.id,
+        kind: 'dispute_request',
+        title: 'Dispute submitted',
+        body: note || 'Match dispute submitted for admin review.',
+        href: null,
+        teamMatchId,
+        actorUserId: actor.id,
+      });
+    } catch {
+      // The disagreement still counts.
+    }
     // Best-effort: also post matchup chat if available.
     try {
       const chatRepository = createChatRepository(env, { fetch: fetchImpl });
@@ -2651,7 +2655,8 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       await authenticateSupabaseUser(request, env);
       const body = await request.json().catch(() => ({}));
       const { scoreDruTeamMatch } = await import('./druScoreOpen.js');
-      return jsonResponse(await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide));
+      const scored = await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide);
+      return jsonResponse(scored, scored.status || (scored.saved ? 200 : 400));
     }
 
     if (url.pathname === "/api/me/profile") {
