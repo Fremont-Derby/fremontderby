@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
-import { readQaResultsAccess } from './qa-results-access.js';
+import { openQaResults, readQaResultsAccess } from './qa-results-access.js';
 
 const fixture = {
   seasonId: '18580000-1000-4000-8000-000000000000',
@@ -421,7 +421,7 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await expect(captainA.locator('[data-score-a]')).toHaveText(String(targetA));
     await expect(captainB.locator('[data-score-a]')).toHaveText(String(targetA));
     const completed = new Map([[matchA, targetA]]);
-    await captainA.goto('/scorecard');
+    await openQaResults(captainA, '1 of 3 races finalized');
     await expect(captainA.locator('[data-qa-result-state]')).toHaveText('1 of 3 races finalized');
     await expect(captainA.locator('[data-qa-team-result]')).toContainText('No team winner yet');
     for (const race of races.filter((id) => id !== matchA)) {
@@ -465,7 +465,7 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
       }
     }
     for (const page of [captainA, captainB]) {
-      await page.goto('/scorecard');
+      await openQaResults(page, 'Matchup complete');
       await expect(page.locator('[data-qa-result-state]')).toHaveText('Matchup complete');
       await expect(page.locator('[data-qa-team-result]')).toHaveText('Team A wins 3–0');
       await expect(page.locator('[data-qa-result-races] tr')).toHaveCount(3);
@@ -480,4 +480,26 @@ test('distinct captains blind-submit, reconcile scoring, and finalize the same J
     await playerContext.close();
     await freeAgentContext.close();
   }
+});
+
+// Same-file order and one worker keep this read-only proof after the completed
+// captain journey. A focused run requires that already-completed fixture.
+test('captain uses results Refresh after observed HTML throttle and reads saved results', async ({ page, request }) => {
+  const expectedSha = process.env.PLAYWRIGHT_EXPECTED_SHA;
+  expect(expectedSha).toMatch(/^[a-f0-9]{40}$/);
+  const health = await request.get('/health/environment');
+  expect(await health.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl',
+    ok: true, versionTag: expectedSha });
+  await assumePersona(page, 'Regular Captain');
+  let intercepted = false;
+  await page.route('**/api/me/jfl-qa-results', async (route) => {
+    if (intercepted) return route.continue();
+    intercepted = true;
+    await route.fulfill({ status: 429, headers: { 'retry-after': '2' },
+      contentType: 'text/html', body: '<!doctype html><title>Temporarily busy</title>' });
+  });
+  await openQaResults(page, 'Matchup complete');
+  expect(intercepted).toBe(true);
+  await expect(page.locator('[data-qa-result-races] tr')).toHaveCount(3);
+  await expect(page.locator('[data-qa-team-result]')).toHaveText('Team A wins 3–0');
 });
