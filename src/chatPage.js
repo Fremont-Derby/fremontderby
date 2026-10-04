@@ -618,7 +618,7 @@ export function renderChatPage(env = {}) {
       messageInputEl.disabled = !canSend;
       sendButtonEl.disabled = !canSend || sendingMessage;
       messageInputEl.placeholder = canSend ? 'Write a message' : 'Messaging unavailable';
-      blockButtonEl.hidden = !thread || thread.type !== 'direct' || (thread.canSend === false && !thread.blockedByMe);
+      blockButtonEl.hidden = !thread || thread.type !== 'direct';
       blockButtonEl.textContent = thread?.blockedByMe ? 'Unblock' : 'Block';
       messageListEl.dataset.initial = '';
       displayedMessages = [];

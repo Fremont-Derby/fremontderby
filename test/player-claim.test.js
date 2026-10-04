@@ -118,7 +118,8 @@ test('router entry resolves claim APIs before legacy routing and enhances Profil
   assert.match(source, /routePlayerClaim/);
   assert.match(source, /enhanceProfilePlayerClaim/);
   assert.match(source, /const playerClaimResponse = await routePlayerClaim\(request, env\)/);
-  assert.match(source, /enhanceProfilePlayerClaim\(withContact\)/);
+  assert.match(source, /enhanceProfileDirectMessageConsent\(withContact\)/);
+  assert.match(source, /enhanceProfilePlayerClaim\(withConsent\)/);
   const claimIndex = source.indexOf('routePlayerClaim(request, env)');
   const legacyIndex = source.indexOf('legacyRouter.fetch(request, env, ctx)');
   assert.ok(claimIndex > -1 && claimIndex < legacyIndex);
