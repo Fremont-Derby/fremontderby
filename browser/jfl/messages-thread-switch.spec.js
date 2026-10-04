@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { decorateHtmlWithShell } from '../../src/appShell.js';
 import { renderChatPage } from '../../src/chatPage.js';
+import { injectTestPersonaControls } from '../../src/testPersonaEnhancer.js';
 import { injectMessagesTheme } from '../../src/messagesTheme.js';
 
 const sourceMode = process.env.PLAYWRIGHT_MESSAGES_SOURCE === '1';
@@ -38,7 +40,9 @@ async function openMessages(browser, request, mobile) {
       expect(path.endsWith('/messages/read'), 'Never send real message writes in this regression').toBe(true);
       return respond({});
     }
-    if (path === '/api/me/chat-threads') body = { threads: [
+    if (path === '/api/test-persona') return route.fulfill({ status: 404, body: '{}' });
+    if (path === '/api/me/message-notification-summary') body = { unreadCount: 0, previews: [] };
+    else if (path === '/api/me/chat-threads') body = { threads: [
       { team_id: teamA, team_name: 'Regression Team A', season_name: 'Synthetic' },
       { team_id: teamB, team_name: 'Regression Team B', season_name: 'Synthetic' },
     ] };
@@ -61,8 +65,8 @@ async function openMessages(browser, request, mobile) {
     return respond(body);
   });
   if (sourceMode) {
-    const html = await (await injectMessagesTheme(new Response(renderChatPage(),
-      { headers: { 'content-type': 'text/html' } }))).text();
+    const html = await (await injectTestPersonaControls(await injectMessagesTheme(new Response(decorateHtmlWithShell(renderChatPage(), '/messages'),
+      { headers: { 'content-type': 'text/html' } })))).text();
     await page.route('http://messages.test/messages', route => route.fulfill({ contentType: 'text/html', body: html }));
   }
   await page.goto('/messages');
