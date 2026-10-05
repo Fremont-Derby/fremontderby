@@ -144,7 +144,7 @@ export async function handleMessageNotificationSummaryRequest(
       repository.listChatThreads({ actorUserId }),
       repository.listDirectMessageInbox({ actorUserId }),
       repository.listLeagueChatThreads({ actorUserId }),
-      repository.listMatchupChatThreads({ actorUserId }),
+      env.ENVIRONMENT === 'jfl' ? Promise.resolve([]) : repository.listMatchupChatThreads({ actorUserId }),
     ]);
     const unread = unreadCount(teams)
       + unreadCount(direct)
@@ -554,6 +554,7 @@ export async function handleListMatchupChatThreadsRequest(
 ) {
   try {
     const { actor, repository } = await withActor(request, env, fetchImpl);
+    if (env.ENVIRONMENT === 'jfl') return jsonResponse({ threads: [] });
     const threads = await listMatchupChatThreadsCommand({ actorUserId: actor.id }, repository);
     return jsonResponse({ threads: Array.isArray(threads) ? threads : [] });
   } catch (error) {
@@ -585,6 +586,7 @@ export async function handleSendMatchupMessageRequest(
 ) {
   try {
     const { actor, repository } = await withActor(request, env, fetchImpl);
+    if (env.ENVIRONMENT === 'jfl') return jsonResponse({ error: 'Matchup chat is retired. Use General Chat, Team Chat, or Direct Messages.' }, 410);
     const body = await readJsonBody(request);
     const message = await sendMatchupMessageCommand({
       actorUserId: actor.id, teamMatchId, body: body.body,
@@ -601,6 +603,7 @@ export async function handleMarkMatchupChatReadRequest(
 ) {
   try {
     const { actor, repository } = await withActor(request, env, fetchImpl);
+    if (env.ENVIRONMENT === 'jfl') return jsonResponse({ error: 'Matchup chat is retired.' }, 410);
     const body = await readJsonBody(request);
     const readState = await markMatchupChatReadCommand({
       actorUserId: actor.id, teamMatchId, readAt: body.readAt,
