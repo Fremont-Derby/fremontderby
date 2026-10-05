@@ -125,7 +125,7 @@ for (const mobile of [false, true]) {
       await f.writes[1].route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Synthetic registration failure"}' });
       await expect(f.page.locator('[data-status]')).toContainText('Setup saved');
       await expect(f.page.locator('[data-season-selector]')).toHaveValue('season-c');
-      await expect(f.page.locator('[data-season-selector] option[value="season-a"]')).toHaveText('Synthetic Alpha — registration');
+      await expect(f.page.locator('[data-season-selector] option[value="season-a"]')).toHaveText('Synthetic Alpha \u2014 registration');
       await f.page.locator('[data-save]').click();
       await expect.poll(() => f.writes.length).toBe(3);
       expect(f.writes[2].path).toBe('/api/admin/seasons/season-c/setup');

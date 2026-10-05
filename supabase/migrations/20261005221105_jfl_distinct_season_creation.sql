@@ -1,3 +1,10 @@
+do $guard$
+begin
+  if md5(pg_get_functiondef('jfl.configure_season_setup(uuid,uuid,text,text,date,integer,integer,integer,integer,integer[],text,integer,boolean)'::regprocedure)) <> 'b3abc05cea926edd8860103653569760' then
+    raise exception 'JFL configure contract drift; requalify before applying';
+  end if;
+end;
+$guard$;
 -- #3318: JFL-only explicit creation; legacy configure remains unchanged.
 create or replace function jfl.create_season_setup(
   actor_user_id uuid,
