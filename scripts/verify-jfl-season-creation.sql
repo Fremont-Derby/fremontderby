@@ -1,5 +1,6 @@
 -- #3318: rollback-only JFL creation/auth/preservation proof; no private output.
 begin;
+set local role service_role;
 do $proof$
 declare
   admin_id uuid := '18580000-0000-4000-8000-000000000002';
