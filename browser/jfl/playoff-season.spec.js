@@ -5,14 +5,16 @@ const sourceMode = process.env.PLAYWRIGHT_PLAYOFFS_SOURCE === '1';
 const seasons = [{ id: 'complete', name: 'Prior season', status: 'complete' },
   { id: 'active', name: 'Current season', status: 'active' }];
 
-async function openBracket(browser, request, mobile, query = '', available = seasons) {
-  if (!sourceMode) {
-    expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
-    const health = await request.get('/health/environment');
-    expect(health.ok()).toBe(true);
-    expect(await health.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl',
-      ok: true, versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
-  }
+test.beforeAll(async ({ request }) => {
+  if (sourceMode) return;
+  expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
+  const health = await request.get('/health/environment');
+  expect(health.ok()).toBe(true);
+  expect(await health.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl',
+    ok: true, versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
+});
+
+async function openBracket(browser, mobile, query = '', available = seasons) {
   const origin = sourceMode ? 'https://jfl.bracket.test' : process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com';
   const context = await browser.newContext({ baseURL: origin,
     viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 }, isMobile: mobile, hasTouch: mobile });
@@ -55,8 +57,8 @@ async function openBracket(browser, request, mobile, query = '', available = sea
 
 for (const mobile of [false, true]) {
   test.describe(mobile ? '320px phone' : 'desktop', () => {
-    test('explicit season survives memory, reload and selection', async ({ browser, request }) => {
-      const { page, context } = await openBracket(browser, request, mobile, '?season=active&view=bracket#rounds');
+    test('explicit season survives memory, reload and selection', async ({ browser }) => {
+      const { page, context } = await openBracket(browser, mobile, '?season=active&view=bracket#rounds');
       try {
         await expect(page.locator('[data-rounds]')).toContainText('Current winners');
         await expect(page.locator('[data-season]')).toHaveValue('active');
@@ -73,8 +75,8 @@ for (const mobile of [false, true]) {
       } finally { await context.close(); }
     });
     for (const query of ['', '?season=missing']) {
-      test('canonical active default beats stale memory ' + (query || 'without URL choice'), async ({ browser, request }) => {
-        const { page, context } = await openBracket(browser, request, mobile, query);
+      test('canonical active default beats stale memory ' + (query || 'without URL choice'), async ({ browser }) => {
+        const { page, context } = await openBracket(browser, mobile, query);
         try {
           await expect(page.locator('[data-rounds]')).toContainText('Current winners');
           await expect(page.locator('[data-season]')).toHaveValue('active');
@@ -83,8 +85,8 @@ for (const mobile of [false, true]) {
       });
     }
     for (const failLate of [false, true]) {
-      test('late ' + (failLate ? 'error' : 'success') + ' cannot replace current bracket', async ({ browser, request }) => {
-        const fixture = await openBracket(browser, request, mobile, '?season=active');
+      test('late ' + (failLate ? 'error' : 'success') + ' cannot replace current bracket', async ({ browser }) => {
+        const fixture = await openBracket(browser, mobile, '?season=active');
         const { page, context } = fixture;
         try {
           await expect(page.locator('[data-rounds]')).toContainText('Current winners');
@@ -102,8 +104,8 @@ for (const mobile of [false, true]) {
         } finally { await context.close(); }
       });
     }
-    test('failed season clears old results and retry preserves selection', async ({ browser, request }) => {
-      const fixture = await openBracket(browser, request, mobile, '?season=active');
+    test('failed season clears old results and retry preserves selection', async ({ browser }) => {
+      const fixture = await openBracket(browser, mobile, '?season=active');
       const { page, context } = fixture;
       try {
         await expect(page.locator('[data-rounds]')).toContainText('Current winners');
@@ -118,8 +120,8 @@ for (const mobile of [false, true]) {
         await expect(page.locator('[data-season]')).toHaveValue('complete');
       } finally { await context.close(); }
     });
-    test('retry clears winners while seasons load and invalidates pending bracket', async ({ browser, request }) => {
-      const fixture = await openBracket(browser, request, mobile, '?season=active');
+    test('retry clears winners while seasons load and invalidates pending bracket', async ({ browser }) => {
+      const fixture = await openBracket(browser, mobile, '?season=active');
       const { page, context } = fixture;
       try {
         await expect(page.locator('[data-rounds]')).toContainText('Current winners');
@@ -137,8 +139,8 @@ for (const mobile of [false, true]) {
         await expect(page.locator('[data-rounds]')).toContainText('Prior winners');
       } finally { await context.close(); }
     });
-    test('failed and overlapping retries cannot restore stale bootstrap state', async ({ browser, request }) => {
-      const fixture = await openBracket(browser, request, mobile, '?season=active');
+    test('failed and overlapping retries cannot restore stale bootstrap state', async ({ browser }) => {
+      const fixture = await openBracket(browser, mobile, '?season=active');
       const { page, context } = fixture;
       try {
         await expect(page.locator('[data-rounds]')).toContainText('Current winners');
@@ -161,8 +163,8 @@ for (const mobile of [false, true]) {
         await expect(page.locator('[data-status]')).toContainText('1 postseason round');
       } finally { await context.close(); }
     });
-    test('true empty bracket links to schedule in the selected season', async ({ browser, request }) => {
-      const fixture = await openBracket(browser, request, mobile, '?season=active');
+    test('true empty bracket links to schedule in the selected season', async ({ browser }) => {
+      const fixture = await openBracket(browser, mobile, '?season=active');
       const { page, context } = fixture;
       try {
         await expect(page.locator('[data-rounds]')).toContainText('Current winners');
@@ -173,8 +175,8 @@ for (const mobile of [false, true]) {
         await expect(page.locator('[data-empty] a')).toHaveAttribute('href', '/schedule?season=complete');
       } finally { await context.close(); }
     });
-    test('no public season is distinct from an unpublished bracket', async ({ browser, request }) => {
-      const { page, context } = await openBracket(browser, request, mobile, '?season=missing', []);
+    test('no public season is distinct from an unpublished bracket', async ({ browser }) => {
+      const { page, context } = await openBracket(browser, mobile, '?season=missing', []);
       try {
         await expect(page.locator('[data-status]')).toHaveText('No published season is available.');
         await expect(page.locator('[data-rounds]')).toBeEmpty();
