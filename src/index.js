@@ -241,6 +241,8 @@ export async function handleCreateSeasonSetupRequest(
     const setup = await saveSeasonSetupCommand(
       {
         actorUserId: actor.id,
+        createNew: body.createNew ?? false,
+        seasonPurpose: body.seasonPurpose ?? 'league',
         seasonName: body.seasonName ?? body.season_name,
         leagueNight: body.leagueNight ?? body.league_night,
         firstRoundDate: body.firstRoundDate ?? body.first_round_date,
@@ -1563,7 +1565,7 @@ export default {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderSeasonSetupPage(), {
+      return new Response(renderSeasonSetupPage({ allowCreate: env.ENVIRONMENT === 'jfl' }), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
