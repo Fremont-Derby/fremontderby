@@ -1,4 +1,5 @@
 import { decorateHtmlWithShell } from './appShell.js';
+import { publicSeasonSelectionBrowserSource } from './publicSeasonSelection.js';
 
 export function publicDirectoryRows(individuals = [], teams = []) {
   const teamByPlayer = new Map();
@@ -34,6 +35,7 @@ const styles = `<style>
 const script = `<script>
 (() => {
   const project = (${publicDirectoryRows.toString()});
+  const chooseSeason = (${publicSeasonSelectionBrowserSource});
   const root=document.querySelector('[data-players-directory]');
   const season=root.querySelector('[data-season]');
   const search=root.querySelector('[data-search]');
@@ -43,9 +45,18 @@ const script = `<script>
   const status=root.querySelector('[data-status]');
   let rows=[];
   let loadNumber=0;
+  let bootNumber=0;
+  let loaded=false;
+  function clear(){loaded=false;rows=[];list.replaceChildren();empty.hidden=true}
+  function rememberSeason(id){
+    const url=new URL(location.href);if(id)url.searchParams.set('season',id);else url.searchParams.delete('season');
+    history.replaceState(null,'',url.pathname+url.search+url.hash);
+    try{if(id)localStorage.setItem('fd.playersSeasonId',id)}catch{}
+  }
   function state(message,tone='muted'){status.textContent=message;status.dataset.tone=tone}
   async function getJson(path){const response=await fetch(path);if(!response.ok)throw new Error('Directory data is unavailable. Try again.');return response.json()}
   function render(){
+    if(!loaded)return;
     const term=search.value.trim().toLocaleLowerCase();
     const shown=rows.filter(row=>!term||row.name.toLocaleLowerCase().includes(term)||row.team.toLocaleLowerCase().includes(term));
     shown.sort((a,b)=>sort.value==='wins'?b.wins-a.wins||a.name.localeCompare(b.name):sort.value==='rank'?(a.rank??9999)-(b.rank??9999)||a.name.localeCompare(b.name):a.name.localeCompare(b.name));
@@ -63,27 +74,32 @@ const script = `<script>
   }
   async function load(){
     const id=season.value;const request=++loadNumber;
-    if(!id){rows=[];render();state('No published season is available.');return}
+    clear();rememberSeason(id);
+    if(!id){loaded=true;render();state('No published season is available.');return}
     state('Loading players…');
     try{
       const encoded=encodeURIComponent(id);
       const [individuals,teams]=await Promise.all([getJson('/api/seasons/'+encoded+'/individual-standings'),getJson('/api/seasons/'+encoded+'/team-standings')]);
       if(request!==loadNumber)return;
       rows=project(individuals.standings,teams.standings);
-      try{localStorage.setItem('fd.playersSeasonId',id)}catch{}
+      loaded=true;
       render();
-    }catch{if(request!==loadNumber)return;rows=[];render();state('Directory data is unavailable. Try again.','error')}
+      if(!rows.length)state('No players are listed for this season yet.');
+    }catch{if(request!==loadNumber)return;clear();state('Directory data is unavailable. Try again.','error')}
   }
   async function boot(){
+    const request=++bootNumber;++loadNumber;clear();season.disabled=true;
     state('Loading seasons…');
     try{
       const body=await getJson('/api/seasons');const seasons=Array.isArray(body.seasons)?body.seasons:[];
+      if(request!==bootNumber)return;
       season.replaceChildren();
       for(const item of seasons){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' — '+item.status;season.append(option)}
       let remembered='';try{remembered=localStorage.getItem('fd.playersSeasonId')||''}catch{}
-      if(remembered&&seasons.some(item=>item.id===remembered))season.value=remembered;
+      const chosen=chooseSeason(seasons,{explicitId:new URL(location.href).searchParams.get('season')||'',rememberedId:remembered});
+      season.value=chosen?.id||'';season.disabled=false;
       await load();
-    }catch{state('Directory data is unavailable. Try again.','error')}
+    }catch{if(request!==bootNumber)return;state('Directory data is unavailable. Try again.','error')}
   }
   season.addEventListener('change',load);search.addEventListener('input',render);sort.addEventListener('change',render);
   root.querySelector('[data-retry]').addEventListener('click',boot);
