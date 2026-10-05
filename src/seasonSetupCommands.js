@@ -85,6 +85,8 @@ export async function saveSeasonSetupCommand(
   {
     actorUserId,
     seasonId = null,
+    createNew = false,
+    seasonPurpose = 'league',
     seasonName,
     leagueNight,
     firstRoundDate,
@@ -103,11 +105,15 @@ export async function saveSeasonSetupCommand(
     throw new Error('actorUserId is required');
   }
 
+  if (createNew !== false && createNew !== true) throw new Error('createNew must be a boolean');
+  if (createNew && seasonId) throw new Error('New season cannot target an existing season');
+  if (createNew && !['league', 'qa'].includes(seasonPurpose)) throw new Error('Invalid season purpose');
   assertRepository(repository, 'saveSeasonSetup');
 
   return repository.saveSeasonSetup({
     actorUserId,
     seasonId,
+    ...(createNew ? { createNew, seasonPurpose } : {}),
     seasonName: normalizeString(seasonName, 'seasonName', 80),
     leagueNight: normalizeString(leagueNight, 'leagueNight', 40),
     firstRoundDate: normalizeDate(firstRoundDate, 'firstRoundDate'),

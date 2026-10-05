@@ -56,7 +56,7 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     return respond(body);
   });
   if (sourceMode) {
-    let response = new Response(renderSeasonSetupPage(), { headers: { 'content-type': 'text/html' } });
+    let response = new Response(renderSeasonSetupPage({ allowCreate: true }), { headers: { 'content-type': 'text/html' } });
     response = await enhanceSeasonClose(await enhanceSeasonPublishReadiness(response));
     response = await injectAdminSurfaceTheme(response, '/season-setup');
     const html = decorateHtmlWithShell(await response.text(), '/season-setup');
@@ -87,6 +87,77 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  test(`new-season action clears prior inputs and supports cancel without writes (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.locator('[data-team-capacity]').fill('16');
+      await f.page.locator('[data-season-name]').fill('Unsaved old edit');
+      await f.page.locator('[data-new-season]').click();
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+      await expect(f.page.locator('[data-first-round-date]')).toHaveValue('');
+      await expect(f.page.locator('[data-team-capacity]')).toHaveValue('8');
+      await expect(f.page.locator('[data-season-selector]')).toHaveValue('');
+      await expect(f.page.locator('[data-new-season-notice]')).toBeVisible();
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      await expect(f.page.locator('[data-seed-slots]')).toBeDisabled();
+      expect(new URL(f.page.url()).searchParams.has('season')).toBe(false);
+      await f.page.locator('[data-season-selector]').selectOption('season-a');
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('Synthetic Alpha');
+      await expect(f.page.locator('[data-new-season-notice]')).toBeHidden();
+      expect(f.writes).toHaveLength(0);
+      if (mobile) expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally { await f.context.close(); }
+  });
+  test(`distinct season saves alongside existing registration and retains recovery identity (${device})`, async ({ browser, request }) => {
+    const saved = { ...setup('season-a'), id: 'season-c', name: 'Synthetic Next', status: 'registration' };
+    const f = await openOperator(browser, request, mobile, { 'season-c': saved });
+    try {
+      await f.page.locator('[data-new-season]').click();
+      await f.page.locator('[data-season-name]').fill(saved.name);
+      await f.page.locator('[data-first-round-date]').fill('2026-10-11');
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(1);
+      expect(f.writes[0].path).toBe('/api/admin/seasons');
+      expect(f.writes[0].body.createNew).toBe(true);
+      await expect(f.page.locator('[data-new-season]')).toBeDisabled();
+      await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+      await expect.poll(() => f.writes.length).toBe(2);
+      await f.writes[1].route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Synthetic registration failure"}' });
+      await expect(f.page.locator('[data-status]')).toContainText('Setup saved');
+      await expect(f.page.locator('[data-season-selector]')).toHaveValue('season-c');
+      await expect(f.page.locator('[data-season-selector] option[value="season-a"]')).toHaveText('Synthetic Alpha — registration');
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(3);
+      expect(f.writes[2].path).toBe('/api/admin/seasons/season-c/setup');
+      expect(f.writes[2].body.createNew).toBeUndefined();
+      await f.writes[2].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+      await expect.poll(() => f.writes.length).toBe(4);
+      await f.writes[3].route.fulfill({ contentType: 'application/json', body: '{}' });
+      await expect(f.page.locator('[data-status]')).toHaveText('Setup and registration saved');
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-season-name]')).toHaveValue(saved.name);
+      await expect(f.page.locator('[data-save]')).toBeEnabled();
+      expect(f.writes).toHaveLength(4);
+    } finally { await f.context.close(); }
+  });
+  for (const denial of [401, 403]) {
+    test(`new-season ${denial} denial retains draft without registration writes (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile);
+      try {
+        await f.page.locator('[data-new-season]').click();
+        await f.page.locator('[data-season-name]').fill('Denied draft');
+        await f.page.locator('[data-first-round-date]').fill('2026-10-11');
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        await f.writes[0].route.fulfill({ status: denial, contentType: 'application/json', body: '{"error":"Actor is not a league admin"}' });
+        await expect(f.page.locator('[data-status]')).toContainText(denial === 401 ? 'sign-in expired' : 'not a league admin');
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('Denied draft');
+        await expect(f.page.locator('[data-new-season]'))[denial === 401 ? 'toBeDisabled' : 'toBeEnabled']();
+        expect(f.writes).toHaveLength(1);
+      } finally { await f.context.close(); }
+    });
+  }
+
   for (const creating of [false, true]) {
     test(`registration failure retains confirmed ${creating ? 'created' : 'edited'} setup and retries safely (${device})`, async ({ browser, request }) => {
       const id = creating ? 'season-c' : 'season-a';
