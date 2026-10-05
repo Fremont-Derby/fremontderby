@@ -1,5 +1,6 @@
 function browserConfig(env = {}) {
   return {
+    matchupChatEnabled: env.ENVIRONMENT !== 'jfl',
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   };
@@ -120,9 +121,11 @@ export function renderChatPage(env = {}) {
 <body>
   <main class="app">
     <header class="heading">
-      <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
+      <div><h1>Messages</h1><div class="subhead">${env.ENVIRONMENT === 'jfl' ? 'General Chat, Team Chat, and Direct Messages without sharing phone numbers.' : 'League, matchup, team, and player coordination without sharing phone numbers.'}</div></div>
       <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true">Checking your messages…</div></div>
     </header>
+
+    ${env.ENVIRONMENT === 'jfl' ? '<section class="state-card" data-matchup-retired hidden><h2>Matchup chat is retired</h2><p>Use General Chat, Team Chat, or Direct Messages for social conversations. Use Schedule and Scorecard for match-night actions.</p><div class="state-actions"><a class="state-action" href="/schedule">Open Schedule</a><a class="state-action" href="/profile">Chat preferences</a></div></section>' : ''}
 
     <section class="state-card" data-page-state data-tone="warning" hidden>
       <h2 data-page-state-title>Messages unavailable</h2>
@@ -132,7 +135,7 @@ export function renderChatPage(env = {}) {
 
     <section class="state-card" data-signed-out data-tone="warning" hidden>
       <h2 data-signed-out-title>Coordinate league night in one place</h2>
-      <p data-signed-out-detail>Sign in to read league, matchup, team, and player messages without sharing your phone number.</p>
+      <p data-signed-out-detail>${env.ENVIRONMENT === 'jfl' ? 'Sign in to read General Chat, Team Chat, and Direct Messages.' : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.'}</p>
       <div class="state-actions"><a class="state-action" href="/profile">Sign in to message</a></div>
     </section>
 
@@ -198,6 +201,8 @@ export function renderChatPage(env = {}) {
 
   <script>
     const config = ${safeJson(browserConfig(env))};
+    const retiredNotice = document.querySelector('[data-matchup-retired]');
+    if (retiredNotice) retiredNotice.hidden = !new URLSearchParams(location.search).has('matchup');
     const statusEl = document.querySelector('[data-status]');
     const signedOutEl = document.querySelector('[data-signed-out]');
     const signedOutTitleEl = document.querySelector('[data-signed-out-title]');
@@ -271,13 +276,13 @@ export function renderChatPage(env = {}) {
       clearSession();
       layoutEl.hidden = true;
       hidePageState();
-      const matchupId = new URLSearchParams(location.search).get('matchup');
+      const matchupId = config.matchupChatEnabled && new URLSearchParams(location.search).get('matchup');
       signedOutTitleEl.textContent = expired ? 'Your sign-in expired' : (matchupId ? 'Sign in to open this matchup thread' : 'Coordinate league night in one place');
       signedOutDetailEl.textContent = expired
         ? 'Sign in again to reopen your conversations. Your messages were not changed.'
         : (matchupId
           ? 'After you sign in we will open the matchup conversation linked from the schedule.'
-          : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.');
+          : (config.matchupChatEnabled ? 'Sign in to read league, matchup, team, and player messages without sharing your phone number.' : 'Sign in to read General Chat, Team Chat, and Direct Messages.'));
       signedOutEl.hidden = false;
       setStatus(expired ? 'Sign in again to open messages' : 'Sign in to open messages', expired ? 'error' : 'muted');
     }
@@ -424,7 +429,7 @@ export function renderChatPage(env = {}) {
           'No conversations yet',
           candidates.length
             ? 'You can start a private league message with an eligible player.'
-            : 'Join a team or league-night matchup to unlock team, matchup, and player conversations.',
+            : (config.matchupChatEnabled ? 'Join a team or league-night matchup to unlock team, matchup, and player conversations.' : 'Open Profile to manage General Chat, Team Chat, and Direct Messages preferences.'),
           actions,
         ));
         const option = document.createElement('option');
@@ -633,8 +638,8 @@ export function renderChatPage(env = {}) {
         messageListEl.replaceChildren(emptyState(
           'No conversations yet',
           candidates.length
-            ? 'Start a player message or wait for a team, matchup, or league room to appear.'
-            : 'Join a team or league-night matchup to unlock conversations.',
+            ? (config.matchupChatEnabled ? 'Start a player message or wait for a team, matchup, or league room to appear.' : 'Start a Direct Message or open General Chat or Team Chat.')
+            : (config.matchupChatEnabled ? 'Join a team or league-night matchup to unlock conversations.' : 'Open Profile to manage your social chat preferences.'),
           actions,
         ));
         return;
@@ -658,6 +663,7 @@ export function renderChatPage(env = {}) {
       return rows.map((row) => ({ key: 'league:' + row.season_id, type: 'league', id: row.season_id, name: 'League room', season: row.season_name, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     function normalizedMatchupThreads(rows) {
+      if (!config.matchupChatEnabled) return [];
       return rows.map((row) => ({ key: 'matchup:' + row.team_match_id, type: 'matchup', id: row.team_match_id, name: row.team_a_name + ' vs ' + row.team_b_name, season: row.season_name + ' · Round ' + row.round_number, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     async function loadThreads({ preserveSelection = true } = {}) {
@@ -669,7 +675,7 @@ export function renderChatPage(env = {}) {
         api('/api/me/chat-threads'),
         api('/api/me/direct-message-inbox'),
         api('/api/me/league-chat-threads'),
-        api('/api/me/matchup-chat-threads'),
+        config.matchupChatEnabled ? api('/api/me/matchup-chat-threads') : Promise.resolve({ threads: [] }),
         api('/api/me/direct-message-candidates'),
       ]);
       threads = [
@@ -694,11 +700,15 @@ export function renderChatPage(env = {}) {
         || threads[0]?.key
         || '';
       await selectThread(initial);
-      setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
+      if (!config.matchupChatEnabled && params.has('matchup')) {
+        setStatus('Matchup chat is retired. Use General Chat, Team Chat, or Direct Messages.', 'muted');
+      } else {
+        setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
+      }
     }
     async function refreshThreadMetadata() {
       const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
-        api('/api/me/chat-threads'), api('/api/me/direct-message-inbox'), api('/api/me/league-chat-threads'), api('/api/me/matchup-chat-threads'), api('/api/me/direct-message-candidates'),
+        api('/api/me/chat-threads'), api('/api/me/direct-message-inbox'), api('/api/me/league-chat-threads'), config.matchupChatEnabled ? api('/api/me/matchup-chat-threads') : Promise.resolve({ threads: [] }), api('/api/me/direct-message-candidates'),
       ]);
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),

@@ -70,7 +70,7 @@ async function openMessages(browser, request, mobile) {
     return respond(body);
   });
   if (sourceMode) {
-    const html = await (await injectTestPersonaControls(await injectMessagesTheme(new Response(decorateHtmlWithShell(renderChatPage(), '/messages'),
+    const html = await (await injectTestPersonaControls(await injectMessagesTheme(new Response(decorateHtmlWithShell(renderChatPage({ ENVIRONMENT: 'jfl' }), '/messages'),
       { headers: { 'content-type': 'text/html' } })))).text();
     await page.route('https://messages.test/messages', route => route.fulfill({ contentType: 'text/html', body: html }));
   }

@@ -95,7 +95,7 @@ export function renderScheduleMatchCard(match = {}, { round = {}, myTeamIds = []
     <div class="fd-schedule-match__top">${mine ? '<strong class="fd-schedule-match__mine">Your match</strong>' : '<span class="fd-schedule-match__state">Match</span>'}<span class="fd-schedule-match__state">${state}</span></div>
     <div class="fd-schedule-match__teams"><strong>${teamA}</strong><span class="fd-schedule-match__score">${score}</span><strong>${teamB}</strong></div>
     <div class="fd-schedule-match__meta"><span>${time}</span><span>${venue}</span><span>${tableText}</span></div>
-    <details class="fd-schedule-match__details"><summary>Details</summary><div class="fd-schedule-match__actions"><a href="/scorecard?match=${encodedId}">${['finalized', 'corrected'].includes(String(match.status || '')) ? 'View score' : 'Score match'}</a><a href="/messages?matchup=${encodedId}">Messages</a></div></details>
+    <details class="fd-schedule-match__details"><summary>Details</summary><div class="fd-schedule-match__actions"><a href="/scorecard?match=${encodedId}">${['finalized', 'corrected'].includes(String(match.status || '')) ? 'View score' : 'Score match'}</a></div></details>
   </article>`;
 }
 
@@ -230,8 +230,7 @@ function scheduleClientScript() {
         const actions = document.createElement('div'); actions.className = 'fd-schedule-match__actions';
         const id = clean(match.teamMatchId || match.team_match_id);
         const scoreLink = document.createElement('a'); scoreLink.href = '/scorecard?match=' + encodeURIComponent(id); scoreLink.textContent = ['finalized', 'corrected'].includes(String(match.status || '')) ? 'View score' : 'Score match';
-        const messages = document.createElement('a'); messages.href = '/messages?matchup=' + encodeURIComponent(id); messages.textContent = 'Messages';
-        actions.append(scoreLink, messages); details.append(summary, actions); card.append(top, teams, meta, details); return card;
+        actions.append(scoreLink); details.append(summary, actions); card.append(top, teams, meta, details); return card;
       }
       function sortRounds(items) {
         return [...items].map((round) => ({ ...round, matches: [...(round.matches || [])].sort((a, b) => Number(a.tableNumber ?? a.table_number ?? 9999) - Number(b.tableNumber ?? b.table_number ?? 9999) || clean(a.teamMatchId).localeCompare(clean(b.teamMatchId))) }))

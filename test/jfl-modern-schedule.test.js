@@ -83,7 +83,7 @@ test('compact match cards expose opponent, status, time, venue/table, semantic m
   assert.match(html, /<details/);
   assert.match(html, /<summary[^>]*>Details/);
   assert.match(html, /\/scorecard\?match=match-2/);
-  assert.match(html, /\/messages\?matchup=match-2/);
+  assert.doesNotMatch(html, /\/messages\?matchup=/);
 });
 
 test('missing time and venue are explicit rather than invented', () => {
