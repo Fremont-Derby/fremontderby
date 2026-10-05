@@ -14,7 +14,7 @@ const registration = { teamCapacity: 8, counts: { confirmedTeams: 8 }, applicati
 const candidates = { registration, teams: Array.from({ length: 8 }, (_, i) => ({
   slot_workflow_status: 'confirmed', captain_player_id: `synthetic-${i}`, captain_has_phone: true })) };
 
-async function openOperator(browser, request, mobile) {
+async function openOperator(browser, request, mobile, setupOverrides = {}) {
   if (!sourceMode) {
     expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
     const health = await request.get('/health/environment');
@@ -45,7 +45,7 @@ async function openOperator(browser, request, mobile) {
       const match = path.match(/^\/api\/admin\/seasons\/(season-[ab])\/(setup|team-registration|team-candidates|close-readiness)$/);
       expect(match, `Unexpected endpoint ${path}`).toBeTruthy();
       const [, id, kind] = match;
-      body = kind === 'setup' ? { setup: setup(id) } : kind === 'team-registration' ? { registration } :
+      body = kind === 'setup' ? { setup: { ...setup(id), ...setupOverrides[id] } } : kind === 'team-registration' ? { registration } :
         kind === 'team-candidates' ? candidates : { readiness: { season_status: setup(id).status,
           ready: id === 'season-a', championship_finalized: id === 'season-a',
           unresolved_postseason_matches: id === 'season-a' ? 0 : 1, unresolved_player_matches: 0,
@@ -82,6 +82,60 @@ async function openOperator(browser, request, mobile) {
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  test(`unset setup fields never inherit another season's configuration (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile, { 'season-b': {
+      status: 'draft', first_round_date: null, league_night: null, roster_lock_round: null,
+      opening_block_length: null, individual_min_matches: null, round_interval_days: null,
+      default_table_numbers: null, race_chart_version: null, playoff_team_count: null,
+      playoff_anchor_tiebreaker: false,
+    } });
+    try {
+      await f.page.locator('[data-league-night]').fill('Monday');
+      await f.page.locator('[data-roster-lock-round]').fill('9');
+      await f.page.locator('[data-table-numbers]').fill('5,6,7,8');
+      await f.page.locator('[data-race-chart-version]').fill('Alpha-only-chart');
+      await f.page.locator('[data-season-selector]').selectOption('season-b');
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('Synthetic Beta');
+      await expect(f.page.locator('[data-first-round-date]')).toHaveValue('');
+      for (const [field, value] of Object.entries({ 'league-night': 'Thursday', 'roster-lock-round': '5',
+        'opening-block-length': '3', 'individual-min-matches': '5', 'round-interval-days': '7',
+        'table-numbers': '1,2,3,4', 'race-chart-version': 'season-1-default', 'playoff-team-count': '4' })) {
+        await expect(f.page.locator(`[data-${field}]`)).toHaveValue(value);
+      }
+      await expect(f.page.locator('[data-playoff-anchor-tiebreaker]')).not.toBeChecked();
+      await f.page.locator('[data-first-round-date]').fill('2026-11-12');
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(1);
+      expect(f.writes[0].path).toBe('/api/admin/seasons/season-b/setup');
+      expect(f.writes[0].body).toMatchObject({ seasonName: 'Synthetic Beta', leagueNight: 'Thursday',
+        firstRoundDate: '2026-11-12', rosterLockRound: 5, tableNumbers: [1, 2, 3, 4],
+        raceChartVersion: 'season-1-default', playoffAnchorTiebreaker: false });
+      await f.writes[0].route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Synthetic save denied"}' });
+      await expect(f.page.locator('[data-status]')).toHaveText('Synthetic save denied');
+      expect(f.writes).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
+  test(`pending and failed setup clear prior season summaries (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await expect(f.page.locator('[data-registration-summary]')).toContainText('Confirmed teams8');
+      f.hold('season-b', ['setup', 'team-registration']);
+      await f.page.locator('[data-season-selector]').selectOption('season-b');
+      await expect.poll(() => f.held.length).toBe(2);
+      await expect(f.page.locator('[data-registration-summary]')).toBeEmpty();
+      for (const field of ['season-status', 'team-count', 'round-count', 'table-summary']) {
+        await expect(f.page.locator(`[data-${field}]`)).toHaveText('—');
+      }
+      await expect(f.page.locator('[data-save]')).toBeDisabled();
+      await f.release(true);
+      await expect(f.page.locator('[data-status]')).toContainText('Delayed synthetic denial');
+      await expect(f.page.locator('[data-registration-summary]')).toBeEmpty();
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-season-status]')).toHaveText('playoffs');
+      await expect(f.page.locator('[data-registration-summary]')).toContainText('Confirmed teams8');
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
   for (const fail of [false, true]) {
     test(`delayed setup ${fail ? 'denial' : 'success'} cannot replace selected season (${device})`, async ({ browser, request }) => {
       const f = await openOperator(browser, request, mobile);
