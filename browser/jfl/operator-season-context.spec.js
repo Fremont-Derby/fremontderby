@@ -14,7 +14,7 @@ const registration = { teamCapacity: 8, counts: { confirmedTeams: 8 }, applicati
 const candidates = { registration, teams: Array.from({ length: 8 }, (_, i) => ({
   slot_workflow_status: 'confirmed', captain_player_id: `synthetic-${i}`, captain_has_phone: true })) };
 
-async function openOperator(browser, request, mobile, setupOverrides = {}) {
+async function openOperator(browser, request, mobile, setupOverrides = {}, initiallyEmpty = false) {
   if (!sourceMode) {
     expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
     const health = await request.get('/health/environment');
@@ -37,12 +37,13 @@ async function openOperator(browser, request, mobile, setupOverrides = {}) {
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (req.method() !== 'GET') { writes.push({ path, body: req.postDataJSON(), route }); return; }
     let body;
-    if (path === '/api/admin/seasons') body = { seasons };
+    if (path === '/api/admin/seasons') body = { seasons: initiallyEmpty ? [] : seasons };
+    else if (path === '/api/me/ready-checks') return respond({}, 404);
     else if (path === '/api/test-persona') return respond({}, 404);
     else if (path === '/api/me/message-notification-summary') body = { unreadCount: 0, previews: [] };
     else if (path.includes('/Loading%20seasons.../')) return respond({ error: 'Choose a loaded season' }, 400);
     else {
-      const match = path.match(/^\/api\/admin\/seasons\/(season-[ab])\/(setup|team-registration|team-candidates|close-readiness)$/);
+      const match = path.match(/^\/api\/admin\/seasons\/(season-[abc])\/(setup|team-registration|team-candidates|close-readiness)$/);
       expect(match, `Unexpected endpoint ${path}`).toBeTruthy();
       const [, id, kind] = match;
       body = kind === 'setup' ? { setup: { ...setup(id), ...setupOverrides[id] } } : kind === 'team-registration' ? { registration } :
@@ -59,10 +60,14 @@ async function openOperator(browser, request, mobile, setupOverrides = {}) {
     response = await enhanceSeasonClose(await enhanceSeasonPublishReadiness(response));
     response = await injectAdminSurfaceTheme(response, '/season-setup');
     const html = decorateHtmlWithShell(await response.text(), '/season-setup');
-    await page.route('https://operator.test/season-setup?season=season-a', route => route.fulfill({ contentType: 'text/html', body: html }));
+    await page.route('https://operator.test/season-setup**', route => route.fulfill({ contentType: 'text/html', body: html }));
   }
   await page.goto('/season-setup?season=season-a');
-  await expect(page.locator('[data-season-name]')).toHaveValue('Synthetic Alpha');
+  if (initiallyEmpty) {
+    await expect(page.locator('[data-save]')).toBeEnabled();
+    return { context, page, writes };
+  }
+  await expect(page.locator('[data-season-name]')).toHaveValue(setupOverrides['season-a']?.name || 'Synthetic Alpha');
   for (const prefix of ['publish-readiness', 'season-close']) {
     const state = page.locator(`[data-${prefix}-state]`);
     await expect(state).not.toContainText('Checking');
@@ -82,6 +87,64 @@ async function openOperator(browser, request, mobile, setupOverrides = {}) {
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  for (const creating of [false, true]) {
+    test(`registration failure retains confirmed ${creating ? 'created' : 'edited'} setup and retries safely (${device})`, async ({ browser, request }) => {
+      const id = creating ? 'season-c' : 'season-a';
+      const saved = { ...setup('season-a'), id, name: 'Confirmed season', status: 'registration' };
+      const f = await openOperator(browser, request, mobile, { [id]: saved }, creating);
+      try {
+        await f.page.locator('[data-season-name]').fill('Confirmed season');
+        await f.page.locator('[data-first-round-date]').fill('2026-10-11');
+        await f.page.locator('[data-team-capacity]').fill('12');
+        await f.page.locator('[data-minimum-roster]').fill('4');
+        await f.page.locator('[data-hold-days]').fill('21');
+        await f.page.locator('[data-reservation-deadline]').fill('2026-10-10T12:00');
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        expect(f.writes[0].route.request().method()).toBe(creating ? 'POST' : 'PUT');
+        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+        await expect.poll(() => f.writes.length).toBe(2);
+        await expect(f.page.locator('[data-season-selector]')).toHaveValue(id);
+        expect(new URL(f.page.url()).searchParams.get('season')).toBe(id);
+        expect(await f.page.evaluate(() => localStorage.getItem('fd.setupSeasonId'))).toBe(id);
+        await f.writes[1].route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Synthetic registration unavailable"}' });
+        await expect(f.page.locator('[data-status]')).toContainText('Setup saved');
+        await expect(f.page.locator('[data-status]')).toContainText('Synthetic registration unavailable');
+        await expect(f.page.locator('[data-save]')).toBeEnabled();
+        await expect(f.page.locator('[data-team-capacity]')).toHaveValue('12');
+        await expect(f.page.locator('[data-minimum-roster]')).toHaveValue('4');
+        await expect(f.page.locator('[data-hold-days]')).toHaveValue('21');
+        await expect(f.page.locator('[data-reservation-deadline]')).toHaveValue('2026-10-10T12:00');
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(3);
+        expect(f.writes[2].route.request().method()).toBe('PUT');
+        expect(f.writes[2].path).toBe(`/api/admin/seasons/${id}/setup`);
+        await f.writes[2].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+        await expect.poll(() => f.writes.length).toBe(4);
+        expect(f.writes[3].path).toBe(`/api/admin/seasons/${id}/team-registration`);
+        expect(f.writes[3].body).toEqual(f.writes[1].body);
+        await f.writes[3].route.fulfill({ contentType: 'application/json', body: '{}' });
+        await expect(f.page.locator('[data-status]')).toHaveText('Setup and registration saved');
+        await f.page.locator('[data-load]').click();
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('Confirmed season');
+        await expect(f.page.locator('[data-save]')).toBeEnabled();
+        expect(f.writes.filter(w => w.route.request().method() === 'POST')).toHaveLength(creating ? 1 : 0);
+      } finally { await f.context.close(); }
+    });
+  }
+  for (const invalidSetup of [{}, { id: 'season-b' }]) {
+    test(`unconfirmed setup ${invalidSetup.id ? 'identity' : 'response'} stops registration (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile);
+      try {
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: invalidSetup }) });
+        await expect(f.page.locator('[data-status]')).toContainText('Season save could not be confirmed');
+        await expect(f.page.locator('[data-season-selector]')).toHaveValue('season-a');
+        expect(f.writes).toHaveLength(1);
+      } finally { await f.context.close(); }
+    });
+  }
   test(`unset setup fields never inherit another season's configuration (${device})`, async ({ browser, request }) => {
     const f = await openOperator(browser, request, mobile, { 'season-b': {
       status: 'draft', first_round_date: null, league_night: null, roster_lock_round: null,
