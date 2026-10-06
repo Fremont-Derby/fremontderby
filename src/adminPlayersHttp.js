@@ -102,6 +102,16 @@ export async function handleSetAdminRoleRequest(
       if (typeof body.teamId !== 'string' || !body.teamId.trim()) {
         return Response.json({ error: 'teamId is required' }, { status: 400 });
       }
+      const { rosterDropBlocked } = await import('./rosterLock.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${body.seasonId}&select=status`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
+      if (rosterDropBlocked(season?.status, body.active)) {
+        return Response.json({ error: 'Roster is locked after the schedule is published.' }, { status: 409, headers: { 'cache-control': 'no-store' } });
+      }
       const result = await repository.setRosterMembership({
         actorUserId: actor.id,
         playerId,
@@ -189,8 +199,24 @@ export async function handleRecordRatingObservationRequest(
   }
 }
 
+
+export async function handleGetAdminPlayerRequest(request, env, playerId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
+    const players = await repository.listPlayers({ actorUserId: actor.id });
+    const player = (players || []).find((row) => String(row.playerId || row.id) === String(playerId));
+    const { playerOpen } = await import('./playerOpen.js');
+    if (!playerOpen(player)) return Response.json({ error: 'Player not found' }, { status: 404, headers: { 'cache-control': 'no-store' } });
+    return Response.json({ player }, { headers: { 'cache-control': 'no-store' } });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export const adminPlayersHttpHandlers = {
   recordRatingObservation: handleRecordRatingObservationRequest,
   list: handleListAdminPlayersRequest,
+  get: handleGetAdminPlayerRequest,
   setAdminRole: handleSetAdminRoleRequest,
 };

@@ -32,14 +32,23 @@ export function createPlayoffHttpHandlers({
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-          const { practicePlayoffsReady, writeDruPracticeResults, closeFinishedDruTeamMatches, closeOpenDruPracticeMatches } = await import('./druTeamResult.js');
-          await writeDruPracticeResults(env, seasonId, fetchImpl);
-          await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
-          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
           const { withSupabaseSchema } = await import('./supabaseSchema.js');
           const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
           const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
           const key = env.SUPABASE_SERVICE_ROLE_KEY;
+          const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, {
+            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
+          });
+          const seasonRows = seasonResponse.ok ? await seasonResponse.json() : [];
+          const seasonStatus = String(seasonRows[0]?.status || '');
+          if (seasonStatus === 'registration' || seasonStatus === 'draft' || seasonStatus === 'new') {
+            return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
+          }
+
+          const { practicePlayoffsReady, writeDruPracticeResults, closeFinishedDruTeamMatches, closeOpenDruPracticeMatches } = await import('./druTeamResult.js');
+          await writeDruPracticeResults(env, seasonId, fetchImpl);
+          await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
           const roundResponse = await fetchWithSchema(`${base}/rest/v1/rounds?season_id=eq.${seasonId}&stage=eq.regular&select=id`, {
             headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
           });
@@ -52,6 +61,9 @@ export function createPlayoffHttpHandlers({
           });
           const rows = response.ok ? await response.json() : [];
           if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
+          await writeDruPracticeResults(env, seasonId, fetchImpl);
+          await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
         }
         const repository = createRepository(env, { fetch: fetchImpl });
         const playoffs = await startSeasonPlayoffsCommand(

@@ -208,7 +208,7 @@ export default {
       return htmlResponse(renderChatPage(env), url.pathname);
     }
 
-    if (url.pathname === '/notices') {
+    if (url.pathname === '/notices' || url.pathname === '/alerts') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderNoticesPage(), url.pathname);
     }
@@ -389,6 +389,12 @@ export default {
     if (url.pathname === '/api/admin/players') {
       if (request.method !== 'GET') return methodNotAllowed();
       return adminPlayersHttpHandlers.list(request, env);
+    }
+
+    const adminPlayerMatch = url.pathname.match(/^\/api\/admin\/players\/([^/]+)$/);
+    if (adminPlayerMatch) {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return adminPlayersHttpHandlers.get(request, env, decodeURIComponent(adminPlayerMatch[1]));
     }
 
     if (adminPlayerRoleMatch) {

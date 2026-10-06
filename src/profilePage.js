@@ -1,4 +1,3 @@
-import { personaMissionLine, missionChromeLine } from './missionChrome.js';
 import { safeAutocompleteClientScript } from './safeAutocomplete.js';
 import { friendlyErrorMessage as sharedFriendlyErrorMessage } from './friendlyErrorMessage.js';
 import { safeJson } from './textEscape.js';
@@ -10,8 +9,6 @@ function browserConfig(env = {}) {
 }
 
 export function renderProfilePage(env = {}) {
-  const mission = personaMissionLine({ name: 'find my next match' });
-  const chrome = missionChromeLine({ task: 'find the match', done: 'the match is named', abort: 'stop' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -106,9 +103,8 @@ export function renderProfilePage(env = {}) {
     }
   </style>
 </head>
-<body>\n  <p data-persona-mission>${mission}</p>\n  <p data-mission-chrome>${chrome}</p>
+<body>\n  <p data-persona-mission></p>\n  <p data-mission-chrome></p>
   <main class="app">\n    <p data-profile-phone="formatted">A phone number is shown as a formatted number, and eligibility progress counts the requirements met.</p>
-    <section data-error-link><h2>Error link</h2><p>A client error keeps its id and a short server code. The stack stays off the page.</p></section>
     <p class="note" data-eligibility-why>Eligibility says why a player can play or why they are blocked.</p>
     <header class="topbar">
       <div class="brand"><span class="mark">P</span><span>Fremont Derby Profile</span></div>
@@ -447,7 +443,7 @@ export function renderProfilePage(env = {}) {
       if (standingNoteEl) {
         standingNoteEl.value = (profile && (profile.standing_availability_note || profile.standingAvailabilityNote)) || '';
       }
-      const teams = profile && Array.isArray(profile.teams) ? profile.teams : [];
+      const teams = (profile && Array.isArray(profile.teams) ? profile.teams : []).filter((team)=>!team.endsAt && !team.ends_at);
       const seasons = profile && Array.isArray(profile.seasons) ? profile.seasons : [];
       renderRows(
         teamBody,

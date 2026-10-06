@@ -242,6 +242,12 @@ export async function handlePublishScheduleRequest(
       if (!slotRows.length) return jsonResponse({ error: 'Practice slots did not load, so the night was not published.' }, 409);
       const ready = practicePublishReady(practicePublishSlotCount(slotRows));
       if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
+      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
+      const { draftCanPublish } = await import('./draftPublish.js');
+      if (draftCanPublish(season?.status)) {
+        await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}`, { method: 'PATCH', headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify({ status: 'registration' }) });
+      }
       const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
       const listSeasonTeams = repository.listSeasonTeams.bind(repository);
       repository.listSeasonTeams = async (id, actorUserId) => {
@@ -825,11 +831,25 @@ export async function handleListTradeCounterpartyOptionsRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const teams = await listTradeCounterpartyOptionsCommand(
-      { actorUserId: actor.id, seasonId },
-      repository,
-    );
-    return jsonResponse({ teams });
+    try {
+      const teams = await listTradeCounterpartyOptionsCommand(
+        { actorUserId: actor.id, seasonId },
+        repository,
+      );
+      return jsonResponse({ teams });
+    } catch (error) {
+      if (String(env?.ENVIRONMENT || '').trim() !== 'dru') throw error;
+      const { tradeTeams } = await import('./tradeTeams.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const response = await fetchWithSchema(`${base}/rest/v1/teams?season_id=eq.${seasonId}&select=id,name`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+      const rows = response.ok ? await response.json() : [];
+      const teams = tradeTeams((rows || []).map((row) => ({ teamId: row.id, teamName: row.name })));
+      if (!teams.length) throw error;
+      return jsonResponse({ teams });
+    }
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1033,6 +1053,14 @@ export async function handleTeamMatchDisputeRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
+    const { disputeOpen } = await import('./disputeOpen.js');
+    const { withSupabaseSchema } = await import('./supabaseSchema.js');
+    const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+    const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+    const key = env.SUPABASE_SERVICE_ROLE_KEY;
+    const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=status,winner_team_id`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+    const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
+    if (!disputeOpen(match)) return jsonResponse({ error: 'A match has to be played before it can be disputed.' }, 409);
     const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
     // A notice is a trail. A bad link must not block the disagreement.
     try {
@@ -1562,6 +1590,19 @@ export async function handleSetRosterAvailabilityRequest(
       if (s === 'no' || s === 'out') status = 'unavailable';
       if (s === 'maybe') status = 'unsure';
     }
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { availabilityReady } = await import('./availabilityReady.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' };
+      const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?round_id=eq.${roundId}&select=team_a_id&limit=1`, { headers });
+      const teamId = matchResponse.ok ? (await matchResponse.json())?.[0]?.team_a_id : null;
+      const memberResponse = teamId ? await fetchWithSchema(`${base}/rest/v1/team_memberships?team_id=eq.${teamId}&ends_at=is.null&select=player_id&limit=1`, { headers }) : null;
+      const playerId = memberResponse?.ok ? (await memberResponse.json())?.[0]?.player_id : null;
+      if (availabilityReady(playerId)) await fetchWithSchema(`${base}/rest/v1/players?id=eq.${playerId}`, { method: 'PATCH', headers, body: JSON.stringify({ user_id: actor.id }) });
+    }
     const availability = await setRosterAvailabilityCommand(
       {
         actorUserId: actor.id,
@@ -1618,11 +1659,24 @@ export async function handleSubmitTeamLineupRequest(
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
       const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
+      if (Array.isArray(slots) && slots.length > 3) {
+        const error = new Error('A regular lineup is three players.');
+        error.status = 400;
+        throw error;
+      }
       const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup, lockDruRegularLineup } = await import('./druLineupBypass.js');
       const playerIds = lineupPlayerIds(slots);
       const rawIds = slots.map((slot) => String(slot?.playerId || slot?.player_id || '').trim()).filter(Boolean);
-      if (new Set(rawIds.map((id) => id.toLowerCase())).size !== rawIds.length) {
+      const bodyIds = (Array.isArray(body.playerIds) ? body.playerIds : []).map((id) => String(id || '').trim()).filter(Boolean);
+      const seenIds = rawIds.length ? rawIds : bodyIds;
+      if (new Set(seenIds.map((id) => id.toLowerCase())).size !== seenIds.length) {
         const error = new Error('Pick three different players before the lineup can lock');
+        error.status = 400;
+        throw error;
+      }
+      const unknown = (bodyIds.length ? bodyIds : rawIds).find((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      if (unknown) {
+        const error = new Error('That player is not on this team.');
         error.status = 400;
         throw error;
       }
@@ -1743,7 +1797,11 @@ export async function handleListSeasonScheduleRequest(
         scope: `schedule:${seasonId}`,
         cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
         getVersion: async () => versionTokenFromValue(versionState),
-        buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+        buildBody: async () => {
+        const { roundsForDate } = await import('./dateRound.js');
+        const date = new URL(request.url).searchParams.get('date');
+        return { rounds: roundsForDate(await repository.listSeasonSchedule({ seasonId }), date) };
+      },
       });
     }
     if (!(await repository.seasonExists({ seasonId }))) {
@@ -1774,7 +1832,11 @@ export async function handleListSeasonScheduleRequest(
         }
         return versionTokenFromValue({ rounds, matches });
       },
-      buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+      buildBody: async () => {
+        const { roundsForDate } = await import('./dateRound.js');
+        const date = new URL(request.url).searchParams.get('date');
+        return { rounds: roundsForDate(await repository.listSeasonSchedule({ seasonId }), date) };
+      },
     });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -2513,7 +2575,7 @@ if (url.pathname === "/standings") {
       const teamId = decodeURIComponent(url.pathname.slice("/teams/".length).split("/")[0] || "");
       if (teamId) return Response.redirect(new URL("/teams?team=" + encodeURIComponent(teamId), url), 302);
     }
-    if (url.pathname === "/teams") {
+    if (url.pathname === "/teams" || url.pathname.startsWith("/teams/")) {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -2683,7 +2745,8 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       await authenticateSupabaseUser(request, env);
       const body = await request.json().catch(() => ({}));
       const { recordDruRaceResult } = await import('./druScoreOpen.js');
-      return jsonResponse(await recordDruRaceResult(env, druScoreRace[1], body.winnerSide));
+      const scored = await recordDruRaceResult(env, druScoreRace[1], body.winnerSide);
+      return jsonResponse(scored, scored.saved ? 200 : 404);
     }
 
     const druScoreMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/score$/);
@@ -2692,7 +2755,7 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       await authenticateSupabaseUser(request, env);
       const body = await request.json().catch(() => ({}));
       const { scoreDruTeamMatch } = await import('./druScoreOpen.js');
-      const scored = await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide);
+      const scored = await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide, undefined, { racksA: body.racksA, racksB: body.racksB });
       return jsonResponse(scored, scored.status || (scored.saved ? 200 : 400));
     }
 

@@ -9,5 +9,5 @@ test('a mission launch is named and the preview is not the tester path', () => {
   assert.equal(testerPathLine({ preview: true }), '');
   const html = renderStandingsPage();
   assert.match(html, /Launch find my next match/);
-  assert.match(html, /Tester path: play the mission/);
+  assert.doesNotMatch(html, /Tester path: play the mission/);
 });

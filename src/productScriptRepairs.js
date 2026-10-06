@@ -60,7 +60,7 @@ function injectPlayerHighlight(html, headers) {
         const banner=document.querySelector('[data-player-highlight]');
         if(!requested||!banner)return;
         banner.hidden=false;
-        banner.textContent='Showing player: '+requested;
+        banner.textContent='That player link is not on this list. Search the directory.';
         const search=document.querySelector('input[type="search"],input[name="q"],input[data-player-search]');
         if(search&&!search.value) search.value=requested;
       })();
@@ -83,7 +83,7 @@ function injectStandingsHighlight(html, headers) {
         const banner=document.querySelector('[data-standings-highlight]');
         if(!requested||!banner)return;
         banner.hidden=false;
-        banner.textContent='Showing team: '+requested;
+        banner.textContent='That team link is not on this list. Choose a season.';
         banner.setAttribute('data-requested-standing', requested);
         for (const row of document.querySelectorAll('[data-team-name], [data-standing-name]')) {
           if (isRequestedStanding(row.getAttribute('data-team-name')||row.getAttribute('data-standing-name')||row.textContent, requested)) {

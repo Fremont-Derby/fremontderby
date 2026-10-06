@@ -28,7 +28,7 @@ export function renderPlayersDirectoryPage() {
 <body>
   <main class="app">
     <header class="topbar">
-      <div class="brand"><span class="mark">9</span><span>Player directory</span></div>
+      <div class="brand"><span class="mark">9</span><span> Player directory</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
     </header>
     <p data-next-match>Looking up your next published match…</p>
