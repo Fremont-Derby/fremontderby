@@ -1,9 +1,8 @@
-import { missionLaunchLine, testerPathLine } from './missionLaunch.js';
+import { missionLaunchLine } from './missionLaunch.js';
 import { standingsContextLine, missionTaskLine } from './standingsTask.js';
 export function renderStandingsPage() {
   const launch = missionLaunchLine({ name: 'find my next match' });
-  const tester = testerPathLine({ preview: false });
-  const task = missionTaskLine({ task: 'find my standings' });
+  const task = '';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -17,9 +16,9 @@ export function renderStandingsPage() {
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
   </style>
 </head>
-<body>\n  <p data-mission-launch>${launch}</p>\n  <p data-tester-path>${tester}</p>\n    <p data-mission-task>${task}</p>
+<body>\n  <p data-mission-launch>${launch}</p>\n  <p data-tester-path></p>\n    <p data-mission-task>${task}</p>
   <main class="app">
-    <section data-qa-runs><h2>QA runs</h2><p>A run shows only when it has an id, a lane, and a pass or fail result.</p></section>
+    
     <header class="topbar"><div class="brand"><span class="mark">9</span><h1 style="margin:0;font-size:1.05rem;font-weight:950">Standings</h1></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
     <p data-champion hidden style="margin:8px 0;font-weight:800"></p><nav data-standings-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
       <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
@@ -49,7 +48,7 @@ export function renderStandingsPage() {
     function renderSeasonOptions(){seasonInput.replaceChildren();for(const season of seasons){const option=document.createElement('option');option.value=season.id;option.textContent=season.name+' — '+season.status;seasonInput.append(option)}const explicit=seasons.find((season)=>season.id===requestedSeasonId);const registration=seasons.find((season)=>season.status==='registration');const remembered=seasons.find((season)=>season.id===rememberedSeasonId);const selected=explicit||remembered||registration||seasons[0];seasonInput.value=selected?.id||'';seasonInput.disabled=seasons.length===0;loadButton.disabled=seasons.length===0}
     function renderRegistrationSummary(season){const isRegistration=season?.status==='registration';registrationSummary.hidden=!isRegistration;if(!isRegistration)return;const openSlots=Number(season.openTeamSlots||0);teamCountEl.textContent=season.teamCount+' / '+season.teamCapacity;playerCountEl.textContent=String(season.rosteredPlayerCount);openSlotsEl.textContent=String(season.openTeamSlots);registerLink.href='/teams?season='+encodeURIComponent(season.id);registerLink.textContent=openSlots<=0?(season.applicationsWaiting?'View waitlist / teams':'Teams full — view teams'):'Register or join a team'}
     async function loadSeasons(){setStatus('Loading seasons...');hideState();seasonInput.disabled=true;loadButton.disabled=true;let body;if(window.fdConditionalFetch){const result=await window.fdConditionalFetch('/api/seasons');if(result.notModified){seasonInput.disabled=false;loadButton.disabled=false;return Boolean(seasons.length)}body=result.body||{};if(!result.response.ok)throw new Error((body&&body.error)||'Standings could not be loaded.');}else{const response=await fetch('/api/seasons');body=await response.json();if(!response.ok)throw new Error((body&&body.error)||('Standings could not be loaded (HTTP '+response.status+').'));}seasons=body.seasons||[];renderSeasonOptions();if(!seasons.length){renderRegistrationSummary(null);renderTeams([]);renderPlayers([]);const message='No season is published yet. Standings will appear here once league setup is ready.';teamEmpty.textContent=message;teamMobileEmpty.textContent=message;playerEmpty.textContent=message;playerMobileEmpty.textContent=message;showState('No season yet','There is nothing to rank yet. You can still review the league format while registration and scheduling are prepared.','/rules','View league rules');setStatus('No season published yet');return false}return true}
-    function rankLabel(rows,index){const rank=rows[index]?.standings_rank;if(rank==null||rank==='')return'-';const tied=rows.filter((row)=>row.standings_rank===rank).length>1;return tied?'T-'+rank:String(rank)}let lastStandingsSignature='';
+    function rankLabel(rows,index){const played=Number(rows[index]?.games_played||0);if(!played)return'-';const rank=rows[index]?.standings_rank;if(rank==null||rank==='')return'-';const tied=rows.filter((row)=>row.standings_rank===rank&&Number(row.games_played||0)>0).length>1;return tied?'T-'+rank:String(rank)}let lastStandingsSignature='';
     function standingsSignature(teamRows,playerRows){
       const t=(teamRows||[]).map((r)=>[r.team_id||r.teamId||'',r.wins,r.losses,r.points||r.games_won||''].join(':')).join('|');
       const p=(playerRows||[]).map((r)=>[r.player_id||r.playerId||'',r.wins,r.losses,r.matches_played||''].join(':')).join('|');
@@ -91,7 +90,7 @@ export function renderStandingsPage() {
       const isRegistration=season&&season.status==='registration';
       const isComplete=season&&season.status==='complete';
       let list=rows.slice();
-      if(isRegistration||isComplete){list=list.filter((row)=>(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0)}
+      list=list.filter((row)=>Number(row.matches_played||0)>0);if(!list.length){playerEmpty.textContent='Player standings begin after scored matches.';playerMobileEmpty.textContent=playerEmpty.textContent}
       playerEmpty.hidden=list.length>0;playerMobileEmpty.hidden=list.length>0;
       const keyed=list.map((row,index)=>({row,index,key:String(row.player_id||row.playerId||row.display_name||index)}));
       function buildPlayerRow(item){

@@ -145,7 +145,7 @@ export function renderNotificationsPage() {
       const quiet=Boolean(opts&&opts.quiet);
       if(!token()){setStatus('Sign in required','muted');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.innerHTML='<strong>Sign in to see notices</strong><div class="muted">Notifications follow your player account.</div>';const a=document.createElement('a');a.href='/profile';a.textContent='Open Profile';empty.append(a);listEl.append(empty);return}
       if(!quiet) setStatus('Loading…','muted',{quiet:false});
-      const body=await api('/api/me/notifications');
+      let body; try { body=await api('/api/me/notifications'); } catch(error){ setStatus('Notifications could not be loaded.','error'); listEl.replaceChildren(); const empty=document.createElement('div'); empty.className='item'; empty.textContent='Notifications could not be loaded.'; listEl.append(empty); return }
       render(body.notifications||[]);
       const unread=(body.notifications||[]).filter((n)=>!n.readAt).length;
       setStatus(unread?unread+' unread':'Up to date','ok');

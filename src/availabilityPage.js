@@ -25,7 +25,7 @@ export function renderAvailabilityPage() {
       <a href="/notifications" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#d7d9d7);border-radius:10px;color:inherit;text-decoration:none;font-weight:850">Alerts</a>
     </nav>
     <section class="recovery" data-recovery aria-live="polite">
-      <h1 data-recovery-title>Finding your next league night…</h1>
+      <h1 data-recovery-title>League night check-in</h1>
       <p data-recovery-copy>Check in so your captain knows who will be there tonight.</p>
       <div class="recovery-actions" data-recovery-actions></div>
     </section>

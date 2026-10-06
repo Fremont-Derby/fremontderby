@@ -205,7 +205,7 @@ async function readJson(response) {
 
     <p data-champion hidden style="margin:8px 0;font-weight:800"></p><form class="controls" data-form>
       <label>Season
-        <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
+        <select name="seasonId" data-season-id disabled><option value="">Choose a season</option></select>
       </label>
       <a class="ghost" href="/standings" style="min-height:44px;display:inline-flex;align-items:center">Standings</a>
       <a class="ghost" href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center">Score</a>
@@ -368,7 +368,7 @@ async function readJson(response) {
     }
 
     function renderSummary(summary) {
-      fields.playerCount.textContent = summary.player_count || 0;
+      fields.playerCount.textContent = (Number(summary.player_count||0)>16 && Number(summary.paid_amount_cents||0)===0) ? 'Count not ready' : (summary.player_count || 0);
       fields.committed.textContent = money(summary.committed_amount_cents);
       fields.collected.textContent = money(summary.paid_amount_cents);
       fields.entryFee.textContent = money(summary.entry_fee_cents);

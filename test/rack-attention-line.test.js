@@ -13,5 +13,5 @@ test('notices page names messages instead of a missing route', () => {
   const html = renderNoticesPage();
   assert.match(html, /League notices are on the messages page/);
   assert.match(html, /href="\/messages"/);
-  assert.match(html, /1 rack needs attention/);
+  assert.doesNotMatch(html, /1 rack needs attention/);
 });

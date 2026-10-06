@@ -1,3 +1,4 @@
+import { scheduleRackCount } from './scheduleRackCount.js';
 import { withSupabaseSchema } from './supabaseSchema.js';
 import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
@@ -171,13 +172,15 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           headers,
         }).catch(() => [])
         : [];
-      const winnerByMatch = new Map();
+      const racesByMatch = new Map();
       for (const row of Array.isArray(playerRows) ? playerRows : []) {
-        if (!['finalized', 'corrected'].includes(row.status) || !['A', 'B'].includes(row.winner_side)) continue;
-        const tally = winnerByMatch.get(row.team_match_id) || { A: 0, B: 0 };
-        tally[row.winner_side] += 1;
-        winnerByMatch.set(row.team_match_id, tally);
+        const races = racesByMatch.get(row.team_match_id) || [];
+        races.push(row);
+        racesByMatch.set(row.team_match_id, races);
       }
+      const winnerByMatch = new Map(
+        [...racesByMatch.entries()].map(([id, races]) => [id, scheduleRackCount({ status: 'scheduled' }, races)]),
+      );
       const teamsById = new Map(
         (Array.isArray(teamRows) ? teamRows : []).map((team) => [team.id, team.name]),
       );
@@ -199,8 +202,8 @@ export function createStandingsRepository(env, { fetch: fetchImpl = globalThis.f
           makeupStatus: match.makeup_status ?? null,
           makeupNote: match.makeup_note ?? null,
           makeupProposedByTeamId: match.makeup_proposed_by_team_id ?? null,
-          racksA: winnerByMatch.get(match.id)?.A || 0,
-          racksB: winnerByMatch.get(match.id)?.B || 0,
+          racksA: scheduleRackCount(match, racesByMatch.get(match.id)).A,
+          racksB: scheduleRackCount(match, racesByMatch.get(match.id)).B,
           winnerTeamId: match.winner_team_id ?? null,
           winnerName: match.winner_team_id === match.team_a_id
             ? teamsById.get(match.team_a_id) ?? null

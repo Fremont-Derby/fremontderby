@@ -97,7 +97,7 @@ export function renderPlayoffsPage() {
     async function get(path){
       const response=await fetch(path);
       const body=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(body.error||'Playoffs did not return a bracket. Try again.');
+      if(!response.ok)throw new Error(body.error||'Playoffs have not started for this season.');
       return body;
     }
     async function authApi(path,options={}){
@@ -114,7 +114,7 @@ export function renderPlayoffsPage() {
       return stage||'Round';
     }
     function renderBracket(rounds){
-      const post=rounds.filter((r)=>['semifinal','championship','tiebreaker'].includes(String(r.stage||'')));
+      const post=(rounds||[]).filter((r)=>['semifinal','championship','tiebreaker'].includes(String(r.stage||'')));
       bracketEl.replaceChildren();
       if(!post.length){
         bracketEl.innerHTML='<div class="empty"><strong style="display:block;margin-bottom:8px">No postseason rounds yet</strong>A team qualifies four players from its own matches. When an admin starts playoffs, semifinals appear here.<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px"><a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a><a href="/standings" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Standings</a><a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Score</a></div></div>';
@@ -249,7 +249,7 @@ export function renderPlayoffsPage() {
       const id=seasonEl.value;
       if(!id)return;
       if(!quiet) setStatus('Loading playoff bracket…');
-      const body=await get('/api/seasons/'+encodeURIComponent(id)+'/schedule');
+      const body=await get('/api/seasons/'+encodeURIComponent(id)+'/playoffs');
       renderBracket(body.rounds||body.schedule||[]);
       if(!quiet) setStatus('Playoffs loaded','ok');
     }

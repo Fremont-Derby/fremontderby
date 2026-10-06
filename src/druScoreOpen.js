@@ -108,7 +108,7 @@ export async function recordDruRaceResult(env, playerMatchId, winnerSide, fetchI
   return { saved: true, winnerSide: patch.winner_side };
 }
 
-export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetchImpl = globalThis.fetch) {
+export async function scoreDruTeamMatch(env, teamMatchId, winnerSide, fetchImpl = globalThis.fetch) {
   if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return { saved: false, error: 'Not a DRU lane.' };
   const { withSupabaseSchema } = await import('./supabaseSchema.js');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
@@ -117,6 +117,9 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetc
   if (!base || !key || !teamMatchId) return { saved: false, status: 404, error: 'Match not found.' };
   const side = acceptedWinnerSide(winnerSide);
   if (!side) return { saved: false, status: 400, error: 'winnerSide must be A or B' };
+  const racksA = Number(racks?.racksA);
+  const racksB = Number(racks?.racksB);
+  if (Number.isFinite(racksA) && Number.isFinite(racksB) && racksA === racksB) return { saved: false, status: 400, error: 'A tie cannot name a winner.' };
   const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=representation' };
   const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=id,team_a_id,team_b_id,status,winner_team_id`, { headers });
   const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
@@ -128,7 +131,12 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetc
     const lineups = lineupResponse.ok ? await lineupResponse.json() : [];
     const ready = new Set((lineups || []).map((row) => row.team_id));
     if (!ready.has(match.team_a_id) || !ready.has(match.team_b_id)) {
-      return { saved: false, status: 409, error: 'No race is open. Open the lineup, then come back to score.' };
+      const opened = await openDruMatchForScoring(env, teamMatchId, fetchImpl);
+      const racesResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?team_match_id=eq.${teamMatchId}&select=id`, { headers });
+      const races = racesResponse.ok ? await racesResponse.json() : [];
+      if (!opened?.opened && !races.length) {
+        return { saved: false, status: 409, error: 'Both teams need a lineup before this match can be scored.' };
+      }
     }
   }
   await openDruMatchForScoring(env, teamMatchId, fetchImpl);

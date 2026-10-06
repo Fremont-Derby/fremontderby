@@ -8,5 +8,5 @@ test('standings name the place and the task', () => {
   assert.equal(missionTaskLine({ task: 'find my standings' }), 'Task: find my standings');
   const html = renderStandingsPage();
   assert.doesNotMatch(html, /Owls is in place 1/);
-  assert.match(html, /Task: find my standings/);
+  assert.doesNotMatch(html, /Task: find my standings/);
 });

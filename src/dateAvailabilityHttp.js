@@ -39,6 +39,23 @@ export async function routeDateAvailability(request, env, { fetch: fetchImpl = g
     if (!statuses.has(availabilityStatus)) {
       throw new Error('status must be available, unsure, or unavailable');
     }
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { activeSeasonCanCheckIn } = await import('./activeCheckIn.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' };
+      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, { headers });
+      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
+      const playerResponse = await fetchWithSchema(`${base}/rest/v1/players?user_id=eq.${actor.id}&select=id`, { headers });
+      const player = playerResponse.ok ? (await playerResponse.json())?.[0] : null;
+      const memberResponse = player ? await fetchWithSchema(`${base}/rest/v1/team_memberships?season_id=eq.${seasonId}&player_id=eq.${player.id}&ends_at=is.null&select=id`, { headers }) : null;
+      const rostered = memberResponse?.ok ? (await memberResponse.json()).length > 0 : false;
+      if (activeSeasonCanCheckIn(season?.status, rostered)) {
+        await fetchWithSchema(`${base}/rest/v1/season_players`, { method: 'POST', headers: { ...headers, prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify({ season_id: seasonId, player_id: player.id, status: 'active' }) });
+      }
+    }
     return json({
       availability: await repository.setOwn({
         actorUserId: actor.id,

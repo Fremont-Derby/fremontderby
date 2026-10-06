@@ -11,10 +11,8 @@ const agentSessionScript = `<script ${MARKER}>
     const durable = window.localStorage;
     const current = session.getItem('fd.accessToken') || durable.getItem('fd.accessToken') || '';
     const looksLikeJwt = current.split('.').length === 3 && current.length > 40;
-    if (!looksLikeJwt) {
-      session.setItem('fd.accessToken', sentinel);
-      try { durable.setItem('fd.accessToken', sentinel); } catch {}
-    }
+    if (looksLikeJwt) return;
+    if (current !== sentinel) return;
   } catch {}
   function hideGoogleWall() {
     const nodes = document.querySelectorAll('button, a, p, .banner, [role="status"]');
