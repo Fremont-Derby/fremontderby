@@ -119,10 +119,16 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide, fetchImpl 
   if (!side) return { saved: false, status: 400, error: 'winnerSide must be A or B' };
   const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=representation' };
   await openDruMatchForScoring(env, teamMatchId, fetchImpl);
-  const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=id,team_a_id,team_b_id,status`, { headers });
+  const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=id,team_a_id,team_b_id,status,winner_team_id`, { headers });
   const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
   if (!match) return { saved: false, status: 404, error: 'Match not found.' };
-  if (match.status === 'finalized') return { saved: false, status: 409, error: 'This match is already saved. A captain has to correct it.' };
+  if (match.status === 'finalized') {
+    if (match.winner_team_id) return { saved: false, status: 409, error: 'This match is already saved. A captain has to correct it.' };
+    const winnerTeamId = side === 'A' ? match.team_a_id : match.team_b_id;
+    const filled = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}`, { method: 'PATCH', headers, body: JSON.stringify({ winner_team_id: winnerTeamId }) });
+    if (!filled.ok) return { saved: false, error: 'This match could not be saved.' };
+    return { saved: true, winnerSide: side, filledWinner: true };
+  }
   const racesResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?team_match_id=eq.${teamMatchId}&select=id,player_a_id,player_b_id`, { headers });
   const races = racesResponse.ok ? await racesResponse.json() : [];
   for (const race of races) {
