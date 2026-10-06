@@ -123,6 +123,10 @@ test('season teams UI exposes a phone-safe create flow and clear prepared state'
   assert.match(html, /createForm\.hidden=true/);
   assert.match(html, /@media\(max-width:520px\)/);
   assert.doesNotMatch(html, /Team ID/i);
+  assert.match(html, /inSeasonCount===0&&newCount>0/);
+  assert.match(html, /searchParams.set\('tab','new'\)/);
+  assert.match(html, /practicePhone/);
+  assert.match(html, /\/contact/);
 });
 
 test('season teams router exposes prepared team creation as POST', async () => {
