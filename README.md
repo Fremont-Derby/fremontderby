@@ -12,7 +12,7 @@ This repository is designed so a new development session can start with little o
 
 Then read the **current GitHub issue and its linked context**. Issues, PRs, code, tests, migrations, CI, and relevant live platform state carry the specific and current details. Do not treat this README as a fixed priority queue.
 
-For scheduled ChatGPT tasks or other low-context external sessions, use the intentionally small bootstrap in [`docs/agent-bootstrap.md`](docs/agent-bootstrap.md). The external task should point back into the repository rather than copying the whole roadmap or architecture into its prompt.
+For scheduled ChatGPT tasks or other low-context external sessions, use the intentionally small bootstrap in [`docs/guidance/agent-bootstrap.md`](docs/guidance/agent-bootstrap.md). The external task should point back into the repository rather than copying the whole roadmap or architecture into its prompt.
 
 GitHub-native agents also receive a thin pointer through [`.github/copilot-instructions.md`](.github/copilot-instructions.md), so all agent types converge on the same contract.
 
@@ -20,10 +20,10 @@ GitHub-native agents also receive a thin pointer through [`.github/copilot-instr
 
 - `AGENTS.md` — durable autonomous operating behavior.
 - `README.md` — stable product/architecture/environment orientation.
-- `docs/product-surface-catalog.md` — canonical index connecting audiences, documented user stories, functions, and page ownership.
+- `docs/reference/product-surface-catalog.md` — canonical index connecting audiences, documented user stories, functions, and page ownership.
 - `docs/page-api-user-story-audit.md` — comprehensive page-by-page audit reference connecting current/planned stories to UI/API ownership and product-owner audit flags.
 - `.github/agents/*.agent.md` — specialist operating profiles, including the Product Librarian / Information Architecture lane.
-- `docs/agent-bootstrap.md` — minimal external-session bootstrap.
+- `docs/guidance/agent-bootstrap.md` — minimal external-session bootstrap.
 - GitHub issues/milestones/PRs — current priorities, user stories, requirements, blockers, and acceptance criteria.
 - Code/tests/migrations/live state — what actually exists.
 
@@ -53,7 +53,7 @@ npm run build
 
 Fremont Derby treats user stories, page ownership, and navigation as maintained product infrastructure rather than incidental UI details.
 
-The **Product Librarian / Information Architecture** agent at [`.github/agents/product-librarian.agent.md`](.github/agents/product-librarian.agent.md) continuously reconciles this structure. The durable catalog lives at [`docs/product-surface-catalog.md`](docs/product-surface-catalog.md), with the deeper page/API/story audit at [`docs/page-api-user-story-audit.md`](docs/page-api-user-story-audit.md).
+The **Product Librarian / Information Architecture** agent at [`.github/agents/product-librarian.agent.md`](.github/agents/product-librarian.agent.md) continuously reconciles this structure. The durable catalog lives at [`docs/reference/product-surface-catalog.md`](docs/reference/product-surface-catalog.md), with the deeper page/API/story audit at [`docs/page-api-user-story-audit.md`](docs/page-api-user-story-audit.md).
 
 For normal user-facing product work:
 
@@ -90,7 +90,7 @@ Current runtime can temporarily lag approved product ownership while focused cle
 - **#553 public season selection / QA isolation** — complete after PRs #561/#562/#566. Normal public registration/standings/prize reads admit only `league`-purpose seasons; Schedule, Standings, and Prizes share one deterministic selector that preserves a valid explicit `?season=` and otherwise prefers lifecycle relevance (`active/playoffs → registration → most recent complete`), with remembered state only as fallback.
 - **#382 site-wide visual/accessibility system** — the approved product language is warm/light page content with white/light surfaces and deep Fremont-green actions; the dark felt/wood treatment is reserved for shared navigation identity. Shared architecture and page-source convergence have landed across the public, player, captain, admin, recovery, Standings, Rules, and Test Drive surfaces. #382 remains open for representative phone/desktop browser verification, `/scorecard/live` mock-up fidelity, and any concrete defects found during that final visual QA.
 
-Do not create parallel pages to implement these transitions. Follow the canonical ownership in the linked stories and `docs/product-surface-catalog.md`.
+Do not create parallel pages to implement these transitions. Follow the canonical ownership in the linked stories and `docs/reference/product-surface-catalog.md`.
 
 ## Product invariants that should not be casually changed
 
@@ -123,7 +123,7 @@ The code intentionally uses small modules rather than a framework.
 | Pure domain logic | `domain/*.js` | Schedule, match/race, season, playoff logic without HTTP/database concerns |
 | Database source of truth | `supabase/migrations/*.sql` | Tables, constraints, RPC functions, triggers, RLS, grants |
 | Tests | `test/*.test.js` | Node `node:test` regression and integration-contract coverage |
-| Product surface catalog | `docs/product-surface-catalog.md` | Audience/story/function/page ownership and discoverability index |
+| Product surface catalog | `docs/reference/product-surface-catalog.md` | Audience/story/function/page ownership and discoverability index |
 | Page/API/story audit | `docs/page-api-user-story-audit.md` | Product-owner audit of page stories, current/planned APIs, and IA flags |
 | Cloudflare config | `wrangler.jsonc` | Worker name and non-secret environment bindings |
 | CI | `.github/workflows/ci.yml` | Required validation on PRs and `main` |
@@ -230,7 +230,7 @@ Admin is directly available from shared desktop navigation and the mobile menu; 
 
 The shared visual contract is centralized: normal application content is warm/light, while dark felt/wood is reserved for the shared navigation shell. The page-level source convergence tracked by #427/#428/#429/#434/#435/#437 has landed; parent #382 remains the durable owner for representative phone/desktop browser sign-off and `/scorecard/live` mock-up fidelity.
 
-Inspect `src/router.js`, `src/routerEntry.js`, `docs/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
+Inspect `src/router.js`, `src/routerEntry.js`, `docs/reference/product-surface-catalog.md`, and `docs/page-api-user-story-audit.md` before adding a route so a second surface is not created for behavior that already exists and the new function receives a documented canonical home.
 
 ## Development commands
 
@@ -272,7 +272,7 @@ For affected behavior, aim to leave:
 
 ## Testing
 
-Season 1 push confidence contract: [`docs/SEASON1_TEST_CONTRACT.md`](docs/SEASON1_TEST_CONTRACT.md).
+Season 1 push confidence contract: [`docs/validation/SEASON1_TEST_CONTRACT.md`](docs/validation/SEASON1_TEST_CONTRACT.md).
 
 ## License
 
@@ -284,4 +284,4 @@ Third-party services used at runtime (for example Cloudflare and Supabase) remai
 
 ## API reference
 
-Agent-oriented HTTP inventory: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (#363).
+Agent-oriented HTTP inventory: [docs/reference/API_REFERENCE.md](docs/reference/API_REFERENCE.md) (#363).

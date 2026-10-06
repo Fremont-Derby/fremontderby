@@ -2,13 +2,13 @@
 
 When directed to **Do work!**, follow `docs/do-work-protocol.md` (canaries first, verified ships only).
 
-When directed to run **ChatGPT Work/browser UX production validation**, follow `docs/WORK_BROWSER_UX_VALIDATION.md` and `.github/agents/browser-ux-validation.agent.md`. Treat that mission as blocker-first release preflight for issue #219; it accelerates but does not replace the required two-human captain trial.
+When directed to run **ChatGPT Work/browser UX production validation**, follow `docs/validation/WORK_BROWSER_UX_VALIDATION.md` and `.github/agents/browser-ux-validation.agent.md`. Treat that mission as blocker-first release preflight for issue #219; it accelerates but does not replace the required two-human captain trial.
 
-When directed to establish or extend **Playwright/self-hosted browser automation**, treat issue #2524 and `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` as the authoritative implementation plan. The repository is public: never route `pull_request` code to the persistent self-hosted browser runner, and keep ordinary public PR CI on GitHub-hosted runners. Use **JFL as the browser-automation and product-completion target** under #2800. Gamma work is deferred until #2800's JFL exit gate is satisfied; only then reactivate #2527 to establish an integrated RC baseline. Never wholesale-merge the permanent JFL or DRU branches to update Gamma.
+When directed to establish or extend **Playwright/self-hosted browser automation**, treat issue #2524 and `docs/operations/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` as the authoritative implementation plan. The repository is public: never route `pull_request` code to the persistent self-hosted browser runner, and keep ordinary public PR CI on GitHub-hosted runners. Use **JFL as the browser-automation and product-completion target** under #2800. Gamma work is deferred until #2800's JFL exit gate is satisfied; only then reactivate #2527 to establish an integrated RC baseline. Never wholesale-merge the permanent JFL or DRU branches to update Gamma.
 
 ## Current product-owner focus — JFL product completeness (#2800)
 
-The durable JFL/DRU collaboration model for this phase is in `docs/AGENTIC_DEVELOPMENT_PROGRAM.md`. Every autonomous JFL/DRU session must treat that charter as required reading subordinate to this file. It defines the shared outcome, lane roles, DRU→JFL handoff model, mentoring loop, program health signals, and continuous-improvement expectations.
+The durable JFL/DRU collaboration model for this phase is in `docs/guidance/AGENTIC_DEVELOPMENT_PROGRAM.md`. Every autonomous JFL/DRU session must treat that charter as required reading subordinate to this file. It defines the shared outcome, lane roles, DRU→JFL handoff model, mentoring loop, program health signals, and continuous-improvement expectations.
 
 **Issue #2800 is the controlling near-term product milestone for every autonomous implementation lane.** Until its JFL exit gate is satisfied, optimize the project for completing and proving the real product in JFL, not for Gamma reconciliation or production promotion.
 
@@ -38,7 +38,7 @@ Use the highest-authority current source available. A more specific source may a
 4. **`AGENTS.md`** — authoritative repository-owned operating contract for every autonomous development agent.
 5. **`.github/agents/*.agent.md` and `.github/instructions/*.instructions.md`** — role-, lane-, or surface-specific additions that must remain consistent with `AGENTS.md`.
 6. **`README.md`** — architecture, product invariants, environment map, and contributor orientation.
-7. **`docs/agent-bootstrap.md`** — intentionally tiny external-session bootstrap text.
+7. **`docs/guidance/agent-bootstrap.md`** — intentionally tiny external-session bootstrap text.
 
 If a lane or specialist guide conflicts with `AGENTS.md`, follow `AGENTS.md` and record the conflict for correction. Do not carry stale assumptions from a previous session when the repository can answer the question now.
 

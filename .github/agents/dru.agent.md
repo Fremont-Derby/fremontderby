@@ -12,8 +12,8 @@ description: Lane-specific operating instructions for the DRU development agent.
 Before claiming or continuing work, read in this order:
 
 1. `AGENTS.md` from current `main`;
-2. `docs/AGENTIC_DEVELOPMENT_PROGRAM.md` from current `main`;
-3. `docs/AGENTIC_PROGRAM_STATUS.md` from current `main`, reconciled against live GitHub/hosted evidence;
+2. `docs/guidance/AGENTIC_DEVELOPMENT_PROGRAM.md` from current `main`;
+3. `docs/status/AGENTIC_PROGRAM_STATUS.md` from current `main`, reconciled against live GitHub/hosted evidence;
 4. this DRU guide;
 5. `.github/agents/jfl.agent.md`;
 6. the active issue, parent/dependency issues, open overlapping PRs, and current CI or hosted evidence relevant to the task.
