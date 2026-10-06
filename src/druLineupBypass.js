@@ -101,7 +101,7 @@ async function clearEmptyDruLineups(fetchWithSchema, conn, teamId, roundId, priv
 export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, roundId, playerIds = [], slots }, fetchImpl = globalThis.fetch) {
   if (!druOnly(env)) return false;
   if (!actorUserId || !teamId || !roundId) reject('Lineup could not be locked');
-  if (Array.isArray(slots) && !lineupSlotsAreComplete(slots)) reject('Lineup needs three players before it can lock');
+  if (Array.isArray(slots) && !lineupSlotsAreComplete(slots)) reject('Lineup needs three players in slots 1, 2, and 3 before it can lock');
   const named = (Array.isArray(slots) ? lineupPlayerIds(slots) : playerIds).map((id) => String(id || '').trim()).filter(Boolean);
   if (duplicateLineupIds(named)) reject('Lineup players must be unique.');
   if (new Set(named.map((id) => id.toLowerCase())).size !== named.length) reject('Pick three different players before the lineup can lock');
@@ -130,7 +130,8 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, ro
     if (!membershipSeatOk(saved.status)) reject(`Membership write failed: ${saved.status} ${(await saved.text()).slice(0, 180)}`);
   }
   const waived = await waiveDruTeamPayments(env, { seasonId, teamId, playerIds: roster }, fetchImpl);
-  if (waived !== roster.length) reject('Lineup players could not be waived');
+  const onTeam = roster.every((id) => members.some((row) => same(row, id) && row.team_id === teamId));
+  if (!onTeam && waived < roster.length) reject('Lineup players could not be waived');
   return true;
 }
 
