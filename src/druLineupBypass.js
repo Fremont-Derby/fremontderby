@@ -104,7 +104,8 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, ro
   if (Array.isArray(slots) && !lineupSlotsAreComplete(slots)) reject('Lineup needs three players before it can lock');
   const named = (Array.isArray(slots) ? lineupPlayerIds(slots) : playerIds).map((id) => String(id || '').trim()).filter(Boolean);
   if (duplicateLineupIds(named)) reject('Lineup players must be unique.');
-  if (new Set(named.map((id) => id.toLowerCase())).size !== 3) reject('Lineup needs three players before it can lock');
+  if (new Set(named.map((id) => id.toLowerCase())).size !== named.length) reject('Pick three different players before the lineup can lock');
+  if (named.length !== 3) reject('Lineup needs three players before it can lock');
   const conn = service(env);
   if (!conn) reject('Lineup could not be locked');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
@@ -205,7 +206,7 @@ export async function lockDruPlayoffLineup(env, { actorUserId, teamId, roundId, 
   const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'return=representation' };
   const roundResponse = await fetchWithSchema(`${conn.base}/rest/v1/rounds?id=eq.${roundId}&select=id,stage,season_id`, { headers });
   const round = roundResponse.ok ? (await roundResponse.json())?.[0] : null;
-  if (!round || !['semifinal', 'final', 'playoff', 'championship'].includes(round.stage)) return null;
+  if (!round || !['regular', 'semifinal', 'final', 'playoff', 'championship'].includes(round.stage)) return null;
   const matchResponse = await fetchWithSchema(`${conn.base}/rest/v1/team_matches?round_id=eq.${roundId}&or=(team_a_id.eq.${teamId},team_b_id.eq.${teamId})&select=id,season_id,team_a_id,team_b_id`, { headers });
   const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
   if (!match) return null;
