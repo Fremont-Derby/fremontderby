@@ -19,7 +19,7 @@ The controlling milestone is issue #2800: JFL product completeness.
 
 ## Current program status
 
-Read `docs/AGENTIC_PROGRAM_STATUS.md` before normal prioritization. It is the maintained executive/status handoff for the current phase. Reconcile it against live issues, PRs, CI, and hosted evidence; newer authoritative evidence wins. Update the status document only for material program-level changes rather than routine card churn.
+Read `docs/status/AGENTIC_PROGRAM_STATUS.md` before normal prioritization. It is the maintained executive/status handoff for the current phase. Reconcile it against live issues, PRs, CI, and hosted evidence; newer authoritative evidence wins. Update the status document only for material program-level changes rather than routine card churn.
 
 ## Collaboration contract
 

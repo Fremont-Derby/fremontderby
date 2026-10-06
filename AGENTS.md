@@ -351,3 +351,8 @@ Until Gamma promotion is fully required in rulesets, same-repo implementation PR
 
 
 Every implementation PR must link exactly which card(s) it implements.
+
+
+## Durable knowledge
+
+GitHub cards and comments are execution records, not the sole long-term home for reusable instructions. Follow `docs/guidance/agent-knowledge-lifecycle.md`: when work establishes an enduring cross-card rule, product contract, reusable operational procedure, or recurring lesson, promote it into the appropriate canonical documentation. Keep transient SHAs, blockers, reproduction details, and routine progress on the card/PR rather than turning docs into a second backlog.
