@@ -16,7 +16,6 @@ export function renderSchedulePage() {
 </head>
 <body>
   <main class="app">\n    <p data-next-match="briefing">The next match names the opponent.</p>
-    <section data-standings-context><h2>My standings</h2><p>The next match names the team, the rank, and the matches played.</p></section>
     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Schedule</span></div><div class="status" data-status>Loading…</div></header>
     <nav data-schedule-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
       <a href="/availability" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Check in</a>
