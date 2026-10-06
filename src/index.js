@@ -2513,7 +2513,7 @@ if (url.pathname === "/standings") {
       const teamId = decodeURIComponent(url.pathname.slice("/teams/".length).split("/")[0] || "");
       if (teamId) return Response.redirect(new URL("/teams?team=" + encodeURIComponent(teamId), url), 302);
     }
-    if (url.pathname === "/teams") {
+    if (url.pathname === "/teams" || url.pathname.startsWith("/teams/")) {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
