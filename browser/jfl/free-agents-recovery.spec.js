@@ -83,9 +83,9 @@ for (const mobile of [false, true]) {
       await expect(f.page.locator('[data-free-results] li')).toHaveCount(1); expect(f.writes).toEqual([]);
     } finally { await f.context.close(); }
   });
-  for (const kind of ['teams', 'candidates']) test(`malformed ${kind} never claims empty success (${device})`, async ({ browser }) => {
+  for (const kind of ['teams', 'candidates', 'null teams', 'null candidates']) test(`malformed ${kind} never claims empty success (${device})`, async ({ browser }) => {
     const f = await open(browser, mobile); try {
-      await f.wait(1); await f.respond(0, kind === 'teams' ? {} : teams); if (kind === 'candidates') { await f.wait(2); await f.respond(1, { freeAgents: 'bad' }); }
+      await f.wait(1); await f.respond(0, kind === 'teams' ? {} : kind === 'null teams' ? null : teams); if (kind.endsWith('candidates')) { await f.wait(2); await f.respond(1, kind === 'null candidates' ? null : { freeAgents: 'bad' }); }
       await expect(f.page.locator('[data-free-state]')).toContainText('Could not load'); await expect(f.page.locator('[data-free-lineup]')).toBeHidden();
       await expect(f.page.locator('[data-free-results] li')).toHaveCount(0); expect(f.writes).toEqual([]);
     } finally { await f.context.close(); }
@@ -95,6 +95,20 @@ for (const mobile of [false, true]) {
       await f.wait(1); await f.respond(0, teams); await f.wait(2); await f.page.locator('[data-free-round]').selectOption('round-b'); await f.wait(3);
       await f.respond(2, candidates); await f.respond(1, {}, 403); await expect(f.page.locator('[data-free-results] li')).toHaveCount(2);
       await expect(f.page.locator('[data-free-lineup]')).toHaveAttribute('href', '/lineup?team=team-a&round=round-b'); expect(f.writes).toEqual([]);
+    } finally { await f.context.close(); }
+  });
+  test(`team change clears candidates and search preserves pending state (${device})`, async ({ browser }) => {
+    const f = await open(browser, mobile); try {
+      await f.wait(1); await f.respond(0, { teamManagement: { captain_teams: [...teams.teamManagement.captain_teams, { teamId: 'team-b', teamName: 'Synthetic Beta', seasonName: 'Another synthetic season', lineupRounds: [{ roundId: 'round-c', scheduledOn: '2099-10-13', roundNumber: 1 }] }] } });
+      await f.wait(2); await f.respond(1, candidates); await expect(f.page.locator('[data-free-results] li')).toHaveCount(2);
+      await f.page.locator('[data-free-team]').selectOption('team-b'); await f.wait(3);
+      await expect(f.page.locator('[data-free-results] li')).toHaveCount(0); await expect(f.page.locator('[data-free-lineup]')).toBeHidden();
+      await expect(f.page.locator('[data-free-search]')).toBeDisabled();
+      await f.page.locator('[data-free-search]').evaluate(el => el.dispatchEvent(new Event('input')));
+      await expect(f.page.locator('[data-free-state]')).toContainText('Checking eligible candidates');
+      expect(f.reads[2].path).toBe('/api/teams/team-b/rounds/round-c/eligible-free-agents');
+      await f.respond(2, { freeAgents: [] }); await expect(f.page.locator('[data-free-state]')).toContainText('No eligible free agents');
+      await expect(f.page.locator('[data-free-lineup]')).toHaveAttribute('href', '/lineup?team=team-b&round=round-c'); expect(f.writes).toEqual([]);
     } finally { await f.context.close(); }
   });
   test(`signed-out keeps canonical participation links (${device})`, async ({ browser }) => {

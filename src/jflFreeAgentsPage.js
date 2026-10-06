@@ -103,7 +103,7 @@ const script = `<script>
     try{
       const body=await getJson('/api/teams/'+encodeURIComponent(team.teamId)+'/rounds/'+encodeURIComponent(round.roundId)+'/eligible-free-agents');
       if(current!==requestNumber)return;
-      if(!Array.isArray(body.freeAgents)||body.freeAgents.some((row)=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('Could not load free agents. Try again.');
+      if(!Array.isArray(body?.freeAgents)||body.freeAgents.some((row)=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('Could not load free agents. Try again.');
       candidates=body.freeAgents.map(safeCandidate);candidatesReady=true;search.disabled=false;
       lineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);lineup.hidden=false;
       renderCandidates();
@@ -124,7 +124,7 @@ const script = `<script>
     message('Loading your teams…');
     try{
       const body=await getJson('/api/me/teams');if(current!==loadNumber)return;
-      if(!Array.isArray(body.teamManagement?.captain_teams)||body.teamManagement.captain_teams.some((team)=>!team||!team.teamId||!Array.isArray(team.lineupRounds)))throw new Error('Could not load free agents. Try again.');
+      if(!Array.isArray(body?.teamManagement?.captain_teams)||body.teamManagement.captain_teams.some((team)=>!team||!team.teamId||!Array.isArray(team.lineupRounds)))throw new Error('Could not load free agents. Try again.');
       contexts=contextsFromManagement(body.teamManagement);
       if(!contexts.length){workspace.hidden=true;message('No captained team yet. You can still join as a free agent and check in on Schedule.');return}
       workspace.hidden=false;teamSelect.replaceChildren();
