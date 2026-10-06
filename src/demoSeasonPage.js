@@ -173,6 +173,7 @@ export function renderDemoSeasonPage() {
     <section class="hero">
       <div class="kicker">Practice night</div>
       <h1>Test Drive the App</h1>
+      <p>War Games practice. This tour stays off the live season.</p>
       <p>See how Fremont Derby feels before joining a real match. Build a fictional team, submit a three-player lineup, score one 8/9 race, then explore a completed seven-round season and playoffs. No Google sign-in is required.</p>
       <div class="actions"><a class="button primary" href="/sandbox/captain">Start as captain →</a><a class="button secondary" href="/sandbox/player">Jump to scoring</a></div>
       <div class="chips"><span class="chip">8 fictional teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 dual scoring</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>

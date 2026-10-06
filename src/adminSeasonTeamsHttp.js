@@ -66,7 +66,7 @@ export function createAdminSeasonTeamsHttpHandlers({
           }, repository);
         } catch (error) {
           if (error.status === 409 || /duplicate|already exists|unique/i.test(String(error.message || ''))) {
-            const next = new Error('That team name is already used. Pick another name.');
+            const next = new Error('That team name is already used on another night. Pick another name.');
             next.status = 409;
             throw next;
           }

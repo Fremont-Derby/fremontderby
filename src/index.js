@@ -1048,6 +1048,7 @@ export async function handleTeamMatchDisputeRequest(
   teamMatchId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
+  // href: null. The disagreement still counts if the notice link is bad.
   try {
     if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
