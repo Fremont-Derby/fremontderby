@@ -1,3 +1,4 @@
+import { routeJflProvisionalSeed, enhanceJflProvisionalSeedLink } from './jflProvisionalSeedHttp.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
@@ -127,6 +128,8 @@ async function finalizeBrowserResponse(response, pathname) {
 const baseRouterEntry = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const provisionalSeedResponse = await routeJflProvisionalSeed(request, env);
+    if (provisionalSeedResponse) return finalizeBrowserResponse(provisionalSeedResponse, url.pathname);
     const qaResults = await routeJflQaResults(request, env);
     if (qaResults) return qaResults;
     const notificationsResponse = await routeJflNotifications(request, env);
@@ -195,7 +198,8 @@ const baseRouterEntry = {
     if (env.ENVIRONMENT === 'jfl' && response.status === 404 && isHtmlResponse(response)) {
       return finalizeBrowserResponse(jflNotFoundResponse(url.pathname), url.pathname);
     }
-    const reconciled = await reconcileProductShell(response, url.pathname);
+    const seedLinked = await enhanceJflProvisionalSeedLink(response, env, url.pathname);
+    const reconciled = await reconcileProductShell(seedLinked, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
     if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
     if (url.pathname === '/season-setup' && request.method === 'GET') {
