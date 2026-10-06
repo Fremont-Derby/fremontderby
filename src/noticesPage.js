@@ -1,7 +1,4 @@
-import { rackAttentionLine } from './rackAttentionLine.js';
-
 export function renderNoticesPage() {
-  const oneRack = rackAttentionLine(1);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +10,7 @@ export function renderNoticesPage() {
   <main>
     <h1>Notices</h1>
     <p>League notices are on the messages page.</p>
-    <p>${oneRack}</p>
+    <p>No rack needs attention until a match is open.</p>
     <p><a href="/messages">Open messages</a></p>
   </main>
 </body>
