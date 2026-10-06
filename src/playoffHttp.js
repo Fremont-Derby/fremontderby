@@ -32,9 +32,10 @@ export function createPlayoffHttpHandlers({
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-          const { practicePlayoffsReady, writeDruPracticeResults, closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
+          const { practicePlayoffsReady, writeDruPracticeResults, closeFinishedDruTeamMatches, closeOpenDruPracticeMatches } = await import('./druTeamResult.js');
           await writeDruPracticeResults(env, seasonId, fetchImpl);
           await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
           const { withSupabaseSchema } = await import('./supabaseSchema.js');
           const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
           const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
