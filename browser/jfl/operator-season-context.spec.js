@@ -14,7 +14,7 @@ const registration = { teamCapacity: 8, counts: { confirmedTeams: 8 }, applicati
 const candidates = { registration, teams: Array.from({ length: 8 }, (_, i) => ({
   slot_workflow_status: 'confirmed', captain_player_id: `synthetic-${i}`, captain_has_phone: true })) };
 
-async function openOperator(browser, request, mobile, setupOverrides = {}, initiallyEmpty = false) {
+async function openOperator(browser, request, mobile, setupOverrides = {}, initiallyEmpty = false, linkOptions = null) {
   if (!sourceMode) {
     expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
     const health = await request.get('/health/environment');
@@ -26,14 +26,19 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
     viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 },
     isMobile: mobile, hasTouch: mobile });
-  await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'));
+  await context.addInitScript(() => {
+    sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only');
+    localStorage.setItem('fd.setupSeasonId', 'season-b');
+  });
   const page = await context.newPage();
   const held = [];
   const writes = [];
+  const reads = [];
   let hold = null;
   await context.route('**/api/**', async route => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
+    if (req.method() === 'GET') reads.push(path);
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (req.method() !== 'GET') { writes.push({ path, body: req.postDataJSON(), route }); return; }
     let body;
@@ -62,7 +67,9 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     const html = decorateHtmlWithShell(await response.text(), '/season-setup');
     await page.route('https://operator.test/season-setup**', route => route.fulfill({ contentType: 'text/html', body: html }));
   }
-  await page.goto('/season-setup?season=season-a');
+  await page.goto(linkOptions ? '/season-setup?view=setup' +
+    (linkOptions.requested ? '&season=' + linkOptions.requested : '') + '#configuration' : initiallyEmpty ? '/season-setup' : '/season-setup?season=season-a');
+  if (linkOptions) return { context, page, writes, reads };
   if (initiallyEmpty) {
     await expect(page.locator('[data-save]')).toBeEnabled();
     return { context, page, writes };
@@ -87,6 +94,57 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  for (const empty of [false, true]) {
+    test(`missing explicit season blocks edits and permits deliberate recovery ${empty ? 'empty list' : 'existing list'} (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile, {}, empty, { requested: 'season-missing' });
+      try {
+        await expect(f.page.locator('[data-status]')).toHaveText('The requested season is unavailable. Choose a listed season or select New season.');
+        expect(new URL(f.page.url()).searchParams.get('season')).toBe('season-missing');
+        expect(await f.page.evaluate(() => localStorage.getItem('fd.setupSeasonId'))).toBe('season-b');
+        await expect(f.page.locator('[data-season-selector]')).toHaveValue('');
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+        for (const selector of ['[data-save]', '[data-publish]', '[data-seed-slots]', '[data-season-close-button]']) {
+          if (await f.page.locator(selector).count()) await expect(f.page.locator(selector)).toBeDisabled();
+        }
+        await expect(f.page.locator('[data-season-name]')).toBeDisabled();
+        expect(f.reads.filter(path => /^\/api\/admin\/seasons\//.test(path))).toEqual([]);
+        expect(f.writes).toHaveLength(0);
+        if (!empty) {
+          await f.page.locator('[data-season-selector]').selectOption('season-a');
+          await expect(f.page.locator('[data-season-name]')).toHaveValue('Synthetic Alpha');
+          await expect(f.page.locator('[data-save]')).toBeEnabled();
+          expect(new URL(f.page.url()).searchParams.get('season')).toBe('season-a');
+        }
+        await f.page.locator('[data-new-season]').click();
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+        await expect(f.page.locator('[data-save]')).toBeEnabled();
+        expect(new URL(f.page.url()).searchParams.has('season')).toBe(false);
+        expect(new URL(f.page.url()).searchParams.get('view')).toBe('setup');
+        expect(new URL(f.page.url()).hash).toBe('#configuration');
+        await f.page.locator('[data-season-name]').fill('Deliberate draft');
+        await f.page.locator('[data-first-round-date]').fill('2026-10-11');
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        expect(f.writes[0].path).toBe('/api/admin/seasons');
+        expect(f.writes[0].body.createNew).toBe(true);
+        await f.writes[0].route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Synthetic creation denied"}' });
+        await expect(f.page.locator('[data-status]')).toHaveText('Synthetic creation denied');
+        if (mobile) expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      } finally { await f.context.close(); }
+    });
+  }
+  for (const requested of ['season-b', '']) {
+    test(`operator ${requested ? 'valid explicit' : 'default'} season still loads (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile, {}, false, { requested });
+      try {
+        await expect(f.page.locator('[data-season-name]')).toHaveValue(requested ? 'Synthetic Beta' : 'Synthetic Alpha');
+        await expect(f.page.locator('[data-season-selector]')).toHaveValue(requested || 'season-a');
+        await expect(f.page.locator('[data-save]'))[requested ? 'toBeDisabled' : 'toBeEnabled']();
+        expect(new URL(f.page.url()).searchParams.get('season')).toBe(requested || 'season-a');
+        expect(f.writes).toHaveLength(0);
+      } finally { await f.context.close(); }
+    });
+  }
   const throttleHtml = '<!doctype html><html><h1>Cloudflare 1015</h1><p>Ray ID: synthetic-private; IP: synthetic-private</p></html>';
   test(`HTML throttle during creation preserves draft without replay (${device})`, async ({ browser, request }) => {
     const f = await openOperator(browser, request, mobile);
