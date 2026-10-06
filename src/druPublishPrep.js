@@ -125,6 +125,17 @@ export function practicePublishSlotCount(slots = []) {
   return slots.filter((slot) => slot && slot.team_id && !['released', 'expired'].includes(slot.status)).length;
 }
 
+export function releasedPracticeTeamIds(slots = []) {
+  return slots
+    .filter((slot) => slot && slot.team_id && ['released', 'expired'].includes(slot.status))
+    .map((slot) => slot.team_id);
+}
+
+export function withoutReleasedPracticeTeams(teams = [], slots = []) {
+  const released = new Set(releasedPracticeTeamIds(slots));
+  return teams.filter((team) => team && !released.has(team.id));
+}
+
 export function practicePublishReady(teamCount) {
   const count = Number(teamCount || 0);
   if (!count) return { ok: false, text: 'Add a team before publishing.' };

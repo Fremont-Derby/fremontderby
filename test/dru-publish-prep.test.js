@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { practiceCaptainPlan, practicePublishReady, practicePublishSlotCount, practiceRosterPlan, practiceSlotPlan } from '../src/druPublishPrep.js';
+import { practiceCaptainPlan, practicePublishReady, practicePublishSlotCount, practiceRosterPlan, practiceSlotPlan, withoutReleasedPracticeTeams } from '../src/druPublishPrep.js';
 
 test('a practice night fills each team to the committed roster', () => {
   const plan = practiceRosterPlan(
@@ -65,4 +65,12 @@ test('a released slot does not count toward the practice night', () => {
   ];
   assert.equal(practicePublishSlotCount(slots), 1);
   assert.equal(practicePublishReady(practicePublishSlotCount(slots)).ok, false);
+});
+
+test('a released team is left out of the practice schedule', () => {
+  const teams = withoutReleasedPracticeTeams(
+    [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+    [{ team_id: 'b', status: 'released' }, { team_id: 'c', status: 'confirmed' }],
+  );
+  assert.deepEqual(teams.map((team) => team.id), ['a', 'c']);
 });
