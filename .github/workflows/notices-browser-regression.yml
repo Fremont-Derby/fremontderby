@@ -1,0 +1,39 @@
+name: Notices recovery browser regression
+on:
+  pull_request:
+    paths:
+      - 'src/jflNotificationsPage.js'
+      - 'browser/jfl/notices-recovery.spec.js'
+      - '.github/workflows/notices-browser-regression.yml'
+  push:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'src/jflNotificationsPage.js'
+      - 'browser/jfl/notices-recovery.spec.js'
+      - '.github/workflows/notices-browser-regression.yml'
+permissions:
+  contents: read
+jobs:
+  notices-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PLAYWRIGHT_NOTICES_SOURCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test browser/jfl/notices-recovery.spec.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: notices-browser-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
