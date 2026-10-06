@@ -1618,6 +1618,11 @@ export async function handleSubmitTeamLineupRequest(
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
       const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
+      if (Array.isArray(slots) && slots.length > 3) {
+        const error = new Error('A regular lineup is three players.');
+        error.status = 400;
+        throw error;
+      }
       const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup, lockDruRegularLineup } = await import('./druLineupBypass.js');
       const playerIds = lineupPlayerIds(slots);
       const rawIds = slots.map((slot) => String(slot?.playerId || slot?.player_id || '').trim()).filter(Boolean);
