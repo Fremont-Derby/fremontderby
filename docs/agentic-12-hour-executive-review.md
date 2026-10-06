@@ -96,3 +96,59 @@ The strongest next evidence would be:
 5. A repaired JFL behavior is adversarially retested by DRU.
 
 **Convergence judgment:** improving materially, but not yet a closed flywheel. JFL is converging on product completeness and DRU has returned to useful live exploration. The next acceleration step is reducing the time from DRU discovery to JFL verified remediation and DRU retest.
+
+
+## 2026-10-06 08:00 CT review
+
+### Executive signal
+
+**Direction: JFL flow accelerated; DRU discovery throughput exploded into queue/WIP overload, so system convergence regressed despite useful findings.**
+
+JFL produced multiple source-to-exact-deployed acceptance loops and closed six focused acceptances in its latest recorded run (#2311, #1813, #3520, #3523, #2796, #3525). It also independently reviewed #3288 and found a stale-requester eligibility defect before acceptance, preserving the P0 contract instead of rubber-stamping a green primitive.
+
+DRU continued real-night exploration and found many concrete defects, but the journal records **56 open DRU pull requests** targeting the permanent DRU lane and an emergency consolidation because the publish pipeline could only serialize them. That is direct evidence that discovery/implementation arrival rate exceeded lane verification/deployment capacity. The resulting batch is rework/consolidation, not product velocity. The prior review's one-focused-card / portability guidance was not consumed strongly enough to prevent queue explosion.
+
+### Objective velocity / flow scoreboard
+
+| Dimension | Current signal | Trend from prior review |
+| --- | --- | --- |
+| JFL product-flow advancement | **Strong** | Improved: six focused acceptances plus exact deployed/browser evidence. |
+| Verified product completion | **Improving** | JFL is closing bounded acceptance slices; #2800 remains open and terminal two-captain/human proof is incomplete. |
+| DRU discovery value | **High** | Real-night negative testing is surfacing many concrete user-visible defects. |
+| DRU -> JFL portability | **Weak** | No completed DRU→JFL→verified→DRU-retest loop was found; #3311 remains unclaimed. |
+| Rework / consolidation | **Severe** | 56 open DRU PRs required a special consolidation ship because serialized deployment could not absorb them. |
+| CI / process friction | **Material** | Serial permanent-lane publishing became a bottleneck; docs/process-only fan-out remains separately tracked in #3345. |
+| Lane-boundary health | **Good** | No evidence of DRU→Gamma/production promotion; JFL/DRU branch boundaries remain respected. |
+| JFL P0 pull-through | **Improving but blocked** | #3288 received independent review; a stale-recipient transfer defect must be remediated before acceptance. |
+| Independent privacy acceptance | **Stalled** | #3311 is still unclaimed despite being P0/handoff:dru. |
+| JFL ↔ DRU convergence | **Regressed** | Both lanes are product-oriented, but DRU output is accumulating faster than it is qualified/consumed by JFL. |
+
+### Representative end-to-end evidence
+
+**JFL acceptance loop:** recent #2800 evidence records exact deployed SHAs, green CI, controlled browser checks, real supported persona/API checks, rollback-only SQL where appropriate, and explicit limits on what was *not* proven. #2796 was closed only after populated/search/signed-out acceptance. #3525 closed after phone-width verification. This is the verification discipline to preserve.
+
+**JFL P0 protection:** read-only review of #3288 identified that expired/Release takeover paths could transfer ownership to a requester who became ineligible after requesting. That finding maps directly to the product contract and blocks false completion. It is not yet a completed ideal-loop instance because remediation/browser proof/DRU adversarial retest remain outstanding.
+
+**DRU queue failure:** #2883's newest session contract explicitly says 56 open PRs were the same night's fixes and that publishing them individually would keep the lane busy all night. The human authorized a one-time combined ship. This is strong evidence of WIP/flow-control failure: useful discovery was converted into more implementation inventory than the serialized lane could validate/deploy. Consolidation is a recovery action, not evidence that the 56 slices independently reached verified completion.
+
+### Prior-review consumption
+
+JFL behavior materially reflects the prior review: it returned attention to #3288, used independent qualification, and continued exact-SHA hosted acceptance rather than counting merges. No ceremonial acknowledgment is required.
+
+DRU behavior only partially reflects it. Real-night exploration continued as requested, but the prior warning against PR fragmentation and the request to qualify portable findings did not prevent 56 concurrent PRs. #3311 also remains unconsumed. The report therefore risks becoming theater for DRU unless work selection changes at the next natural boundary.
+
+### Durable adaptation
+
+No new validator is justified yet. Existing policy already says one primary card, one coherent objective, prefer one evidence-rich JFL handoff over many micro-PRs, and ask whether work advances the product or feeds the pipeline. The failure is execution/flow control, not missing prose.
+
+The smallest durable adjustment is operational: **after the current DRU consolidation recovery, stop opening implementation PRs faster than the permanent DRU lane can verify/deploy them. Keep discovery evidence on cards and convert only the highest-value blocker into implementation until lane WIP drains.** At the next natural boundary, consume #3311 or hand JFL one demonstrated portable blocker. Do not add another mechanical rule unless this failure repeats after the explicit correction.
+
+### Risks / next thing to watch
+
+1. Whether the 56-PR DRU batch actually drains to a small verified inventory rather than merely becoming one large unverified merge.
+2. Whether DRU converts a demonstrated live failure into a JFL-qualified handoff and completes the first full ideal loop.
+3. Whether #3311 is accepted and executed instead of remaining a permanent P0 handoff.
+4. Whether #3288 remediates stale-recipient eligibility and proceeds through mutation enforcement, browser proof, and independent DRU attack.
+5. Whether JFL's high verification discipline remains focused on #2800 core paths rather than drifting into an endless tail of phone/polish defects.
+
+**Convergence judgment: temporarily drifting apart at the system level.** JFL is accelerating verified product completion and DRU is generating valuable real-product evidence, but DRU's implementation arrival rate has overwhelmed its serialized verification/deployment path and has not yet shortened JFL's cycle time. Convergence resumes when DRU WIP drains and repeated discoveries terminate in JFL-qualified, verified, adversarially retested outcomes.
