@@ -56,6 +56,28 @@ export function practiceSlotPlan(teams = [], memberships = [], limit = 8) {
   return slots;
 }
 
+
+
+export function practicePublishTeamIds(teams = [], slots = []) {
+  const occupied = [];
+  const seen = new Set();
+  for (const slot of slots) {
+    const id = slot?.team_id || slot?.teamId || null;
+    if (!id || seen.has(id) || ['released', 'expired'].includes(slot.status)) continue;
+    seen.add(id);
+    occupied.push(id);
+  }
+  const listed = teams
+    .filter((team) => team?.active !== false)
+    .map((team) => team.id || team.team_id || team.teamId)
+    .filter(Boolean);
+  return occupied.length === 8 ? occupied : listed;
+}
+
+export function readySlotConfirmBody(now = new Date().toISOString()) {
+  return { status: 'confirmed', resolved_at: now, last_action_reason: 'DRU practice night' };
+}
+
 export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globalThis.fetch) {
   if (!druOnly(env) || !seasonId) return { prepared: false };
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
@@ -104,6 +126,7 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
     });
   }
   const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'return=minimal' };
+  await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&status=eq.ready`, { method: 'PATCH', headers: privateHeaders, body: JSON.stringify(readySlotConfirmBody()) });
   for (const slot of practiceSlotPlan(teams, membershipsWithCaptains)) {
     await fetchWithSchema(`${base}/rest/v1/season_team_slots`, {
       method: 'POST',
