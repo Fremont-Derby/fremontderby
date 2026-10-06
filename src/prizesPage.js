@@ -368,7 +368,7 @@ async function readJson(response) {
     }
 
     function renderSummary(summary) {
-      fields.playerCount.textContent = summary.player_count || 0;
+      fields.playerCount.textContent = (Number(summary.player_count||0)>16 && Number(summary.paid_amount_cents||0)===0) ? 'Count not ready' : (summary.player_count || 0);
       fields.committed.textContent = money(summary.committed_amount_cents);
       fields.collected.textContent = money(summary.paid_amount_cents);
       fields.entryFee.textContent = money(summary.entry_fee_cents);
