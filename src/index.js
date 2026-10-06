@@ -226,16 +226,31 @@ export async function handlePublishScheduleRequest(
       await prepareDruPracticePublish(env, seasonId, fetchImpl);
       const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
       await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
-      const { practicePublishReady, practicePublishSlotCount } = await import('./druPublishPrep.js');
+      const { practicePublishReady, practicePublishSlotCount, withoutReleasedPracticeTeams } = await import('./druPublishPrep.js');
       const { withSupabaseSchema } = await import('./supabaseSchema.js');
       const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
       const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
       const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const slots = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&team_id=not.is.null&select=team_id,status`, {
+      const slotsResponse = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&team_id=not.is.null&select=team_id,status`, {
         headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'dru_private' },
       });
-      const ready = practicePublishReady(slots.ok ? practicePublishSlotCount(await slots.json()) : 0);
+      const slotRows = slotsResponse.ok ? await slotsResponse.json() : [];
+      const ready = practicePublishReady(practicePublishSlotCount(slotRows));
       if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
+      const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
+      const listSeasonTeams = repository.listSeasonTeams.bind(repository);
+      repository.listSeasonTeams = async (id, actorUserId) => withoutReleasedPracticeTeams(await listSeasonTeams(id, actorUserId), slotRows);
+      const result = await publishSeasonScheduleCommand(
+        {
+          seasonId,
+          actorUserId: actor.id,
+          firstRoundDate: body.firstRoundDate,
+          intervalDays: body.intervalDays,
+          tableNumbers: body.tableNumbers,
+        },
+        repository,
+      );
+      return jsonResponse(result, 201);
     }
 
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
