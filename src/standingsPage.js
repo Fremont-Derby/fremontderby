@@ -2,7 +2,7 @@ import { missionLaunchLine } from './missionLaunch.js';
 import { standingsContextLine, missionTaskLine } from './standingsTask.js';
 export function renderStandingsPage() {
   const launch = missionLaunchLine({ name: 'find my next match' });
-  const task = missionTaskLine({ task: 'find my standings' });
+  const task = '';
   return `<!doctype html>
 <html lang="en">
 <head>

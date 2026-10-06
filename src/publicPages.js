@@ -35,7 +35,7 @@ export function renderIntroPage() {
   return pageShell('Welcome', `
     <div class="eyebrow">Cash league · four tables · seven matches · flexible calendar</div>
     <h1>Fremont Derby</h1>
-    <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
+    <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong> 8 teams · 12 weeks.</p>
     <ul>
       <li><strong>When:</strong> Weekly league nights. The regular season is a seven-match round robin, with room for makeup dates and postseason play.</li>
       <li><strong>Where:</strong> Fremont venue — four tables, one house.</li>
