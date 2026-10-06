@@ -60,7 +60,7 @@ function injectPlayerHighlight(html, headers) {
         const banner=document.querySelector('[data-player-highlight]');
         if(!requested||!banner)return;
         banner.hidden=false;
-        banner.textContent='Showing player: '+requested;
+        banner.textContent='That player link is not on this list. Search the directory.';
         const search=document.querySelector('input[type="search"],input[name="q"],input[data-player-search]');
         if(search&&!search.value) search.value=requested;
       })();
