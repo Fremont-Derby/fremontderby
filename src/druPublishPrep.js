@@ -104,6 +104,7 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
     });
   }
   const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'return=minimal' };
+  await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&status=eq.ready`, { method: 'PATCH', headers: privateHeaders, body: JSON.stringify({ status: 'confirmed', resolved_at: new Date().toISOString(), last_action_reason: 'DRU practice night' }) });
   for (const slot of practiceSlotPlan(teams, membershipsWithCaptains)) {
     await fetchWithSchema(`${base}/rest/v1/season_team_slots`, {
       method: 'POST',
