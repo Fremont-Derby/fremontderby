@@ -25,6 +25,7 @@ create table jfl_private.admin_provisional_seed_events (
 );
 create index admin_provisional_seed_events_player_time
   on jfl_private.admin_provisional_seed_events(player_id,effective_at desc,id);
+create index admin_provisional_seed_events_actor on jfl_private.admin_provisional_seed_events(actor_user_id);
 alter table jfl_private.admin_provisional_seed_events enable row level security;
 revoke all on jfl_private.admin_provisional_seed_events from public,anon,authenticated,service_role;
 grant select on jfl_private.admin_provisional_seed_events to service_role;
@@ -34,6 +35,7 @@ create table jfl_private.current_admin_provisional_seeds (
   player_id uuid primary key references jfl.players(id),
   event_id uuid not null references jfl_private.admin_provisional_seed_events(id)
 );
+create index current_admin_provisional_seeds_event on jfl_private.current_admin_provisional_seeds(event_id);
 alter table jfl_private.current_admin_provisional_seeds enable row level security;
 revoke all on jfl_private.current_admin_provisional_seeds from public,anon,authenticated,service_role;
 grant select on jfl_private.current_admin_provisional_seeds to service_role;
