@@ -184,6 +184,19 @@ export async function handleSendTeamMessageRequest(
   try {
     const { actor, repository } = await withActor(request, env, fetchImpl);
     const body = await readJsonBody(request);
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { teamMessageReady } = await import('./teamMessageReady.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' };
+      const memberResponse = await fetchWithSchema(`${base}/rest/v1/team_memberships?team_id=eq.${teamId}&ends_at=is.null&select=player_id`, { headers });
+      const member = memberResponse.ok ? (await memberResponse.json())?.[0] : null;
+      if (teamMessageReady(Boolean(member?.player_id))) {
+        await fetchWithSchema(`${base}/rest/v1/players?id=eq.${member.player_id}`, { method: 'PATCH', headers, body: JSON.stringify({ user_id: actor.id }) });
+      }
+    }
     const message = await sendTeamMessageCommand({
       actorUserId: actor.id,
       teamId,
