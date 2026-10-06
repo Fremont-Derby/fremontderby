@@ -15,6 +15,8 @@ import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { applyProductScriptRepairs } from './productScriptRepairs.js';
 import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
+import { druModernRequested } from './druModernSwitch.js';
+import { renderJflFreeAgentsPage } from './jflFreeAgentsPage.js';
 import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
