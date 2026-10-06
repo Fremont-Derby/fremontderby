@@ -71,3 +71,11 @@ Create one team at a time. A burst of player creates returns Cloudflare HTML wit
 Clover Brook Night 2429, season `c582de47-eca0-4d08-9a24-b9b451123af5`, same version `69dfdf7ef3f2d895ec50d4799d0a168ab5863325`. Champion: Elm Chalk Roll 2429 beat River Button Club 2429, racks 3–0. The other semi was River Button Club 2429 over Clover Brook Crew 2429, 3–0.
 
 Same calls. Negative results matched the first night: playoffs before the schedule was final returned 409, a bad winner side returned 400, a second score returned 409, and advancing before the semis returned 409.
+
+## Third night
+
+Maple Otter Night 2432, season `6eae8db9-2ab6-4c84-88c2-4cc1d5563838`, health version `00f5afbe-b550-46d1-bc7e-babd91a5fbbc`. Champion: Maple Otter Crew 2432 beat Thistle Button Club 2432, racks 3–0. The other semi was Thistle Button Club 2432 over Pebble Sparrow Roll 2432.
+
+Negative calls matched the earlier nights. Playoffs before the schedule was final returned 409. A missing match returned 404. `winnerSide: C` returned 400. A second score returned 409.
+
+New note: the schedule can mark a semifinal finalized and name a winner while still showing racks 0–0. The championship row on this night showed racks 3–0. Wait and read the schedule again before treating an empty playoff list as a miss.
