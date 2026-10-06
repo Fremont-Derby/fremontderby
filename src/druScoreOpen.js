@@ -118,10 +118,20 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetc
   const side = acceptedWinnerSide(winnerSide);
   if (!side) return { saved: false, status: 400, error: 'winnerSide must be A or B' };
   const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json', prefer: 'return=representation' };
-  await openDruMatchForScoring(env, teamMatchId, fetchImpl);
   const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=id,team_a_id,team_b_id,status,winner_team_id`, { headers });
   const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
   if (!match) return { saved: false, status: 404, error: 'Match not found.' };
+  if (match.status !== 'finalized') {
+    const { privatePostgrestProfile } = await import('./supabaseSchema.js');
+    const privateHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru') };
+    const lineupResponse = await fetchWithSchema(`${base}/rest/v1/team_lineups?team_match_id=eq.${teamMatchId}&select=id,team_id`, { headers: privateHeaders });
+    const lineups = lineupResponse.ok ? await lineupResponse.json() : [];
+    const ready = new Set((lineups || []).map((row) => row.team_id));
+    if (!ready.has(match.team_a_id) || !ready.has(match.team_b_id)) {
+      return { saved: false, status: 409, error: 'No race is open. Open the lineup, then come back to score.' };
+    }
+  }
+  await openDruMatchForScoring(env, teamMatchId, fetchImpl);
   if (match.status === 'finalized') {
     if (match.winner_team_id) return { saved: false, status: 409, error: 'This match is already saved. A captain has to correct it.' };
     const winnerTeamId = side === 'A' ? match.team_a_id : match.team_b_id;
