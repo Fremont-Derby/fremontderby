@@ -87,6 +87,113 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  const throttleHtml = '<!doctype html><html><h1>Cloudflare 1015</h1><p>Ray ID: synthetic-private; IP: synthetic-private</p></html>';
+  test(`HTML throttle during creation preserves draft without replay (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.locator('[data-new-season]').click();
+      await f.page.locator('[data-season-name]').fill('Throttled draft');
+      await f.page.locator('[data-first-round-date]').fill('2026-10-11');
+      await f.page.locator('[data-team-capacity]').fill('12');
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(1);
+      await f.writes[0].route.fulfill({ status: 429, contentType: 'text/html', headers: { 'retry-after': '45' }, body: throttleHtml });
+      await expect(f.page.locator('[data-status]')).toContainText('Too many requests');
+      await expect(f.page.locator('[data-status]')).toContainText('45 seconds');
+      await expect(f.page.locator('[data-status]')).not.toContainText('Cloudflare');
+      await expect(f.page.locator('[data-status]')).not.toContainText('synthetic-private');
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('Throttled draft');
+      await expect(f.page.locator('[data-team-capacity]')).toHaveValue('12');
+      await expect(f.page.locator('[data-season-selector]')).toHaveValue('');
+      expect(f.writes).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
+  test(`registration HTML throttle retains confirmed identity for manual PUT retry (${device})`, async ({ browser, request }) => {
+    const saved = { ...setup('season-a'), id: 'season-c', name: 'Confirmed draft', status: 'registration' };
+    const f = await openOperator(browser, request, mobile, { 'season-c': saved });
+    try {
+      await f.page.locator('[data-new-season]').click();
+      await f.page.locator('[data-season-name]').fill(saved.name);
+      await f.page.locator('[data-first-round-date]').fill('2026-10-11');
+      await f.page.locator('[data-team-capacity]').fill('12');
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(1);
+      await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+      await expect.poll(() => f.writes.length).toBe(2);
+      await f.writes[1].route.fulfill({ status: 429, contentType: 'text/html', body: throttleHtml });
+      await expect(f.page.locator('[data-status]')).toContainText('Setup saved');
+      await expect(f.page.locator('[data-status]')).toContainText('Registration was not confirmed: Too many requests');
+      await expect(f.page.locator('[data-status]')).not.toContainText('Cloudflare');
+      await expect(f.page.locator('[data-team-capacity]')).toHaveValue('12');
+      await expect(f.page.locator('[data-season-selector]')).toHaveValue('season-c');
+      expect(f.writes).toHaveLength(2);
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(3);
+      expect(f.writes[2].path).toBe('/api/admin/seasons/season-c/setup');
+      expect(f.writes[2].route.request().method()).toBe('PUT');
+      await f.writes[2].route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Synthetic retry denied"}' });
+      await expect(f.page.locator('[data-status]')).toHaveText('Synthetic retry denied');
+    } finally { await f.context.close(); }
+  });
+  for (const kind of ['setup', 'team-registration']) {
+    test(`saved values survive throttled ${kind} reload and recover without writes (${device})`, async ({ browser, request }) => {
+      const saved = { ...setup('season-a'), name: 'Saved draft' };
+      const f = await openOperator(browser, request, mobile, { 'season-a': saved });
+      let throttled = true;
+      await f.page.route(`**/api/admin/seasons/season-a/${kind}`, route => {
+        if (throttled && route.request().method() === 'GET') return route.fulfill({ status: 429, contentType: 'text/html', body: throttleHtml });
+        return route.fallback();
+      });
+      try {
+        await f.page.locator('[data-team-capacity]').fill('12');
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+        await expect.poll(() => f.writes.length).toBe(2);
+        await f.writes[1].route.fulfill({ contentType: 'application/json', body: '{}' });
+        await expect(f.page.locator('[data-status]')).toContainText('Setup and registration saved. Saved values could not be reloaded');
+        await expect(f.page.locator('[data-status]')).toContainText('Too many requests');
+        await expect(f.page.locator('[data-status]')).not.toContainText('Cloudflare');
+        await expect(f.page.locator('[data-team-capacity]')).toHaveValue('12');
+        await expect(f.page.locator('[data-season-name]')).toHaveValue(saved.name);
+        await expect(f.page.locator('[data-season-selector]')).toHaveValue('season-a');
+        await expect(f.page.locator('[data-save]')).toBeDisabled();
+        await expect(f.page.locator('[data-publish]')).toBeDisabled();
+        await expect(f.page.locator('[data-season-close-button]')).toBeDisabled();
+        expect(f.writes).toHaveLength(2);
+        throttled = false;
+        await f.page.locator('[data-load]').click();
+        await expect(f.page.locator('[data-save]')).toBeEnabled();
+        await expect(f.page.locator('[data-status]')).toContainText('Setup and registration loaded');
+        expect(f.writes).toHaveLength(2);
+      } finally { await f.context.close(); }
+    });
+  }
+  for (const retryAfter of ['9999999', 'untrusted header', new Date(Date.now() + 120000).toUTCString()]) {
+    test(`throttle guidance bounds Retry-After ${retryAfter.startsWith('999') ? 'large' : retryAfter === 'untrusted header' ? 'invalid' : 'date'} (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile);
+      try {
+        await f.page.locator('[data-save]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        await f.writes[0].route.fulfill({ status: 429, contentType: 'text/html', headers: { 'retry-after': retryAfter }, body: throttleHtml });
+        await expect(f.page.locator('[data-status]')).toContainText('Too many requests');
+        await expect(f.page.locator('[data-status]')).not.toContainText('9999999');
+        await expect(f.page.locator('[data-status]')).not.toContainText('untrusted header');
+        if (retryAfter.includes('GMT')) await expect(f.page.locator('[data-status]')).toContainText('seconds');
+        expect(f.writes).toHaveLength(1);
+      } finally { await f.context.close(); }
+    });
+  }
+  test(`non-throttle HTML denial displays a plain error (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(1);
+      await f.writes[0].route.fulfill({ status: 503, contentType: 'text/html', body: throttleHtml });
+      await expect(f.page.locator('[data-status]')).toHaveText('Request failed. Please try again later.');
+      expect(f.writes).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
   test(`new-season action clears prior inputs and supports cancel without writes (${device})`, async ({ browser, request }) => {
     const f = await openOperator(browser, request, mobile);
     try {
