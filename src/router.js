@@ -391,6 +391,12 @@ export default {
       return adminPlayersHttpHandlers.list(request, env);
     }
 
+    const adminPlayerMatch = url.pathname.match(/^\/api\/admin\/players\/([^/]+)$/);
+    if (adminPlayerMatch) {
+      if (request.method !== 'GET') return methodNotAllowed();
+      return adminPlayersHttpHandlers.get(request, env, decodeURIComponent(adminPlayerMatch[1]));
+    }
+
     if (adminPlayerRoleMatch) {
       if (request.method !== 'PUT') return methodNotAllowed();
       return adminPlayersHttpHandlers.setAdminRole(

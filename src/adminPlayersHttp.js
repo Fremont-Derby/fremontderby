@@ -187,8 +187,24 @@ export async function handleRecordRatingObservationRequest(
   }
 }
 
+
+export async function handleGetAdminPlayerRequest(request, env, playerId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+  try {
+    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
+    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
+    const players = await repository.listPlayers({ actorUserId: actor.id });
+    const player = (players || []).find((row) => String(row.playerId || row.id) === String(playerId));
+    const { playerOpen } = await import('./playerOpen.js');
+    if (!playerOpen(player)) return Response.json({ error: 'Player not found' }, { status: 404, headers: { 'cache-control': 'no-store' } });
+    return Response.json({ player }, { headers: { 'cache-control': 'no-store' } });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export const adminPlayersHttpHandlers = {
   recordRatingObservation: handleRecordRatingObservationRequest,
   list: handleListAdminPlayersRequest,
+  get: handleGetAdminPlayerRequest,
   setAdminRole: handleSetAdminRoleRequest,
 };
