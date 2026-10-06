@@ -200,12 +200,12 @@ async function readJson(response) {
   <main class="app">
     <header class="topbar">
       <div class="brand"><span class="mark">$</span><span>Fremont Derby Prizes</span></div>
-      <div class="status" data-status aria-live="polite">Loading seasons…</div>
+      <div class="status" data-status aria-live="polite">Choose a season to load prizes.</div>
     </header>
 
     <p data-champion hidden style="margin:8px 0;font-weight:800"></p><form class="controls" data-form>
       <label>Season
-        <select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select>
+        <select name="seasonId" data-season-id disabled><option value="">Choose a season</option></select>
       </label>
       <a class="ghost" href="/standings" style="min-height:44px;display:inline-flex;align-items:center">Standings</a>
       <a class="ghost" href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center">Score</a>
