@@ -1621,7 +1621,9 @@ export async function handleSubmitTeamLineupRequest(
       const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup, lockDruRegularLineup } = await import('./druLineupBypass.js');
       const playerIds = lineupPlayerIds(slots);
       const rawIds = slots.map((slot) => String(slot?.playerId || slot?.player_id || '').trim()).filter(Boolean);
-      if (new Set(rawIds.map((id) => id.toLowerCase())).size !== rawIds.length) {
+      const bodyIds = (Array.isArray(body.playerIds) ? body.playerIds : []).map((id) => String(id || '').trim()).filter(Boolean);
+      const seenIds = rawIds.length ? rawIds : bodyIds;
+      if (new Set(seenIds.map((id) => id.toLowerCase())).size !== seenIds.length) {
         const error = new Error('Pick three different players before the lineup can lock');
         error.status = 400;
         throw error;
