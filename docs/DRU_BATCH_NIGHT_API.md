@@ -65,3 +65,9 @@ Second score: the same match returned 409, `This match is already saved. A capta
 Advance before the semis: `POST /api/admin/seasons/{id}/advance-championship` returned 409, `Both semifinals must be finalized, including any required anchor tiebreaker`.
 
 Create one team at a time. A burst of player creates returns Cloudflare HTML with status 429, not JSON. Wait and retry that one call.
+
+## Second night
+
+Clover Brook Night 2429, season `c582de47-eca0-4d08-9a24-b9b451123af5`, same version `69dfdf7ef3f2d895ec50d4799d0a168ab5863325`. Champion: Elm Chalk Roll 2429 beat River Button Club 2429, racks 3–0. The other semi was River Button Club 2429 over Clover Brook Crew 2429, 3–0.
+
+Same calls. Negative results matched the first night: playoffs before the schedule was final returned 409, a bad winner side returned 400, a second score returned 409, and advancing before the semis returned 409.
