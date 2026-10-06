@@ -26,8 +26,10 @@ export async function handleListAdminPlayersRequest(
       repository.listPlayers({ actorUserId: actor.id }),
       repository.listRosterTeams({ actorUserId: actor.id }),
     ]);
+    const { playerSearch } = await import('./playerSearch.js');
+    const query = new URL(request.url).searchParams.get('q');
     return Response.json(
-      { players, rosterTeams },
+      { players: playerSearch(players, query), rosterTeams },
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch (error) {
