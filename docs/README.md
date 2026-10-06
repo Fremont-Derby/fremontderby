@@ -6,8 +6,8 @@ Use this page to find durable repository documentation without treating every Ma
 
 1. [`AGENTS.md`](../AGENTS.md) — authoritative repository operating contract for agents.
 2. [`README.md`](../README.md) — product, architecture, environment, and contributor orientation.
-3. [`AGENTIC_DEVELOPMENT_PROGRAM.md`](AGENTIC_DEVELOPMENT_PROGRAM.md) — current JFL/DRU collaboration model.
-4. [`AGENTIC_PROGRAM_STATUS.md`](AGENTIC_PROGRAM_STATUS.md) — living program-status guidance; reconcile it with current GitHub and hosted evidence.
+3. [`AGENTIC_DEVELOPMENT_PROGRAM.md`](guidance/AGENTIC_DEVELOPMENT_PROGRAM.md) — current JFL/DRU collaboration model.
+4. [`AGENTIC_PROGRAM_STATUS.md`](status/AGENTIC_PROGRAM_STATUS.md) — living program-status guidance; reconcile it with current GitHub and hosted evidence.
 5. The active GitHub issue, dependencies, overlapping PRs, CI, and live environment evidence for the work being attempted.
 
 JFL and DRU sessions must also read both lane guides under `.github/agents/`.
@@ -30,11 +30,11 @@ A file being newer, longer, or linked from an old issue does not make it authori
 
 Living guidance that shapes autonomous work:
 
-- [Agentic development program](AGENTIC_DEVELOPMENT_PROGRAM.md)
-- [Agentic program status](AGENTIC_PROGRAM_STATUS.md)
-- [Agent bootstrap](agent-bootstrap.md)
-- [Agent collaboration](agent-collaboration.md)
-- [Do-work protocol](do-work-protocol.md)
+- [Agentic development program](guidance/AGENTIC_DEVELOPMENT_PROGRAM.md)
+- [Agentic program status](status/AGENTIC_PROGRAM_STATUS.md)
+- [Agent bootstrap](guidance/agent-bootstrap.md)
+- [Agent collaboration](guidance/agent-collaboration.md)
+- [Do-work protocol](guidance/do-work-protocol.md)
 - [12-hour executive review](agentic-12-hour-executive-review.md) — living delivery-system review once merged to `main`; material updates only.
 
 Lane/specialist instructions live under `.github/agents/` and `.github/instructions/`, subordinate to `AGENTS.md`.
@@ -43,12 +43,12 @@ Lane/specialist instructions live under `.github/agents/` and `.github/instructi
 
 Stable product/system references include:
 
-- [Architecture](ARCHITECTURE.md)
-- [API reference](API_REFERENCE.md)
-- [Environments](ENVIRONMENTS.md)
-- [Product surface catalog](product-surface-catalog.md)
-- [Project cohesion](project-cohesion.md)
-- [UX controls and status](ux-controls-and-status.md)
+- [Architecture](reference/ARCHITECTURE.md)
+- [API reference](reference/API_REFERENCE.md)
+- [Environments](reference/ENVIRONMENTS.md)
+- [Product surface catalog](reference/product-surface-catalog.md)
+- [Project cohesion](reference/project-cohesion.md)
+- [UX controls and status](reference/ux-controls-and-status.md)
 
 Use current code/tests/live behavior to resolve drift between reference prose and implementation.
 
@@ -56,11 +56,11 @@ Use current code/tests/live behavior to resolve drift between reference prose an
 
 Operational documents are procedures, environment contracts, and recovery/deployment guidance:
 
-- [GitHub Actions inventory](GITHUB_ACTIONS.md)
-- [Playwright self-hosted runner plan](PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md)
-- [Backup/audit/recovery](ops-backup-audit-recovery.md)
-- [Change safety net](change-safety-net.md)
-- [Beta environment](beta-environment.md)
+- [GitHub Actions inventory](operations/GITHUB_ACTIONS.md)
+- [Playwright self-hosted runner plan](operations/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md)
+- [Backup/audit/recovery](operations/ops-backup-audit-recovery.md)
+- [Change safety net](operations/change-safety-net.md)
+- [Beta environment](operations/beta-environment.md)
 
 Operational instructions involving security, deployment, auth, or hosted state must be validated against the current environment before mutation.
 
@@ -68,9 +68,9 @@ Operational instructions involving security, deployment, auth, or hosted state m
 
 Validation contracts and test-driving guidance include:
 
-- [Browser UX validation](WORK_BROWSER_UX_VALIDATION.md)
-- [Season 1 test contract](SEASON1_TEST_CONTRACT.md)
-- [Test-drive workflow inventory](test-drive-workflow-inventory.md)
+- [Browser UX validation](validation/WORK_BROWSER_UX_VALIDATION.md)
+- [Season 1 test contract](validation/SEASON1_TEST_CONTRACT.md)
+- [Test-drive workflow inventory](validation/test-drive-workflow-inventory.md)
 
 Tests may intentionally reference exact documentation paths. Do not move validation contracts casually.
 
@@ -78,7 +78,7 @@ Tests may intentionally reference exact documentation paths. Do not move validat
 
 Living status/review documents summarize current evidence; they do not override live GitHub or product state.
 
-- [Agentic program status](AGENTIC_PROGRAM_STATUS.md)
+- [Agentic program status](status/AGENTIC_PROGRAM_STATUS.md)
 - [12-hour executive review](agentic-12-hour-executive-review.md) — canonical recurring system-level review after #3290 lands.
 
 Update recurring status/review documents when evidence materially changes the trend, decision, risk, or guidance—not merely because a timer fired.
@@ -94,6 +94,6 @@ Historical material should remain searchable, but agents must independently repr
 - Prefer updating an existing authoritative document over creating a near-duplicate.
 - Give every new durable document a clear purpose and freshness class.
 - Link important new docs from this map or a more specific authoritative index.
-- Preserve stable paths when tests, runbooks, issues, or agent guides depend on them.
+- Use canonical relative links for new repository references. When a deliberate move may break historical or external links, keep a small compatibility stub at the former path.
 - Move/rename files only when the navigation benefit outweighs reference churn, and update all deterministic references in the same tracked change.
 - Put transient implementation state in GitHub issues/PRs rather than creating permanent Markdown snapshots.
