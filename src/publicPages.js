@@ -33,7 +33,7 @@ function pageShell(title, body) {
 
 export function renderIntroPage() {
   return pageShell('Welcome', `
-    <div class="eyebrow">Cash league · 8 teams · 12 weeks · flexible calendar</div>
+    <div class="eyebrow">Cash league · four tables · seven matches · flexible calendar</div>
     <h1>Fremont Derby</h1>
     <p class="lead"><strong>Cash pool league. One venue. Four tables. Two ways to win.</strong></p>
     <ul>
@@ -71,7 +71,7 @@ export function renderRulesPage() {
 
     <h2>Season</h2>
     <ul>
-      <li>The published calendar spans 12 weeks to leave room for flexibility, makeup dates, and postseason play.</li>
+      <li>The published calendar leaves room for makeup dates and postseason play. The regular season is seven matches.</li>
       <li>The regular season is a seven-match single round robin: every team plays every other team once.</li>
       <li>Each team matchup has three individual player matches.</li>
       <li>The published league-night date and reserved tables are the default option, not a requirement.</li>
