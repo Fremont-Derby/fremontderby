@@ -128,7 +128,8 @@ export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetc
     const lineups = lineupResponse.ok ? await lineupResponse.json() : [];
     const ready = new Set((lineups || []).map((row) => row.team_id));
     if (!ready.has(match.team_a_id) || !ready.has(match.team_b_id)) {
-      return { saved: false, status: 409, error: 'No race is open. Open the lineup, then come back to score.' };
+      const opened = await openDruMatchForScoring(env, teamMatchId, fetchImpl);
+      if (!opened.opened) return { saved: false, status: 409, error: 'No race is open. Open the lineup, then come back to score.' };
     }
   }
   await openDruMatchForScoring(env, teamMatchId, fetchImpl);
