@@ -34,6 +34,7 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
   const held = [];
   const writes = [];
   const reads = [];
+  const listReads = [];
   let hold = null;
   await context.route('**/api/**', async route => {
     const req = route.request();
@@ -42,7 +43,14 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     const respond = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (req.method() !== 'GET') { writes.push({ path, body: req.postDataJSON(), route }); return; }
     let body;
-    if (path === '/api/admin/seasons') body = { seasons: initiallyEmpty ? [] : seasons };
+    if (path === '/api/admin/seasons') {
+      listReads.push(route);
+      if (linkOptions?.bootstrap) {
+        if (listReads.length === 1) return respond(linkOptions.bootstrap.body, linkOptions.bootstrap.status);
+        return;
+      }
+      body = { seasons: initiallyEmpty ? [] : seasons };
+    }
     else if (path === '/api/me/ready-checks') return respond({}, 404);
     else if (path === '/api/test-persona') return respond({}, 404);
     else if (path === '/api/me/message-notification-summary') body = { unreadCount: 0, previews: [] };
@@ -69,7 +77,7 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
   }
   await page.goto(linkOptions ? '/season-setup?view=setup' +
     (linkOptions.requested ? '&season=' + linkOptions.requested : '') + '#configuration' : initiallyEmpty ? '/season-setup' : '/season-setup?season=season-a');
-  if (linkOptions) return { context, page, writes, reads };
+  if (linkOptions) return { context, page, writes, reads, listReads };
   if (initiallyEmpty) {
     await expect(page.locator('[data-save]')).toBeEnabled();
     return { context, page, writes };
@@ -94,6 +102,67 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  test(`malformed default list cannot create until a genuine empty retry (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile, {}, false, { requested: '', bootstrap: { status: 200, body: {} } });
+    try {
+      await expect(f.page.locator('[data-save]')).toBeDisabled();
+      await expect(f.page.locator('[data-retry-seasons]')).toBeVisible();
+      await f.page.locator('[data-retry-seasons]').click();
+      await expect.poll(() => f.listReads.length).toBe(2);
+      await f.listReads[1].fulfill({ contentType: 'application/json', body: '{"seasons":[]}' });
+      await expect(f.page.locator('[data-status]')).toContainText('Ready to create Season 1');
+      await expect(f.page.locator('[data-save]')).toBeEnabled();
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('Fremont Derby Season 1');
+      await expect(f.page.locator('[data-retry-seasons]')).toBeHidden();
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+  for (const bootstrap of [
+    ...[401, 403, 429, 502].map(status => ({ status, body: { error: 'Synthetic list unavailable' } })),
+    { status: 200, body: {} }, { status: 200, body: null },
+    { status: 200, body: { seasons: {} } }, { status: 200, body: { seasons: [{}] } },
+  ]) {
+    test(`bootstrap ${bootstrap.status} ${JSON.stringify(bootstrap.body)} retries reads without enabling creation (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile, {}, false, { requested: 'season-b', bootstrap });
+      try {
+        if (bootstrap.status === 401) {
+          await expect(f.page.locator('[data-status]')).toHaveText('Your sign-in expired. Open Profile and sign in again.');
+          await expect(f.page.locator('[data-signin]')).toBeVisible();
+          await expect(f.page.locator('[data-retry-seasons]')).toBeHidden();
+          await expect(f.page.locator('[data-save]')).toBeDisabled();
+          await expect(f.page.locator('[data-new-season]')).toBeDisabled();
+          expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBeNull();
+          expect(f.listReads).toHaveLength(1);
+          expect(f.writes).toHaveLength(0);
+          return;
+        }
+        await expect(f.page.locator('[data-retry-seasons]')).toBeVisible();
+        await expect(f.page.locator('[data-retry-seasons]')).toBeEnabled();
+        await expect(f.page.locator('[data-status]')).toContainText(bootstrap.status === 429 ? 'Too many requests' : bootstrap.status === 200 ? 'Season list could not be confirmed' : 'Synthetic list unavailable');
+        await expect(f.page.locator('[data-save]')).toBeDisabled();
+        await expect(f.page.locator('[data-load]')).toBeDisabled();
+        await expect(f.page.locator('[data-new-season]')).toBeDisabled();
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+        expect(f.writes).toHaveLength(0);
+        expect(f.reads.filter(path => /^\/api\/admin\/seasons\//.test(path))).toEqual([]);
+        expect(new URL(f.page.url()).searchParams.get('season')).toBe('season-b');
+        expect(await f.page.evaluate(() => localStorage.getItem('fd.setupSeasonId'))).toBe('season-b');
+        await f.page.locator('[data-retry-seasons]').click();
+        await expect.poll(() => f.listReads.length).toBe(2);
+        await expect(f.page.locator('[data-retry-seasons]')).toBeHidden();
+        await expect(f.page.locator('[data-save]')).toBeDisabled();
+        await f.page.evaluate(() => document.querySelector('[data-retry-seasons]').dispatchEvent(new MouseEvent('click', { bubbles: true })));
+        await f.listReads[1].fulfill({ contentType: 'application/json', body: JSON.stringify({ seasons }) });
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('Synthetic Beta');
+        await expect(f.page.locator('[data-season-selector]')).toHaveValue('season-b');
+        await expect(f.page.locator('[data-save]')).toBeDisabled();
+        await expect(f.page.locator('[data-retry-seasons]')).toBeHidden();
+        expect(f.listReads).toHaveLength(2);
+        expect(f.writes).toHaveLength(0);
+        if (mobile) expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      } finally { await f.context.close(); }
+    });
+  }
   for (const empty of [false, true]) {
     test(`missing explicit season blocks edits and permits deliberate recovery ${empty ? 'empty list' : 'existing list'} (${device})`, async ({ browser, request }) => {
       const f = await openOperator(browser, request, mobile, {}, empty, { requested: 'season-missing' });
