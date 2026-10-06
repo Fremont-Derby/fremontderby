@@ -253,7 +253,7 @@ export function renderPlayoffsPage() {
       renderBracket(body.rounds||body.schedule||[]);
       if(!quiet) setStatus('Playoffs loaded','ok');
     }
-    function showBracketError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Playoffs could not be loaded.');setStatus(message,'error');bracketEl.innerHTML='<div class="empty"><strong>Playoffs could not be loaded</strong><div>'+message+'</div></div>';}
+    function showBracketError(error){const raw=String(error&&error.message||''); const message=/season or match link|invalid/i.test(raw)?'Choose a season from the list.':(window.fdFriendlyError?window.fdFriendlyError(error):(raw||'Playoffs could not be loaded.'));setStatus(message,'error');bracketEl.innerHTML='<div class="empty"><strong>Choose a season</strong><div>'+message+'</div></div>';}
     document.querySelector('[data-refresh]').addEventListener('click',()=>loadBracket().catch(showBracketError));
     seasonEl.addEventListener('change',()=>loadBracket().catch(showBracketError));
     document.querySelector('[data-start]').addEventListener('click',async()=>{

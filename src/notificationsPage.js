@@ -20,7 +20,6 @@ export function renderNotificationsPage() {
 </head>
 <body>
   <main class="app">
-    <section data-mission-order><h2>Mission order</h2><p>The next mission is the first one in the list that is not done.</p></section>
     <header class="topbar">
       <div class="brand"><span class="mark">9</span><span>Notifications</span></div>
       <div class="status" data-status aria-live="polite">Loading…</div>
@@ -155,7 +154,7 @@ export function renderNotificationsPage() {
       try{await api('/api/me/notifications/read-all',{method:'POST'});try{window.dispatchEvent(new CustomEvent('fd:notifications-changed'))}catch(_){ }await load()}
       catch(error){setStatus((window.fdFriendlyError?window.fdFriendlyError(error):error.message),'error')}
     });
-    function showNoticeError(error){const message=window.fdFriendlyError?window.fdFriendlyError(error):(error.message||'Notices could not be loaded.');setStatus(message,'error');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.textContent=message;listEl.append(empty);}load().catch(showNoticeError);
+    function showNoticeError(error){const raw=String(error&&error.message||''); const message=/invalid url|unexpected token|not valid json/i.test(raw)?'Notices could not load. Try again.':(window.fdFriendlyError?window.fdFriendlyError(error):(raw||'Notices could not load. Try again.'));setStatus(message,'error');listEl.replaceChildren();const empty=document.createElement('div');empty.className='item';empty.textContent=message;listEl.append(empty);}load().catch(showNoticeError);
     if(window.fdLiveRefresh)window.fdLiveRefresh.register((opts)=>load(opts).catch(showNoticeError),{intervalMs:30000,immediate:false});
   </script>
 </body>
