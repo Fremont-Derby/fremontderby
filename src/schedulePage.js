@@ -114,7 +114,7 @@ let bestLive=null,bestLiveScore=-Infinity,bestUpcoming=null,bestUpcomingDistance
         }
         const protocol=document.createElement('div');protocol.className='muted';protocol.style.fontSize='.78rem';
         if(!['finalized','corrected'].includes(String(match.status||''))){
-          protocol.textContent='No-show: after the agreed start, captains use explicit forfeit slots on the lineup/scorecard and note it in matchup messages. League admin resolves disputes.';
+          protocol.hidden=true;
         }
         card.append(top,versus,actions,makeup,protocol);if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(card);return card;
             }
@@ -150,7 +150,7 @@ let bestLive=null,bestLiveScore=-Infinity,bestUpcoming=null,bestUpcomingDistance
         }
         const protocol=document.createElement('div');protocol.className='muted';protocol.style.fontSize='.78rem';
         if(!['finalized','corrected'].includes(String(match.status||''))){
-          protocol.textContent='No-show: after the agreed start, captains use explicit forfeit slots on the lineup/scorecard and note it in matchup messages. League admin resolves disputes.';
+          protocol.hidden=true;
         }
         card.append(top,versus,actions,makeup,protocol);if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(card);matchList.append(card)}
         }if(!round.matches.length){const noMatches=document.createElement('div');noMatches.className='empty';noMatches.textContent='No matchups are posted for this league night. Open lineup to see who is playing.';matchList.append(noMatches)}panel.hidden=false;localStorage.setItem('fd.scheduleRoundId',round.roundId);const url=new URL(location.href);url.searchParams.set('season',seasonSelect.value);url.searchParams.set('round',round.roundId);history.replaceState({},'',url)}
