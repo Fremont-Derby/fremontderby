@@ -71,7 +71,7 @@ export function renderRulesPage() {
 
     <h2>Season</h2>
     <ul>
-      <li>The published calendar spans 12 weeks to leave room for flexibility, makeup dates, and postseason play.</li>
+      <li>The published calendar leaves room for makeup dates and postseason play. The regular season is seven matches.</li>
       <li>The regular season is a seven-match single round robin: every team plays every other team once.</li>
       <li>Each team matchup has three individual player matches.</li>
       <li>The published league-night date and reserved tables are the default option, not a requirement.</li>
