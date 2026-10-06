@@ -100,6 +100,16 @@ export async function handleSetAdminRoleRequest(
       if (typeof body.teamId !== 'string' || !body.teamId.trim()) {
         return Response.json({ error: 'teamId is required' }, { status: 400 });
       }
+      const { rosterDropBlocked } = await import('./rosterLock.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${body.seasonId}&select=status`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
+      if (rosterDropBlocked(season?.status, body.active)) {
+        return Response.json({ error: 'Roster is locked after the schedule is published.' }, { status: 409, headers: { 'cache-control': 'no-store' } });
+      }
       const result = await repository.setRosterMembership({
         actorUserId: actor.id,
         playerId,
