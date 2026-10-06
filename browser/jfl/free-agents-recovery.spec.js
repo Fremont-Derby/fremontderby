@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { decorateJflModernShell } from '../../src/jflModernShell.js';
 import { renderJflFreeAgentsPage } from '../../src/jflFreeAgentsPage.js';
 const mode = process.env.PLAYWRIGHT_FREE_AGENTS_SOURCE || '0';
 const source = mode !== '0';
+const sourceEnv = { ENVIRONMENT: 'jfl', CF_VERSION_METADATA: { tag: 'a'.repeat(40), timestamp: '2026-10-06T08:51:00.000Z', id: 'synthetic-build-only' } };
 const teams = { teamManagement: { captain_teams: [{ teamId: 'team-a', teamName: 'Synthetic Alpha', seasonName: 'Synthetic season', lineupRounds: [
   { roundId: 'round-a', roundNumber: 1, scheduledOn: '2099-10-13', opponentName: 'Synthetic Beta' },
   { roundId: 'round-b', roundNumber: 2, scheduledOn: '2099-10-20', opponentName: 'Synthetic Gamma' },
@@ -16,8 +18,8 @@ test.beforeAll(async ({ request }) => {
   const r = await request.get('/health/environment'); expect(r.ok()).toBeTruthy();
   expect(await r.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
 });
-async function open(browser, mobile, signedOut = false) {
-  const context = await browser.newContext({ baseURL: source ? 'https://free.test' : 'https://jfl.fremontderby.com', viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 } });
+async function open(browser, mobile, signedOut = false, options = {}) {
+  const context = await browser.newContext({ baseURL: 'https://jfl.fremontderby.com', viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 }, ...options });
   if (!signedOut) await context.addInitScript(() => { if (window === window.top) sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'); });
   const page = await context.newPage(); const reads = []; const writes = []; const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -27,9 +29,10 @@ async function open(browser, mobile, signedOut = false) {
     if (path === '/api/me/teams' || path.includes('/eligible-free-agents')) { reads.push({ route, path }); return; }
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
   });
-  if (source) await page.route('https://free.test/free-agents', async route => {
+  if (source) await page.route('https://jfl.fremontderby.com/free-agents', async route => {
     let html = renderJflFreeAgentsPage();
-    if (mode === 'bundled') { const { default: worker } = await import('../../dist/routerEntry.js'); html = await (await worker.fetch(new Request(route.request().url()), { ENVIRONMENT: 'jfl' }, {})).text(); }
+    if (mode === 'bundled') { const { default: worker } = await import('../../dist/routerEntry.js'); html = await (await worker.fetch(new Request(route.request().url()), sourceEnv, {})).text(); }
+    if (mode !== 'bundled') html = await (await decorateJflModernShell(new Response(html, { headers: { 'content-type': 'text/html' } }), new Request(route.request().url()), sourceEnv)).text();
     await route.fulfill({ contentType: 'text/html', body: html });
   });
   await page.goto('/free-agents');
@@ -124,6 +127,30 @@ for (const mobile of [false, true]) {
       await f.page.locator('[data-free-retry]').click(); await f.wait(2); await f.respond(1, { teamManagement: { captain_teams: [{ ...teams.teamManagement.captain_teams[0], lineupRounds: [] }] } });
       await expect(f.page.locator('[data-free-state]')).toContainText('No upcoming published round'); await expect(f.page.locator('[data-free-round]')).toBeDisabled();
       await expect(f.page.locator('[data-free-lineup]')).toBeHidden(); expect(f.reads).toHaveLength(2); expect(f.writes).toEqual([]);
+    } finally { await f.context.close(); }
+  });
+}
+
+for (const [timezoneId, locale] of [['America/Los_Angeles', 'en-US'], ['Pacific/Kiritimati', 'en-US'], ['Etc/GMT+12', 'de-DE']]) {
+  test(`phone header retains version, localized time and usable Menu (${timezoneId}/${locale})`, async ({ browser }) => {
+    const f = await open(browser, true, true, { timezoneId, locale }); try {
+      const badge = f.page.locator('[data-fd-jfl-environment]');
+      await expect(badge).toBeVisible();
+      await expect(badge.locator('strong')).toHaveText('JFL');
+      await expect(badge.locator('code')).toHaveText(source ? 'aaaaaaaa' : process.env.PLAYWRIGHT_EXPECTED_SHA.slice(0, 8));
+      await expect(badge.locator('[data-fd-jfl-deploy-time]')).not.toHaveText(/^(|…|\.\.\.)$/);
+      const menu = f.page.locator('[data-fd-more-menu]');
+      const summary = menu.locator('summary');
+      await expect(summary).toBeVisible();
+      const bounds = await summary.boundingBox(); expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+      if (await menu.evaluate(el => el.open)) await summary.click();
+      await summary.focus(); await f.page.keyboard.press('Enter');
+      await expect(menu).toHaveAttribute('open', '');
+      await expect(menu.locator('a[href="/free-agents"]')).toBeVisible();
+      await expect(menu.locator('a[href="/free-agents"]')).toHaveAttribute('aria-current', 'page');
+      expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await summary.click(); await expect(menu).not.toHaveAttribute('open', '');
+      expect(f.writes).toEqual([]); expect(f.errors).toEqual([]);
     } finally { await f.context.close(); }
   });
 }

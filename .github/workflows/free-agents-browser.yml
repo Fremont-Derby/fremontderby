@@ -1,10 +1,10 @@
 name: Free-agent recovery browser regression
 on:
   pull_request:
-    paths: ['src/jflFreeAgentsPage.js', 'browser/jfl/free-agents-recovery.spec.js', 'playwright.free-agents.config.mjs', '.github/workflows/free-agents-browser.yml']
+    paths: ['src/jflFreeAgentsPage.js', 'src/jflModernShell.js', 'browser/jfl/free-agents-recovery.spec.js', 'playwright.free-agents.config.mjs', '.github/workflows/free-agents-browser.yml']
   push:
     branches: [fremontderby-jfl]
-    paths: ['src/jflFreeAgentsPage.js', 'browser/jfl/free-agents-recovery.spec.js', 'playwright.free-agents.config.mjs', '.github/workflows/free-agents-browser.yml']
+    paths: ['src/jflFreeAgentsPage.js', 'src/jflModernShell.js', 'browser/jfl/free-agents-recovery.spec.js', 'playwright.free-agents.config.mjs', '.github/workflows/free-agents-browser.yml']
 permissions:
   contents: read
 jobs:
