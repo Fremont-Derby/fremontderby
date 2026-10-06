@@ -3,11 +3,11 @@ export function renderJflNotificationsPage() {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Notices · Fremont Derby</title>
 <style>
-  .notices{width:min(760px,100%);margin:auto;padding:20px 16px 80px;font:16px/1.5 system-ui,sans-serif}
+  .notices{box-sizing:border-box;width:min(760px,100%);margin:auto;padding:20px 16px 80px;font:16px/1.5 system-ui,sans-serif}
   .notices h1{margin:0 0 4px}.notices p{margin:0 0 16px}
   .notice-actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
   .notice-actions button,.notice-actions a,.notice-card button,.notice-card a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:9px}
-  .notice-list{display:grid;gap:12px}.notice-card{padding:16px;border:1px solid #b6c5bb;border-radius:12px;background:#fff;color:#143023}
+  .notice-list{display:grid;gap:12px}.notice-card{min-width:0;overflow-wrap:anywhere;padding:16px;border:1px solid #b6c5bb;border-radius:12px;background:#fff;color:#143023}
   .notice-card[data-unread="true"]{border-left:6px solid #24794b}.notice-card h2{margin:0 0 6px;font-size:1.06rem}
   .notice-card time,.notice-state{display:block;color:#46594e;font-size:.88rem}.notice-card p{margin:8px 0}
   .notice-card .notice-actions{margin:8px 0 0}.notice-status[role="status"]{min-height:24px}
