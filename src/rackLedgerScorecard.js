@@ -80,9 +80,9 @@ export const sharedRackLedgerScorecardMarkup = `
     <section class="team-score" aria-label="Running team score">
       <div class="team-score-label">Running team score</div>
       <div class="team-score-grid">
-        <div class="team-block"><span class="team-name" data-team-a-name>Team A</span><strong class="team-points" data-team-score-a>0</strong></div>
+        <div class="team-block"><span class="team-name" data-team-a-name>Team A</span><strong class="team-points" data-team-score-a>—</strong></div>
         <span class="team-separator">—</span>
-        <div class="team-block"><span class="team-name" data-team-b-name>Team B</span><strong class="team-points" data-team-score-b>0</strong></div>
+        <div class="team-block"><span class="team-name" data-team-b-name>Team B</span><strong class="team-points" data-team-score-b>—</strong></div>
       </div>
     </section>
 
