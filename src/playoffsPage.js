@@ -97,7 +97,7 @@ export function renderPlayoffsPage() {
     async function get(path){
       const response=await fetch(path);
       const body=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(body.error||'Playoffs did not return a bracket. Try again.');
+      if(!response.ok)throw new Error(body.error||'Playoffs have not started for this season.');
       return body;
     }
     async function authApi(path,options={}){
