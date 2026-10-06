@@ -91,7 +91,7 @@ export function renderStandingsPage() {
       const isRegistration=season&&season.status==='registration';
       const isComplete=season&&season.status==='complete';
       let list=rows.slice();
-      if(isRegistration||isComplete){list=list.filter((row)=>(Number(row.matches_played)||(Number(row.wins)+Number(row.losses)))>0)}
+      list=list.filter((row)=>Number(row.matches_played||0)>0);if(!list.length){playerEmpty.textContent='Player standings begin after scored matches.';playerMobileEmpty.textContent=playerEmpty.textContent}
       playerEmpty.hidden=list.length>0;playerMobileEmpty.hidden=list.length>0;
       const keyed=list.map((row,index)=>({row,index,key:String(row.player_id||row.playerId||row.display_name||index)}));
       function buildPlayerRow(item){
