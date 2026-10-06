@@ -33,9 +33,6 @@ export function createPlayoffHttpHandlers({
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
           const { practicePlayoffsReady, writeDruPracticeResults, closeFinishedDruTeamMatches, closeOpenDruPracticeMatches } = await import('./druTeamResult.js');
-          await writeDruPracticeResults(env, seasonId, fetchImpl);
-          await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
-          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
           const { withSupabaseSchema } = await import('./supabaseSchema.js');
           const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
           const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
@@ -52,6 +49,9 @@ export function createPlayoffHttpHandlers({
           });
           const rows = response.ok ? await response.json() : [];
           if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
+          await writeDruPracticeResults(env, seasonId, fetchImpl);
+          await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
+          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
         }
         const repository = createRepository(env, { fetch: fetchImpl });
         const playoffs = await startSeasonPlayoffsCommand(
