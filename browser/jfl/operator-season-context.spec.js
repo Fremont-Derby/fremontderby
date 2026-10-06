@@ -27,6 +27,7 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 },
     isMobile: mobile, hasTouch: mobile });
   await context.addInitScript(() => {
+    if (window !== window.top) return;
     sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only');
     localStorage.setItem('fd.setupSeasonId', 'season-b');
   });
@@ -131,7 +132,14 @@ for (const mobile of [false, true]) {
           await expect(f.page.locator('[data-retry-seasons]')).toBeHidden();
           await expect(f.page.locator('[data-save]')).toBeDisabled();
           await expect(f.page.locator('[data-new-season]')).toBeDisabled();
+          // A late same-origin frame must never re-run synthetic sign-in after expiry.
+          await f.page.evaluate(() => new Promise(resolve => {
+            const frame = document.createElement('iframe');
+            frame.addEventListener('load', resolve, { once: true });
+            document.body.append(frame);
+          }));
           expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBeNull();
+          expect(await f.page.evaluate(() => localStorage.getItem('fd.accessToken'))).toBeNull();
           expect(f.listReads).toHaveLength(1);
           expect(f.writes).toHaveLength(0);
           return;
