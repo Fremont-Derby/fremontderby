@@ -447,7 +447,7 @@ export function renderProfilePage(env = {}) {
       if (standingNoteEl) {
         standingNoteEl.value = (profile && (profile.standing_availability_note || profile.standingAvailabilityNote)) || '';
       }
-      const teams = profile && Array.isArray(profile.teams) ? profile.teams : [];
+      const teams = (profile && Array.isArray(profile.teams) ? profile.teams : []).filter((team)=>!team.endsAt && !team.ends_at);
       const seasons = profile && Array.isArray(profile.seasons) ? profile.seasons : [];
       renderRows(
         teamBody,
