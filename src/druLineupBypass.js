@@ -104,7 +104,8 @@ export async function ensureDruActorCanLockLineup(env, { actorUserId, teamId, ro
   if (Array.isArray(slots) && !lineupSlotsAreComplete(slots)) reject('Lineup needs three players before it can lock');
   const named = (Array.isArray(slots) ? lineupPlayerIds(slots) : playerIds).map((id) => String(id || '').trim()).filter(Boolean);
   if (duplicateLineupIds(named)) reject('Lineup players must be unique.');
-  if (new Set(named.map((id) => id.toLowerCase())).size !== 3) reject('Lineup needs three players before it can lock');
+  if (new Set(named.map((id) => id.toLowerCase())).size !== named.length) reject('Pick three different players before the lineup can lock');
+  if (named.length !== 3) reject('Lineup needs three players before it can lock');
   const conn = service(env);
   if (!conn) reject('Lineup could not be locked');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
