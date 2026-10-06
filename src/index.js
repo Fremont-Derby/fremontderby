@@ -244,7 +244,11 @@ export async function handlePublishScheduleRequest(
       if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
       const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
       const listSeasonTeams = repository.listSeasonTeams.bind(repository);
-      repository.listSeasonTeams = async (id, actorUserId) => withoutReleasedPracticeTeams(await listSeasonTeams(id, actorUserId), slotRows);
+      repository.listSeasonTeams = async (id, actorUserId) => {
+        const { practicePublishTeamIds } = await import('./druPublishPrep.js');
+        const teams = withoutReleasedPracticeTeams(await listSeasonTeams(id, actorUserId), slotRows);
+        return practicePublishTeamIds(teams, slotRows).map((teamId) => ({ id: teamId, active: true }));
+      };
       const result = await publishSeasonScheduleCommand(
         {
           seasonId,
