@@ -38,7 +38,7 @@ npm run check
 npm test
 ```
 
-Deploy and Worker tip checks are operator-owned (see `docs/ENVIRONMENTS.md` and `docs/GITHUB_ACTIONS.md`). Self-hosted runners are optional for INFRA when GitHub-hosted minutes are unavailable.
+Deploy and Worker tip checks are operator-owned (see `docs/reference/ENVIRONMENTS.md` and `docs/operations/GITHUB_ACTIONS.md`). Self-hosted runners are optional for INFRA when GitHub-hosted minutes are unavailable.
 
 ## Security
 

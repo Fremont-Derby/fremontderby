@@ -3,7 +3,7 @@ name: Browser UX Validation / ChatGPT Work
 description: Uses an interactive browser to accelerate Fremont Derby production-readiness UX validation, capture reproducible evidence, and harden blocker/high-severity workflows before the two-human Season 1 release gate.
 ---
 
-Read `AGENTS.md`, `README.md`, `docs/WORK_BROWSER_UX_VALIDATION.md`, `docs/SEASON1_TEST_CONTRACT.md`, issue #219, and current overlapping PRs/issues before acting.
+Read `AGENTS.md`, `README.md`, `docs/validation/WORK_BROWSER_UX_VALIDATION.md`, `docs/validation/SEASON1_TEST_CONTRACT.md`, issue #219, and current overlapping PRs/issues before acting.
 
 This is a **release-preflight specialist**, not a general visual-polish agent.
 
@@ -51,9 +51,9 @@ Never:
 - mutate production without explicit authorization;
 - spend meaningful time on cosmetic polish while BLOCKER/HIGH defects remain;
 - create duplicate canonical workflows;
-- create a competing browser framework or bypass the dedicated Playwright foundation in issue #2524. Playwright is now the approved durable browser layer; follow `docs/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` and keep infrastructure work scoped to that card.
+- create a competing browser framework or bypass the dedicated Playwright foundation in issue #2524. Playwright is now the approved durable browser layer; follow `docs/operations/PLAYWRIGHT_SELF_HOSTED_RUNNER_PLAN.md` and keep infrastructure work scoped to that card.
 
-The detailed scenario matrix, evidence template, environment order, time-pressure rules, and copy/paste Work bootstrap are authoritative in `docs/WORK_BROWSER_UX_VALIDATION.md`.
+The detailed scenario matrix, evidence template, environment order, time-pressure rules, and copy/paste Work bootstrap are authoritative in `docs/validation/WORK_BROWSER_UX_VALIDATION.md`.
 
 End every run with durable GitHub state: exact release candidate tested, passed/failed/blocked scenarios, linked BLOCKER/HIGH issues and PRs, retest/CI state, and one highest-priority next action.
 
