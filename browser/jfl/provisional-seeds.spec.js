@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { renderJflProvisionalSeedPage } from '../../src/jflProvisionalSeedPage.js';
+import bundledWorker from '../../dist/routerEntry.js';
 const sourceMode = process.env.PLAYWRIGHT_SEED_SOURCE === '1';
 const a = '10000000-0000-4000-8000-000000000001';
 const b = '10000000-0000-4000-8000-000000000002';
@@ -29,7 +29,10 @@ async function open(browser, request, mobile, options = {}) {
     else throw new Error('Unexpected synthetic seed request ' + path);
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
-  if (sourceMode) await page.route('https://seed.test/admin/provisional-rating', route => route.fulfill({ contentType: 'text/html', body: renderJflProvisionalSeedPage() }));
+  if (sourceMode) await page.route('https://seed.test/admin/provisional-rating', async route => {
+    const response = await bundledWorker.fetch(new Request(route.request().url()), { ENVIRONMENT: 'jfl' }, {});
+    await route.fulfill({ status: response.status, contentType: 'text/html', body: await response.text() });
+  });
   await page.goto('/admin/provisional-rating');
   if (!options.signedOut) {
     await expect(page.locator('[data-seed-player]')).toBeEnabled();

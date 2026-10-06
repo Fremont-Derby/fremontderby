@@ -1,4 +1,4 @@
-export function provisionalSeedClient() {
+const provisionalSeedClientScript = String.raw`(() => {
   const select = document.querySelector('[data-seed-player]');
   const value = document.querySelector('[data-seed-value]');
   const reason = document.querySelector('[data-seed-reason]');
@@ -77,7 +77,7 @@ export function provisionalSeedClient() {
     finally { pending = false; sync(); }
   });
   sync(); if (token()) load(); else status.textContent = 'Open Profile and sign in again.';
-}
+})();`;
 
 export function renderJflProvisionalSeedPage() {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Provisional rating seeds · Fremont Derby</title>
@@ -85,5 +85,5 @@ export function renderJflProvisionalSeedPage() {
   <a href="/admin/players">Back to Players</a><h1>Provisional rating seeds</h1><p>League admins can record an explicit provisional value with evidence or a reason. Existing historical races keep their locked ratings and targets. Established seeds are protected.</p>
   <label>Player<select data-seed-player disabled><option value="">Choose a player</option></select></label><p data-seed-current>Choose a player to inspect the current seed.</p><p data-seed-evidence></p>
   <form data-seed-form><label>Provisional rating<input data-seed-value type="number" min="0" max="1000" step="1" required disabled></label><label>Evidence or reason<textarea data-seed-reason maxlength="500" required disabled></textarea></label><div class="actions"><button data-seed-save disabled>Save provisional seed</button><button data-seed-reload type="button" disabled>Reload</button><a href="/profile" data-seed-signin hidden>Open Profile to sign in</a></div></form><p role="status" aria-live="polite" data-seed-status>Loading…</p>
-  </main><script>(${provisionalSeedClient.toString()})();</script></body></html>`;
+  </main><script>${provisionalSeedClientScript}</script></body></html>`;
 }
