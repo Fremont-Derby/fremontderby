@@ -1,9 +1,4 @@
-import { missionLaunchLine, testerPathLine } from './missionLaunch.js';
-import { standingsContextLine, missionTaskLine } from './standingsTask.js';
 export function renderStandingsPage() {
-  const launch = missionLaunchLine({ name: 'find my next match' });
-  const tester = testerPathLine({ preview: false });
-  const task = missionTaskLine({ task: 'find my standings' });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -17,9 +12,8 @@ export function renderStandingsPage() {
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
   </style>
 </head>
-<body>\n  <p data-mission-launch>${launch}</p>\n  <p data-tester-path>${tester}</p>\n    <p data-mission-task>${task}</p>
+<body>
   <main class="app">
-    <section data-qa-runs><h2>QA runs</h2><p>A run shows only when it has an id, a lane, and a pass or fail result.</p></section>
     <header class="topbar"><div class="brand"><span class="mark">9</span><h1 style="margin:0;font-size:1.05rem;font-weight:950">Standings</h1></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
     <p data-champion hidden style="margin:8px 0;font-weight:800"></p><nav data-standings-shortcuts aria-label="Related" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px">
       <a href="/players" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#343c45);border-radius:10px;color:inherit;text-decoration:none">Players</a>
