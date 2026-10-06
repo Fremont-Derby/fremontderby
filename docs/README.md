@@ -28,6 +28,8 @@ A file being newer, longer, or linked from an old issue does not make it authori
 
 ## Agent and program guidance
 
+- [Agent knowledge lifecycle](guidance/agent-knowledge-lifecycle.md) — decides when reusable instructions/lessons must graduate from cards/comments into docs.
+
 Living guidance that shapes autonomous work:
 
 - [Agentic development program](guidance/AGENTIC_DEVELOPMENT_PROGRAM.md)
@@ -40,6 +42,12 @@ Living guidance that shapes autonomous work:
 Lane/specialist instructions live under `.github/agents/` and `.github/instructions/`, subordinate to `AGENTS.md`.
 
 ## Architecture and product reference
+
+Enduring product contracts that should not depend on an open issue include:
+
+- [Messaging contract](reference/messaging-contract.md)
+- [Scorekeeper handoff contract](reference/scorekeeper-handoff-contract.md)
+
 
 Stable product/system references include:
 

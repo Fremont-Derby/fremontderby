@@ -115,3 +115,8 @@ Drift looks like:
 - default DRU-to-Gamma promotion while #2800 is incomplete;
 - relabeling cards to satisfy CI rather than describe state;
 - "merged" being treated as "verified" or "closed."
+
+
+## Durable-knowledge rule
+
+Follow [the agent knowledge lifecycle](agent-knowledge-lifecycle.md). Issues/comments are execution evidence, not the long-term home for reusable instructions. When a session discovers an enduring cross-card rule, product contract, operational procedure, or recurring lesson, promote it into the appropriate canonical docs before considering the learning complete.
