@@ -134,7 +134,7 @@ export function renderPlayoffsPage() {
           const winner=match.winnerTeamName||'';
           card.innerHTML='<div class="muted">Table '+(match.tableNumber||'—')+' · '+(match.status||'scheduled')+'</div>'
             +'<div class="versus"><strong>'+(match.teamAName||'TBD')+'</strong><span>vs</span><strong>'+(match.teamBName||'TBD')+'</strong></div>'
-            +(winner?'<div class="status" data-status>Champion: '+winner+'</div>':'');
+            +(winner?'<div class="status" data-status>'+(round.stage==='championship'?'Champion: ':'Winner: ')+winner+'</div>':'');
           const actions=document.createElement('div');
           actions.className='actions';
           const score=document.createElement('a');
