@@ -1562,6 +1562,19 @@ export async function handleSetRosterAvailabilityRequest(
       if (s === 'no' || s === 'out') status = 'unavailable';
       if (s === 'maybe') status = 'unsure';
     }
+    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
+      const { availabilityReady } = await import('./availabilityReady.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' };
+      const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?round_id=eq.${roundId}&select=team_a_id&limit=1`, { headers });
+      const teamId = matchResponse.ok ? (await matchResponse.json())?.[0]?.team_a_id : null;
+      const memberResponse = teamId ? await fetchWithSchema(`${base}/rest/v1/team_memberships?team_id=eq.${teamId}&ends_at=is.null&select=player_id&limit=1`, { headers }) : null;
+      const playerId = memberResponse?.ok ? (await memberResponse.json())?.[0]?.player_id : null;
+      if (availabilityReady(playerId)) await fetchWithSchema(`${base}/rest/v1/players?id=eq.${playerId}`, { method: 'PATCH', headers, body: JSON.stringify({ user_id: actor.id }) });
+    }
     const availability = await setRosterAvailabilityCommand(
       {
         actorUserId: actor.id,
