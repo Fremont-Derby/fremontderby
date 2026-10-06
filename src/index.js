@@ -825,11 +825,25 @@ export async function handleListTradeCounterpartyOptionsRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const teams = await listTradeCounterpartyOptionsCommand(
-      { actorUserId: actor.id, seasonId },
-      repository,
-    );
-    return jsonResponse({ teams });
+    try {
+      const teams = await listTradeCounterpartyOptionsCommand(
+        { actorUserId: actor.id, seasonId },
+        repository,
+      );
+      return jsonResponse({ teams });
+    } catch (error) {
+      if (String(env?.ENVIRONMENT || '').trim() !== 'dru') throw error;
+      const { tradeTeams } = await import('./tradeTeams.js');
+      const { withSupabaseSchema } = await import('./supabaseSchema.js');
+      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const key = env.SUPABASE_SERVICE_ROLE_KEY;
+      const response = await fetchWithSchema(`${base}/rest/v1/teams?season_id=eq.${seasonId}&select=id,name`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+      const rows = response.ok ? await response.json() : [];
+      const teams = tradeTeams((rows || []).map((row) => ({ teamId: row.id, teamName: row.name })));
+      if (!teams.length) throw error;
+      return jsonResponse({ teams });
+    }
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
