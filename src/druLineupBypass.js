@@ -70,7 +70,7 @@ export function lineupPlayerIds(slots) {
 
 export function lineupSlotsAreComplete(slots) {
   const rows = Array.isArray(slots) ? slots : [];
-  const numbers = rows.map((slot) => Number(slot?.slotNumber || slot?.slot_number));
+  const numbers = rows.map((slot) => Number(slot?.slotNumber || slot?.slot_number || slot?.slot));
   return rows.length === 3 && rows.every((slot) => String(slot?.playerId || slot?.player_id || '').trim()) && new Set(numbers).size === 3 && [1, 2, 3].every((n) => numbers.includes(n));
 }
 
