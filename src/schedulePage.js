@@ -112,8 +112,8 @@ let bestLive=null,bestLiveScore=-Infinity,bestUpcoming=null,bestUpcomingDistance
           form.append(date,place,propose);
           makeup.append(form);
         }
-        const protocol=document.createElement('div');protocol.className='muted';protocol.style.fontSize='.78rem';
-        if(!['finalized','corrected'].includes(String(match.status||''))){
+        const protocol=document.createElement('div');protocol.className='muted';protocol.style.fontSize='.78rem';protocol.textContent='No-show: mark the missing player, then score the forfeit from the score page.';
+        if(['finalized','corrected'].includes(String(match.status||''))){
           protocol.hidden=true;
         }
         card.append(top,versus,actions,makeup,protocol);if(window.fdSafeAutocomplete)window.fdSafeAutocomplete.scan(card);return card;
