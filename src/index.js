@@ -2671,7 +2671,8 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       await authenticateSupabaseUser(request, env);
       const body = await request.json().catch(() => ({}));
       const { recordDruRaceResult } = await import('./druScoreOpen.js');
-      return jsonResponse(await recordDruRaceResult(env, druScoreRace[1], body.winnerSide));
+      const scored = await recordDruRaceResult(env, druScoreRace[1], body.winnerSide);
+      return jsonResponse(scored, scored.saved ? 200 : 404);
     }
 
     const druScoreMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/score$/);

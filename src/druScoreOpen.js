@@ -108,7 +108,7 @@ export async function recordDruRaceResult(env, playerMatchId, winnerSide, fetchI
   return { saved: true, winnerSide: patch.winner_side };
 }
 
-export async function scoreDruTeamMatch(env, teamMatchId, winnerSide = 'A', fetchImpl = globalThis.fetch) {
+export async function scoreDruTeamMatch(env, teamMatchId, winnerSide, fetchImpl = globalThis.fetch) {
   if (String(env?.ENVIRONMENT || '').trim() !== 'dru') return { saved: false, error: 'Not a DRU lane.' };
   const { withSupabaseSchema } = await import('./supabaseSchema.js');
   const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
