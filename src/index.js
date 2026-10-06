@@ -1618,7 +1618,7 @@ export async function handleSubmitTeamLineupRequest(
     const body = await readJsonBody(request);
     if (String(env.ENVIRONMENT || '').trim() === 'dru') {
       const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
-      const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup } = await import('./druLineupBypass.js');
+      const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup, lockDruRegularLineup } = await import('./druLineupBypass.js');
       const playerIds = lineupPlayerIds(slots);
       if (!lineupSlotsAreComplete(slots) || playerIds.length !== 3) {
         const error = new Error('Lineup needs three players before it can lock');
@@ -1628,6 +1628,8 @@ export async function handleSubmitTeamLineupRequest(
       await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, roundId, playerIds, slots }, fetchImpl);
       const playoff = await lockDruPlayoffLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
       if (playoff) return jsonResponse({ lineup: playoff });
+      const regular = await lockDruRegularLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
+      if (regular) return jsonResponse({ lineup: regular });
     }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
