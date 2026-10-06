@@ -1620,6 +1620,12 @@ export async function handleSubmitTeamLineupRequest(
       const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
       const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup, lockDruRegularLineup } = await import('./druLineupBypass.js');
       const playerIds = lineupPlayerIds(slots);
+      const sentIds = (Array.isArray(body.playerIds) ? body.playerIds : []).map((id) => String(id || '').trim()).filter(Boolean);
+      if (sentIds.length > 3) {
+        const error = new Error('A regular lineup is three players.');
+        error.status = 400;
+        throw error;
+      }
       const rawIds = slots.map((slot) => String(slot?.playerId || slot?.player_id || '').trim()).filter(Boolean);
       if (new Set(rawIds.map((id) => id.toLowerCase())).size !== rawIds.length) {
         const error = new Error('Pick three different players before the lineup can lock');
