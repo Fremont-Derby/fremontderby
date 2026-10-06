@@ -121,7 +121,7 @@ export function renderChatPage(env = {}) {
   <main class="app">
     <header class="heading">
       <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
-      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
+      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a></div><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div>
     </header>
     <nav aria-label="League destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px">
       <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
