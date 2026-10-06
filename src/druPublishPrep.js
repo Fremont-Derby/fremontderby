@@ -122,7 +122,7 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
 }
 
 export function practicePublishSlotCount(slots = []) {
-  return slots.filter((slot) => slot && slot.team_id && !['released', 'expired'].includes(slot.status)).length;
+  return slots.filter((slot) => practiceSlotTeamId(slot) && !['released', 'expired'].includes(slot.status)).length;
 }
 
 export function releasedPracticeTeamIds(slots = []) {
