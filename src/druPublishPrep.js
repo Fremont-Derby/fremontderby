@@ -121,6 +121,10 @@ export async function prepareDruPracticePublish(env, seasonId, fetchImpl = globa
   return { prepared: true, teams: teams.length, added: captainAdds.length + plan.adds.length };
 }
 
+export function practicePublishSlotCount(slots = []) {
+  return slots.filter((slot) => slot && slot.team_id && !['released', 'expired'].includes(slot.status)).length;
+}
+
 export function practicePublishReady(teamCount) {
   const count = Number(teamCount || 0);
   if (!count) return { ok: false, text: 'Add a team before publishing.' };
