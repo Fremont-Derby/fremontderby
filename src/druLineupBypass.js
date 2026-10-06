@@ -25,12 +25,20 @@ export async function waiveDruTeamPayments(env, { seasonId, teamId, playerIds = 
   const rows = members.ok ? await members.json() : [];
   const ids = [...new Set([...(Array.isArray(playerIds) ? playerIds : []), ...(Array.isArray(rows) ? rows : []).map((row) => row.player_id)].filter(Boolean))];
   if (!ids.length) return 0;
-  const saved = await fetchWithSchema(`${conn.base}/rest/v1/payment_status?on_conflict=season_id,player_id`, {
-    method: 'POST',
-    headers: { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(ids.map((playerId) => ({ season_id: seasonId, player_id: playerId, status: 'waived', amount_due_cents: 0, amount_paid_cents: 0, updated_at: new Date().toISOString() }))),
-  });
-  return saved.ok ? ids.length : 0;
+  const payHeaders = { ...headers, 'content-profile': privatePostgrestProfile('dru'), 'accept-profile': privatePostgrestProfile('dru'), prefer: 'resolution=merge-duplicates,return=minimal' };
+  let waived = 0;
+  for (const playerId of ids) {
+    const saved = await fetchWithSchema(`${conn.base}/rest/v1/payment_status?on_conflict=season_id,player_id`, {
+      method: 'POST',
+      headers: payHeaders,
+      body: JSON.stringify([{ season_id: seasonId, player_id: playerId, status: 'waived', amount_due_cents: 0, amount_paid_cents: 0, updated_at: new Date().toISOString() }]),
+    });
+    if (saved.ok) { waived += 1; continue; }
+    const existing = await fetchWithSchema(`${conn.base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=eq.${playerId}&select=status`, { headers: payHeaders });
+    const status = existing.ok ? (await existing.json())?.[0]?.status : '';
+    if (status === 'waived' || status === 'paid') waived += 1;
+  }
+  return waived;
 }
 
 export function playoffRacesOpened(slotRows, races, teamAId, teamBId) {
