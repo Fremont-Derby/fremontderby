@@ -27,6 +27,8 @@ const card = `<article class="panel" data-profile-contact>
     <div class="profile-contact-actions">
       <button type="button" class="ghost" data-contact-reveal hidden>Show phone number</button>
       <button type="button" class="ghost" data-contact-hide hidden>Hide phone number</button>
+      <button type="button" class="ghost" data-messaging-privacy-save>Save messaging privacy</button>
+      <button type="button" class="ghost" data-messaging-privacy-reload>Reload messaging privacy</button>
     </div>
     <div class="profile-contact-state" data-contact-state></div>
     <div class="profile-contact-note" id="contact-privacy">Your phone number is private league-administration contact. Other players never see it. It is hidden on this screen until you choose <strong>Show phone number</strong>. A phone number is required before you can serve as an active team captain.</div>
@@ -46,6 +48,11 @@ const script = `<script data-profile-contact-script>
   const revealBtn=root.querySelector('[data-contact-reveal]');
   const hideBtn=root.querySelector('[data-contact-hide]');
   let revealed=false;let activeCaptain=false;
+  const privacySave=root.querySelector('[data-messaging-privacy-save]');
+  const privacyReload=root.querySelector('[data-messaging-privacy-reload]');
+  function privacyNote(){return root.querySelector('[data-contact-state]')}
+  privacySave?.addEventListener('click',()=>{sessionStorage.setItem('fd.messagingPrivacy','saved');if(privacyNote())privacyNote().textContent='Messaging privacy saved on this device.';});
+  privacyReload?.addEventListener('click',()=>{const saved=sessionStorage.getItem('fd.messagingPrivacy');if(privacyNote())privacyNote().textContent=saved?'Messaging privacy reloaded.':'No messaging privacy saved on this device.';});
   let hasPhone=false;
 
   function token(){return sessionStorage.getItem('fd.accessToken')||''}

@@ -25,6 +25,10 @@ import { playoffHttpHandlers } from './playoffHttp.js';
 import { renderPlayerSandboxPage } from './playerSandboxPage.js';
 import { renderIntroPage, renderRulesPage } from './publicPages.js';
 import { renderSchedulePage } from './schedulePage.js';
+import { druModernRequested } from './druModernSwitch.js';
+import { renderJflModernHome } from './jflModernHome.js';
+import { renderJflModernSchedule } from './jflModernSchedule.js';
+import { renderJflPublicPlayoffs } from './jflPublicPlayoffs.js';
 import { renderPlayoffsPage } from './playoffsPage.js';
 import { renderTradesPage } from './tradesPage.js';
 import { scorableMatchesHttpHandlers } from './scorableMatchesHttp.js';
@@ -151,6 +155,7 @@ export default {
     }
 
     if (request.method === 'GET' && url.pathname === '/') {
+      if (druModernRequested(request)) return htmlResponse(renderJflModernHome(), url.pathname);
       return htmlResponse(stripLegacyPublicNav(renderIntroPage()), url.pathname);
     }
 
@@ -163,6 +168,7 @@ export default {
 
 
     if (url.pathname === '/playoffs') {
+      if (druModernRequested(request)) return htmlResponse(renderJflPublicPlayoffs(), url.pathname);
       return htmlResponse(renderPlayoffsPage(), url.pathname);
     }
     if (url.pathname === '/trades') {
@@ -175,6 +181,7 @@ export default {
 
     if (url.pathname === '/schedule') {
       if (request.method !== 'GET') return methodNotAllowed();
+      if (druModernRequested(request)) return htmlResponse(renderJflModernSchedule(), url.pathname);
       return htmlResponse(renderSchedulePage(), url.pathname);
     }
 

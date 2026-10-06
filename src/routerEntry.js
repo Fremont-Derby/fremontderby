@@ -15,6 +15,8 @@ import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
 import { applyProductScriptRepairs } from './productScriptRepairs.js';
 import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
+import { druModernRequested } from './druModernSwitch.js';
+import { renderJflFreeAgentsPage } from './jflFreeAgentsPage.js';
 import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
 import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
@@ -274,7 +276,9 @@ export default {
 
     if (url.pathname === '/free-agents' || url.pathname === '/practice') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      const html = url.pathname === '/practice' ? renderPracticePage() : renderFreeAgentsPage();
+      const html = url.pathname === '/practice'
+        ? renderPracticePage()
+        : (druModernRequested(request) ? renderJflFreeAgentsPage() : renderFreeAgentsPage());
       return finalizeBrowserResponse(new Response(html, {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
