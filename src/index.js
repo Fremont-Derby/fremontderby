@@ -242,6 +242,12 @@ export async function handlePublishScheduleRequest(
       if (!slotRows.length) return jsonResponse({ error: 'Practice slots did not load, so the night was not published.' }, 409);
       const ready = practicePublishReady(practicePublishSlotCount(slotRows));
       if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
+      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
+      const { draftCanPublish } = await import('./draftPublish.js');
+      if (draftCanPublish(season?.status)) {
+        await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}`, { method: 'PATCH', headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify({ status: 'registration' }) });
+      }
       const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
       const listSeasonTeams = repository.listSeasonTeams.bind(repository);
       repository.listSeasonTeams = async (id, actorUserId) => {
