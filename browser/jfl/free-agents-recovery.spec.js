@@ -19,7 +19,7 @@ test.beforeAll(async ({ request }) => {
   expect(await r.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
 });
 async function open(browser, mobile, signedOut = false, options = {}) {
-  const context = await browser.newContext({ baseURL: source ? 'https://free.test' : 'https://jfl.fremontderby.com', viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 }, ...options });
+  const context = await browser.newContext({ baseURL: 'https://jfl.fremontderby.com', viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 }, ...options });
   if (!signedOut) await context.addInitScript(() => { if (window === window.top) sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'); });
   const page = await context.newPage(); const reads = []; const writes = []; const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -29,7 +29,7 @@ async function open(browser, mobile, signedOut = false, options = {}) {
     if (path === '/api/me/teams' || path.includes('/eligible-free-agents')) { reads.push({ route, path }); return; }
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
   });
-  if (source) await page.route('https://free.test/free-agents', async route => {
+  if (source) await page.route('https://jfl.fremontderby.com/free-agents', async route => {
     let html = renderJflFreeAgentsPage();
     if (mode === 'bundled') { const { default: worker } = await import('../../dist/routerEntry.js'); html = await (await worker.fetch(new Request(route.request().url()), sourceEnv, {})).text(); }
     if (mode !== 'bundled') html = await (await decorateJflModernShell(new Response(html, { headers: { 'content-type': 'text/html' } }), new Request(route.request().url()), sourceEnv)).text();
