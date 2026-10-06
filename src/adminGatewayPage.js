@@ -15,9 +15,6 @@ export function renderAdminGatewayPage() {
 </head>
 <body>
   <main class="app">
-    <p data-fill="2262">Card 2262 is in the DRU lane.</p>
-    <p data-fill="2259">Card 2259 is in the DRU lane.</p>
-    <p data-fill="2268">Card 2268 is in the DRU lane.</p>
     <p class="note" data-workflow-health>Workflow health covers Auth, Teams, Score, Messages, and Admin. A red workflow is recorded before the next gate.</p>
     <section class="hero" aria-labelledby="admin-title">
       <div class="kicker">Fremont Derby</div>
