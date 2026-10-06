@@ -208,7 +208,7 @@ export default {
       return htmlResponse(renderChatPage(env), url.pathname);
     }
 
-    if (url.pathname === '/notices') {
+    if (url.pathname === '/notices' || url.pathname === '/alerts') {
       if (request.method !== 'GET') return methodNotAllowed();
       return htmlResponse(renderNoticesPage(), url.pathname);
     }
