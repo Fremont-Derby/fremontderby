@@ -1743,7 +1743,11 @@ export async function handleListSeasonScheduleRequest(
         scope: `schedule:${seasonId}`,
         cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
         getVersion: async () => versionTokenFromValue(versionState),
-        buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+        buildBody: async () => {
+        const { roundsForDate } = await import('./dateRound.js');
+        const date = new URL(request.url).searchParams.get('date');
+        return { rounds: roundsForDate(await repository.listSeasonSchedule({ seasonId }), date) };
+      },
       });
     }
     if (!(await repository.seasonExists({ seasonId }))) {
@@ -1774,7 +1778,11 @@ export async function handleListSeasonScheduleRequest(
         }
         return versionTokenFromValue({ rounds, matches });
       },
-      buildBody: async () => ({ rounds: await repository.listSeasonSchedule({ seasonId }) }),
+      buildBody: async () => {
+        const { roundsForDate } = await import('./dateRound.js');
+        const date = new URL(request.url).searchParams.get('date');
+        return { rounds: roundsForDate(await repository.listSeasonSchedule({ seasonId }), date) };
+      },
     });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
