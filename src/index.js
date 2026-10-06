@@ -1033,6 +1033,14 @@ export async function handleTeamMatchDisputeRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
+    const { disputeOpen } = await import('./disputeOpen.js');
+    const { withSupabaseSchema } = await import('./supabaseSchema.js');
+    const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
+    const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+    const key = env.SUPABASE_SERVICE_ROLE_KEY;
+    const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=status,winner_team_id`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
+    const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
+    if (!disputeOpen(match)) return jsonResponse({ error: 'A match has to be played before it can be disputed.' }, 409);
     const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
     // A notice is a trail. A bad link must not block the disagreement.
     try {
