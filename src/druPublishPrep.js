@@ -127,13 +127,26 @@ export function practicePublishSlotCount(slots = []) {
 
 export function releasedPracticeTeamIds(slots = []) {
   return slots
-    .filter((slot) => slot && slot.team_id && ['released', 'expired'].includes(slot.status))
-    .map((slot) => slot.team_id);
+    .filter((slot) => practiceSlotTeamId(slot) && ['released', 'expired'].includes(slot.status))
+    .map((slot) => practiceSlotTeamId(slot));
+}
+
+export function practiceSlotTeamId(slot) {
+  return slot?.team_id || slot?.teamId || null;
 }
 
 export function withoutReleasedPracticeTeams(teams = [], slots = []) {
   const released = new Set(releasedPracticeTeamIds(slots));
-  return teams.filter((team) => team && !released.has(team.id));
+  const occupied = new Set(
+    slots
+      .filter((slot) => practiceSlotTeamId(slot) && !['released', 'expired'].includes(slot.status))
+      .map((slot) => practiceSlotTeamId(slot)),
+  );
+  return teams.filter((team) => {
+    const id = team?.id || team?.team_id || team?.teamId;
+    if (!id || released.has(id)) return false;
+    return occupied.size ? occupied.has(id) : true;
+  });
 }
 
 export function practicePublishReady(teamCount) {

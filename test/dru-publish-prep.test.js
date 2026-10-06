@@ -72,5 +72,13 @@ test('a released team is left out of the practice schedule', () => {
     [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
     [{ team_id: 'b', status: 'released' }, { team_id: 'c', status: 'confirmed' }],
   );
-  assert.deepEqual(teams.map((team) => team.id), ['a', 'c']);
+  assert.deepEqual(teams.map((team) => team.id), ['c']);
+});
+
+test('a team off the open slots is left out of the practice schedule', () => {
+  const teams = withoutReleasedPracticeTeams(
+    [{ id: 'open' }, { id: 'released' }, { id: 'extra' }],
+    [{ team_id: 'open', status: 'confirmed' }],
+  );
+  assert.deepEqual(teams.map((team) => team.id), ['open']);
 });
