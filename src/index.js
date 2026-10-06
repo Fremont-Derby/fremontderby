@@ -231,10 +231,15 @@ export async function handlePublishScheduleRequest(
       const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
       const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
       const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const slotsResponse = await fetchWithSchema(`${base}/rest/v1/season_team_slots?season_id=eq.${seasonId}&team_id=not.is.null&select=team_id,status`, {
-        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'accept-profile': 'dru_private' },
+      const registrationResponse = await fetchWithSchema(`${base}/rest/v1/rpc/get_admin_season_registration`, {
+        method: 'POST',
+        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({ actor_user_id: actor.id, target_season_id: seasonId }),
       });
-      const slotRows = slotsResponse.ok ? await slotsResponse.json() : [];
+      const registrationBody = registrationResponse.ok ? await registrationResponse.json() : {};
+      const registrationRow = Array.isArray(registrationBody) ? registrationBody[0] : registrationBody;
+      const slotRows = registrationRow?.registration?.slots || registrationRow?.slots || [];
+      if (!slotRows.length) return jsonResponse({ error: 'Practice slots did not load, so the night was not published.' }, 409);
       const ready = practicePublishReady(practicePublishSlotCount(slotRows));
       if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
       const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
