@@ -40,6 +40,11 @@ import {
   saveOwnStandingAvailabilityCommand,
 } from './playerProfileCommands.js';
 import { renderProfilePage } from './profilePage.js';
+import { druModernRequested } from './druModernSwitch.js';
+import { renderJflModernStandings } from './jflModernStandings.js';
+import { renderJflModernTeams } from './jflModernTeams.js';
+import { modernizeJflProfileHtml } from './jflModernProfileEnhancer.js';
+import { renderJflPlayersDirectory } from './jflPlayersDirectory.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import {
   configureSeasonPrizesCommand,
@@ -2372,7 +2377,7 @@ export default {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderPlayersDirectoryPage(), {
+      return new Response(druModernRequested(request) ? renderJflPlayersDirectory() : renderPlayersDirectoryPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2385,7 +2390,7 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderStandingsPage(), {
+      return new Response(druModernRequested(request) ? renderJflModernStandings() : renderStandingsPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2451,7 +2456,7 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderProfilePage(env), {
+      return new Response(druModernRequested(request) ? modernizeJflProfileHtml(renderProfilePage(env)) : renderProfilePage(env), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2481,7 +2486,7 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderTeamsPage(), {
+      return new Response(druModernRequested(request) ? renderJflModernTeams() : renderTeamsPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",

@@ -274,7 +274,9 @@ export default {
 
     if (url.pathname === '/free-agents' || url.pathname === '/practice') {
       if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      const html = url.pathname === '/practice' ? renderPracticePage() : renderFreeAgentsPage();
+      const html = url.pathname === '/practice'
+        ? renderPracticePage()
+        : (druModernRequested(request) ? renderJflFreeAgentsPage() : renderFreeAgentsPage());
       return finalizeBrowserResponse(new Response(html, {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
       }), url.pathname);
