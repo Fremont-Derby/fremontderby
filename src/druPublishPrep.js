@@ -57,6 +57,23 @@ export function practiceSlotPlan(teams = [], memberships = [], limit = 8) {
 }
 
 
+
+export function practicePublishTeamIds(teams = [], slots = []) {
+  const occupied = [];
+  const seen = new Set();
+  for (const slot of slots) {
+    const id = slot?.team_id || slot?.teamId || null;
+    if (!id || seen.has(id) || ['released', 'expired'].includes(slot.status)) continue;
+    seen.add(id);
+    occupied.push(id);
+  }
+  const listed = teams
+    .filter((team) => team?.active !== false)
+    .map((team) => team.id || team.team_id || team.teamId)
+    .filter(Boolean);
+  return occupied.length === 8 ? occupied : listed;
+}
+
 export function readySlotConfirmBody(now = new Date().toISOString()) {
   return { status: 'confirmed', resolved_at: now, last_action_reason: 'DRU practice night' };
 }
