@@ -4,6 +4,7 @@ import {
   authenticateSupabaseUser,
   betaAuthBypassEnabled,
   resolveBetaBypassActor,
+  DRU_AGENT_SENTINEL,
 } from '../src/supabaseAuth.js';
 
 function testLaneEnv(environment = 'jfl', overrides = {}) {
@@ -77,6 +78,16 @@ test('gamma and production still require bearer even if a bypass flag is present
 test('resolveBetaBypassActor fails closed without actor id', () => {
   assert.throws(
     () => resolveBetaBypassActor({ ENVIRONMENT: 'jfl', BETA_AUTH_BYPASS: '1' }),
+    (error) => error.name === 'AuthError',
+  );
+});
+
+test('DRU sign-in token returns the test actor and stays off JFL', async () => {
+  const request = { headers: { get: (name) => name.toLowerCase() === 'authorization' ? 'Bearer ' + DRU_AGENT_SENTINEL : '' } };
+  const actor = await authenticateSupabaseUser(request, testLaneEnv('dru'));
+  assert.equal(actor.id, '00000000-0000-4000-8000-000000000001');
+  await assert.rejects(
+    () => authenticateSupabaseUser(request, testLaneEnv('jfl')),
     (error) => error.name === 'AuthError',
   );
 });
