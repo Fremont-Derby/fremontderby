@@ -46,9 +46,10 @@ test('DRU root Workers Build profile matches the explicit dru environment', () =
   assert.equal(customDomainFor('dru'), rootCustomDomain());
   assert.equal(config.env.dru.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
   assert.equal(config.env.dru.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
-  assert.equal(config.env.dru.vars.SUPABASE_URL, config.vars.SUPABASE_URL);
-  assert.equal(config.env.dru.vars.SUPABASE_PUBLISHABLE_KEY, config.vars.SUPABASE_PUBLISHABLE_KEY);
-  assert.equal(config.env.dru.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
+  assert.equal('SUPABASE_URL' in config.env.dru.vars, false);
+  assert.equal('SUPABASE_PUBLISHABLE_KEY' in config.env.dru.vars, false);
+  assert.equal('EXPECTED_SUPABASE_PROJECT_REF' in config.env.dru.vars, false);
+  assert.equal(config.env.dru.vars.TEST_PERSONA_OPERATOR_USER_IDS, config.vars.TEST_PERSONA_OPERATOR_USER_IDS);
   assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
   assert.equal(config.env.dru.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
   assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
