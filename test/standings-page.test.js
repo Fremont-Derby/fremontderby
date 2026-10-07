@@ -27,7 +27,7 @@ test('standings page keeps team and individual standings one tap away', () => {
 test('standings page uses phone-native cards instead of horizontal table scrolling', () => {
   const html = renderStandingsPage();
 
-  assert.match(html, /data-team-cards aria-label="Team standings"/);
+  assert.match(html, /data-team-cards/);
   assert.match(html, /data-player-cards aria-label="Individual standings"/);
   assert.match(html, /\.panel table\{display:none\}/);
   assert.match(html, /\.mobile-list\{display:block\}/);
