@@ -91,9 +91,7 @@
         "BETA_ACTOR_EMAIL": "dru-actor@fremontderby.com",
         "SUPABASE_SCHEMA": "dru",
         "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
-        "SUPABASE_URL": "https://oqkkvqkerusepyokzbmt.supabase.co",
-        "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pxpey3nrNt1nWQ2CBXJhQg_btWE10eB",
-        "EXPECTED_SUPABASE_PROJECT_REF": "oqkkvqkerusepyokzbmt"
+        "TEST_PERSONA_OPERATOR_USER_IDS": "b22805b6-92ba-44bd-a92e-0c82f0be6613"
       },
       "secrets": {
         "required": [
