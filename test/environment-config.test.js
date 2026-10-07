@@ -21,11 +21,11 @@ function rootCustomDomain() {
   return config.routes?.find((route) => route.custom_domain === true)?.pattern;
 }
 
-test('DRU root Workers Build profile pins durable public bindings and keeps service role secret', () => {
-  assert.equal(config.name, 'fremontderby-dru');
-  assert.equal(config.vars.ENVIRONMENT, 'dru');
-  assert.equal(config.vars.SUPABASE_SCHEMA, 'dru');
-  assert.equal(rootCustomDomain(), 'dru.fremontderby.com');
+test('JFL root Workers Build profile pins durable public bindings and keeps service role secret', () => {
+  assert.equal(config.name, 'fremontderby-jfl');
+  assert.equal(config.vars.ENVIRONMENT, 'jfl');
+  assert.equal(config.vars.SUPABASE_SCHEMA, 'jfl');
+  assert.equal(rootCustomDomain(), 'jfl.fremontderby.com');
   assert.equal(config.vars.SUPABASE_URL, 'https://oqkkvqkerusepyokzbmt.supabase.co');
   assert.match(config.vars.SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_/);
   assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, 'oqkkvqkerusepyokzbmt');
@@ -41,22 +41,22 @@ test('DRU root Workers Build profile pins durable public bindings and keeps serv
   }
 });
 
-test('DRU root Workers Build profile matches the explicit dru environment', () => {
-  assert.equal(config.env.dru.name, config.name);
-  assert.equal(customDomainFor('dru'), rootCustomDomain());
-  assert.equal(config.env.dru.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
-  assert.equal(config.env.dru.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
-  assert.equal(config.env.dru.vars.SUPABASE_URL, config.vars.SUPABASE_URL);
-  assert.equal(config.env.dru.vars.SUPABASE_PUBLISHABLE_KEY, config.vars.SUPABASE_PUBLISHABLE_KEY);
-  assert.equal(config.env.dru.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
-  assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
-  assert.equal(config.env.dru.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
-  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
-  assert.ok(config.env.dru.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+test('JFL root Workers Build profile matches the explicit jfl environment', () => {
+  assert.equal(config.env.jfl.name, config.name);
+  assert.equal(customDomainFor('jfl'), rootCustomDomain());
+  assert.equal(config.env.jfl.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
+  assert.equal(config.env.jfl.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
+  assert.equal(config.env.jfl.vars.SUPABASE_URL, config.vars.SUPABASE_URL);
+  assert.equal(config.env.jfl.vars.SUPABASE_PUBLISHABLE_KEY, config.vars.SUPABASE_PUBLISHABLE_KEY);
+  assert.equal(config.env.jfl.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
+  assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
+  assert.ok(config.env.jfl.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
 });
 
 test('Wrangler retains explicit custom-domain identities for each named lane', () => {
-  assert.equal(rootCustomDomain(), publicHosts.dru);
+  assert.equal(rootCustomDomain(), publicHosts.jfl);
   for (const [environment, host] of Object.entries(publicHosts)) {
     assert.equal(customDomainFor(environment), host);
   }
@@ -113,11 +113,15 @@ test('unrecovered DRU and Gamma Supabase credentials remain required secrets', (
   }
 });
 
-test('DRU open-auth actor is explicit lane-only test config', () => {
+test('JFL open-auth actor is explicit lane-only test config', () => {
   assert.equal(config.vars.BETA_ACTOR_USER_ID, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
   assert.equal(config.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
-  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
-  assert.equal(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
+  assert.equal(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+
+  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
+  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, undefined);
+
   assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
   assert.equal(config.env.gamma.vars.BETA_ACTOR_USER_ID, undefined);
 });
