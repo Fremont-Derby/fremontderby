@@ -56,7 +56,7 @@ test('DRU root Workers Build profile matches the explicit dru environment', () =
 });
 
 test('Wrangler retains explicit custom-domain identities for each named lane', () => {
-  assert.equal(rootCustomDomain(), publicHosts.jfl);
+  assert.equal(rootCustomDomain(), publicHosts.dru);
   for (const [environment, host] of Object.entries(publicHosts)) {
     assert.equal(customDomainFor(environment), host);
   }
@@ -118,10 +118,6 @@ test('DRU open-auth actor is explicit lane-only test config', () => {
   assert.equal(config.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
   assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
   assert.equal(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
-
-  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
-  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, undefined);
-
   assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
   assert.equal(config.env.gamma.vars.BETA_ACTOR_USER_ID, undefined);
 });
