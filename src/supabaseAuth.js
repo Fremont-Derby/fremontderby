@@ -38,9 +38,16 @@ const testAuthEnvironments = new Set(['jfl', 'dru']);
 
 /** Opaque browser token used only by JFL "Continue with Google" simulation (#655). */
 export const JFL_SIMULATED_GOOGLE_TOKEN = 'fd-jfl-simulated-google-v1';
+export const DRU_AGENT_SENTINEL = 'dru-bypass';
 
 export function isJflSimulatedGoogleToken(token) {
   return String(token || '').trim() === JFL_SIMULATED_GOOGLE_TOKEN;
+}
+
+export function isDruAgentSentinel(token, env = {}) {
+  return String(env.ENVIRONMENT || '').trim() === 'dru'
+    && betaAuthBypassEnabled(env)
+    && String(token || '').trim() === DRU_AGENT_SENTINEL;
 }
 
 /**
@@ -107,6 +114,13 @@ export async function authenticateSupabaseUser(
   }
 
   const token = bearerToken(request);
+
+  if (token === DRU_AGENT_SENTINEL) {
+    if (!isDruAgentSentinel(token, env)) {
+      throw new AuthError('DRU sign-in token is not valid in this environment', 401);
+    }
+    return resolveBetaBypassActor(env);
+  }
 
   if (token === JFL_SIMULATED_OIDC_ACCESS_TOKEN || isJflSimulatedGoogleToken(token)) {
     if (!jflSimulatedOidcEnabled(env) && !isJflSimulatedGoogleToken(token)) {
