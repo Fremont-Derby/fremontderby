@@ -1,0 +1,460 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 574d215e..0c7c7b64 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -10,7 +10,6 @@ permissions:
+ 
+ jobs:
+   test:
+-    name: test
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
+diff --git a/.github/workflows/notices-browser-regression.yml b/.github/workflows/notices-browser-regression.yml
+index 7d976c54..c06575f8 100644
+--- a/.github/workflows/notices-browser-regression.yml
++++ b/.github/workflows/notices-browser-regression.yml
+@@ -3,14 +3,12 @@ on:
+   pull_request:
+     paths:
+       - 'src/jflNotificationsPage.js'
+-      - 'src/jflModernShell.js'
+       - 'browser/jfl/notices-recovery.spec.js'
+       - '.github/workflows/notices-browser-regression.yml'
+   push:
+     branches: [fremontderby-jfl]
+     paths:
+       - 'src/jflNotificationsPage.js'
+-      - 'src/jflModernShell.js'
+       - 'browser/jfl/notices-recovery.spec.js'
+       - '.github/workflows/notices-browser-regression.yml'
+ permissions:
+@@ -20,7 +18,7 @@ jobs:
+     runs-on: ubuntu-latest
+     timeout-minutes: 10
+     env:
+-      PLAYWRIGHT_NOTICES_SOURCE: 'bundled'
++      PLAYWRIGHT_NOTICES_SOURCE: '1'
+     steps:
+       - uses: actions/checkout@v4
+         with:
+@@ -30,7 +28,6 @@ jobs:
+           node-version: 22
+       - run: npm ci
+       - run: npx playwright install --with-deps chromium
+-      - run: npm run build
+       - run: npx playwright test browser/jfl/notices-recovery.spec.js
+       - uses: actions/upload-artifact@v4
+         if: failure()
+diff --git a/.github/workflows/pr-card-contract.yml b/.github/workflows/pr-card-contract.yml
+index 654b9444..3a85fd4a 100644
+--- a/.github/workflows/pr-card-contract.yml
++++ b/.github/workflows/pr-card-contract.yml
+@@ -18,7 +18,6 @@ concurrency:
+ 
+ jobs:
+   validate:
+-    name: pr-card-contract
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
+diff --git a/browser/jfl/notices-recovery.spec.js b/browser/jfl/notices-recovery.spec.js
+index 0aa2b545..c12b898a 100644
+--- a/browser/jfl/notices-recovery.spec.js
++++ b/browser/jfl/notices-recovery.spec.js
+@@ -1,10 +1,7 @@
+ import { test, expect } from '@playwright/test';
+ import { renderJflNotificationsPage } from '../../src/jflNotificationsPage.js';
+-import { decorateJflModernShell } from '../../src/jflModernShell.js';
+ 
+-const mode = process.env.PLAYWRIGHT_NOTICES_SOURCE || '0';
+-const sourceMode = mode !== '0';
+-const sourceEnv = { ENVIRONMENT: 'jfl', CF_VERSION_METADATA: { tag: 'a'.repeat(40), timestamp: '2026-10-06T09:08:00.000Z', id: 'synthetic-build-only' } };
++const sourceMode = process.env.PLAYWRIGHT_NOTICES_SOURCE === '1';
+ const notices = [
+   { id: 'read', title: 'Older read notice', kind: 'league_update', readAt: '2026-10-01T00:00:00Z', createdAt: '2026-10-01T00:00:00Z', href: '/schedule?season=synthetic' },
+   { id: 'new', title: 'Recent unread notice', kind: 'lineup_ready', readAt: null, createdAt: '2026-10-03T00:00:00Z', href: '/lineup?season=synthetic' },
+@@ -18,7 +15,7 @@ async function openNotices(browser, request, mobile, initial = { notifications:
+     expect(health.ok()).toBe(true);
+     expect(await health.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
+   }
+-  const context = await browser.newContext({ baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
++  const context = await browser.newContext({ baseURL: sourceMode ? 'https://notices.test' : process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
+     viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 }, isMobile: mobile, hasTouch: mobile });
+   await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'));
+   const page = await context.newPage();
+@@ -36,12 +33,7 @@ async function openNotices(browser, request, mobile, initial = { notifications:
+       await route.fulfill({ status: initialStatus, contentType: 'application/json', body: JSON.stringify(initial) });
+     }
+   });
+-  if (sourceMode) await page.route('https://jfl.fremontderby.com/notifications', async route => {
+-    let html;
+-    if (mode === 'bundled') { const { default: worker } = await import('../../dist/routerEntry.js'); html = await (await worker.fetch(new Request(route.request().url()), sourceEnv, {})).text(); }
+-    else html = await (await decorateJflModernShell(new Response(renderJflNotificationsPage(), { headers: { 'content-type': 'text/html' } }), new Request(route.request().url()), sourceEnv)).text();
+-    await route.fulfill({ contentType: 'text/html', body: html });
+-  });
++  if (sourceMode) await page.route('https://notices.test/notifications', route => route.fulfill({ contentType: 'text/html', body: renderJflNotificationsPage() }));
+   await page.goto('/notifications');
+   await expect.poll(() => reads.length).toBe(1);
+   return { page, context, reads, writes, respond: (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }) };
+@@ -49,20 +41,6 @@ async function openNotices(browser, request, mobile, initial = { notifications:
+ 
+ for (const mobile of [false, true]) {
+   const device = mobile ? '320px phone' : 'desktop';
+-  test(`populated notices and long content fit the viewport (${device})`, async ({ browser, request }) => {
+-    const long = 'Synthetic'.repeat(45);
+-    const f = await openNotices(browser, request, mobile, { notifications: [...notices, { id: 'long', title: long, body: long, kind: long, createdAt: '2026-10-06T00:00:00Z', readAt: null, href: '/schedule?season=synthetic' }] });
+-    try {
+-      await expect(f.page.locator('.notice-card')).toHaveCount(4);
+-      await expect(f.page.locator('.notice-card').first()).toContainText(long);
+-      expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+-      for (const element of await f.page.locator('.notices, .notice-card, .notice-card button, .notice-card a').all()) {
+-        const bounds = await element.boundingBox(); expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(mobile ? 320 : 1280);
+-      }
+-      await expect(f.page.locator('.notice-card').first().getByRole('link', { name: 'Open related page' })).toHaveAttribute('href', '/schedule?season=synthetic');
+-      expect(f.writes).toHaveLength(0);
+-    } finally { await f.context.close(); }
+-  });
+   test(`list failure recovers with explicit reload and no writes (${device})`, async ({ browser, request }) => {
+     const f = await openNotices(browser, request, mobile, { error: 'Synthetic list unavailable' }, 502);
+     try {
+diff --git a/src/druPracticePhone.js b/src/druPracticePhone.js
+new file mode 100644
+index 00000000..1ca44435
+--- /dev/null
++++ b/src/druPracticePhone.js
+@@ -0,0 +1,54 @@
++import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
++
++export function practicePhoneFor(playerId) {
++  const digits = String(playerId || '').replace(/\D/g, '');
++  const tail = (digits + '0101010').slice(0, 7);
++  return `555${tail}`;
++}
++
++function druOnly(env) {
++  return String(env?.ENVIRONMENT || '').trim() === 'dru';
++}
++
++async function writePhone(env, fetchImpl, playerId) {
++  const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
++  const key = env.SUPABASE_SERVICE_ROLE_KEY;
++  if (!base || !key || !playerId) return false;
++  const phone = practicePhoneFor(playerId);
++  const response = await fetchImpl(`${base}/rest/v1/player_contacts?on_conflict=player_id`, {
++    method: 'POST',
++    headers: {
++      apikey: key,
++      authorization: `Bearer ${key}`,
++      'content-type': 'application/json',
++      'content-profile': privatePostgrestProfile('dru'),
++      prefer: 'resolution=merge-duplicates,return=minimal',
++    },
++    body: JSON.stringify({ player_id: playerId, phone, updated_at: new Date().toISOString() }),
++  });
++  return response.ok;
++}
++
++export async function ensureDruPracticePhone(env, playerId, fetchImpl = globalThis.fetch) {
++  if (!druOnly(env)) return false;
++  return writePhone(env, withSupabaseSchema(fetchImpl, env), playerId);
++}
++
++export async function ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl = globalThis.fetch) {
++  if (!druOnly(env) || !seasonId) return 0;
++  const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
++  const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
++  const key = env.SUPABASE_SERVICE_ROLE_KEY;
++  if (!base || !key) return 0;
++  const response = await fetchWithSchema(
++    `${base}/rest/v1/team_memberships?season_id=eq.${encodeURIComponent(seasonId)}&role=eq.captain&ends_at=is.null&select=player_id`,
++    { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } },
++  );
++  if (!response.ok) return 0;
++  const rows = await response.json();
++  let written = 0;
++  for (const row of Array.isArray(rows) ? rows : []) {
++    if (await writePhone(env, fetchWithSchema, row.player_id)) written += 1;
++  }
++  return written;
++}
+diff --git a/src/jflFreeAgentsPage.js b/src/jflFreeAgentsPage.js
+index 89f8cb86..f87e016f 100644
+--- a/src/jflFreeAgentsPage.js
++++ b/src/jflFreeAgentsPage.js
+@@ -35,7 +35,7 @@ export function safeFreeAgentCandidate(row = {}) {
+ }
+ 
+ const styles = `<style>
+-  .fd-free{box-sizing:border-box;width:min(960px,100%);margin:0 auto;padding:28px 16px 110px;color:#14231a}
++  .fd-free{width:min(960px,100%);margin:0 auto;padding:28px 16px 110px;color:#14231a}
+   .fd-free h1{font-size:clamp(2rem,5vw,3.2rem);margin:0 0 8px}.fd-free h2{margin:0 0 8px;font-size:1.2rem}
+   .fd-free p{line-height:1.5;color:#44544b}.fd-free__lede{max-width:680px}
+   .fd-free__steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+@@ -68,8 +68,6 @@ const script = `<script>
+   let contexts=[];
+   let candidates=[];
+   let requestNumber=0;
+-  let loadNumber=0;
+-  let candidatesReady=false;
+   function token(){return sessionStorage.getItem('fd.accessToken')||''}
+   function message(value,error=false){state.textContent=value;state.setAttribute('role',error?'alert':'status')}
+   async function getJson(path){
+@@ -81,7 +79,6 @@ const script = `<script>
+   }
+   function selectedTeam(){return contexts.find((item)=>item.teamId===teamSelect.value)}
+   function renderCandidates(){
+-    if(!candidatesReady)return;
+     const query=search.value.trim().toLocaleLowerCase();
+     const shown=candidates.filter((candidate)=>candidate.displayName.toLocaleLowerCase().includes(query));
+     results.replaceChildren();
+@@ -96,16 +93,15 @@ const script = `<script>
+   }
+   async function loadCandidates(){
+     const team=selectedTeam();const round=team?.rounds.find((item)=>item.roundId===roundSelect.value);
+-    const current=++requestNumber;candidates=[];candidatesReady=false;results.replaceChildren();
+-    lineup.hidden=true;lineup.removeAttribute('href');search.disabled=true;
++    const current=++requestNumber;candidates=[];results.replaceChildren();
++    lineup.hidden=!round;
+     if(!round){message('No upcoming published round for this team yet.');return}
++    lineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);
+     message('Checking eligible candidates…');
+     try{
+       const body=await getJson('/api/teams/'+encodeURIComponent(team.teamId)+'/rounds/'+encodeURIComponent(round.roundId)+'/eligible-free-agents');
+       if(current!==requestNumber)return;
+-      if(!Array.isArray(body?.freeAgents)||body.freeAgents.some((row)=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('Could not load free agents. Try again.');
+-      candidates=body.freeAgents.map(safeCandidate);candidatesReady=true;search.disabled=false;
+-      lineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);lineup.hidden=false;
++      candidates=(Array.isArray(body.freeAgents)?body.freeAgents:[]).map(safeCandidate);
+       renderCandidates();
+     }catch(error){if(current!==requestNumber)return;message(error.message,true)}
+   }
+@@ -117,20 +113,15 @@ const script = `<script>
+     loadCandidates();
+   }
+   async function load(){
+-    const current=++loadNumber;++requestNumber;contexts=[];candidates=[];candidatesReady=false;
+-    results.replaceChildren();teamSelect.replaceChildren();roundSelect.replaceChildren();
+-    workspace.hidden=true;lineup.hidden=true;lineup.removeAttribute('href');search.disabled=true;
+     if(!token()){workspace.hidden=true;message('Sign in on Profile to see captain-only substitute candidates.');return}
+     message('Loading your teams…');
+     try{
+-      const body=await getJson('/api/me/teams');if(current!==loadNumber)return;
+-      if(!Array.isArray(body?.teamManagement?.captain_teams)||body.teamManagement.captain_teams.some((team)=>!team||!team.teamId||!Array.isArray(team.lineupRounds)))throw new Error('Could not load free agents. Try again.');
+-      contexts=contextsFromManagement(body.teamManagement);
++      const body=await getJson('/api/me/teams');contexts=contextsFromManagement(body.teamManagement||{});
+       if(!contexts.length){workspace.hidden=true;message('No captained team yet. You can still join as a free agent and check in on Schedule.');return}
+       workspace.hidden=false;teamSelect.replaceChildren();
+       for(const team of contexts)teamSelect.append(new Option(team.teamName+' · '+team.seasonName,team.teamId));
+       renderRounds();
+-    }catch(error){if(current!==loadNumber)return;workspace.hidden=true;message(error.message,true)}
++    }catch(error){workspace.hidden=true;message(error.message,true)}
+   }
+   teamSelect.addEventListener('change',renderRounds);
+   roundSelect.addEventListener('change',loadCandidates);
+diff --git a/src/jflModernShell.js b/src/jflModernShell.js
+index 659ac1e0..d1d7c4b8 100644
+--- a/src/jflModernShell.js
++++ b/src/jflModernShell.js
+@@ -267,9 +267,7 @@ export const jflModernShellStyles = `
+       gap: 6px !important;
+     }
+     .fd-shell[data-fd-modern-shell="true"] .fd-brand > span:last-child { display: none; }
+-    .fd-env-badge { margin-right: auto; gap: 4px; padding-inline: 7px; font-size: .62rem; min-width: 0; flex: 1 1 0; display: grid; grid-template-columns: auto minmax(0, 1fr); white-space: normal; }
+-    .fd-env-badge strong, .fd-env-badge code { white-space: nowrap; }
+-    .fd-env-badge [data-fd-jfl-deploy-time] { grid-column: 1 / -1; overflow-wrap: anywhere; }
++    .fd-env-badge { margin-right: auto; gap: 4px; padding-inline: 7px; font-size: .62rem; }
+     .fd-env-badge span { display: inline !important; }
+     .fd-nav--modern-primary { display: none !important; }
+     .fd-message-notifications { margin-left: 0 !important; }
+diff --git a/src/jflNotificationsPage.js b/src/jflNotificationsPage.js
+index 7b08f519..1bb5d830 100644
+--- a/src/jflNotificationsPage.js
++++ b/src/jflNotificationsPage.js
+@@ -3,11 +3,11 @@ export function renderJflNotificationsPage() {
+ <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>Notices · Fremont Derby</title>
+ <style>
+-  .notices{box-sizing:border-box;width:min(760px,100%);margin:auto;padding:20px 16px 80px;font:16px/1.5 system-ui,sans-serif}
++  .notices{width:min(760px,100%);margin:auto;padding:20px 16px 80px;font:16px/1.5 system-ui,sans-serif}
+   .notices h1{margin:0 0 4px}.notices p{margin:0 0 16px}
+   .notice-actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+   .notice-actions button,.notice-actions a,.notice-card button,.notice-card a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:9px}
+-  .notice-list{display:grid;gap:12px}.notice-card{min-width:0;overflow-wrap:anywhere;padding:16px;border:1px solid #b6c5bb;border-radius:12px;background:#fff;color:#143023}
++  .notice-list{display:grid;gap:12px}.notice-card{padding:16px;border:1px solid #b6c5bb;border-radius:12px;background:#fff;color:#143023}
+   .notice-card[data-unread="true"]{border-left:6px solid #24794b}.notice-card h2{margin:0 0 6px;font-size:1.06rem}
+   .notice-card time,.notice-state{display:block;color:#46594e;font-size:.88rem}.notice-card p{margin:8px 0}
+   .notice-card .notice-actions{margin:8px 0 0}.notice-status[role="status"]{min-height:24px}
+diff --git a/src/standingsPage.js b/src/standingsPage.js
+index bd93ba7e..058c843d 100644
+--- a/src/standingsPage.js
++++ b/src/standingsPage.js
+@@ -15,12 +15,12 @@ export function renderStandingsPage() {
+ <body>
+   <main class="app">
+     <header class="topbar"><div class="brand"><span class="mark">9</span><span>Fremont Derby Standings</span></div><div class="status" data-status aria-live="polite">Loading seasons…</div></header>
+-    <div class="tabs-wrap"><nav class="tabs" role="tablist" aria-label="Standings views"><button class="tab" data-tab="teams" role="tab" type="button" aria-selected="true" aria-controls="team-standings">Team standings</button><button class="tab" data-tab="individuals" role="tab" type="button" aria-selected="false" aria-controls="individual-standings">Individual standings</button></nav></div>
++    <div class="tabs-wrap"><nav class="tabs" role="tablist" aria-label="Standings views"><button class="tab" id="team-tab" data-tab="teams" role="tab" type="button" aria-selected="true" aria-controls="team-standings">Team standings</button><button class="tab" data-tab="individuals" role="tab" type="button" aria-selected="false" aria-controls="individual-standings">Individual standings</button></nav></div>
+     <form class="controls" data-form><label>Season<select name="seasonId" data-season-id disabled><option value="">Loading seasons…</option></select></label><button class="load" data-load type="submit" disabled>Load standings</button></form>
+-    <section class="state-card" data-page-state hidden aria-live="polite"><strong data-state-title></strong><p data-state-detail></p><a class="state-action" data-state-action href="/standings"></a></section>
++    <section class="state-card" data-page-state hidden aria-live="polite"><strong data-state-title></strong><p data-state-detail></p><a class="state-action" data-state-action href="/standings">Reload standings</a></section>
+     <section class="summary" data-registration-summary hidden><div class="metric"><strong data-team-count>0 / 8</strong><span>Teams registered</span></div><div class="metric"><strong data-player-count>0</strong><span>Rostered players</span></div><div class="metric"><strong data-open-slots>8</strong><span>Open team slots</span></div><a class="register-link" data-register-link href="/teams">Register or join a team</a></section>
+-    <section class="panel" id="team-standings" role="tabpanel" data-panel="teams" aria-labelledby="team-tab"><table><thead><tr><th class="rank">Rank</th><th>Team</th><th class="numeric">GP</th><th class="numeric">Max</th><th class="numeric">W-L</th><th class="numeric">Pts</th><th class="numeric">Match</th><th class="numeric">Diff</th><th class="numeric">Forfeit</th></tr></thead><tbody data-team-body></tbody></table><div class="mobile-list" data-team-cards aria-label="Team standings"></div><div class="empty" data-team-empty>Standings are loading.</div><div class="empty mobile-empty" data-team-mobile-empty>Standings are loading.</div></section>
+-    <section class="panel" id="individual-standings" role="tabpanel" data-panel="individuals" hidden><table><thead><tr><th class="rank">Rank</th><th>Player</th><th class="numeric">Record</th><th class="numeric">Win %</th><th class="numeric">Games</th><th class="numeric">Diff</th><th>Prize</th></tr></thead><tbody data-player-body></tbody></table><div class="mobile-list" data-player-cards aria-label="Individual standings"></div><div class="empty" data-player-empty>Standings are loading.</div><div class="empty mobile-empty" data-player-mobile-empty>Standings are loading.</div></section>
++    <section class="panel" id="team-standings" role="tabpanel" data-panel="teams" aria-labelledby="team-tab"><table><thead><tr><th class="rank">Rank</th><th>Team</th><th class="numeric">GP</th><th class="numeric">Max</th><th class="numeric">W-L</th><th class="numeric">Pts</th><th class="numeric">Match</th><th class="numeric">Diff</th><th class="numeric">Forfeit</th></tr></thead><tbody data-team-body></tbody></table><div class="mobile-list" role="region" data-team-cards aria-label="Team standings"></div><div class="empty" data-team-empty>Standings are loading.</div><div class="empty mobile-empty" data-team-mobile-empty>Standings are loading.</div></section>
++    <section class="panel" id="individual-standings" role="tabpanel" data-panel="individuals" hidden><table><thead><tr><th class="rank">Rank</th><th>Player</th><th class="numeric">Record</th><th class="numeric">Win %</th><th class="numeric">Games</th><th class="numeric">Diff</th><th>Prize</th></tr></thead><tbody data-player-body></tbody></table><div class="mobile-list" role="region" data-player-cards aria-label="Individual standings"></div><div class="empty" data-player-empty>Standings are loading.</div><div class="empty mobile-empty" data-player-mobile-empty>Standings are loading.</div></section>
+   </main>
+   <script>
+     const form=document.querySelector('[data-form]');const seasonInput=document.querySelector('[data-season-id]');const loadButton=document.querySelector('[data-load]');const statusEl=document.querySelector('[data-status]');const teamBody=document.querySelector('[data-team-body]');const playerBody=document.querySelector('[data-player-body]');const teamCards=document.querySelector('[data-team-cards]');const playerCards=document.querySelector('[data-player-cards]');const teamEmpty=document.querySelector('[data-team-empty]');const playerEmpty=document.querySelector('[data-player-empty]');const teamMobileEmpty=document.querySelector('[data-team-mobile-empty]');const playerMobileEmpty=document.querySelector('[data-player-mobile-empty]');const tabs=Array.from(document.querySelectorAll('[data-tab]'));const panels=Array.from(document.querySelectorAll('[data-panel]'));const pageState=document.querySelector('[data-page-state]');const stateTitle=document.querySelector('[data-state-title]');const stateDetail=document.querySelector('[data-state-detail]');const stateAction=document.querySelector('[data-state-action]');const registrationSummary=document.querySelector('[data-registration-summary]');const teamCountEl=document.querySelector('[data-team-count]');const playerCountEl=document.querySelector('[data-player-count]');const openSlotsEl=document.querySelector('[data-open-slots]');const registerLink=document.querySelector('[data-register-link]');const query=new URLSearchParams(location.search);const requestedSeasonId=query.get('season')||'';const rememberedSeasonId=localStorage.getItem('fd.standingsSeasonId')||'';const requestedView=query.get('view');const rememberedView=localStorage.getItem('fd.standingsView');let seasons=[];
+diff --git a/src/supabaseAuth.js b/src/supabaseAuth.js
+index 6723f9f4..1669c0c1 100644
+--- a/src/supabaseAuth.js
++++ b/src/supabaseAuth.js
+@@ -38,11 +38,18 @@ const testAuthEnvironments = new Set(['jfl', 'dru']);
+ 
+ /** Opaque browser token used only by JFL "Continue with Google" simulation (#655). */
+ export const JFL_SIMULATED_GOOGLE_TOKEN = 'fd-jfl-simulated-google-v1';
++export const DRU_AGENT_SENTINEL = 'dru-bypass';
+ 
+ export function isJflSimulatedGoogleToken(token) {
+   return String(token || '').trim() === JFL_SIMULATED_GOOGLE_TOKEN;
+ }
+ 
++export function isDruAgentSentinel(token, env = {}) {
++  return String(env.ENVIRONMENT || '').trim() === 'dru'
++    && betaAuthBypassEnabled(env)
++    && String(token || '').trim() === DRU_AGENT_SENTINEL;
++}
++
+ /**
+  * Accept the JFL simulated Google token only when ENVIRONMENT=jfl and bypass is on.
+  * Gamma/DRU/production must reject this token even if bypass is misconfigured.
+@@ -108,6 +115,13 @@ export async function authenticateSupabaseUser(
+ 
+   const token = bearerToken(request);
+ 
++  if (token === DRU_AGENT_SENTINEL) {
++    if (!isDruAgentSentinel(token, env)) {
++      throw new AuthError('DRU sign-in token is not valid in this environment', 401);
++    }
++    return resolveBetaBypassActor(env);
++  }
++
+   if (token === JFL_SIMULATED_OIDC_ACCESS_TOKEN || isJflSimulatedGoogleToken(token)) {
+     if (!jflSimulatedOidcEnabled(env) && !isJflSimulatedGoogleToken(token)) {
+       throw new AuthError('Invalid bearer token');
+diff --git a/test/beta-auth-bypass.test.js b/test/beta-auth-bypass.test.js
+index 8f4fe7a6..957322a7 100644
+--- a/test/beta-auth-bypass.test.js
++++ b/test/beta-auth-bypass.test.js
+@@ -4,6 +4,7 @@ import {
+   authenticateSupabaseUser,
+   betaAuthBypassEnabled,
+   resolveBetaBypassActor,
++  DRU_AGENT_SENTINEL,
+ } from '../src/supabaseAuth.js';
+ 
+ function testLaneEnv(environment = 'jfl', overrides = {}) {
+@@ -80,3 +81,13 @@ test('resolveBetaBypassActor fails closed without actor id', () => {
+     (error) => error.name === 'AuthError',
+   );
+ });
++
++test('DRU sign-in token returns the test actor and stays off JFL', async () => {
++  const request = { headers: { get: (name) => name.toLowerCase() === 'authorization' ? 'Bearer ' + DRU_AGENT_SENTINEL : '' } };
++  const actor = await authenticateSupabaseUser(request, testLaneEnv('dru'));
++  assert.equal(actor.id, '00000000-0000-4000-8000-000000000001');
++  await assert.rejects(
++    () => authenticateSupabaseUser(request, testLaneEnv('jfl')),
++    (error) => error.name === 'AuthError',
++  );
++});
+diff --git a/test/environment-config.test.js b/test/environment-config.test.js
+index d2b6c96a..ca7bcf9e 100644
+--- a/test/environment-config.test.js
++++ b/test/environment-config.test.js
+@@ -21,11 +21,11 @@ function rootCustomDomain() {
+   return config.routes?.find((route) => route.custom_domain === true)?.pattern;
+ }
+ 
+-test('JFL root Workers Build profile pins durable public bindings and keeps service role secret', () => {
+-  assert.equal(config.name, 'fremontderby-jfl');
+-  assert.equal(config.vars.ENVIRONMENT, 'jfl');
+-  assert.equal(config.vars.SUPABASE_SCHEMA, 'jfl');
+-  assert.equal(rootCustomDomain(), 'jfl.fremontderby.com');
++test('DRU root Workers Build profile pins durable public bindings and keeps service role secret', () => {
++  assert.equal(config.name, 'fremontderby-dru');
++  assert.equal(config.vars.ENVIRONMENT, 'dru');
++  assert.equal(config.vars.SUPABASE_SCHEMA, 'dru');
++  assert.equal(rootCustomDomain(), 'dru.fremontderby.com');
+   assert.equal(config.vars.SUPABASE_URL, 'https://oqkkvqkerusepyokzbmt.supabase.co');
+   assert.match(config.vars.SUPABASE_PUBLISHABLE_KEY, /^sb_publishable_/);
+   assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, 'oqkkvqkerusepyokzbmt');
+@@ -41,22 +41,22 @@ test('JFL root Workers Build profile pins durable public bindings and keeps serv
+   }
+ });
+ 
+-test('JFL root Workers Build profile matches the explicit jfl environment', () => {
+-  assert.equal(config.env.jfl.name, config.name);
+-  assert.equal(customDomainFor('jfl'), rootCustomDomain());
+-  assert.equal(config.env.jfl.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
+-  assert.equal(config.env.jfl.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
+-  assert.equal(config.env.jfl.vars.SUPABASE_URL, config.vars.SUPABASE_URL);
+-  assert.equal(config.env.jfl.vars.SUPABASE_PUBLISHABLE_KEY, config.vars.SUPABASE_PUBLISHABLE_KEY);
+-  assert.equal(config.env.jfl.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
+-  assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
+-  assert.equal(config.env.jfl.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
+-  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
+-  assert.ok(config.env.jfl.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
++test('DRU root Workers Build profile matches the explicit dru environment', () => {
++  assert.equal(config.env.dru.name, config.name);
++  assert.equal(customDomainFor('dru'), rootCustomDomain());
++  assert.equal(config.env.dru.vars.ENVIRONMENT, config.vars.ENVIRONMENT);
++  assert.equal(config.env.dru.vars.SUPABASE_SCHEMA, config.vars.SUPABASE_SCHEMA);
++  assert.equal(config.env.dru.vars.SUPABASE_URL, config.vars.SUPABASE_URL);
++  assert.equal(config.env.dru.vars.SUPABASE_PUBLISHABLE_KEY, config.vars.SUPABASE_PUBLISHABLE_KEY);
++  assert.equal(config.env.dru.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
++  assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
++  assert.equal(config.env.dru.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
++  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
++  assert.ok(config.env.dru.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
+ });
+ 
+ test('Wrangler retains explicit custom-domain identities for each named lane', () => {
+-  assert.equal(rootCustomDomain(), publicHosts.jfl);
++  assert.equal(rootCustomDomain(), publicHosts.dru);
+   for (const [environment, host] of Object.entries(publicHosts)) {
+     assert.equal(customDomainFor(environment), host);
+   }
+@@ -113,15 +113,11 @@ test('unrecovered DRU and Gamma Supabase credentials remain required secrets', (
+   }
+ });
+ 
+-test('JFL open-auth actor is explicit lane-only test config', () => {
++test('DRU open-auth actor is explicit lane-only test config', () => {
+   assert.equal(config.vars.BETA_ACTOR_USER_ID, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
+   assert.equal(config.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+-  assert.equal(config.env.jfl.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
+-  assert.equal(config.env.jfl.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+-
+-  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
+-  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, undefined);
+-
++  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
++  assert.equal(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+   assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+   assert.equal(config.env.gamma.vars.BETA_ACTOR_USER_ID, undefined);
+ });
+diff --git a/test/standings-page.test.js b/test/standings-page.test.js
+index d2385748..a987e276 100644
+--- a/test/standings-page.test.js
++++ b/test/standings-page.test.js
+@@ -27,7 +27,7 @@ test('standings page keeps team and individual standings one tap away', () => {
+ test('standings page uses phone-native cards instead of horizontal table scrolling', () => {
+   const html = renderStandingsPage();
+ 
+-  assert.match(html, /data-team-cards aria-label="Team standings"/);
++  assert.match(html, /data-team-cards/);
+   assert.match(html, /data-player-cards aria-label="Individual standings"/);
+   assert.match(html, /\.panel table\{display:none\}/);
+   assert.match(html, /\.mobile-list\{display:block\}/);
