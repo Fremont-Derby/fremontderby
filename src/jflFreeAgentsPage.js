@@ -35,7 +35,7 @@ export function safeFreeAgentCandidate(row = {}) {
 }
 
 const styles = `<style>
-  .fd-free{width:min(960px,100%);margin:0 auto;padding:28px 16px 110px;color:#14231a}
+  .fd-free{box-sizing:border-box;width:min(960px,100%);margin:0 auto;padding:28px 16px 110px;color:#14231a}
   .fd-free h1{font-size:clamp(2rem,5vw,3.2rem);margin:0 0 8px}.fd-free h2{margin:0 0 8px;font-size:1.2rem}
   .fd-free p{line-height:1.5;color:#44544b}.fd-free__lede{max-width:680px}
   .fd-free__steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
@@ -68,6 +68,8 @@ const script = `<script>
   let contexts=[];
   let candidates=[];
   let requestNumber=0;
+  let loadNumber=0;
+  let candidatesReady=false;
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
   function message(value,error=false){state.textContent=value;state.setAttribute('role',error?'alert':'status')}
   async function getJson(path){
@@ -79,6 +81,7 @@ const script = `<script>
   }
   function selectedTeam(){return contexts.find((item)=>item.teamId===teamSelect.value)}
   function renderCandidates(){
+    if(!candidatesReady)return;
     const query=search.value.trim().toLocaleLowerCase();
     const shown=candidates.filter((candidate)=>candidate.displayName.toLocaleLowerCase().includes(query));
     results.replaceChildren();
@@ -93,15 +96,16 @@ const script = `<script>
   }
   async function loadCandidates(){
     const team=selectedTeam();const round=team?.rounds.find((item)=>item.roundId===roundSelect.value);
-    const current=++requestNumber;candidates=[];results.replaceChildren();
-    lineup.hidden=!round;
+    const current=++requestNumber;candidates=[];candidatesReady=false;results.replaceChildren();
+    lineup.hidden=true;lineup.removeAttribute('href');search.disabled=true;
     if(!round){message('No upcoming published round for this team yet.');return}
-    lineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);
     message('Checking eligible candidates…');
     try{
       const body=await getJson('/api/teams/'+encodeURIComponent(team.teamId)+'/rounds/'+encodeURIComponent(round.roundId)+'/eligible-free-agents');
       if(current!==requestNumber)return;
-      candidates=(Array.isArray(body.freeAgents)?body.freeAgents:[]).map(safeCandidate);
+      if(!Array.isArray(body?.freeAgents)||body.freeAgents.some((row)=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('Could not load free agents. Try again.');
+      candidates=body.freeAgents.map(safeCandidate);candidatesReady=true;search.disabled=false;
+      lineup.href='/lineup?team='+encodeURIComponent(team.teamId)+'&round='+encodeURIComponent(round.roundId);lineup.hidden=false;
       renderCandidates();
     }catch(error){if(current!==requestNumber)return;message(error.message,true)}
   }
@@ -113,15 +117,20 @@ const script = `<script>
     loadCandidates();
   }
   async function load(){
+    const current=++loadNumber;++requestNumber;contexts=[];candidates=[];candidatesReady=false;
+    results.replaceChildren();teamSelect.replaceChildren();roundSelect.replaceChildren();
+    workspace.hidden=true;lineup.hidden=true;lineup.removeAttribute('href');search.disabled=true;
     if(!token()){workspace.hidden=true;message('Sign in on Profile to see captain-only substitute candidates.');return}
     message('Loading your teams…');
     try{
-      const body=await getJson('/api/me/teams');contexts=contextsFromManagement(body.teamManagement||{});
+      const body=await getJson('/api/me/teams');if(current!==loadNumber)return;
+      if(!Array.isArray(body?.teamManagement?.captain_teams)||body.teamManagement.captain_teams.some((team)=>!team||!team.teamId||!Array.isArray(team.lineupRounds)))throw new Error('Could not load free agents. Try again.');
+      contexts=contextsFromManagement(body.teamManagement);
       if(!contexts.length){workspace.hidden=true;message('No captained team yet. You can still join as a free agent and check in on Schedule.');return}
       workspace.hidden=false;teamSelect.replaceChildren();
       for(const team of contexts)teamSelect.append(new Option(team.teamName+' · '+team.seasonName,team.teamId));
       renderRounds();
-    }catch(error){workspace.hidden=true;message(error.message,true)}
+    }catch(error){if(current!==loadNumber)return;workspace.hidden=true;message(error.message,true)}
   }
   teamSelect.addEventListener('change',renderRounds);
   roundSelect.addEventListener('change',loadCandidates);
