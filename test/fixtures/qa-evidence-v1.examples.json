@@ -1,0 +1,58 @@
+[
+  {
+    "schema_version": "1.0.0", "lane": "jfl", "run_id": "run-pass", "replay_of_run_id": null,
+    "level_id": "scorecard.fresh", "seed": "seed-pass", "build_sha": "1111111111111111111111111111111111111111", "worker_version": "worker-1",
+    "started_at": "2026-09-10T01:00:00Z", "completed_at": "2026-09-10T01:01:00Z", "duration_ms": 60000,
+    "tester_id": "tester-opaque-1", "session_id": "session-1",
+    "device": { "browser_family": "Chrome", "device_family": "Android", "viewport_width": 412, "viewport_height": 915 },
+    "fixture_facts": { "race_complete": false, "mismatch_present": false, "target_class": "balanced" },
+    "assertions": [{ "assertion_id": "first-action-obvious", "result": "pass", "answered_at": "2026-09-10T01:00:50Z" }],
+    "outcome": "pass", "note": null, "events": [{ "event_id": "event-1", "type": "interaction", "action": "score_rack", "component": "rack_controls", "occurred_at": "2026-09-10T01:00:30Z", "sequence": 1 }],
+    "triage": { "label": "expected_behavior", "issue_number": null, "labeled_at": "2026-09-10T01:02:00Z" }
+  },
+  {
+    "schema_version": "1.0.0", "lane": "jfl", "run_id": "run-human-fail", "replay_of_run_id": null,
+    "level_id": "player.find-next-match", "seed": "seed-human", "build_sha": "2222222222222222222222222222222222222222", "worker_version": "worker-2",
+    "started_at": "2026-09-10T02:00:00Z", "completed_at": "2026-09-10T02:02:00Z", "duration_ms": 120000,
+    "tester_id": "tester-opaque-1", "session_id": "session-2",
+    "device": { "browser_family": "Chrome", "device_family": "Android", "viewport_width": 412, "viewport_height": 915 },
+    "fixture_facts": { "upcoming_match_count": 2, "multi_season": true },
+    "assertions": [{ "assertion_id": "discoverable-from-home", "result": "fail", "answered_at": "2026-09-10T02:01:50Z" }],
+    "outcome": "fail", "note": "The next action was not obvious.", "events": [], "triage": { "label": "product_defect", "issue_number": 2295, "labeled_at": "2026-09-10T02:03:00Z" }
+  },
+  {
+    "schema_version": "1.0.0", "lane": "jfl", "run_id": "run-client-error", "replay_of_run_id": null,
+    "level_id": "scorecard.mismatch", "seed": "seed-client", "build_sha": "3333333333333333333333333333333333333333", "worker_version": "worker-3",
+    "started_at": "2026-09-10T03:00:00Z", "completed_at": "2026-09-10T03:00:40Z", "duration_ms": 40000,
+    "tester_id": "tester-opaque-2", "session_id": "session-3",
+    "device": { "browser_family": "Firefox", "device_family": "Desktop", "viewport_width": 1440, "viewport_height": 900 },
+    "fixture_facts": { "mismatch_present": true, "mismatch_rack_number": 2 },
+    "assertions": [{ "assertion_id": "recovery-action-visible", "result": "fail", "answered_at": "2026-09-10T03:00:35Z" }],
+    "outcome": "fail", "note": null,
+    "events": [{ "event_id": "event-client-1", "type": "client_error", "error_class": "TypeError", "message_template": "Cannot read properties of undefined", "route": "/qa/scorecard/play", "action": "edit_rack", "stack_location": "scorecard.js:line:column", "occurred_at": "2026-09-10T03:00:20Z", "correlation_id": null }],
+    "triage": { "label": "product_defect", "issue_number": null, "labeled_at": "2026-09-10T03:01:00Z" }
+  },
+  {
+    "schema_version": "1.0.0", "lane": "jfl", "run_id": "run-server-error", "replay_of_run_id": null,
+    "level_id": "captain.add-players", "seed": "seed-server", "build_sha": "4444444444444444444444444444444444444444", "worker_version": "worker-4",
+    "started_at": "2026-09-10T04:00:00Z", "completed_at": "2026-09-10T04:00:30Z", "duration_ms": 30000,
+    "tester_id": "tester-opaque-3", "session_id": "session-4",
+    "device": { "browser_family": "Chrome", "device_family": "Android", "viewport_width": 360, "viewport_height": 800 },
+    "fixture_facts": { "eligible_player_count": 3, "captain_role": true },
+    "assertions": [{ "assertion_id": "add-player-succeeds", "result": "fail", "answered_at": "2026-09-10T04:00:25Z" }],
+    "outcome": "fail", "note": null,
+    "events": [{ "event_id": "event-server-1", "type": "server_error", "status_family": "5xx", "route": "/api/teams/:id/players", "action": "add_player", "occurred_at": "2026-09-10T04:00:15Z", "correlation_id": "corr-opaque-1" }],
+    "triage": { "label": "environment", "issue_number": null, "labeled_at": "2026-09-10T04:01:00Z" }
+  },
+  {
+    "schema_version": "1.0.0", "lane": "jfl", "run_id": "run-replay-pass", "replay_of_run_id": "run-human-fail",
+    "level_id": "player.find-next-match", "seed": "seed-human", "build_sha": "5555555555555555555555555555555555555555", "worker_version": "worker-5",
+    "started_at": "2026-09-10T05:00:00Z", "completed_at": "2026-09-10T05:00:45Z", "duration_ms": 45000,
+    "tester_id": "tester-opaque-1", "session_id": "session-5",
+    "device": { "browser_family": "Chrome", "device_family": "Android", "viewport_width": 412, "viewport_height": 915 },
+    "fixture_facts": { "upcoming_match_count": 2, "multi_season": true },
+    "assertions": [{ "assertion_id": "discoverable-from-home", "result": "pass", "answered_at": "2026-09-10T05:00:40Z" }],
+    "outcome": "pass", "note": null, "events": [],
+    "triage": { "label": "expected_behavior", "issue_number": 2295, "labeled_at": "2026-09-10T05:01:00Z" }
+  }
+]

@@ -157,11 +157,14 @@ function standingsClientScript() {
       const playerCount = document.querySelector('[data-registration-player-count]');
       const openSlots = document.querySelector('[data-registration-open-slots]');
       const stateEl = document.querySelector('[data-standings-state]');
+      const retryButton = document.querySelector('[data-standings-retry]');
       const query = new URLSearchParams(location.search);
       const requestedSeasonId = query.get('season') || '';
       const rememberedSeasonId = localStorage.getItem('fd.standingsSeasonId') || '';
       const requestedView = query.get('view') || localStorage.getItem('fd.standingsView') || 'teams';
       let seasons = [];
+      let generation = 0;
+      let seasonsLoaded = false;
       const standingsSeasonCandidates = ${standingsSeasonCandidates.toString()};
 
       const esc = (value) => String(value == null ? '' : value)
@@ -193,6 +196,23 @@ function standingsClientScript() {
       function showState(message) {
         stateEl.textContent = message;
         stateEl.hidden = !message;
+      }
+
+      function clearResults(message) {
+        teamList.replaceChildren();
+        playerList.replaceChildren();
+        registration.hidden = true;
+        teamEmpty.hidden = false;
+        playerEmpty.hidden = false;
+        teamEmpty.textContent = message;
+        playerEmpty.textContent = message;
+      }
+
+      function rememberSeason(seasonId) {
+        localStorage.setItem('fd.standingsSeasonId', seasonId);
+        const next = new URL(location.href);
+        next.searchParams.set('season', seasonId);
+        history.replaceState(null, '', next.pathname + next.search + next.hash);
       }
 
       function selectView(view, persist = true) {
@@ -256,15 +276,17 @@ function standingsClientScript() {
         loadButton.disabled = seasons.length === 0;
       }
 
-      async function loadSeasons() {
+      async function loadSeasons(token) {
         setStatus('Loading seasons…');
         showState('');
         seasonInput.disabled = true;
         loadButton.disabled = true;
         const response = await fetch('/api/seasons');
         const body = await response.json();
+        if (token !== generation) return false;
         if (!response.ok) throw new Error((body && body.error) || 'Standings could not be loaded.');
         seasons = body.seasons || [];
+        seasonsLoaded = true;
         renderSeasonOptions();
         if (!seasons.length) {
           renderTeams([]);
@@ -279,10 +301,11 @@ function standingsClientScript() {
         return true;
       }
 
-      async function loadStandings({ allowFallback = false, explicitId = '' } = {}) {
+      async function loadStandings(token, { allowFallback = false, explicitId = '' } = {}) {
         const selectedId = String(seasonInput.value || '').trim();
         const candidates = standingsSeasonCandidates(seasons, selectedId, { allowFallback, explicitId });
         if (!candidates.length) throw new Error('Choose a season first.');
+        rememberSeason(selectedId);
         setStatus('Loading standings…');
         showState('');
         let lastError = new Error('Standings could not be loaded.');
@@ -295,12 +318,13 @@ function standingsClientScript() {
           ]);
           const teamBody = await responses[0].json();
           const playerBody = await responses[1].json();
+          if (token !== generation) return;
           if (!responses[0].ok || !responses[1].ok) {
             lastError = new Error((teamBody && teamBody.error) || (playerBody && playerBody.error) || 'Standings could not be loaded.');
             continue;
           }
           seasonInput.value = seasonId;
-          localStorage.setItem('fd.standingsSeasonId', seasonId);
+          rememberSeason(seasonId);
           renderTeams(teamBody.standings || []);
           renderPlayers(playerBody.standings || [], season);
           renderRegistration(season);
@@ -312,12 +336,25 @@ function standingsClientScript() {
         throw lastError;
       }
 
-      async function run(action) {
+      async function run({ bootstrap = false } = {}) {
+        const token = ++generation;
+        clearResults('Loading standings…');
+        showState('');
+        retryButton.hidden = true;
         try {
-          await action();
+          if (bootstrap) {
+            if (await loadSeasons(token)) {
+              await loadStandings(token, { allowFallback: !requestedSeasonId, explicitId: requestedSeasonId });
+            }
+          } else {
+            await loadStandings(token);
+          }
         } catch (error) {
+          if (token !== generation) return;
+          clearResults('Standings could not be loaded. Try again.');
           setStatus('Could not load standings', 'error');
           showState('Standings are temporarily unavailable. Nothing needs to be re-entered.');
+          retryButton.hidden = false;
         }
       }
 
@@ -331,14 +368,11 @@ function standingsClientScript() {
           tabs.find((candidate) => candidate.dataset.standingsTab === next)?.focus();
         });
       });
-      seasonInput.addEventListener('change', () => { if (seasonInput.value) run(loadStandings); });
-      form.addEventListener('submit', (event) => { event.preventDefault(); run(loadStandings); });
+      seasonInput.addEventListener('change', () => { if (seasonInput.value) run(); });
+      form.addEventListener('submit', (event) => { event.preventDefault(); run({ bootstrap: !seasonsLoaded }); });
+      retryButton.addEventListener('click', () => run({ bootstrap: !seasonsLoaded }));
       selectView(requestedView, false);
-      run(async () => {
-        if (await loadSeasons()) {
-          await loadStandings({ allowFallback: !requestedSeasonId, explicitId: requestedSeasonId });
-        }
-      });
+      run({ bootstrap: true });
     })();
   `;
 }
@@ -374,6 +408,7 @@ function standingsDocument() {
       <button class="fd-standings__tab" data-standings-tab="individuals" role="tab" type="button" aria-selected="false" aria-controls="fd-individual-standings">Individual standings</button>
     </div>
     <div class="fd-standings__state" data-standings-state hidden role="status" aria-live="polite"></div>
+    <button class="fd-standings__load" data-standings-retry type="button" hidden>Try again</button>
     <section class="fd-standings__panel" id="fd-team-standings" data-standings-panel="teams" role="tabpanel">
       <div class="fd-standings__list" data-team-standings-list></div>
       <div class="fd-standings__empty" data-team-standings-empty>Standings are loading.</div>

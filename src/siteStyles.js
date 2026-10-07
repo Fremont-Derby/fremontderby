@@ -1,8 +1,10 @@
 import { designSystemStyles } from './designSystem.js';
+import { modernUiPrimitiveStyles } from './modernUiPrimitives.js';
 
 // Final site-wide contract. Page renderers may own layout, but shared shell/navigation
 // and standard surfaces are normalized here after every page-local stylesheet.
 export const siteStyles = `${designSystemStyles}
+${modernUiPrimitiveStyles}
 
   /* #521: one final authority for shared shell/navigation. */
   .fd-shell {
@@ -18,7 +20,6 @@ export const siteStyles = `${designSystemStyles}
     border: 1px solid transparent !important;
     background: transparent !important;
     color: #eff8f2 !important;
-    white-space: nowrap !important;
   }
   .fd-shell .fd-nav a:hover,
   .fd-shell .fd-nav a:focus-visible {
@@ -55,13 +56,6 @@ export const siteStyles = `${designSystemStyles}
 
   /* #521: the dock owns all of its geometry and cannot inherit page nav rules. */
   @media (max-width: 760px) {
-    html {
-      padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
-    }
-    .fd-mobile-dock-spacer {
-      display: block !important;
-      height: calc(96px + env(safe-area-inset-bottom)) !important;
-    }
     .fd-mobile-dock {
       position: fixed !important;
       right: 8px !important;
@@ -105,6 +99,15 @@ export const siteStyles = `${designSystemStyles}
     border-radius: var(--fd-radius) !important;
     background: var(--fd-bg-surface) !important;
     box-shadow: var(--fd-shadow-soft) !important;
+  }
+
+  /* #1831: Schedule owns this nested disclosure; do not render it as another card. */
+  .fd-schedule-match__details {
+    border: 0 !important;
+    border-top: 1px solid #eceae4 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
   @media (forced-colors: active) {

@@ -1,0 +1,43 @@
+name: Operator season browser regression
+on:
+  pull_request:
+    paths:
+      - 'src/seasonSetupPage.js'
+      - 'src/seasonPublishReadinessEnhancer.js'
+      - 'src/seasonCloseEnhancer.js'
+      - 'browser/jfl/operator-season-context.spec.js'
+      - '.github/workflows/operator-browser-regression.yml'
+  push:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'src/seasonSetupPage.js'
+      - 'src/seasonPublishReadinessEnhancer.js'
+      - 'src/seasonCloseEnhancer.js'
+      - 'browser/jfl/operator-season-context.spec.js'
+      - '.github/workflows/operator-browser-regression.yml'
+permissions:
+  contents: read
+jobs:
+  operator-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PLAYWRIGHT_OPERATOR_SOURCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test browser/jfl/operator-season-context.spec.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: operator-browser-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

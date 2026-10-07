@@ -1,12 +1,12 @@
 const style = `<style data-profile-season-status>
-  .season-now{display:grid;gap:12px;padding:12px}.season-now-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.season-now h2{margin:0;font-size:1.15rem}.season-now-sub{margin-top:4px;color:var(--muted);font-size:.84rem;line-height:1.4}.season-now-states{display:flex;flex-wrap:wrap;gap:8px}.season-now-state{display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:999px;font-size:.78rem;font-weight:900}.season-now-state[data-kind="registered"]{border-color:#2f7d57}.season-now-state[data-kind="due"]{border-color:#9c7422}.season-now-state[data-kind="paid"]{border-color:#2f7d57}.season-now-action{min-height:48px;padding:0 16px}.season-now-note{color:var(--muted);font-size:.82rem;line-height:1.45}.season-now-error{color:#9b3129;font-weight:800}.season-now [hidden]{display:none!important}@media(max-width:600px){.season-now-head{display:grid}.season-now-action{width:100%}}
+  .season-now{display:grid;gap:12px;padding:12px}.season-now-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.season-now h2{margin:0;font-size:1.15rem}.season-now-sub{margin-top:4px;color:var(--muted);font-size:.84rem;line-height:1.4}.season-now-states{display:flex;flex-wrap:wrap;gap:8px}.season-now-state{display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:999px;font-size:.78rem;font-weight:900}.season-now-state[data-kind="registered"]{border-color:#2f7d57}.season-now-state[data-kind="due"]{border-color:#9c7422}.season-now-state[data-kind="paid"]{border-color:#2f7d57}.season-now-action{min-height:48px;padding:0 16px}.season-now-note{color:var(--muted);font-size:.82rem;line-height:1.45}.season-now-error{color:#8c1710;font-weight:850;line-height:1.4}.season-now [hidden]{display:none!important}@media(max-width:600px){.season-now-head{display:grid}.season-now-action{width:100%}}
 </style>`;
 
 const card = `<article class="panel" data-season-now>
-  <div class="panel-head"><span>Current season</span><span class="badge" data-season-now-badge>Checking…</span></div>
+  <div class="panel-head"><span>Current season</span><span class="badge" data-season-now-badge data-tone="loading">Checking…</span></div>
   <div class="season-now" role="region" aria-label="Current season registration and payment status">
     <div class="season-now-head">
-      <div><h2 data-season-now-name>Loading season…</h2><div class="season-now-sub" data-season-now-copy>Loading your registration and payment status.</div></div>
+      <div><h2 data-season-now-name>Loading season…</h2><div class="season-now-sub" data-season-now-copy>Checking your current registration and payment status.</div></div>
       <button class="primary season-now-action" data-season-now-action type="button" hidden>Join this season</button>
     </div>
     <div class="season-now-states" data-season-now-states hidden>
@@ -31,73 +31,39 @@ const script = `<script data-profile-season-status-script>
   const action=root.querySelector('[data-season-now-action]');
   const note=root.querySelector('[data-season-now-note]');
   const errorEl=root.querySelector('[data-season-now-error]');
+  const sessionState=document.querySelector('[data-session-state]');
+  const requestTimeoutMs=8000;
   let selectedSeason=null;
   let currentRegistration=null;
+  let lastLoadedToken='';
 
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
+  function withTimeout(promise,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),requestTimeoutMs)})]).finally(()=>clearTimeout(timer))}
   async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
   async function request(path,options={},retry=true){
     const accessToken=token();
     if(!accessToken)throw new Error('Sign in to join the season.');
-    const response=await fetch(path,{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json',...(options.headers||{})}});
+    const response=await withTimeout(fetch(path,{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json',...(options.headers||{})}}),'Season status took too long to load. Please try again.');
     if(response.status===401&&retry){await new Promise((resolve)=>setTimeout(resolve,250));const refreshed=token();if(refreshed&&refreshed!==accessToken)return request(path,options,false)}
     const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body;
   }
-  async function publicJson(path){const response=await fetch(path);const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body}
+  async function publicJson(path){const response=await withTimeout(fetch(path),'Season list took too long to load. Please try again.');const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body}
   function paymentLabel(value){const status=String(value||'unpaid').toLowerCase();if(status==='paid')return'Paid';if(status==='waived')return'Waived';if(status==='refunded')return'Refunded';return'Payment due'}
   function paymentKind(value){return ['paid','waived'].includes(String(value||'').toLowerCase())?'paid':'due'}
-  function showError(error){errorEl.hidden=false;errorEl.textContent=(error&&error.message)||'We could not load your season status. Please try again.';action.hidden=false;action.textContent='Try again';action.dataset.mode='retry';badge.textContent='Could not load'}
-  function renderClosed(season){selectedSeason=season||null;currentRegistration=null;nameEl.textContent=season?.name||'Fremont Derby';badge.textContent='Registration closed';copy.textContent='Registration is not currently open.';states.hidden=true;action.hidden=true;note.textContent='You can still review the schedule and rules while waiting for the next registration window.';errorEl.hidden=true}
+  function showError(error){nameEl.textContent=selectedSeason?.name||'Season status unavailable';copy.textContent='We could not finish loading your current season status.';states.hidden=true;note.textContent='';errorEl.hidden=false;errorEl.textContent=(error&&error.message)||'We could not load your season status. Please try again.';action.hidden=false;action.disabled=false;action.textContent='Try again';action.dataset.mode='retry';badge.textContent='Could not load';badge.dataset.tone='error'}
+  function renderClosed(season){selectedSeason=season||null;currentRegistration=null;nameEl.textContent=season?.name||'Fremont Derby';badge.textContent='Registration closed';badge.dataset.tone='muted';copy.textContent='Registration is not currently open.';states.hidden=true;action.hidden=true;note.textContent='You can still review the schedule and rules while waiting for the next registration window.';errorEl.hidden=true}
   function renderRegistration(registration){
     currentRegistration=registration||null;errorEl.hidden=true;states.hidden=false;
-    if(!registration){badge.textContent='Join now';registrationState.textContent='Not registered';registrationState.dataset.kind='';paymentState.textContent='Payment not started';paymentState.dataset.kind='';copy.textContent='Join this season even if you do not have a team yet.';action.hidden=false;action.textContent='Join this season';action.dataset.mode='join';note.textContent='Registration and payment are separate. You can register first and be marked paid later.';return}
-    registrationState.textContent='Registered';registrationState.dataset.kind='registered';paymentState.textContent=paymentLabel(registration.paymentStatus);paymentState.dataset.kind=paymentKind(registration.paymentStatus);const pay=String(registration.paymentStatus||'unpaid').toLowerCase();badge.textContent=pay==='paid'?'Registered • Paid':(pay==='waived'?'Registered • Waived':'Registered • Payment due');copy.textContent=pay==='paid'||pay==='waived'?'You are registered and payment is recorded for this season.':'You are registered. Payment is still due for this season.';action.hidden=true;note.textContent=pay==='paid'||pay==='waived'?'Your payment has been recorded by the league.':'Registration and payment are separate. Ask a captain or admin if you already paid.';
+    if(!registration){badge.textContent='Join now';badge.dataset.tone='muted';registrationState.textContent='Not registered';registrationState.dataset.kind='';paymentState.textContent='Payment not started';paymentState.dataset.kind='';copy.textContent='Join this season even if you do not have a team yet.';action.hidden=false;action.textContent='Join this season';action.dataset.mode='join';note.textContent='Registration and payment are separate. You can register first and be marked paid later.';return}
+    badge.textContent='Registered';badge.dataset.tone='ok';registrationState.textContent='Registered';registrationState.dataset.kind='registered';paymentState.textContent=paymentLabel(registration.paymentStatus);paymentState.dataset.kind=paymentKind(registration.paymentStatus);copy.textContent='You are registered for this season.';action.hidden=true;note.textContent=registration.paymentStatus==='paid'?'Your payment has been recorded.':'Your registration is complete. Payment is still tracked separately by the league.';
   }
   async function load(){
-    errorEl.hidden=true;action.hidden=true;badge.textContent='Loading…';copy.textContent='Loading your registration and payment status.';
+    errorEl.hidden=true;action.hidden=true;badge.textContent='Checking…';badge.dataset.tone='loading';nameEl.textContent='Loading season…';copy.textContent='Checking your current registration and payment status.';
     const seasonsBody=await publicJson('/api/seasons');const seasons=seasonsBody.seasons||[];
-    const open=seasons.find((season)=>String(season.status||'').toLowerCase()==='registration');
-    const current=open
-      || seasons.find((season)=>['active','playoffs'].includes(String(season.status||'').toLowerCase()))
-      || seasons.find((season)=>String(season.status||'').toLowerCase()==='published')
-      || seasons[0]
-      || null;
-    if(!current){renderClosed(null);return}
-    selectedSeason=current;nameEl.textContent=current.name||'Fremont Derby';badge.textContent='Checking…';
-    const canJoin=String(current.status||'').toLowerCase()==='registration';
-    try{
-      const statusBody=await request('/api/seasons/'+encodeURIComponent(current.id)+'/registration/me',{method:'GET'});
-      const registration=statusBody.registration||null;
-      if(canJoin){renderRegistration(registration);return}
-      // Active / playoffs: still show registered vs not + payment, without a join CTA when closed.
-      states.hidden=false;
-      if(!registration){
-        badge.textContent='Not registered';
-        registrationState.textContent='Not registered';
-        registrationState.dataset.kind='registered';
-        paymentState.textContent='Payment status unavailable';
-        paymentState.dataset.kind='due';
-        copy.textContent='Registration is closed for this season. Ask an admin if you need to be added.';
-        action.hidden=true;
-        note.textContent='You can still use Score, Schedule, and Teams if you already have a roster or free-agent path.';
-        return;
-      }
-      renderRegistration(registration);
-      if(!canJoin){
-        action.hidden=true;
-        if(String(registration.paymentStatus||'').toLowerCase()==='paid'||String(registration.paymentStatus||'').toLowerCase()==='waived'){
-          badge.textContent='In season';
-        }else{
-          badge.textContent='Payment due';
-          copy.textContent='You are registered. Payment is still due for this season.';
-          note.textContent='Payment is tracked by the league — contact an admin or your captain if you already paid.';
-        }
-      }
-    }catch(error){
-      if(canJoin)throw error;
-      renderClosed(current);
-      note.textContent=(error&&error.message)||note.textContent;
-    }
+    const open=seasons.find((season)=>season.status==='registration');
+    if(!open){renderClosed(seasons.find((season)=>['active','playoffs','published'].includes(season.status))||seasons[0]||null);return}
+    selectedSeason=open;nameEl.textContent=open.name;badge.textContent='Checking…';badge.dataset.tone='loading';
+    const statusBody=await request('/api/seasons/'+encodeURIComponent(open.id)+'/registration/me',{method:'GET'});renderRegistration(statusBody.registration||null);
   }
   async function join(){
     if(!selectedSeason)throw new Error('Registration is not open.');
@@ -108,9 +74,10 @@ const script = `<script data-profile-season-status-script>
       const body=await request('/api/seasons/'+encodeURIComponent(selectedSeason.id)+'/registration/me',{method:'POST',body:JSON.stringify({participationType:rostered?'rostered':'free_agent'})});renderRegistration(body.registration);
     }finally{action.disabled=false}
   }
+  function syncSession(){const current=token();if(!current){lastLoadedToken='';return}if(current===lastLoadedToken)return;lastLoadedToken=current;load().catch(showError)}
   action.addEventListener('click',()=>{const mode=action.dataset.mode;Promise.resolve(mode==='join'?join():load()).catch(showError)});
-  const start=()=>{if(token())load().catch(showError)};
-  setTimeout(start,0);
+  if(sessionState)new MutationObserver(syncSession).observe(sessionState,{childList:true,characterData:true,subtree:true});
+  setTimeout(syncSession,0);
 })();
 </script>`;
 

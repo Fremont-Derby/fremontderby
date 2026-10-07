@@ -1,5 +1,3 @@
-import { escapeHtml } from './textEscape.js';
-
 const teams = [
   'Break Room Bandits',
   'Corner Pocket Club',
@@ -54,6 +52,15 @@ const postseason = {
     winner: 'Break Room Bandits',
   },
 };
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
 function buildRoundRobin(teamNames) {
   const rotation = [...teamNames];
@@ -111,12 +118,10 @@ export function renderDemoSeasonPage() {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <title>Test Drive the App · Fremont Derby</title>
+  <title>Try a League Night · Fremont Derby</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#07150f; color:#f4f7f5; --gold:#e9bd45; --green:#2fa972; }
     * { box-sizing:border-box; }
-    button, a, summary, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    input, select, textarea { font-size: 16px; }
     body { margin:0; background:linear-gradient(180deg,#081a12,#06110d); }
     main { width:min(1080px,calc(100% - 24px)); margin:auto; padding:20px 0 56px; }
     a { color:#d7f6e2; }
@@ -167,13 +172,10 @@ export function renderDemoSeasonPage() {
 </head>
 <body>
   <main>
-    <section data-mission-launch><h2>Start a mission</h2><label>Persona <input data-mission-persona /></label><label>Task <input data-mission-task /></label><button type="button" data-mission-start>Start</button><p data-mission-result></p></section>
-    <p class="note" data-plain-launch>A mission starts with the task in plain language, not fixture data.</p>
     <div class="demo-banner">TRY A LEAGUE NIGHT · FICTIONAL PLAYERS AND RESULTS · CANNOT AFFECT THE REAL SEASON</div>
     <section class="hero">
-      <div class="kicker">Practice night</div>
-      <h1>Test Drive the App</h1>
-      <p>War Games practice. This tour stays off the live season.</p>
+      <div class="kicker">War Games practice</div>
+      <h1>Try a League Night</h1>
       <p>See how Fremont Derby feels before joining a real match. Build a fictional team, submit a three-player lineup, score one 8/9 race, then explore a completed seven-round season and playoffs. No Google sign-in is required.</p>
       <div class="actions"><a class="button primary" href="/sandbox/captain">Start as captain →</a><a class="button secondary" href="/sandbox/player">Jump to scoring</a></div>
       <div class="chips"><span class="chip">8 fictional teams</span><span class="chip">7 rounds</span><span class="chip">3 active players/team</span><span class="chip">28 team matchups</span><span class="chip">8/9 dual scoring</span><span class="chip">4 postseason players/team</span><span class="chip">Anchor tiebreaker</span></div>
@@ -226,7 +228,7 @@ export function renderDemoSeasonPage() {
     <h2>Ready for the real league?</h2>
     <section class="card">
       <p>When you are done practicing, look at current teams or read the rules. The practice state stays separate from competitive records.</p>
-      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/players">Player directory</a><a class="button secondary" href="/schedule">Schedule</a><a class="button secondary" href="/scorecard">Score</a><a class="button secondary" href="/availability">Check in</a><a class="button secondary" href="/lineup">Lineup</a><a class="button secondary" href="/rules">Read the rules</a></div>
+      <div class="next"><a class="button primary" href="/teams">See current teams</a><a class="button secondary" href="/rules">Read the rules</a></div>
     </section>
 
     <details>
@@ -242,8 +244,6 @@ export function renderDemoSeasonPage() {
     function captainProgress(captain){if(!captain)return'Ready';if(captain.submitted)return'Done';if(captain.formation&&Object.values(captain.formation).some(value=>value!=='pending'))return'In progress';return'Ready'}
     function progress(){const captain=stored(captainKey),player=stored(playerKey);paint(document.querySelector('[data-captain-status]'),captainProgress(captain));const playerState=player&&player.finalized?'Done':player&&((player.A&&player.A.racks&&player.A.racks.length)||(player.B&&player.B.racks&&player.B.racks.length))?'In progress':'Ready';paint(document.querySelector('[data-player-status]'),playerState)}
     document.querySelector('[data-reset-all]').onclick=()=>{sessionStorage.removeItem(captainKey);sessionStorage.removeItem(playerKey);progress()};progress();
-    const start=document.querySelector('[data-mission-start]');
-    if(start)start.onclick=()=>{const persona=(document.querySelector('[data-mission-persona]').value||'').trim();const task=(document.querySelector('[data-mission-task]').value||'').trim();document.querySelector('[data-mission-result]').textContent=persona&&task?('Practice mission started for '+persona+': '+task+'. This does not change the real season.'):'Add a persona and a task first.';};
   </script>
 </body>
 </html>`;

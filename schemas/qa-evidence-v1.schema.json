@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jfl.fremontderby.com/schemas/qa-evidence-v1.schema.json",
+  "title": "Fremont Derby JFL QA evidence envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "lane", "run_id", "level_id", "seed", "build_sha", "worker_version", "started_at", "tester_id", "device", "fixture_facts", "assertions", "outcome", "events"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "lane": { "const": "jfl" },
+    "run_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "replay_of_run_id": { "type": ["string", "null"], "maxLength": 128 },
+    "level_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "seed": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "build_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "worker_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+    "tester_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "session_id": { "type": ["string", "null"], "maxLength": 128 },
+    "device": {
+      "type": "object", "additionalProperties": false,
+      "required": ["browser_family", "device_family", "viewport_width", "viewport_height"],
+      "properties": {
+        "browser_family": { "type": "string", "maxLength": 64 },
+        "device_family": { "type": "string", "maxLength": 64 },
+        "viewport_width": { "type": "integer", "minimum": 1 },
+        "viewport_height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "fixture_facts": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean", "null"] } },
+    "assertions": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["assertion_id", "result"],
+        "properties": {
+          "assertion_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "result": { "enum": ["pass", "fail", "not_answered"] },
+          "answered_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    },
+    "outcome": { "enum": ["pass", "fail", "incomplete"] },
+    "note": { "type": ["string", "null"], "maxLength": 1000 },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_id", "type", "occurred_at"],
+        "properties": {
+          "event_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "type": { "enum": ["interaction", "client_error", "server_error"] },
+          "occurred_at": { "type": "string", "format": "date-time" },
+          "sequence": { "type": "integer", "minimum": 0 },
+          "action": { "type": "string", "maxLength": 80 },
+          "component": { "type": "string", "maxLength": 80 },
+          "error_class": { "type": "string", "maxLength": 80 },
+          "message_template": { "type": "string", "maxLength": 240 },
+          "route": { "type": "string", "maxLength": 160 },
+          "stack_location": { "type": "string", "maxLength": 160 },
+          "status_family": { "type": "string", "pattern": "^[1-5]xx$" },
+          "correlation_id": { "type": ["string", "null"], "maxLength": 128 }
+        }
+      }
+    },
+    "triage": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "properties": {
+        "label": { "enum": ["untriaged", "product_defect", "test_defect", "environment", "expected_behavior", "duplicate"] },
+        "issue_number": { "type": ["integer", "null"], "minimum": 1 },
+        "labeled_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}

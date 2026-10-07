@@ -1,37 +1,19 @@
 const style = `<style data-profile-contact-style>
-  .profile-contact{display:grid;gap:12px;padding:12px}
-  .profile-contact-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
-  .profile-contact-actions{display:flex;flex-wrap:wrap;gap:8px}
-  .profile-contact-note{color:var(--muted);font-size:.82rem;line-height:1.45}
-  .profile-contact-state{font-size:.82rem;font-weight:900}
-  .profile-contact-state[data-ready="true"]{color:#26734e}.profile-contact-state[data-required="true"]{padding:10px 12px;border-left:4px solid var(--gold,#c9a227);border-radius:8px;background:#2b2412;color:#ffe8a6;line-height:1.45}
-  .profile-contact-error{color:#9b3129;font-weight:800}
-  .profile-contact button{min-height:48px;padding:0 16px}
-  .profile-contact [hidden]{display:none!important}
-  .profile-contact-masked{font-variant-numeric:tabular-nums;letter-spacing:.04em;font-weight:800}
-  @media(max-width:600px){
-    .profile-contact-row{grid-template-columns:1fr}
-    .profile-contact button{width:100%}
-  }
+  .profile-contact{display:grid;gap:12px;padding:12px}.profile-contact-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.profile-contact-note{color:var(--muted);font-size:.82rem;line-height:1.45}.profile-contact-state{font-size:.82rem;font-weight:900;color:#315443}.profile-contact-state[data-ready="true"]{color:#17663e}.profile-contact-state[data-tone="error"]{color:#8c1710}.profile-contact-error{color:#8c1710;font-weight:850;line-height:1.4}.profile-contact button{min-height:48px;padding:0 16px}.profile-contact-retry{justify-self:start}.profile-contact [hidden]{display:none!important}@media(max-width:600px){.profile-contact-row{grid-template-columns:1fr}.profile-contact button{width:100%}.profile-contact-retry{justify-self:stretch}}
 </style>`;
 
 const card = `<article class="panel" data-profile-contact>
-  <div class="panel-head"><span>Private contact</span><span class="badge" data-contact-badge>Checking…</span></div>
+  <div class="panel-head"><span>Private contact</span><span class="badge" data-contact-badge data-tone="loading">Checking…</span></div>
   <form class="profile-contact" data-contact-form>
     <div class="profile-contact-row">
       <label>Phone number
-        <input type="tel" inputmode="tel" autocomplete="off" data-contact-phone placeholder="Add a phone number" aria-describedby="contact-privacy" />
+        <input type="tel" inputmode="tel" autocomplete="tel" data-contact-phone placeholder="(206) 555-0123" aria-describedby="contact-privacy" />
       </label>
       <button class="primary" data-contact-save type="submit">Save phone</button>
     </div>
-    <div class="profile-contact-actions">
-      <button type="button" class="ghost" data-contact-reveal hidden>Show phone number</button>
-      <button type="button" class="ghost" data-contact-hide hidden>Hide phone number</button>
-      <button type="button" class="ghost" data-messaging-privacy-save>Save messaging privacy</button>
-      <button type="button" class="ghost" data-messaging-privacy-reload>Reload messaging privacy</button>
-    </div>
     <div class="profile-contact-state" data-contact-state></div>
-    <div class="profile-contact-note" id="contact-privacy">Your phone number is private league-administration contact. Other players never see it. It is hidden on this screen until you choose <strong>Show phone number</strong>. A phone number is required before you can serve as an active team captain.</div>
+    <button class="ghost profile-contact-retry" data-contact-retry type="button" hidden>Retry loading contact</button>
+    <div class="profile-contact-note" id="contact-privacy">Your phone number is private league-administration contact information. Other players do not get access to it. A phone number is required before you can serve as an active team captain.</div>
     <div class="profile-contact-error" role="status" aria-live="polite" data-contact-error hidden></div>
   </form>
 </article>`;
@@ -39,125 +21,27 @@ const card = `<article class="panel" data-profile-contact>
 const script = `<script data-profile-contact-script>
 (() => {
   const root=document.querySelector('[data-profile-contact]');if(!root)return;
-  const form=root.querySelector('[data-contact-form]');
-  const phone=root.querySelector('[data-contact-phone]');
-  const save=root.querySelector('[data-contact-save]');
-  const badge=root.querySelector('[data-contact-badge]');
-  const state=root.querySelector('[data-contact-state]');
-  const errorEl=root.querySelector('[data-contact-error]');
-  const revealBtn=root.querySelector('[data-contact-reveal]');
-  const hideBtn=root.querySelector('[data-contact-hide]');
-  let revealed=false;let activeCaptain=false;
-  const privacySave=root.querySelector('[data-messaging-privacy-save]');
-  const privacyReload=root.querySelector('[data-messaging-privacy-reload]');
-  function privacyNote(){return root.querySelector('[data-contact-state]')}
-  privacySave?.addEventListener('click',()=>{sessionStorage.setItem('fd.messagingPrivacy','saved');if(privacyNote())privacyNote().textContent='Messaging privacy saved on this device.';});
-  privacyReload?.addEventListener('click',()=>{const saved=sessionStorage.getItem('fd.messagingPrivacy');if(privacyNote())privacyNote().textContent=saved?'Messaging privacy reloaded.':'No messaging privacy saved on this device.';});
-  let hasPhone=false;
-
+  const form=root.querySelector('[data-contact-form]');const phone=root.querySelector('[data-contact-phone]');const save=root.querySelector('[data-contact-save]');const retryButton=root.querySelector('[data-contact-retry]');const badge=root.querySelector('[data-contact-badge]');const state=root.querySelector('[data-contact-state]');const errorEl=root.querySelector('[data-contact-error]');const sessionState=document.querySelector('[data-session-state]');
+  const requestTimeoutMs=8000;
+  let lastContact=null;
+  let lastLoadedToken='';
   function token(){return sessionStorage.getItem('fd.accessToken')||''}
+  function digits(value){return String(value||'').replace(/\\D/g,'')}
+  function formatPhone(value){const raw=digits(value);if(raw.length===10)return '('+raw.slice(0,3)+') '+raw.slice(3,6)+'-'+raw.slice(6);if(raw.length===11&&raw.startsWith('1'))return '+1 ('+raw.slice(1,4)+') '+raw.slice(4,7)+'-'+raw.slice(7);return raw}
+  function withTimeout(promise,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),requestTimeoutMs)})]).finally(()=>clearTimeout(timer))}
   async function parseJson(response){const text=await response.text();if(!text)return{};try{return JSON.parse(text)}catch{return{error:text}}}
-  async function request(path,options={},retry=true){
-    const accessToken=token();
-    if(!accessToken)throw new Error('Sign in to manage your contact information.');
-    const response=await fetch(path,{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json',...(options.headers||{})}});
-    if(response.status===401&&retry){
-      await new Promise(resolve=>setTimeout(resolve,250));
-      const refreshed=token();
-      if(refreshed&&refreshed!==accessToken)return request(path,options,false);
-    }
-    const body=await parseJson(response);
-    if(!response.ok)throw new Error(body.error||'Request failed');
-    return body;
-  }
-
-  function setRevealed(next){
-    revealed=Boolean(next);
-    revealBtn.hidden=!hasPhone||revealed;
-    hideBtn.hidden=!hasPhone||!revealed;
-    if(!revealed){
-      phone.value='';
-      phone.placeholder=hasPhone?'Phone on file — hidden':'Add a phone number';
-      phone.autocomplete='off';
-    }else{
-      phone.placeholder='(206) 555-0123';
-      phone.autocomplete='tel';
-    }
-  }
-
-  function renderMasked(contact){
-    hasPhone=Boolean(contact?.hasPhone);
-    badge.textContent=hasPhone?'Contact on file':(activeCaptain?'Required now':'Phone missing');
-    state.dataset.ready=String(hasPhone);
-    state.dataset.required=String(!hasPhone&&activeCaptain);
-    const masked=contact?.phoneMasked||'••••';
-    state.replaceChildren();
-    if(hasPhone){
-      state.append('Phone on file for league administration: ');
-      const mask=document.createElement('span');
-      mask.className='profile-contact-masked';
-      mask.textContent=masked;
-      state.append(mask, '.');
-    }else{
-      state.textContent=activeCaptain?'Your captain contact is incomplete. Add and save a phone number here to keep active captaincy available.':'No phone is on file. Normal player features still work; active captaincy requires a phone.';
-    }
-    errorEl.hidden=true;
-    setRevealed(false);
-  }
-
-  function showError(error){
-    errorEl.hidden=false;
-    errorEl.textContent=error?.message||'We could not update your phone number. Nothing was changed.';
-    badge.textContent='Could not save';
-  }
-
-  async function load(){
-    badge.textContent='Loading…';
-    // WHY: default GET omits full phone; UI stays masked until explicit reveal.
-    // Detect active captain so missing contact becomes an explicit recovery state (#335).
-    const [contactResult, profileResult] = await Promise.allSettled([
-      request('/api/me/contact',{method:'GET'}),
-      request('/api/me/profile',{method:'GET'}),
-    ]);
-    if (profileResult.status === 'fulfilled') {
-      const teams = Array.isArray(profileResult.value?.profile?.teams) ? profileResult.value.profile.teams : [];
-      activeCaptain = teams.some((team) => String(team?.role || '').toLowerCase() === 'captain');
-    }
-    if (contactResult.status === 'rejected') throw contactResult.reason;
-    renderMasked(contactResult.value.contact);
-  }
-
-  async function revealPhone(){
-    badge.textContent='Revealing…';
-    const body=await request('/api/me/contact?reveal=1',{method:'GET'});
-    hasPhone=Boolean(body.contact?.hasPhone);
-    phone.value=body.contact?.phone||'';
-    state.dataset.ready=String(hasPhone);
-    state.textContent=hasPhone?'Phone visible on this device only. Hide it when you are done.':'No phone is on file.';
-    badge.textContent=hasPhone?'Visible':'Phone missing';
-    setRevealed(true);
-  }
-
-  async function hidePhone(){
-    phone.value='';
-    const body=await request('/api/me/contact',{method:'GET'});
-    renderMasked(body.contact);
-  }
-
-  async function savePhone(){
-    save.disabled=true;save.textContent='Saving…';errorEl.hidden=true;
-    try{
-      const body=await request('/api/me/contact',{method:'PUT',body:JSON.stringify({phone:phone.value.trim()||null})});
-      renderMasked(body.contact);
-    }finally{
-      save.disabled=false;save.textContent='Save phone';
-    }
-  }
-
-  form.addEventListener('submit',event=>{event.preventDefault();savePhone().catch(showError)});
-  revealBtn.addEventListener('click',()=>revealPhone().catch(showError));
-  hideBtn.addEventListener('click',()=>hidePhone().catch(showError));
-  setTimeout(()=>{if(token())load().catch(showError)},0);
+  async function request(options={},retry=true){const accessToken=token();if(!accessToken)throw new Error('Sign in to manage your contact information.');const response=await withTimeout(fetch('/api/me/contact',{...options,headers:{authorization:'Bearer '+accessToken,'content-type':'application/json'}}),'Contact information took too long to load. Please try again.');if(response.status===401&&retry){await new Promise(resolve=>setTimeout(resolve,250));const refreshed=token();if(refreshed&&refreshed!==accessToken)return request(options,false)}const body=await parseJson(response);if(!response.ok)throw new Error(body.error||'Request failed');return body}
+  function render(contact){lastContact=contact||null;const ready=Boolean(contact?.hasPhone);phone.value=formatPhone(contact?.phone||'');badge.textContent=ready?'Contact on file':'Phone missing';badge.dataset.tone=ready?'ok':'muted';state.hidden=false;state.dataset.ready=String(ready);state.dataset.tone=ready?'ok':'muted';state.textContent=ready?'Phone saved for league administration.':'No phone is on file. Normal player features still work; active captaincy requires a phone.';retryButton.hidden=true;errorEl.hidden=true;errorEl.textContent=''}
+  function showError(error){errorEl.hidden=false;errorEl.textContent=error?.message||'We could not load or update your phone information. Nothing was changed.';badge.textContent='Could not load';badge.dataset.tone='error';state.hidden=false;state.dataset.ready='false';state.dataset.tone='error';state.textContent=lastContact?.hasPhone?'Saved phone is still on file.':'Contact status is unavailable.';retryButton.hidden=false}
+  async function load(){badge.textContent='Checking…';badge.dataset.tone='loading';state.textContent='Loading contact information…';state.dataset.tone='loading';retryButton.hidden=true;errorEl.hidden=true;const body=await request({method:'GET'});render(body.contact)}
+  async function savePhone(){save.disabled=true;save.textContent='Saving…';badge.textContent='Saving…';badge.dataset.tone='loading';retryButton.hidden=true;errorEl.hidden=true;try{const raw=digits(phone.value);const body=await request({method:'PUT',body:JSON.stringify({phone:raw||null})});render(body.contact)}catch(error){badge.textContent='Fix phone';badge.dataset.tone='error';state.hidden=false;state.dataset.ready='false';state.dataset.tone='error';state.textContent=lastContact?.hasPhone?'Saved phone was not changed.':'Nothing was saved.';errorEl.hidden=false;errorEl.textContent=error?.message||'We could not update your phone number. Nothing was changed.'}finally{save.disabled=false;save.textContent='Save phone'}}
+  function syncSession(){const current=token();if(!current){lastLoadedToken='';return}if(current===lastLoadedToken)return;lastLoadedToken=current;load().catch(showError)}
+  phone.addEventListener('input',()=>{phone.value=formatPhone(phone.value);if(!errorEl.hidden){errorEl.hidden=true;retryButton.hidden=true;badge.textContent=lastContact?.hasPhone?'Contact on file':'Phone missing';badge.dataset.tone=lastContact?.hasPhone?'ok':'muted';state.dataset.tone=lastContact?.hasPhone?'ok':'muted';state.textContent=lastContact?.hasPhone?'Phone saved for league administration.':'No phone is on file.'}});
+  phone.addEventListener('blur',()=>{phone.value=formatPhone(phone.value)});
+  retryButton.addEventListener('click',()=>load().catch(showError));
+  form.addEventListener('submit',event=>{event.preventDefault();savePhone()});
+  if(sessionState)new MutationObserver(syncSession).observe(sessionState,{childList:true,characterData:true,subtree:true});
+  setTimeout(syncSession,0);
 })();
 </script>`;
 

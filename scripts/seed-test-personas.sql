@@ -15,6 +15,9 @@ begin
 end
 $$;
 
+-- Non-login auth placeholders satisfy players.user_id foreign keys. These
+-- .invalid addresses have no identities or usable credentials; the real tester
+-- authenticates separately and the Worker assumes these actor ids server-side.
 insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
   ('18580000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'admin-no-team@jfl.persona.invalid', '{"persona_fixture":true}'::jsonb, '{}'::jsonb, now(), now()),
@@ -67,6 +70,9 @@ values
   ('18580000-2000-4001-8000-000000000005', '18580000-0000-4001-8000-000000000005', 'TEST Player B')
 on conflict (id) do update set user_id = excluded.user_id, display_name = excluded.display_name, updated_at = now();
 
+-- Existing captain workflows require a phone number before active captain
+-- membership is accepted. Use reserved 555 fixture numbers rather than bypassing
+-- the same invariant human testers are meant to exercise.
 insert into jfl_private.player_contacts (player_id, phone)
 values
   ('18580000-2000-4000-8000-000000000002', '+12065550102'),

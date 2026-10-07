@@ -7,11 +7,36 @@ import {
 } from './adminSeasonTeamsCommands.js';
 import { createAdminSeasonTeamsRepository } from './adminSeasonTeamsRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import { safeClientErrorMessage } from './requestSanitize.js';
 
-export function adminSeasonTeamsStatusFor(error) {
-  return rpcErrorStatus(error);
+function statusFor(error) {
+  const message = error?.message || 'Request failed';
+  if (message.includes('Actor is not a league admin')) return 403;
+  if (message.includes('Supabase request failed with 401')) return 401;
+  if (message.includes('Supabase request failed with 403')) return 403;
+  if (message.includes('Season not found') || message.includes('Team not found') || message.includes('Player not found')) return 404;
+  if (
+    message.includes('already exists')
+    || message.includes('already has an active captain')
+    || message.includes('already has a current captain')
+    || message.includes('already captains another team')
+    || message.includes('already captains another open or live team')
+    || message.includes('Phone number is required')
+    || message.includes('must be qualified before it can take a season slot')
+  ) return 409;
+  if (message.includes('No team slots') || message.includes('before season publication')) return 409;
+  return 400;
+}
+
+function clientMessage(error) {
+  const message = String(error?.message || 'Request failed')
+    .replace(/^Supabase request failed with \d+:\s*/i, '');
+  if (message.includes('Player already captains another open or live team')) {
+    return 'This player already captains another open or live team.';
+  }
+  if (message.includes('Team already has a current captain')) {
+    return 'This team already has a current captain. Use captain transfer instead.';
+  }
+  return message;
 }
 
 async function readJson(request) {
@@ -39,7 +64,7 @@ export function createAdminSeasonTeamsHttpHandlers({
       const repository = createRepository(env, { fetch: fetchImpl });
       return await action(actor, repository);
     } catch (error) {
-      return Response.json({ error: safeClientErrorMessage(error) }, { status: adminSeasonTeamsStatusFor(error) });
+      return Response.json({ error: clientMessage(error) }, { status: statusFor(error) });
     }
   }
 
@@ -57,27 +82,12 @@ export function createAdminSeasonTeamsHttpHandlers({
     createPrepared(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const body = await readJson(request);
-        let team;
-        try {
-          team = await createPreparedAdminSeasonTeamCommand({
-            actorUserId: actor.id,
-            seasonId,
-            teamName: body.teamName ?? body.team_name,
-          }, repository);
-        } catch (error) {
-          if (error.status === 409 || /duplicate|already exists|unique/i.test(String(error.message || ''))) {
-            const next = new Error('That team name is already used on another night. Pick another name.');
-            next.status = 409;
-            throw next;
-          }
-          throw error;
-        }
-        // Prepared rows are seed-only until captain + minimum roster qualify for a slot (#624).
-        return Response.json({
-          team,
-          occupiesSlot: false,
-          note: 'Prepared teams do not count toward the 8 registration slots until they have a captain, enough roster depth, and an accepted/confirmed slot.',
-        }, { status: 201 });
+        const team = await createPreparedAdminSeasonTeamCommand({
+          actorUserId: actor.id,
+          seasonId,
+          teamName: body.teamName ?? body.team_name,
+        }, repository);
+        return Response.json({ team }, { status: 201 });
       });
     },
 

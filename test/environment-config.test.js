@@ -31,7 +31,6 @@ test('DRU root Workers Build profile pins durable public bindings and keeps serv
   assert.equal(config.vars.EXPECTED_SUPABASE_PROJECT_REF, 'oqkkvqkerusepyokzbmt');
   assert.equal('SUPABASE_SERVICE_ROLE_KEY' in config.vars, false);
   assert.ok(config.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
-  assert.ok(config.secrets.required.includes('BETA_ACTOR_USER_ID'));
 
   for (const name of [
     'SUPABASE_URL',
@@ -52,15 +51,8 @@ test('DRU root Workers Build profile matches the explicit dru environment', () =
   assert.equal(config.env.dru.vars.EXPECTED_SUPABASE_PROJECT_REF, config.vars.EXPECTED_SUPABASE_PROJECT_REF);
   assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, config.vars.BETA_AUTH_BYPASS);
   assert.equal(config.env.dru.vars.BETA_ACTOR_EMAIL, config.vars.BETA_ACTOR_EMAIL);
+  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
   assert.ok(config.env.dru.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
-  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
-  for (const name of [
-    'SUPABASE_URL',
-    'SUPABASE_PUBLISHABLE_KEY',
-    'EXPECTED_SUPABASE_PROJECT_REF',
-  ]) {
-    assert.equal(config.env.dru.secrets.required.includes(name), false);
-  }
 });
 
 test('Wrangler retains explicit custom-domain identities for each named lane', () => {
@@ -107,23 +99,30 @@ test('release lanes have explicit Derby identities and no legacy generic beta en
   assert.equal(config.env.gamma.vars.ENVIRONMENT, 'gamma');
 });
 
-test('unrecovered JFL and Gamma Supabase credentials remain required secrets', () => {
-  for (const lane of ['jfl', 'gamma']) {
+test('unrecovered DRU and Gamma Supabase credentials remain required secrets', () => {
+  const common = [
+    'SUPABASE_URL',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'EXPECTED_SUPABASE_PROJECT_REF',
+  ];
+  for (const lane of ['dru', 'gamma']) {
     const target = config.env[lane];
-    assert.ok(target.secrets.required.includes('SUPABASE_SERVICE_ROLE_KEY'));
-    assert.doesNotMatch(JSON.stringify(target.vars || {}), /REPLACE_|SET_ME|placeholder/i);
+    for (const name of common) assert.ok(target.secrets.required.includes(name));
+    assert.doesNotMatch(JSON.stringify(target), /REPLACE_|SET_ME|placeholder/i);
   }
 });
 
-test('DRU actor id stays secret-backed (not hardcoded in root vars)', () => {
-  assert.equal(config.vars.BETA_ACTOR_USER_ID, undefined);
-  assert.ok(config.secrets.required.includes('BETA_ACTOR_USER_ID'));
-  assert.ok(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'));
-  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, undefined);
-  assert.equal(config.env.gamma.vars.BETA_AUTH_BYPASS, '0');
+test('DRU open-auth actor is explicit lane-only test config', () => {
+  assert.equal(config.vars.BETA_ACTOR_USER_ID, 'b22805b6-92ba-44bd-a92e-0c82f0be6613');
+  assert.equal(config.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.dru.vars.BETA_ACTOR_USER_ID, config.vars.BETA_ACTOR_USER_ID);
+  assert.equal(config.env.dru.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.gamma.secrets.required.includes('BETA_ACTOR_USER_ID'), false);
+  assert.equal(config.env.gamma.vars.BETA_ACTOR_USER_ID, undefined);
 });
 
-test('auth bypass is enabled for the DRU root deployment profile', () => {
+test('auth bypass is enabled for the JFL root deployment profile', () => {
   assert.equal(config.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.jfl.vars.BETA_AUTH_BYPASS, '1');
   assert.equal(config.env.dru.vars.BETA_AUTH_BYPASS, '1');

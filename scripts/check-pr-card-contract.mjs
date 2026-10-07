@@ -13,13 +13,7 @@ const TRACKING_REFERENCE = /\b(?:Tracks|Refs)\s+(?:#(\d+)|https:\/\/github\.com\
 const AUTO_CLOSE_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:#\d+|https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/\d+)\b/i;
 
 function withoutComments(value) {
-  let out = String(value || '');
-  let prev;
-  do {
-    prev = out;
-    out = out.replace(/<!--[\s\S]*?-->/g, '');
-  } while (out !== prev);
-  return out.trim();
+  return value.replace(/<!--[\s\S]*?-->/g, '').trim();
 }
 
 function sectionContent(body, heading) {

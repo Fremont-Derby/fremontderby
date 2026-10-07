@@ -1,5 +1,3 @@
-import { assertSameThread } from './chatThreadGuard.js';
-
 function requireValue(value, message) {
   const normalized = String(value ?? '').trim();
   if (!normalized) throw new Error(message);
@@ -34,17 +32,16 @@ export async function listTeamMessagesCommand(
 }
 
 export async function sendTeamMessageCommand(
-  { actorUserId, teamId, expectedTeamId, body, clientMessageId },
+  { actorUserId, teamId, body, clientMessageId },
   repository,
 ) {
   const normalizedBody = String(body ?? '').trim();
   if (!normalizedBody) throw new Error('Message cannot be empty');
   if (normalizedBody.length > 2000) throw new Error('Message cannot exceed 2000 characters');
-  const resolvedTeamId = assertSameThread(expectedTeamId, teamId, 'team chat');
 
   return repository.sendTeamMessage({
     actorUserId: requireValue(actorUserId, 'Actor user id is required'),
-    teamId: requireValue(resolvedTeamId, 'Team id is required'),
+    teamId: requireValue(teamId, 'Team id is required'),
     body: normalizedBody,
     clientMessageId: clientMessageId ? String(clientMessageId) : null,
   });
@@ -98,21 +95,16 @@ export async function listDirectMessagesCommand(
 }
 
 export async function sendDirectMessageCommand(
-  { actorUserId, conversationId, expectedConversationId, body, clientMessageId },
+  { actorUserId, conversationId, body, clientMessageId },
   repository,
 ) {
   const normalizedBody = String(body ?? '').trim();
   if (!normalizedBody) throw new Error('Message cannot be empty');
   if (normalizedBody.length > 2000) throw new Error('Message cannot exceed 2000 characters');
-  const resolvedConversationId = assertSameThread(
-    expectedConversationId,
-    conversationId,
-    'conversation',
-  );
 
   return repository.sendDirectMessage({
     actorUserId: requireValue(actorUserId, 'Actor user id is required'),
-    conversationId: requireValue(resolvedConversationId, 'Conversation id is required'),
+    conversationId: requireValue(conversationId, 'Conversation id is required'),
     body: normalizedBody,
     clientMessageId: clientMessageId ? String(clientMessageId) : null,
   });
@@ -175,16 +167,15 @@ export async function listLeagueMessagesCommand(
 }
 
 export async function sendLeagueMessageCommand(
-  { actorUserId, seasonId, expectedSeasonId, body, clientMessageId },
+  { actorUserId, seasonId, body, clientMessageId },
   repository,
 ) {
   const normalizedBody = String(body ?? '').trim();
   if (!normalizedBody) throw new Error('Message cannot be empty');
   if (normalizedBody.length > 2000) throw new Error('Message cannot exceed 2000 characters');
-  const resolvedSeasonId = assertSameThread(expectedSeasonId, seasonId, 'league chat');
   return repository.sendLeagueMessage({
     actorUserId: requireValue(actorUserId, 'Actor user id is required'),
-    seasonId: requireValue(resolvedSeasonId, 'Season id is required'),
+    seasonId: requireValue(seasonId, 'Season id is required'),
     body: normalizedBody,
     clientMessageId: clientMessageId ? String(clientMessageId) : null,
   });
@@ -280,16 +271,15 @@ export async function listMatchupMessagesCommand(
 }
 
 export async function sendMatchupMessageCommand(
-  { actorUserId, teamMatchId, expectedTeamMatchId, body, clientMessageId },
+  { actorUserId, teamMatchId, body, clientMessageId },
   repository,
 ) {
   const normalizedBody = String(body ?? '').trim();
   if (!normalizedBody) throw new Error('Message cannot be empty');
   if (normalizedBody.length > 2000) throw new Error('Message cannot exceed 2000 characters');
-  const resolvedMatchId = assertSameThread(expectedTeamMatchId, teamMatchId, 'matchup chat');
   return repository.sendMatchupMessage({
     actorUserId: requireValue(actorUserId, 'Actor user id is required'),
-    teamMatchId: requireValue(resolvedMatchId, 'Team match id is required'),
+    teamMatchId: requireValue(teamMatchId, 'Team match id is required'),
     body: normalizedBody,
     clientMessageId: clientMessageId ? String(clientMessageId) : null,
   });

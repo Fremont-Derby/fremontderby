@@ -58,6 +58,10 @@ export function isTestPersonaOperator(user, env = {}) {
   if (!testPersonaEnabled(env) || !user?.id) return false;
   const allowlist = configuredOperatorIds(env);
   if (allowlist.size === 0 || !allowlist.has(String(user.id))) return false;
+
+  // Tokenless JFL/DRU beta automation is never allowed to impersonate. The
+  // explicit JFL simulated Google/OIDC browser session is an approved signed-in
+  // tester path and carries one of these markers in addition to betaBypass.
   if (user.betaBypass && !user.jflSimulatedGoogle && !user.simulatedOidc) return false;
   return true;
 }

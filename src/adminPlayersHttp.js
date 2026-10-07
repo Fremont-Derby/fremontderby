@@ -1,16 +1,19 @@
 import { createAdminPlayersRepository } from './adminPlayersRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import { safeClientErrorMessage } from './requestSanitize.js';
 
-export function adminPlayersStatusForError(error) {
-  return rpcErrorStatus(error);
+function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
+  if (/Actor is not a league admin/i.test(error.message)) return 403;
+  if (/last league admin|captain lifecycle/i.test(error.message)) return 409;
+  if (/Player not found|Season not found|Team not found|Active team membership not found/i.test(error.message)) return 404;
+  if (/required|500 characters|must sign in/i.test(error.message)) return 400;
+  return 502;
 }
 
 function errorResponse(error) {
   return Response.json(
-    { error: safeClientErrorMessage(error) },
-    { status: adminPlayersStatusForError(error), headers: { 'cache-control': 'no-store' } },
+    { error: error.message },
+    { status: statusForError(error), headers: { 'cache-control': 'no-store' } },
   );
 }
 
@@ -26,10 +29,8 @@ export async function handleListAdminPlayersRequest(
       repository.listPlayers({ actorUserId: actor.id }),
       repository.listRosterTeams({ actorUserId: actor.id }),
     ]);
-    const { playerSearch } = await import('./playerSearch.js');
-    const query = new URL(request.url).searchParams.get('q');
     return Response.json(
-      { players: playerSearch(players, query), rosterTeams },
+      { players, rosterTeams },
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch (error) {
@@ -75,23 +76,6 @@ export async function handleSetAdminRoleRequest(
       );
     }
 
-    if (body.operation === 'payment-status') {
-      const status = String(body.status || '').toLowerCase();
-      if (status !== 'paid' && status !== 'waived') {
-        return Response.json({ error: 'status must be paid or waived' }, { status: 400 });
-      }
-      if (typeof body.seasonId !== 'string' || !body.seasonId.trim()) {
-        return Response.json({ error: 'seasonId is required' }, { status: 400 });
-      }
-      const result = await repository.setPaymentStatus({
-        actorUserId: actor.id,
-        playerId,
-        seasonId: body.seasonId,
-        status,
-      });
-      return Response.json({ player: result }, { headers: { 'cache-control': 'no-store' } });
-    }
-
     if (body.operation === 'roster-membership') {
       if (typeof body.active !== 'boolean') {
         return Response.json({ error: 'active is required' }, { status: 400 });
@@ -101,16 +85,6 @@ export async function handleSetAdminRoleRequest(
       }
       if (typeof body.teamId !== 'string' || !body.teamId.trim()) {
         return Response.json({ error: 'teamId is required' }, { status: 400 });
-      }
-      const { rosterDropBlocked } = await import('./rosterLock.js');
-      const { withSupabaseSchema } = await import('./supabaseSchema.js');
-      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-      const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${body.seasonId}&select=status`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
-      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
-      if (rosterDropBlocked(season?.status, body.active)) {
-        return Response.json({ error: 'Roster is locked after the schedule is published.' }, { status: 409, headers: { 'cache-control': 'no-store' } });
       }
       const result = await repository.setRosterMembership({
         actorUserId: actor.id,
@@ -144,79 +118,7 @@ export async function handleSetAdminRoleRequest(
   }
 }
 
-
-
-export async function handleRecomputeDerbyEstimateRequest(
-  request,
-  env,
-  playerId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
-    const observation = await repository.recomputeDerbyEstimate({
-      actorUserId: actor.id,
-      playerId,
-    });
-    return Response.json({ observation }, { headers: { 'cache-control': 'no-store' } });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
-export async function handleRecordRatingObservationRequest(
-  request,
-  env,
-  playerId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await request.json().catch(() => ({}));
-    const ratingValue = body.ratingValue ?? body.rating ?? body.fargo_rating;
-    if (ratingValue == null || Number.isNaN(Number(ratingValue))) {
-      return Response.json({ error: 'ratingValue is required (0–1000)' }, { status: 400, headers: { 'cache-control': 'no-store' } });
-    }
-    const sourceKind = body.sourceKind || body.source || 'admin_provisional';
-    const allowed = new Set(['official_fargo', 'derby_estimate', 'admin_provisional', 'fremont_open_import', 'other']);
-    if (!allowed.has(sourceKind)) {
-      return Response.json({ error: 'Invalid sourceKind' }, { status: 400, headers: { 'cache-control': 'no-store' } });
-    }
-    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
-    const observation = await repository.recordRatingObservation({
-      actorUserId: actor.id,
-      playerId,
-      sourceKind,
-      ratingValue: Number(ratingValue),
-      robustness: body.robustness ?? null,
-      confidence: body.confidence ?? null,
-      note: body.note || body.reason || null,
-    });
-    return Response.json({ observation }, { headers: { 'cache-control': 'no-store' } });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
-
-export async function handleGetAdminPlayerRequest(request, env, playerId, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createAdminPlayersRepository(env, { fetch: fetchImpl });
-    const players = await repository.listPlayers({ actorUserId: actor.id });
-    const player = (players || []).find((row) => String(row.playerId || row.id) === String(playerId));
-    const { playerOpen } = await import('./playerOpen.js');
-    if (!playerOpen(player)) return Response.json({ error: 'Player not found' }, { status: 404, headers: { 'cache-control': 'no-store' } });
-    return Response.json({ player }, { headers: { 'cache-control': 'no-store' } });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
 export const adminPlayersHttpHandlers = {
-  recordRatingObservation: handleRecordRatingObservationRequest,
   list: handleListAdminPlayersRequest,
-  get: handleGetAdminPlayerRequest,
   setAdminRole: handleSetAdminRoleRequest,
 };

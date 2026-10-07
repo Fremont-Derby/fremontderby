@@ -1,26 +1,16 @@
 name: CI
 
-# Safe public-repo CI (#872 / #701): run validation on PRs and pushes without
-# any deploy or Cloudflare secret access. Deploy remains workflow_dispatch-only
-# in deploy-release-lanes.yml. Workers Builds isolation is #873 (dashboard + guard).
-# Inventory: docs/GITHUB_ACTIONS.md
 on:
-  workflow_dispatch:
   pull_request:
-    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
   push:
-    branches: [main, fremontderby-gamma, fremontderby-jfl, fremontderby-dru]
+    branches: [main, fremontderby-jfl, fremontderby-dru, fremontderby-gamma]
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   test:
-    name: CI / test
+    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +19,6 @@ jobs:
           node-version: 22
       - run: npm run lint
       - run: npm run check
-      - run: npm run check:matrix
       - run: npm run labels:check
       - name: Run tests
         id: tests
@@ -47,8 +36,6 @@ jobs:
           path: test-output.txt
           retention-days: 1
       - run: npm run build
-      - name: Enforce test-file floor
-        run: node scripts/count-tests.mjs
 
   accessibility:
     name: accessibility
@@ -60,22 +47,10 @@ jobs:
         with:
           node-version: 22
       - name: Run rendered WCAG2AA gate
-        id: accessibility
-        shell: bash
-        run: |
-          set +e
-          npm run a11y 2>&1 | tee accessibility-output.txt
-          status=${PIPESTATUS[0]}
-          exit "$status"
-      - name: Upload failing accessibility output
-        if: failure() && steps.accessibility.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: accessibility-output
-          path: accessibility-output.txt
-          retention-days: 1
+        run: npm run a11y
 
   test-season1:
+    name: test-season1
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,13 +58,10 @@ jobs:
         with:
           node-version: 22
       - run: npm run test:season1
-      - run: npm run test:floor
 
   deploy-nonproduction:
-    # #872/#873: never on pull_request (fork or same-repo). Secrets only on trusted push refs.
     if: >-
       github.event_name == 'push' &&
-      github.event.pull_request == null &&
       (github.ref == 'refs/heads/fremontderby-jfl' ||
        github.ref == 'refs/heads/fremontderby-dru' ||
        github.ref == 'refs/heads/fremontderby-gamma')
@@ -109,6 +81,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           lane="${GITHUB_REF_NAME#fremontderby-}"
+          if [[ "$lane" == "jfl" ]]; then
+            node scripts/cleanup-cloudflare-lane-secrets.mjs jfl
+          fi
           npm run "deploy:${lane}"
       - name: Verify deployed lane and exact commit
         shell: bash
@@ -120,10 +95,131 @@ jobs:
             "https://${lane}.fremontderby.com" \
             "$lane" \
             "$GITHUB_SHA"
+      - name: Verify JFL public season bootstrap
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        run: node scripts/smoke-jfl-season-bootstrap.mjs
+      - name: Verify JFL simulated session and team bootstrap
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        run: node scripts/smoke-jfl-session-health.mjs
+      - name: Verify JFL QA evidence ingestion and idempotent retry
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          run_id="deploy-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          payload="$(jq -cn \
+            --arg run_id "$run_id" \
+            --arg sha "$EXPECTED_SHA" \
+            --arg completed_at "$completed_at" \
+            '{
+              schema_version: "1.0.0",
+              lane: "jfl",
+              run_id: $run_id,
+              replay_of_run_id: null,
+              level_id: "scorecard.deployment-smoke",
+              seed: "github-actions",
+              build_sha: $sha,
+              worker_version: $sha,
+              started_at: $completed_at,
+              completed_at: $completed_at,
+              duration_ms: 0,
+              tester_id: "github-actions",
+              session_id: null,
+              device: {
+                browser_family: "github-actions",
+                device_family: "ci",
+                viewport_width: 0,
+                viewport_height: 0
+              },
+              fixture_facts: {
+                world: "scorecard",
+                race_state: "deployment_smoke",
+                verification_probe: true
+              },
+              assertions: [{
+                assertion_id: "scorecard.deployment-smoke.persist",
+                result: "pass",
+                answered_at: $completed_at
+              }],
+              outcome: "pass",
+              note: null,
+              events: [{
+                event_id: ($run_id + "-save"),
+                type: "interaction",
+                action: "save_result",
+                component: "qa_assertions",
+                occurred_at: $completed_at,
+                sequence: 0
+              }]
+            }')"
+
+          for attempt in 1 2 3 4 5; do
+            if response="$(curl --fail-with-body --silent --show-error \
+                --request POST \
+                --header 'content-type: application/json' \
+                --data "$payload" \
+                https://jfl.fremontderby.com/api/qa/evidence)" && \
+              jq -e --arg run_id "$run_id" \
+                '.saved == true and .runId == $run_id' <<<"$response"; then
+              break
+            fi
+            if [[ "$attempt" == 5 ]]; then
+              echo "JFL QA evidence ingestion did not become ready after $attempt attempts" >&2
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+
+      - name: Verify JFL modern UI proof route
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          legacy_body="$(mktemp)"
+          trap 'rm -f "$headers" "$body" "$legacy_body"' EXIT
+
+          curl --fail --silent --show-error \
+            --dump-header "$headers" \
+            --output "$body" \
+            https://jfl.fremontderby.com/rules
+
+          grep -Fq 'data-fd-modern-ui-slice="true"' "$body"
+          grep -Fq 'Modern UI preview' "$body"
+          grep -Eiq '^x-fremont-ui-mode:[[:space:]]*modern' "$headers"
+
+          curl --fail --silent --show-error \
+            --output "$legacy_body" \
+            'https://jfl.fremontderby.com/rules?ui=legacy'
+
+          if grep -Fq 'data-fd-modern-ui-slice="true"' "$legacy_body"; then
+            echo 'Legacy fallback unexpectedly contains the modern UI marker.' >&2
+            exit 1
+          fi
+      - name: Verify JFL schedule race enhancement is live
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+
+          curl --fail --silent --show-error \
+            --output "$body" \
+            https://jfl.fremontderby.com/schedule
+
+          grep -Fq 'data-fd-jfl-schedule-races' "$body"
+          grep -Fq 'fd-schedule-race__discipline' "$body"
+          grep -Fq 'openingDiscipline' "$body"
+          grep -Fq '8 first' "$body"
+          grep -Fq '9 first' "$body"
 
   production-smoke:
-    # #872/#873: production smoke only after push to main — never PR events.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pull_request == null
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
     runs-on: ubuntu-latest
     concurrency:

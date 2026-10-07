@@ -16,10 +16,6 @@ permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: staging-readiness-${{ github.event.inputs.staging_url || github.sha }}
-  cancel-in-progress: true
-
 jobs:
   smoke:
     runs-on: ubuntu-latest

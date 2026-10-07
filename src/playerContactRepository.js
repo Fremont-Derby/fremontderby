@@ -1,5 +1,4 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);
@@ -7,7 +6,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return stripTrailingSlashes(value);
+  return value.replace(/\/+$/, '');
 }
 
 async function parseResponse(response) {
@@ -61,13 +60,6 @@ export function createPlayerContactRepository(
       return rpc('get_admin_player_phone', {
         actor_user_id: actorUserId,
         target_player_id: playerId,
-      });
-    },
-    setAdminPlayer({ actorUserId, playerId, phone }) {
-      return rpc('set_admin_player_phone', {
-        actor_user_id: actorUserId,
-        target_player_id: playerId,
-        profile_phone: phone,
       });
     },
   };

@@ -1,10 +1,10 @@
 node_modules/
 dist/
-.playwright/
-playwright-report/
-test-results/
 .wrangler/
 .dev.vars
 .dev.vars.*
 .env
 .env.*
+playwright-report/
+test-results/
+supabase/.temp/

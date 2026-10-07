@@ -1,40 +1,41 @@
-import { handleFargoExportRequest } from './fargoExportHttp.js';
-import { handleChallongePublishDryRunRequest } from './challongePublishHttp.js';
-import { handleFargoFeedRequest } from './fargoFeedHttp.js';
-import { handlePlayerStatsSummaryRequest } from './adminPlayerStatsHttp.js';
-import { handleLeagueHouseRequest } from './leagueHouseHttp.js';
-import { handleFargoReportsPage } from './fargoReportsHttp.js';
-import { renderAdminPlayerStatsPage } from './adminPlayerStatsPage.js';
-import { renderAdminRatingHealthPage } from './adminRatingHealthPage.js';
-import { renderAdminSupportPage } from './adminSupportPage.js';
-import { routeAdminSupport } from './adminSupportHttp.js';
-import { runHourlyProbes, maybeCommentProbeFailures } from './hourlyProbe.js';
+import { routeJflProvisionalSeed, enhanceJflProvisionalSeedLink } from './jflProvisionalSeedHttp.js';
 import { injectAccessibilityLayer } from './accessibilityLayer.js';
 import { injectAdminGatewayTheme } from './adminGatewayTheme.js';
-import { renderAdminPlayerContactPage } from './adminPlayerContactPage.js';
 import { injectAdminSurfaceTheme } from './adminSurfaceTheme.js';
-import { applyProductScriptRepairs } from './productScriptRepairs.js';
-import { renderFreeAgentsPage, renderPracticePage } from './publicShellPages.js';
-import { druModernRequested } from './druModernSwitch.js';
-import { renderJflFreeAgentsPage } from './jflFreeAgentsPage.js';
-import { aliasRedirect } from './publicPathAliases.js';
 import { handleCreateAdminPlayerRequest } from './adminCreatePlayerHttp.js';
-import { handleRecordRatingObservationRequest, handleRecomputeDerbyEstimateRequest } from './adminPlayersHttp.js';
 import { routeAdminGateway } from './adminGatewayRouter.js';
 import { decorateHtmlWithShell, renderNotFoundPage } from './appShell.js';
 import { routeDateAvailability } from './dateAvailabilityHttp.js';
+import { renderJflNotFoundPage } from './jflNotFoundPage.js';
+import { routeJflModernHome } from './jflModernHome.js';
+import { routeJflModernSchedule } from './jflModernSchedule.js';
+import { routeJflModernStandings } from './jflModernStandings.js';
+import { routeJflModernTeams } from './jflModernTeams.js';
+import { routeJflFreeAgents } from './jflFreeAgentsPage.js';
+import { routeJflPlayersDirectory } from './jflPlayersDirectory.js';
+import { routeJflPublicPlayoffs } from './jflPublicPlayoffs.js';
+import { routeJflNotifications } from './jflNotificationsHttp.js';
+import { decorateJflModernShell } from './jflModernShell.js';
+import { routeJflSeasonSchedule } from './jflSeasonScheduleHttp.js';
+import { injectJflSimulatedGoogleAuth } from './jflSimulatedGoogleAuth.js';
 import { injectLineupTheme } from './lineupTheme.js';
 import legacyRouter from './router.js';
+import { routeJflQaResults } from './jflQaResultsHttp.js';
+import { enhanceJflQaResults } from './jflQaResultsEnhancer.js';
 import { routeAdminSeasonTeams } from './adminSeasonTeamsRouter.js';
 import { injectMessagesTheme } from './messagesTheme.js';
 import { injectMobileMenuAccessibility } from './mobileMenuAccessibility.js';
+import { routeModernUiCatalog } from './modernUiCatalog.js';
+import { decorateModernUiSliceResponse } from './modernUiSlice.js';
 import { injectPersistentAuthSession } from './persistentAuthSession.js';
-import { injectDruAgentSession } from './druAgentSession.js';
-import { injectTesterFeedback } from './testerFeedbackShortcut.js';
 import { injectPlayerSurfaceTheme } from './playerSurfaceTheme.js';
 import { routePlayerClaim } from './playerClaimHttp.js';
 import { routePlayerContact } from './playerContactHttp.js';
 import { enhanceProfileContact } from './profileContactEnhancer.js';
+import { routeDirectMessageConsent } from './directMessageConsentHttp.js';
+import { routeSocialChatConsent } from './socialChatConsentHttp.js';
+import { enhanceProfileSocialChatConsent } from './profileSocialChatConsentEnhancer.js';
+import { enhanceProfileDirectMessageConsent } from './profileDirectMessageConsentEnhancer.js';
 import { enhanceProfilePlayerClaim } from './profilePlayerClaimEnhancer.js';
 import { enhanceProfileSeasonRegistration } from './profileSeasonRegistrationEnhancer.js';
 import { routePlayerSeasonRegistration } from './playerSeasonRegistrationHttp.js';
@@ -43,88 +44,23 @@ import { injectPublicSurfaceTheme } from './publicSurfaceTheme.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
-import { routeSeasonLifecycle } from './seasonLifecycleHttp.js';
-import { enhanceSeasonLifecycle } from './seasonLifecycleEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { injectSiteStyles } from './siteStyles.js';
 import { injectStandingsTheme } from './standingsTheme.js';
-import { injectPublicSeo } from './publicSeo.js';
 import { enhanceTeamsCanonicalActions } from './teamsCanonicalActionsEnhancer.js';
 import { injectTeamsTheme } from './teamsTheme.js';
-import { renderPlayoffsPage } from './playoffsPage.js';
-import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
-import { renderNotificationsPage } from './notificationsPage.js';
+import { injectEnvironmentFingerprint } from './environmentFingerprint.js';
 
 const RETIRED_TRADE_API_PATTERNS = [
   /^\/api\/me\/trades$/,
   /^\/api\/teams\/[^/]+\/trades$/,
   /^\/api\/team-trades\/[^/]+\/(player-response|captain-approval)$/,
   /^\/api\/admin\/teams\/[^/]+\/trades$/,
-  /^\/trades\/?$/,
-  /^\/trade\/?$/,
 ];
 
-const PUBLIC_HTML_PAGES = new Map([
-  ['/playoffs', renderPlayoffsPage],
-  ['/playoff', renderPlayoffsPage],
-  ['/bracket', renderPlayoffsPage],
-  ['/brackets', renderPlayoffsPage],
-  ['/players', renderPlayersDirectoryPage],
-  ['/player', renderPlayersDirectoryPage],
-  ['/directory', renderPlayersDirectoryPage],
-  ['/notifications', renderNotificationsPage],
-  ['/notify', renderNotificationsPage],
-  ['/free-agents', renderFreeAgentsPage],
-  ['/fa', renderFreeAgentsPage],
-  ['/subs', renderFreeAgentsPage],
-  ['/substitutes', renderFreeAgentsPage],
-  ['/practice', renderPracticePage],
-  ['/practices', renderPracticePage],
-]);
-
-const LIVE_PAGE_REWRITES = new Map([
-  ['/check-in', '/availability'],
-  ['/checkin', '/availability'],
-  ['/league-night', '/availability'],
-  ['/leaguenight', '/availability'],
-  ['/ready-check', '/availability'],
-  ['/readycheck', '/availability'],
-  ['/inbox', '/messages'],
-  ['/chat', '/messages'],
-  ['/msg', '/messages'],
-  ['/msgs', '/messages'],
-  ['/account', '/profile'],
-  ['/settings', '/profile'],
-  ['/me', '/profile'],
-  ['/login', '/profile'],
-  ['/signin', '/profile'],
-  ['/sign-in', '/profile'],
-  ['/scoring', '/scorecard'],
-  ['/score', '/scorecard'],
-  ['/scores', '/scorecard'],
-  ['/awards', '/prizes'],
-  ['/prize', '/prizes'],
-  ['/stats', '/standings'],
-  ['/history', '/standings'],
-  ['/tonight', '/schedule'],
-  ['/week', '/schedule'],
-  ['/schedules', '/schedule'],
-  ['/matches', '/schedule'],
-  ['/roster', '/teams'],
-  ['/join', '/teams'],
-  ['/captain', '/teams'],
-  ['/lineups', '/lineup'],
-  ['/sandbox', '/demo'],
-  ['/try', '/demo'],
-  ['/home', '/'],
-]);
-
-function stripTrailingSlash(pathname) {
-  return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-}
-
 function isRetiredTradePath(pathname) {
-  return RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
+  return pathname === '/trades'
+    || RETIRED_TRADE_API_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
 function retiredTradeResponse(request, pathname) {
@@ -136,10 +72,15 @@ function retiredTradeResponse(request, pathname) {
   });
 }
 
-function htmlPageResponse(render, pathname) {
-  return new Response(decorateHtmlWithShell(render(), pathname), {
+function jflNotFoundResponse(pathname) {
+  return new Response(decorateHtmlWithShell(renderJflNotFoundPage(pathname), pathname), {
+    status: 404,
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   });
+}
+
+function isHtmlResponse(response) {
+  return (response.headers.get('content-type') || '').includes('text/html');
 }
 
 async function reconcileProductShell(response, pathname) {
@@ -162,14 +103,13 @@ async function reconcileProductShell(response, pathname) {
   }
   if (pathname === '/demo') {
     html = html
-      .replace('<title>Try a League Night \u00b7 Fremont Derby</title>', '<title>Test Drive the App \u00b7 Fremont Derby</title>')
+      .replace('<title>Try a League Night · Fremont Derby</title>', '<title>Test Drive the App · Fremont Derby</title>')
       .replace('<h1>Try a League Night</h1>', '<h1>Test Drive the App</h1>');
   }
   return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }
 
-let requestEnv = {};
-async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
+async function finalizeBrowserResponse(response, pathname) {
   const seasonSelected = await enhancePublicSeasonSelection(response, pathname);
   const designed = await injectSiteStyles(seasonSelected);
   const publicThemed = await injectPublicSurfaceTheme(designed, pathname);
@@ -180,213 +120,111 @@ async function finalizeBrowserResponse(response, pathname, env = requestEnv) {
   const teamsThemed = await injectTeamsTheme(messagesThemed);
   const adminGatewayThemed = await injectAdminGatewayTheme(teamsThemed);
   const adminThemed = await injectAdminSurfaceTheme(adminGatewayThemed, pathname);
-  const productRepaired = await applyProductScriptRepairs(adminThemed, pathname);
-  const accessible = await injectAccessibilityLayer(productRepaired);
+  const accessible = await injectAccessibilityLayer(adminThemed);
   const mobileMenuAccessible = await injectMobileMenuAccessibility(accessible);
-  const withAuth = await injectPersistentAuthSession(mobileMenuAccessible);
-  const withSeo = await injectPublicSeo(withAuth, pathname);
-  const withFeedback = await injectTesterFeedback(withSeo);
-  return injectDruAgentSession(withFeedback, env);
+  return injectPersistentAuthSession(mobileMenuAccessible);
 }
 
-// Replaced at deploy time by scripts/stamp-deploy-identity.mjs
-const STAMPED_DEPLOY_GIT_SHA = null;
-const STAMPED_DEPLOY_AT = null;
-
-export default {
-  async scheduled(event, env, ctx) {
-    const summary = await runHourlyProbes(env);
-    const notify = await maybeCommentProbeFailures(env, summary);
-    console.log(JSON.stringify({ type: 'hourly_probe', ok: summary.ok, failures: summary.failures.length, notify }));
-    return summary;
-  },
-
+const baseRouterEntry = {
   async fetch(request, env, ctx) {
-    // HEAD = same as GET without a body (CDN/monitors). Avoid recursive this.fetch.
-    if (request.method === 'HEAD') {
-      const getRequest = new Request(request.url, {
-        method: 'GET',
-        headers: request.headers,
-        redirect: request.redirect,
-      });
-      const response = await this.fetch(getRequest, env, ctx);
-      return new Response(null, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-      });
-    }
-
-    requestEnv = env;
     const url = new URL(request.url);
-    if (url.pathname === '/sandbox/war-game' && String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { renderDruWarGamePage } = await import('./druWarGamePage.js');
-      return new Response(renderDruWarGamePage(), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    const provisionalSeedResponse = await routeJflProvisionalSeed(request, env);
+    if (provisionalSeedResponse) return finalizeBrowserResponse(provisionalSeedResponse, url.pathname);
+    const qaResults = await routeJflQaResults(request, env);
+    if (qaResults) return qaResults;
+    const notificationsResponse = await routeJflNotifications(request, env);
+    if (notificationsResponse) return finalizeBrowserResponse(notificationsResponse, url.pathname);
+    const jflSeasonScheduleResponse = await routeJflSeasonSchedule(request, env);
+    if (jflSeasonScheduleResponse) return jflSeasonScheduleResponse;
+    const modernHomeResponse = routeJflModernHome(request, env);
+    if (modernHomeResponse) {
+      return finalizeBrowserResponse(modernHomeResponse, url.pathname);
     }
-    const page = (response, path = url.pathname) => finalizeBrowserResponse(response, path, env);
-    // Authoritative deploy identity for canaries/smoke (CF metadata.tag is often empty).
-    if ((url.pathname === '/health' || url.pathname === '/health/environment') && request.method === 'GET') {
-      const meta = env.CF_VERSION_METADATA || {};
-      const fromMeta = typeof meta.tag === 'string' && meta.tag.trim() ? meta.tag.trim() : null;
-      const fromEnv = typeof env.DEPLOY_GIT_SHA === 'string' && env.DEPLOY_GIT_SHA.trim() ? env.DEPLOY_GIT_SHA.trim() : null;
-      const fromStamp = typeof STAMPED_DEPLOY_GIT_SHA === 'string' && STAMPED_DEPLOY_GIT_SHA.trim() ? STAMPED_DEPLOY_GIT_SHA.trim() : null;
-      const fromId = typeof meta.id === 'string' && meta.id.trim() && meta.id !== 'local' ? meta.id.trim() : null;
-      const tag = fromMeta || fromEnv || fromStamp || fromId || null;
-      let versionTagSource = null;
-      if (tag && fromMeta === tag) versionTagSource = 'cf_metadata';
-      else if (tag && fromEnv === tag) versionTagSource = 'DEPLOY_GIT_SHA';
-      else if (tag && fromStamp === tag) versionTagSource = 'stamped_source';
-      else if (tag && fromId === tag) versionTagSource = 'cf_version_id';
-      if (url.pathname === '/health') {
-        return Response.json(
-          {
-            ok: true,
-            service: 'fremontderby',
-            version: meta.id || 'local',
-            versionTag: tag,
-            deployedAt: meta.timestamp || STAMPED_DEPLOY_AT || null,
-            versionTagSource,
-          },
-          { headers: { 'cache-control': 'no-store' } },
-        );
-      }
-      // environment: still use legacy readiness via fallthrough
+    const modernScheduleResponse = routeJflModernSchedule(request, env);
+    if (modernScheduleResponse) {
+      const withAvailability = await enhanceScheduleAvailability(modernScheduleResponse);
+      return finalizeBrowserResponse(withAvailability, url.pathname);
     }
-    if (url.pathname === '/internal/hourly-probe' && request.method === 'GET') {
-      const key = request.headers.get('x-probe-key') || url.searchParams.get('key') || '';
-      const expected = String(env?.HOURLY_PROBE_KEY || '').trim();
-      const envName = String(env?.ENVIRONMENT || 'production').toLowerCase();
-      // Production always requires a configured key; other lanes require key when set.
-      if (envName === 'production' || expected) {
-        if (!expected || key !== expected) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-      }
-      const summary = await runHourlyProbes(env);
-      if (url.searchParams.get('notify') === '1') {
-        summary.notify = await maybeCommentProbeFailures(env, summary);
-      }
-      return Response.json(summary, { headers: { 'cache-control': 'no-store' } });
+    const modernStandingsResponse = routeJflModernStandings(request, env);
+    if (modernStandingsResponse) {
+      return finalizeBrowserResponse(modernStandingsResponse, url.pathname);
     }
-
-    // Trades restored — paths served by legacy router / index handlers.
-
-    const aliased = aliasRedirect(request, url);
-    if (aliased) return aliased;
-
-    if (url.pathname === '/free-agents' || url.pathname === '/practice') {
-      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      const html = url.pathname === '/practice'
-        ? renderPracticePage()
-        : (druModernRequested(request) ? renderJflFreeAgentsPage() : renderFreeAgentsPage());
-      return finalizeBrowserResponse(new Response(html, {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
-      }), url.pathname);
+    const modernTeamsResponse = routeJflModernTeams(request, env);
+    if (modernTeamsResponse) {
+      return finalizeBrowserResponse(modernTeamsResponse, url.pathname);
     }
-
-    if (url.pathname === '/api/admin/player-stats' && request.method === 'GET') {
-      return finalizeBrowserResponse(await handlePlayerStatsSummaryRequest(request, env), url.pathname);
+    const freeAgentsResponse = routeJflFreeAgents(request, env);
+    if (freeAgentsResponse) {
+      return finalizeBrowserResponse(freeAgentsResponse, url.pathname);
     }
-    if (url.pathname === '/admin/player-stats') {
-      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      return finalizeBrowserResponse(new Response(renderAdminPlayerStatsPage(), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
-      }), url.pathname);
+    const playersDirectoryResponse = routeJflPlayersDirectory(request, env);
+    if (playersDirectoryResponse) {
+      return finalizeBrowserResponse(playersDirectoryResponse, url.pathname);
     }
-    if (url.pathname === '/admin/rating-health') {
-      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      return finalizeBrowserResponse(new Response(renderAdminRatingHealthPage(), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
-      }), url.pathname);
+    const publicPlayoffsResponse = routeJflPublicPlayoffs(request, env);
+    if (publicPlayoffsResponse) {
+      return finalizeBrowserResponse(publicPlayoffsResponse, url.pathname);
     }
-    if (url.pathname === '/admin/support') {
-      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      return finalizeBrowserResponse(new Response(renderAdminSupportPage(), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
-      }), url.pathname);
+    const modernUiCatalogResponse = routeModernUiCatalog(request, env);
+    if (modernUiCatalogResponse) {
+      return finalizeBrowserResponse(modernUiCatalogResponse, url.pathname);
     }
-    if (url.pathname === '/admin/player-contact') {
-      if (request.method !== 'GET') return Response.json({ error: 'Method not allowed' }, { status: 405 });
-      return finalizeBrowserResponse(new Response(renderAdminPlayerContactPage(), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
-      }), url.pathname);
-    }
-
-    {
-      const recompute = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/recompute-derby-estimate$/);
-      if (recompute && request.method === 'POST') {
-        return finalizeBrowserResponse(
-          await handleRecomputeDerbyEstimateRequest(request, env, decodeURIComponent(recompute[1])),
-          url.pathname,
-        );
-      }
-    }
-
-    {
-      const ratingObs = url.pathname.match(/^\/api\/admin\/players\/([^/]+)\/rating-observation$/);
-      if (ratingObs && request.method === 'POST') {
-        return finalizeBrowserResponse(
-          await handleRecordRatingObservationRequest(request, env, decodeURIComponent(ratingObs[1])),
-          url.pathname,
-        );
-      }
-    }
-
-    if (url.pathname === '/api/fargo/feed' && request.method === 'GET') {
-      return finalizeBrowserResponse(await handleFargoFeedRequest(request, env), url.pathname);
-    }
-    if (url.pathname === '/admin/league-house' && (request.method === 'GET' || request.method === 'POST')) {
-      return finalizeBrowserResponse(await handleLeagueHouseRequest(request, env), url.pathname);
-    }
-    if (url.pathname === '/admin/fargo-reports' && (request.method === 'GET' || request.method === 'POST')) {
-      return finalizeBrowserResponse(await handleFargoReportsPage(request, env), url.pathname);
-    }
-    if (url.pathname === '/api/admin/challonge/publish-candidate-a' && request.method === 'POST') {
-      return finalizeBrowserResponse(
-        await handleChallongePublishDryRunRequest(request, env),
-        url.pathname,
-      );
-    }
-    if (url.pathname === '/api/admin/fargo/export' && request.method === 'POST') {
-      return finalizeBrowserResponse(
-        await handleFargoExportRequest(request, env),
-        url.pathname,
-      );
+    if (isRetiredTradePath(url.pathname)) {
+      const response = env.ENVIRONMENT === 'jfl' && !url.pathname.startsWith('/api/')
+        ? jflNotFoundResponse(url.pathname)
+        : retiredTradeResponse(request, url.pathname);
+      return finalizeBrowserResponse(response, url.pathname);
     }
     if (url.pathname === '/api/admin/players' && request.method === 'POST') return finalizeBrowserResponse(await handleCreateAdminPlayerRequest(request, env), url.pathname);
     const playerClaimResponse = await routePlayerClaim(request, env);
     if (playerClaimResponse) return finalizeBrowserResponse(playerClaimResponse, url.pathname);
-    const adminSupportResponse = await routeAdminSupport(request, env);
-    if (adminSupportResponse) return finalizeBrowserResponse(adminSupportResponse, url.pathname);
+    const consentResponse = await routeDirectMessageConsent(request, env);
+    if (consentResponse) return consentResponse;
+    const socialConsentResponse = await routeSocialChatConsent(request, env);
+    if (socialConsentResponse) return socialConsentResponse;
     const playerContactResponse = await routePlayerContact(request, env);
-    if (playerContactResponse) return page(playerContactResponse);
+    if (playerContactResponse) return finalizeBrowserResponse(playerContactResponse, url.pathname);
     const playerSeasonRegistrationResponse = await routePlayerSeasonRegistration(request, env);
-    if (playerSeasonRegistrationResponse) return page(playerSeasonRegistrationResponse);
+    if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
-    if (dateAvailabilityResponse) return page(dateAvailabilityResponse);
+    if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
     const seasonCloseResponse = await routeSeasonClose(request, env);
     if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
-    const seasonLifecycleResponse = await routeSeasonLifecycle(request, env);
-    if (seasonLifecycleResponse) return finalizeBrowserResponse(seasonLifecycleResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);
-    if (adminGatewayResponse) return page(adminGatewayResponse);
+    if (adminGatewayResponse) return finalizeBrowserResponse(adminGatewayResponse, url.pathname);
     const adminSeasonTeamsResponse = await routeAdminSeasonTeams(request, env);
-    if (adminSeasonTeamsResponse) return page(adminSeasonTeamsResponse);
+    if (adminSeasonTeamsResponse) return finalizeBrowserResponse(adminSeasonTeamsResponse, url.pathname);
     const response = await legacyRouter.fetch(request, env, ctx);
-    const reconciled = await reconcileProductShell(response, url.pathname);
+    if (env.ENVIRONMENT === 'jfl' && response.status === 404 && isHtmlResponse(response)) {
+      return finalizeBrowserResponse(jflNotFoundResponse(url.pathname), url.pathname);
+    }
+    const seedLinked = await enhanceJflProvisionalSeedLink(response, env, url.pathname);
+    const reconciled = await reconcileProductShell(seedLinked, url.pathname);
     if (url.pathname === '/schedule' && request.method === 'GET') return finalizeBrowserResponse(await enhanceScheduleAvailability(reconciled), url.pathname);
     if (url.pathname === '/teams' && request.method === 'GET') return finalizeBrowserResponse(await enhanceTeamsCanonicalActions(reconciled), url.pathname);
-    if (url.pathname === '/admin/seasons' && request.method === 'GET') return finalizeBrowserResponse(await enhanceSeasonLifecycle(reconciled), url.pathname);
     if (url.pathname === '/season-setup' && request.method === 'GET') {
       const withPublishReadiness = await enhanceSeasonPublishReadiness(reconciled);
-      const withClose = await enhanceSeasonClose(withPublishReadiness);
-      return finalizeBrowserResponse(await enhanceSeasonLifecycle(withClose), url.pathname);
+      return finalizeBrowserResponse(await enhanceSeasonClose(withPublishReadiness), url.pathname);
     }
     if (url.pathname === '/profile' && request.method === 'GET') {
       const withSeasonRegistration = await enhanceProfileSeasonRegistration(reconciled);
       const withContact = await enhanceProfileContact(withSeasonRegistration);
-      return page(await enhanceProfilePlayerClaim(withContact));
+      const withConsent = env.ENVIRONMENT === 'jfl' ? await enhanceProfileDirectMessageConsent(withContact) : withContact;
+      const withSocialConsent = env.ENVIRONMENT === 'jfl' ? await enhanceProfileSocialChatConsent(withConsent) : withConsent;
+      const withPlayerClaim = await enhanceProfilePlayerClaim(withSocialConsent);
+      return finalizeBrowserResponse(await injectJflSimulatedGoogleAuth(withPlayerClaim, env), url.pathname);
     }
-    return page(reconciled);
+    const resultResponse = url.pathname === '/scorecard' && request.method === 'GET'
+      ? await enhanceJflQaResults(reconciled, env) : reconciled;
+    const finalized = await finalizeBrowserResponse(resultResponse, url.pathname);
+    return decorateModernUiSliceResponse(finalized, request, env);
+  },
+};
+
+export default {
+  async fetch(request, env, ctx) {
+    const response = await baseRouterEntry.fetch(request, env, ctx);
+    const withShell = await decorateJflModernShell(response, request, env);
+    return injectEnvironmentFingerprint(withShell, request, env);
   },
 };

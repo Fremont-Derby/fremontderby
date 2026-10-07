@@ -67,6 +67,11 @@ const mobileMenuScript = `
   if (!menu || !summary || !drawer) return;
 
   let wasOpen = Boolean(menu.open);
+  const closeMenu = ({ restoreFocus = false } = {}) => {
+    if (!menu.open) return;
+    menu.open = false;
+    if (restoreFocus) summary.focus();
+  };
   const syncMenuState = () => {
     const open = Boolean(menu.open);
     if (dock) dock.inert = open;
@@ -82,14 +87,12 @@ const mobileMenuScript = `
   menu.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || !menu.open) return;
     event.preventDefault();
-    menu.open = false;
-    summary.focus();
+    closeMenu({ restoreFocus: true });
   });
   document.addEventListener('pointerdown', event => {
-    if (!menu.open) return;
-    if (menu.contains(event.target)) return;
-    menu.open = false;
-  });
+    if (!menu.open || menu.contains(event.target)) return;
+    closeMenu();
+  }, true);
   syncMenuState();
 })();
 `;

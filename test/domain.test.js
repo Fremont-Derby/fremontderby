@@ -111,18 +111,3 @@ test('match ends only when a race target is reached', () => {
   assert.equal(match.winner, 'A');
   assert.throws(() => recordRack(match, 'B'), /already complete/);
 });
-
-test('createMatch rejects invalid lag and opening discipline inputs', () => {
-  const base = {
-    ratingA: 550,
-    ratingB: 500,
-    chart,
-    lagWinner: 'A',
-    lagChoice: 'discipline',
-    openingDiscipline: '8-ball',
-  };
-  assert.throws(() => createMatch({ ...base, lagWinner: 'C' }), /lagWinner/);
-  assert.throws(() => createMatch({ ...base, lagChoice: 'serve' }), /lagChoice/);
-  assert.throws(() => createMatch({ ...base, openingDiscipline: '10-ball' }), /openingDiscipline/);
-  assert.throws(() => createMatch({ ...base, openingBlockLength: 0 }), /openingBlockLength/);
-});

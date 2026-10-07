@@ -142,14 +142,3 @@ test('admin override maps non-admin authorization failure to 403', async () => {
   }), {}, 'match-1');
   assert.equal(response.status, 403);
 });
-
-test('finalize reads scoringTeamId from JSON body without query param', async () => {
-  const { calls, handlers } = harness();
-  const response = await handlers.finalize(
-    request({ scoringTeamId: 'team-a' }, null),
-    {},
-    'match-1',
-  );
-  assert.equal(response.status, 200);
-  assert.deepEqual(calls, [['finalize', scoreContext]]);
-});

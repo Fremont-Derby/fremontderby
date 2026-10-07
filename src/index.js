@@ -1,19 +1,3 @@
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
-import { createNotificationRepository } from './notificationRepository.js';
-import {
-  createAdminAuditRepository,
-  deliverAuditWebhooks,
-  writeAuditBestEffort,
-} from './adminAuditRepository.js';
-import { createChatRepository } from './chatRepository.js';
-import { apiSecurityHeaders, assertBetaBypassLane } from './securityHeaders.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import {
-  readSanitizedJsonBody,
-  safeClientErrorMessage,
-  requireUuid,
-  isUuid,
-} from './requestSanitize.js';
 import {
   listTeamRoundAvailabilityCommand,
   setRosterAvailabilityCommand,
@@ -22,7 +6,6 @@ import { renderAvailabilityPage } from './availabilityPage.js';
 import { createAvailabilityRepository } from './availabilityRepository.js';
 import {
   listEligibleFreeAgentsCommand,
-  listSeasonFreeAgentsCommand,
   registerFreeAgentCommand,
   setFreeAgentAvailabilityCommand,
 } from './freeAgentCommands.js';
@@ -37,14 +20,8 @@ import { createLineupRepository } from './lineupRepository.js';
 import {
   getOwnPlayerProfileCommand,
   saveOwnPlayerProfileCommand,
-  saveOwnStandingAvailabilityCommand,
 } from './playerProfileCommands.js';
 import { renderProfilePage } from './profilePage.js';
-import { druModernRequested } from './druModernSwitch.js';
-import { renderJflModernStandings } from './jflModernStandings.js';
-import { renderJflModernTeams } from './jflModernTeams.js';
-import { modernizeJflProfileHtml } from './jflModernProfileEnhancer.js';
-import { renderJflPlayersDirectory } from './jflPlayersDirectory.js';
 import { createPlayerProfileRepository } from './playerProfileRepository.js';
 import {
   configureSeasonPrizesCommand,
@@ -72,10 +49,8 @@ import {
   listIndividualStandingsCommand,
   listTeamStandingsCommand,
 } from './standingsCommands.js';
-import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
 import { renderStandingsPage } from './standingsPage.js';
 import { createStandingsRepository } from './standingsRepository.js';
-import { conditionalJsonFromVersion, conditionalJsonResponse, versionTokenFromValue } from './httpConditional.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
 import {
@@ -83,25 +58,13 @@ import {
   approveTeamTradeCaptainCommand,
   cancelTeamInvitationCommand,
   invitePlayerToTeamCommand,
-  updateTeamPracticeCommand,
   listOwnTeamManagementCommand,
   listOwnTeamTradesCommand,
-  listTradeCounterpartyOptionsCommand,
   proposeTeamTradeCommand,
   removeTeamMemberCommand,
   respondToTeamTradePlayerCommand,
   respondToTeamInvitationCommand,
 } from './teamCommands.js';
-import {
-  proposeTeamMatchMakeupCommand,
-  respondTeamMatchMakeupCommand,
-} from './makeupCommands.js';
-import {
-  listMyNotificationsCommand,
-  markNotificationReadCommand,
-  markAllNotificationsReadCommand,
-  adminBroadcastNotificationCommand,
-} from './notificationCommands.js';
 import { createTeamMembershipRequestRepository } from './teamMembershipRequestRepository.js';
 import { createTeamRepository } from './teamRepository.js';
 import {
@@ -118,20 +81,14 @@ import {
 import { createTeamRegistrationRepository } from './teamRegistrationRepository.js';
 import { renderTeamsPage } from './teamsPage.js';
 import { renderTradesPage } from './tradesPage.js';
-import { normalizeApiPathname } from './pathAliases.js';
 
 const serviceName = "fremontderby";
 
 function versionMetadata(env = {}) {
   const metadata = env.CF_VERSION_METADATA || {};
-  const tag =
-    metadata.tag ||
-    (typeof env.DEPLOY_GIT_SHA === "string" && env.DEPLOY_GIT_SHA.trim()) ||
-    (typeof env.GITHUB_SHA === "string" && env.GITHUB_SHA.trim()) ||
-    null;
   return {
     id: metadata.id || "local",
-    tag,
+    tag: metadata.tag || null,
     timestamp: metadata.timestamp || null,
   };
 }
@@ -172,42 +129,76 @@ export function renderLandingPage(env = {}) {
 }
 
 function jsonResponse(body, status = 200) {
-  return Response.json(body, { status, headers: apiSecurityHeaders() });
+  return Response.json(body, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+    },
+  });
 }
 
 async function readJsonBody(request) {
-  return readSanitizedJsonBody(request);
-}
+  try {
+    const text = await request.text();
+    if (!text.trim()) {
+      return {};
+    }
 
-function normalizeApproveDecline(body) {
-  const raw =
-    body?.response
-    ?? body?.decision
-    ?? body?.action
-    ?? (body?.accept === true || body?.accepted === true ? 'accepted' : null)
-    ?? (body?.approve === true || body?.approved === true ? 'approved' : null)
-    ?? (body?.decline === true || body?.declined === true ? 'declined' : null);
-  if (raw == null) return raw;
-  const value = String(raw).toLowerCase().trim();
-  // Verb forms clients often send instead of past-participle status words.
-  if (value === 'accept') return 'accepted';
-  if (value === 'approve') return 'approved';
-  if (value === 'decline' || value === 'reject' || value === 'rejected') return 'declined';
-  return value;
+    const body = JSON.parse(text);
+    if (!body || Array.isArray(body) || typeof body !== "object") {
+      throw new Error("Request body must be a JSON object");
+    }
+    return body;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error("Request body must be valid JSON");
+    }
+    throw error;
+  }
 }
 
 function clientErrorMessage(error) {
-  // Prefer safe mapping first, then preserve a few product-specific uuid phrases.
-  const safe = safeClientErrorMessage(error);
-  const raw = String(error?.message || '');
-  if (/invalid input syntax for type uuid/i.test(raw) || /Supabase request failed with 400:.*uuid/i.test(raw)) {
-    return 'That season or match link is invalid.';
+  const msg = String(error?.message || "Request failed");
+  if (/invalid input syntax for type uuid/i.test(msg)) {
+    return "That season or match link is invalid.";
   }
-  return safe;
+  if (/Supabase request failed with 400:.*uuid/i.test(msg)) {
+    return "That season or match link is invalid.";
+  }
+  return msg;
 }
 function statusForError(error) {
   if (error instanceof AuthError) return error.status;
-  return rpcErrorStatus(error);
+  if (/invalid input syntax for type uuid/i.test(String(error?.message || ""))) return 400;
+  if (error.message === "Season not found") return 404;
+  if (error.message === "Actor is not a league admin") return 403;
+  if (error.message.includes("Actor is not a league admin")) return 403;
+  if (error.message.includes("Only the active captain")) return 403;
+  if (error.message.includes("Only an active captain")) return 403;
+  if (error.message.includes("Only a traded player")) return 403;
+  if (error.message.includes("Active roster membership is required")) return 403;
+  if (error.message.startsWith("Supabase request failed with 401")) return 401;
+  if (error.message.startsWith("Supabase request failed with 403")) return 403;
+  if (error.message.includes("Player is already scheduled")) return 409;
+  if (error.message.includes("Only match players or active team captains")) return 403;
+  if (error.message.includes("already complete")) return 409;
+  if (error.message.includes("is finalized")) return 409;
+  if (error.message.includes("no racks to undo")) return 409;
+  if (error.message.includes("before finalization")) return 409;
+  if (error.message.includes("before correction")) return 409;
+  if (error.message.includes("valid completed race state")) return 409;
+  if (error.message.includes("valid corrected race state")) return 409;
+  if (error.message.includes("rack history must match")) return 409;
+  if (error.message.includes("Race targets are required")) return 409;
+  if (error.message.includes("prize payouts are already finalized")) return 409;
+  if (error.message.includes("Season setup can only change before publication")) return 409;
+  if (error.message.includes("Roster lock has passed")) return 409;
+  if (error.message.includes("pending trade already includes")) return 409;
+  if (error.message.includes("Trade is no longer pending")) return 409;
+  if (error.message.includes("active membership changed")) return 409;
+  if (error.message.includes("active non-captain roster member")) return 409;
+  if (error.message === "Player match not found") return 404;
+  return 400;
 }
 
 export async function handlePublishScheduleRequest(
@@ -219,54 +210,6 @@ export async function handlePublishScheduleRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { ensureDruPracticeTeams } = await import('./druPracticeTeams.js');
-      await ensureDruPracticeTeams(env, { seasonId, actorUserId: actor.id }, fetchImpl);
-      const { prepareDruPracticePublish } = await import('./druPublishPrep.js');
-      await prepareDruPracticePublish(env, seasonId, fetchImpl);
-      const { ensureDruSeasonCaptainPhones } = await import('./druPracticePhone.js');
-      await ensureDruSeasonCaptainPhones(env, seasonId, fetchImpl);
-      const { practicePublishReady, practicePublishSlotCount, withoutReleasedPracticeTeams } = await import('./druPublishPrep.js');
-      const { withSupabaseSchema } = await import('./supabaseSchema.js');
-      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-      const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const registrationResponse = await fetchWithSchema(`${base}/rest/v1/rpc/get_admin_season_registration`, {
-        method: 'POST',
-        headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ actor_user_id: actor.id, target_season_id: seasonId }),
-      });
-      const registrationBody = registrationResponse.ok ? await registrationResponse.json() : {};
-      const registrationRow = Array.isArray(registrationBody) ? registrationBody[0] : registrationBody;
-      const slotRows = registrationRow?.registration?.slots || registrationRow?.slots || [];
-      if (!slotRows.length) return jsonResponse({ error: 'Practice slots did not load, so the night was not published.' }, 409);
-      const ready = practicePublishReady(practicePublishSlotCount(slotRows));
-      if (!ready.ok) return jsonResponse({ error: ready.text }, 409);
-      const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
-      const season = seasonResponse.ok ? (await seasonResponse.json())?.[0] : null;
-      const { draftCanPublish } = await import('./draftPublish.js');
-      if (draftCanPublish(season?.status)) {
-        await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}`, { method: 'PATCH', headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify({ status: 'registration' }) });
-      }
-      const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
-      const listSeasonTeams = repository.listSeasonTeams.bind(repository);
-      repository.listSeasonTeams = async (id, actorUserId) => {
-        const { practicePublishTeamIds } = await import('./druPublishPrep.js');
-        const teams = withoutReleasedPracticeTeams(await listSeasonTeams(id, actorUserId), slotRows);
-        return practicePublishTeamIds(teams, slotRows).map((teamId) => ({ id: teamId, active: true }));
-      };
-      const result = await publishSeasonScheduleCommand(
-        {
-          seasonId,
-          actorUserId: actor.id,
-          firstRoundDate: body.firstRoundDate,
-          intervalDays: body.intervalDays,
-          tableNumbers: body.tableNumbers,
-        },
-        repository,
-      );
-      return jsonResponse(result, 201);
-    }
 
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
     const result = await publishSeasonScheduleCommand(
@@ -295,15 +238,11 @@ export async function handleCreateSeasonSetupRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
-    let reservedSeasonId = null;
-    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const { reserveFreshDruSeason } = await import('./druFreshSeason.js');
-      reservedSeasonId = await reserveFreshDruSeason(env, { seasonName: body.seasonName ?? body.season_name }, fetchImpl);
-    }
     const setup = await saveSeasonSetupCommand(
       {
         actorUserId: actor.id,
-        seasonId: reservedSeasonId,
+        createNew: body.createNew ?? false,
+        seasonPurpose: body.seasonPurpose ?? 'league',
         seasonName: body.seasonName ?? body.season_name,
         leagueNight: body.leagueNight ?? body.league_night,
         firstRoundDate: body.firstRoundDate ?? body.first_round_date,
@@ -428,51 +367,10 @@ export async function handleSaveOwnProfileRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
-    // Standing-only payloads used to 400 with "displayName is required". Accept either shape.
-    const standingOnly =
-      (body.standingStatus != null || body.standing_availability_status != null
-        || body.standingNote != null || body.standing_availability_note != null)
-      && body.displayName == null && body.display_name == null;
-    if (standingOnly) {
-      const profile = await saveOwnStandingAvailabilityCommand(
-        {
-          actorUserId: actor.id,
-          standingStatus: body.standingStatus ?? body.standing_availability_status,
-          standingNote: body.standingNote ?? body.standing_availability_note,
-        },
-        repository,
-      );
-      return jsonResponse({ profile });
-    }
     const profile = await saveOwnPlayerProfileCommand(
       {
         actorUserId: actor.id,
-        displayName: body.displayName ?? body.display_name,
-        fargoExternalId: body.fargoExternalId ?? body.fargo_external_id ?? body.fargoId ?? body.fargo_id ?? null,
-      },
-      repository,
-    );
-
-    return jsonResponse({ profile });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleSaveOwnStandingAvailabilityRequest(
-  request,
-  env,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await readJsonBody(request);
-    const repository = createPlayerProfileRepository(env, { fetch: fetchImpl });
-    const profile = await saveOwnStandingAvailabilityCommand(
-      {
-        actorUserId: actor.id,
-        standingStatus: body.standingStatus ?? body.standing_availability_status,
-        standingNote: body.standingNote ?? body.standing_availability_note,
+        displayName: body.displayName,
       },
       repository,
     );
@@ -492,16 +390,12 @@ export async function handleCreateTeamRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-      const { reopenDruPracticeRegistration } = await import('./druFreshSeason.js');
-      await reopenDruPracticeRegistration(env, seasonId, fetchImpl);
-    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const application = await submitTeamApplicationCommand(
       {
         actorUserId: actor.id,
         seasonId,
-        teamName: body.teamName ?? body.team_name ?? body.name,
+        teamName: body.teamName ?? body.name,
       },
       repository,
     );
@@ -564,9 +458,7 @@ export async function handleRespondToReturningTeamSlotRequest(
       {
         actorUserId: actor.id,
         slotId,
-        action: body.action ?? body.response ?? body.decision
-          ?? (body.accept === true || body.accepted === true ? 'accept' : null)
-          ?? (body.decline === true || body.declined === true ? 'decline' : null),
+        action: body.action,
         transferPlayerId: body.transferPlayerId ?? body.transfer_player_id,
       },
       repository,
@@ -639,10 +531,8 @@ export async function handleReviewTeamApplicationRequest(
       {
         actorUserId: actor.id,
         applicationId,
-        decision: ({approved:'approve', approve:'approve', deferred:'defer', defer:'defer', rejected:'reject', declined:'reject', reject:'reject'})[
-          String(normalizeApproveDecline(body) ?? body.decision ?? '').toLowerCase()
-        ] ?? (normalizeApproveDecline(body) ?? body.decision),
-        reason: body.reason ?? body.note,
+        decision: body.decision,
+        reason: body.reason,
       },
       repository,
     );
@@ -661,18 +551,13 @@ export async function handleManageTeamSlotRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    const action = body.action ?? body.decision ?? body.response;
-    if (String(env.ENVIRONMENT || '').trim() === 'dru' && String(action || '') === 'confirm') {
-      const { registerDruSlotRoster } = await import('./druSlotRoster.js');
-      await registerDruSlotRoster(env, slotId, fetchImpl);
-    }
     const repository = createTeamRegistrationRepository(env, { fetch: fetchImpl });
     const slot = await manageTeamSlotCommand(
       {
         actorUserId: actor.id,
         slotId,
-        action,
-        reason: body.reason ?? body.note,
+        action: body.action,
+        reason: body.reason,
         extensionDays: body.extensionDays ?? body.extension_days,
       },
       repository,
@@ -731,13 +616,6 @@ export async function handleRequestTeamMembershipRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.requestJoin({ actorUserId: actor.id, teamId });
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_membership_request.create',
-      entityType: 'team',
-      entityId: teamId,
-      afterState: { membershipRequestId: membershipRequest?.id ?? membershipRequest?.requestId ?? null },
-    }, { fetch: fetchImpl });
-
     return jsonResponse({ membershipRequest }, 201);
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -753,25 +631,15 @@ export async function handleRespondToTeamMembershipRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    const response = normalizeApproveDecline(body);
-    if (!['approved', 'declined'].includes(response)) {
+    if (!['approved', 'declined'].includes(body.response)) {
       throw new Error('response must be approved or declined');
     }
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.respond({
       actorUserId: actor.id,
       requestId,
-      response,
+      response: body.response,
     });
-    await writeAuditBestEffort(env, actor.id, {
-      action: response === 'approved'
-        ? 'team_membership_request.approve'
-        : 'team_membership_request.decline',
-      entityType: 'team_membership_request',
-      entityId: requestId,
-      afterState: { response },
-    }, { fetch: fetchImpl });
-
     return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -788,12 +656,6 @@ export async function handleCancelTeamMembershipRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamMembershipRequestRepository(env, { fetch: fetchImpl });
     const membershipRequest = await repository.cancel({ actorUserId: actor.id, requestId });
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_membership_request.cancel',
-      entityType: 'team_membership_request',
-      entityId: requestId,
-    }, { fetch: fetchImpl });
-
     return jsonResponse({ membershipRequest });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -808,48 +670,12 @@ export async function handleListOwnTeamManagementRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createTeamRepository(env, { fetch: fetchImpl });
-    // Actor-scoped: strong ETag after load still enables 304 bandwidth savings on live refresh.
     const teamManagement = await listOwnTeamManagementCommand(
       { actorUserId: actor.id },
       repository,
     );
-    return conditionalJsonResponse(request, { teamManagement }, {
-      cacheControl: 'private, no-store',
-    });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
 
-
-export async function handleListTradeCounterpartyOptionsRequest(
-  request,
-  env,
-  seasonId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    try {
-      const teams = await listTradeCounterpartyOptionsCommand(
-        { actorUserId: actor.id, seasonId },
-        repository,
-      );
-      return jsonResponse({ teams });
-    } catch (error) {
-      if (String(env?.ENVIRONMENT || '').trim() !== 'dru') throw error;
-      const { tradeTeams } = await import('./tradeTeams.js');
-      const { withSupabaseSchema } = await import('./supabaseSchema.js');
-      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-      const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const response = await fetchWithSchema(`${base}/rest/v1/teams?season_id=eq.${seasonId}&select=id,name`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
-      const rows = response.ok ? await response.json() : [];
-      const teams = tradeTeams((rows || []).map((row) => ({ teamId: row.id, teamName: row.name })));
-      if (!teams.length) throw error;
-      return jsonResponse({ teams });
-    }
+    return jsonResponse({ teamManagement });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -874,348 +700,6 @@ export async function handleListOwnTeamTradesRequest(
   }
 }
 
-
-
-export async function handleGetTeamPracticeRequest(
-  request,
-  env,
-  teamId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const practice = await repository.getTeamPractice({ teamId });
-    return jsonResponse({ practice });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleUpdateTeamPracticeRequest(
-  request,
-  env,
-  teamId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    if (request.method !== 'PUT' && request.method !== 'POST') {
-      return jsonResponse({ error: 'Method not allowed' }, 405);
-    }
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await readJsonBody(request);
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const chatRepository = createChatRepository(env, { fetch: fetchImpl });
-    const practice = await updateTeamPracticeCommand(
-      {
-        actorUserId: actor.id,
-        teamId,
-        practiceLocation: body.practiceLocation ?? body.practice_location ?? body.location ?? null,
-        practiceSchedule: body.practiceSchedule ?? body.practice_schedule ?? body.time ?? body.schedule ?? null,
-        practiceRecurrence: body.practiceRecurrence ?? body.practice_recurrence ?? (body.recurring === true || body.recurring === 'weekly' ? 'weekly' : body.recurring === false ? 'once' : null) ?? null,
-        practiceOn: body.practiceOn ?? body.practice_on ?? body.date ?? null,
-      },
-      repository,
-      { chatRepository },
-    );
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team.practice_update',
-      entityType: 'team',
-      entityId: teamId,
-      afterState: practice ?? null,
-    }, { fetch: fetchImpl });
-
-    return jsonResponse({ practice });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-
-
-
-export async function handleListAdminAuditEventsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const url = new URL(request.url);
-    url.pathname = normalizeApiPathname(url.pathname);
-    const repository = createAdminAuditRepository(env, { fetch: fetchImpl });
-    const events = await repository.listAuditEvents({
-      actorUserId: actor.id,
-      limit: Number(url.searchParams.get('limit') || 50),
-      actionPrefix: url.searchParams.get('prefix') || null,
-    });
-    return jsonResponse({ events });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleFlushAdminAuditWebhooksRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const result = await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
-    return jsonResponse(result);
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleListMyNotificationsRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createNotificationRepository(env, { fetch: fetchImpl });
-    const notifications = await listMyNotificationsCommand({ actorUserId: actor.id }, repository);
-    return jsonResponse({ notifications });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleMarkNotificationReadRequest(request, env, notificationId, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
-      return jsonResponse({ error: 'Method not allowed' }, 405);
-    }
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createNotificationRepository(env, { fetch: fetchImpl });
-    const result = await markNotificationReadCommand(
-      { actorUserId: actor.id, notificationId },
-      repository,
-    );
-    return jsonResponse({ notification: result });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleMarkAllNotificationsReadRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
-      return jsonResponse({ error: 'Method not allowed' }, 405);
-    }
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createNotificationRepository(env, { fetch: fetchImpl });
-    const result = await markAllNotificationsReadCommand({ actorUserId: actor.id }, repository);
-    return jsonResponse(result);
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleAdminBroadcastNotificationRequest(request, env, { fetch: fetchImpl = globalThis.fetch } = {}) {
-  try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await readJsonBody(request);
-    const repository = createNotificationRepository(env, { fetch: fetchImpl });
-    const result = await adminBroadcastNotificationCommand(
-      {
-        actorUserId: actor.id,
-        title: body.title,
-        body: body.body ?? body.message,
-        seasonId: body.seasonId ?? body.season_id ?? null,
-        href: body.href ?? null,
-      },
-      repository,
-    );
-    try {
-      const auditRepository = createAdminAuditRepository(env, { fetch: fetchImpl });
-      const seasonId = body.seasonId ?? body.season_id ?? null;
-      await auditRepository.writeAuditEvent({
-        actorUserId: actor.id,
-        action: 'admin.broadcast_notification',
-        entityType: 'season',
-        entityId: seasonId || '00000000-0000-4000-8000-000000000000',
-        reason: String(body.title || '').slice(0, 120) || null,
-        afterState: { sent: result.sent, href: body.href ?? null },
-      });
-      await deliverAuditWebhooks(env, actor.id, { fetch: fetchImpl });
-    } catch {
-      // best-effort audit
-    }
-    return jsonResponse(result, 201);
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-
-export async function handleTeamMatchDisputeRequest(
-  request,
-  env,
-  teamMatchId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  // href: null. The disagreement still counts if the notice link is bad.
-  try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await readJsonBody(request);
-    const note = String(body.note || body.reason || 'Dispute requested').trim().slice(0, 400);
-    const { disputeOpen } = await import('./disputeOpen.js');
-    const { withSupabaseSchema } = await import('./supabaseSchema.js');
-    const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-    const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-    const key = env.SUPABASE_SERVICE_ROLE_KEY;
-    const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=status,winner_team_id`, { headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' } });
-    const match = matchResponse.ok ? (await matchResponse.json())?.[0] : null;
-    if (!disputeOpen(match)) return jsonResponse({ error: 'A match has to be played before it can be disputed.' }, 409);
-    const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
-    // A notice is a trail. A bad link must not block the disagreement.
-    try {
-      await notificationRepository.createUserNotification({
-        recipientUserId: actor.id,
-        kind: 'dispute_request',
-        title: 'Dispute submitted',
-        body: note || 'Match dispute submitted for admin review.',
-        href: null,
-        teamMatchId,
-        actorUserId: actor.id,
-      });
-    } catch {
-      // The disagreement still counts.
-    }
-    // Best-effort: also post matchup chat if available.
-    try {
-      const chatRepository = createChatRepository(env, { fetch: fetchImpl });
-      if (typeof chatRepository.sendMatchupMessage === 'function') {
-        await chatRepository.sendMatchupMessage({
-          actorUserId: actor.id,
-          teamMatchId,
-          body: 'Dispute requested: ' + (note || 'Please review this match.'),
-          clientMessageId: null,
-        });
-      }
-    } catch {
-      // optional
-    }
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_match.dispute',
-      entityType: 'team_match',
-      entityId: teamMatchId,
-      reason: note || null,
-      afterState: { href: '/scorecard?match=' + teamMatchId },
-    }, { fetch: fetchImpl });
-    return jsonResponse({ ok: true }, 201);
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleProposeTeamMatchMakeupRequest(
-  request,
-  env,
-  teamMatchId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await readJsonBody(request);
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const makeup = await proposeTeamMatchMakeupCommand(
-      {
-        actorUserId: actor.id,
-        teamMatchId,
-        makeupOn: body.makeupOn ?? body.makeup_on ?? body.date ?? body.on ?? body.proposedOn ?? body.proposed_on,
-        makeupLocation: body.makeupLocation ?? body.makeup_location ?? body.location ?? body.venue ?? null,
-        makeupNote: body.makeupNote ?? body.makeup_note ?? body.note ?? body.message ?? null,
-      },
-      repository,
-    );
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_match.makeup_propose',
-      entityType: 'team_match',
-      entityId: teamMatchId,
-      afterState: makeup ?? null,
-    }, { fetch: fetchImpl });
-
-    return jsonResponse({ makeup }, 201);
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleRespondTeamMatchMakeupRequest(
-  request,
-  env,
-  teamMatchId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const body = await readJsonBody(request);
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const makeup = await respondTeamMatchMakeupCommand(
-      {
-        actorUserId: actor.id,
-        teamMatchId,
-        response: normalizeApproveDecline(body) ?? body.response ?? body.status,
-      },
-      repository,
-    );
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_match.makeup_respond',
-      entityType: 'team_match',
-      entityId: teamMatchId,
-      afterState: { response: body.response ?? body.status, makeup },
-    }, { fetch: fetchImpl });
-
-    return jsonResponse({ makeup });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-
-
-export async function handleListOwnInvitationsRequest(
-  request,
-  env,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const teamManagement = await listOwnTeamManagementCommand({ actorUserId: actor.id }, repository);
-    return jsonResponse({
-      invitations: teamManagement?.invitations || [],
-      playerId: teamManagement?.player_id || teamManagement?.playerId || null,
-    });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-export async function handleListTeamInvitationsRequest(
-  request,
-  env,
-  teamId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const teamManagement = await listOwnTeamManagementCommand({ actorUserId: actor.id }, repository);
-    const invitations = [];
-    for (const row of teamManagement?.invitations || []) {
-      if (!teamId || row.teamId === teamId || row.team_id === teamId) invitations.push(row);
-    }
-    for (const team of teamManagement?.captain_teams || []) {
-      if (teamId && team.teamId !== teamId && team.team_id !== teamId) continue;
-      for (const inv of team.invitations || team.pendingInvitations || []) {
-        invitations.push({ ...inv, teamId: team.teamId || team.team_id || teamId });
-      }
-    }
-    return jsonResponse({ invitations, teamId });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
 export async function handleInvitePlayerToTeamRequest(
   request,
   env,
@@ -1230,20 +714,10 @@ export async function handleInvitePlayerToTeamRequest(
       {
         actorUserId: actor.id,
         teamId,
-        playerId: body.playerId ?? body.player_id ?? body.invitedPlayerId ?? body.invited_player_id,
+        playerId: body.playerId ?? body.invitedPlayerId,
       },
       repository,
     );
-
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_invitation.create',
-      entityType: 'team_invitation',
-      entityId: invitation?.id ?? invitation?.invitationId ?? null,
-      afterState: {
-        teamId,
-        playerId: body.playerId ?? body.player_id ?? body.invitedPlayerId ?? body.invited_player_id,
-      },
-    }, { fetch: fetchImpl });
 
     return jsonResponse({ invitation }, 201);
   } catch (error) {
@@ -1271,18 +745,6 @@ export async function handleProposeTeamTradeRequest(
       },
       repository,
     );
-
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_trade.propose',
-      entityType: 'team_trade',
-      entityId: trade?.id ?? trade?.tradeId ?? null,
-      afterState: {
-        teamId,
-        offeredPlayerId: body.offeredPlayerId ?? body.offered_player_id,
-        requestedTeamId: body.requestedTeamId ?? body.requested_team_id,
-        requestedPlayerId: body.requestedPlayerId ?? body.requested_player_id,
-      },
-    }, { fetch: fetchImpl });
 
     return jsonResponse({ trade }, 201);
   } catch (error) {
@@ -1327,24 +789,14 @@ export async function handleRespondToTeamInvitationRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createTeamRepository(env, { fetch: fetchImpl });
-    const response = normalizeApproveDecline(body);
     const invitation = await respondToTeamInvitationCommand(
       {
         actorUserId: actor.id,
         invitationId,
-        response,
+        response: body.response,
       },
       repository,
     );
-
-    await writeAuditBestEffort(env, actor.id, {
-      action: (response === 'accepted' || response === 'approved')
-        ? 'team_invitation.accept'
-        : 'team_invitation.decline',
-      entityType: 'team_invitation',
-      entityId: invitationId,
-      afterState: { response },
-    }, { fetch: fetchImpl });
 
     return jsonResponse({ invitation });
   } catch (error) {
@@ -1366,7 +818,7 @@ export async function handleRespondToTeamTradePlayerRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: normalizeApproveDecline(body) ?? body.response,
+        response: body.response,
       },
       repository,
     );
@@ -1391,7 +843,7 @@ export async function handleApproveTeamTradeCaptainRequest(
       {
         actorUserId: actor.id,
         tradeId,
-        response: normalizeApproveDecline(body) ?? body.response,
+        response: body.response,
       },
       repository,
     );
@@ -1419,12 +871,6 @@ export async function handleCancelTeamInvitationRequest(
       repository,
     );
 
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_invitation.cancel',
-      entityType: 'team_invitation',
-      entityId: invitationId,
-    }, { fetch: fetchImpl });
-
     return jsonResponse({ invitation });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1448,13 +894,6 @@ export async function handleRemoveTeamMemberRequest(
       repository,
     );
 
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'team_membership.remove',
-      entityType: 'team_membership',
-      entityId: membershipId,
-      afterState: membership ?? null,
-    }, { fetch: fetchImpl });
-
     return jsonResponse({ membership });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
@@ -1477,12 +916,6 @@ export async function handleRegisterFreeAgentRequest(
       },
       repository,
     );
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'free_agent.register',
-      entityType: 'season',
-      entityId: seasonId,
-      afterState: freeAgent ?? null,
-    }, { fetch: fetchImpl });
 
     return jsonResponse({ freeAgent }, 201);
   } catch (error) {
@@ -1500,51 +933,16 @@ export async function handleSetFreeAgentAvailabilityRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
-    let status = body.status ?? body.availabilityStatus ?? body.availability_status;
-    if (typeof status === 'string') {
-      const s = status.trim().toLowerCase();
-      if (s === 'yes' || s === 'open' || s === 'in') status = 'available';
-      if (s === 'no' || s === 'out') status = 'unavailable';
-      if (s === 'maybe') status = 'unsure';
-    }
     const availability = await setFreeAgentAvailabilityCommand(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: status,
+        availabilityStatus: body.status ?? body.availabilityStatus,
       },
       repository,
     );
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'free_agent.availability_set',
-      entityType: 'round',
-      entityId: roundId,
-      afterState: availability ?? null,
-    }, { fetch: fetchImpl });
 
     return jsonResponse({ availability });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
-
-
-export async function handleListSeasonFreeAgentsRequest(
-  request,
-  env,
-  seasonId,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    // Public-ish list (standings-adjacent); auth optional on open lanes.
-    try {
-      await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    } catch {
-      // continue unauthenticated
-    }
-    const repository = createFreeAgentRepository(env, { fetch: fetchImpl });
-    const freeAgents = await listSeasonFreeAgentsCommand({ seasonId }, repository);
-    return jsonResponse({ freeAgents });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -1584,40 +982,14 @@ export async function handleSetRosterAvailabilityRequest(
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
     const repository = createAvailabilityRepository(env, { fetch: fetchImpl });
-    let status = body.status ?? body.availabilityStatus ?? body.availability_status;
-    if (typeof status === 'string') {
-      const s = status.trim().toLowerCase();
-      if (s === 'yes' || s === 'open' || s === 'in') status = 'available';
-      if (s === 'no' || s === 'out') status = 'unavailable';
-      if (s === 'maybe') status = 'unsure';
-    }
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-      const { availabilityReady } = await import('./availabilityReady.js');
-      const { withSupabaseSchema } = await import('./supabaseSchema.js');
-      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-      const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json', 'content-type': 'application/json' };
-      const matchResponse = await fetchWithSchema(`${base}/rest/v1/team_matches?round_id=eq.${roundId}&select=team_a_id&limit=1`, { headers });
-      const teamId = matchResponse.ok ? (await matchResponse.json())?.[0]?.team_a_id : null;
-      const memberResponse = teamId ? await fetchWithSchema(`${base}/rest/v1/team_memberships?team_id=eq.${teamId}&ends_at=is.null&select=player_id&limit=1`, { headers }) : null;
-      const playerId = memberResponse?.ok ? (await memberResponse.json())?.[0]?.player_id : null;
-      if (availabilityReady(playerId)) await fetchWithSchema(`${base}/rest/v1/players?id=eq.${playerId}`, { method: 'PATCH', headers, body: JSON.stringify({ user_id: actor.id }) });
-    }
     const availability = await setRosterAvailabilityCommand(
       {
         actorUserId: actor.id,
         roundId,
-        availabilityStatus: status,
+        availabilityStatus: body.status ?? body.availabilityStatus,
       },
       repository,
     );
-    await writeAuditBestEffort(env, actor.id, {
-      action: 'roster.availability_set',
-      entityType: 'round',
-      entityId: roundId,
-      afterState: availability ?? null,
-    }, { fetch: fetchImpl });
 
     return jsonResponse({ availability });
   } catch (error) {
@@ -1658,78 +1030,16 @@ export async function handleSubmitTeamLineupRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
-    if (String(env.ENVIRONMENT || '').trim() === 'dru') {
-      const slots = body.slots ?? body.lineupSlots ?? body.lineup_slots ?? [];
-      if (Array.isArray(slots) && slots.length > 3) {
-        const error = new Error('A regular lineup is three players.');
-        error.status = 400;
-        throw error;
-      }
-      const { ensureDruActorCanLockLineup, lineupPlayerIds, lineupSlotsAreComplete, lockDruPlayoffLineup, lockDruRegularLineup } = await import('./druLineupBypass.js');
-      const playerIds = lineupPlayerIds(slots);
-      const rawIds = slots.map((slot) => String(slot?.playerId || slot?.player_id || '').trim()).filter(Boolean);
-      const bodyIds = (Array.isArray(body.playerIds) ? body.playerIds : []).map((id) => String(id || '').trim()).filter(Boolean);
-      const seenIds = rawIds.length ? rawIds : bodyIds;
-      if (new Set(seenIds.map((id) => id.toLowerCase())).size !== seenIds.length) {
-        const error = new Error('Pick three different players before the lineup can lock');
-        error.status = 400;
-        throw error;
-      }
-      const unknown = (bodyIds.length ? bodyIds : rawIds).find((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
-      if (unknown) {
-        const error = new Error('That player is not on this team.');
-        error.status = 400;
-        throw error;
-      }
-      if (!lineupSlotsAreComplete(slots) || playerIds.length !== 3) {
-        const error = new Error('Lineup needs three players before it can lock');
-        error.status = 400;
-        throw error;
-      }
-      await ensureDruActorCanLockLineup(env, { actorUserId: actor.id, teamId, roundId, playerIds, slots }, fetchImpl);
-      const playoff = await lockDruPlayoffLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
-      if (playoff) return jsonResponse({ lineup: playoff });
-      const regular = await lockDruRegularLineup(env, { actorUserId: actor.id, teamId, roundId, slots }, fetchImpl);
-      if (regular) return jsonResponse({ lineup: regular });
-    }
     const repository = createLineupRepository(env, { fetch: fetchImpl });
     const lineup = await submitTeamLineupCommand(
       {
         actorUserId: actor.id,
         teamId,
         roundId,
-        slots: body.slots ?? body.lineupSlots ?? body.lineup_slots,
+        slots: body.slots ?? body.lineupSlots,
       },
       repository,
     );
-
-    // Lifecycle: team chat + in-app notice (best-effort).
-    try {
-      const chatRepository = createChatRepository(env, { fetch: fetchImpl });
-      await chatRepository.sendTeamMessage({
-        actorUserId: actor.id,
-        teamId,
-        body: 'Lineup locked for this matchup. Open Lineup/Scorecard when both sides are ready.',
-        clientMessageId: null,
-      });
-    } catch {
-      // ignore chat failures
-    }
-    try {
-      const notificationRepository = createNotificationRepository(env, { fetch: fetchImpl });
-      // Notify actor as confirmation; roster-wide fanout can expand later.
-      await notificationRepository.createUserNotification({
-        recipientUserId: actor.id,
-        kind: 'lineup_locked',
-        title: 'Lineup locked',
-        body: 'Your team lineup is locked for this matchup.',
-        href: '/lineup?team=' + encodeURIComponent(teamId) + '&round=' + encodeURIComponent(roundId),
-        teamId,
-        actorUserId: actor.id,
-      });
-    } catch {
-      // ignore notification failures
-    }
 
     return jsonResponse({ lineup });
   } catch (error) {
@@ -1762,140 +1072,81 @@ export async function handleListVisibleTeamLineupsRequest(
 }
 
 export async function handleListPublicSeasonsRequest(
-  request,
   env,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
     const seasons = await repository.listPublicSeasons();
-    // Public, anonymous-safe list: strong ETag + short shared edge TTL (Phase 3).
-    return conditionalJsonResponse(request || new Request('https://example.test/api/seasons'), { seasons }, {
-      cacheControl: 'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
-    });
+    return jsonResponse({ seasons });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListSeasonScheduleRequest(
-  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    const ifNoneMatch = request?.headers?.get?.('if-none-match') || '';
-    // WHY: warm polls parallelize exists+version (independent I/O) before any heavy build.
-    if (ifNoneMatch) {
-      const [exists, versionState] = await Promise.all([
-        repository.seasonExists({ seasonId }),
-        repository.getSeasonScheduleVersion({ seasonId }),
-      ]);
-      if (!exists) return jsonResponse({ error: "Season not found" }, 404);
-      return conditionalJsonFromVersion(request, {
-        scope: `schedule:${seasonId}`,
-        cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
-        getVersion: async () => versionTokenFromValue(versionState),
-        buildBody: async () => {
-        const { roundsForDate } = await import('./dateRound.js');
-        const date = new URL(request.url).searchParams.get('date');
-        return { rounds: roundsForDate(await repository.listSeasonSchedule({ seasonId }), date) };
-      },
-      });
-    }
-    if (!(await repository.seasonExists({ seasonId }))) {
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    return conditionalJsonFromVersion(request, {
-      scope: `schedule:${seasonId}`,
-      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
-      versionFromBody: async (body) => {
-        // WHY: must match getSeasonScheduleVersion() shape so cold and warm ETags agree.
-        const rounds = (body?.rounds || []).map((round) => ({
-          id: round.roundId,
-          round_number: round.roundNumber,
-          scheduled_on: round.scheduledOn,
-          status: round.status,
-          stage: round.stage,
-        }));
-        const matches = [];
-        for (const round of body?.rounds || []) {
-          for (const m of round.matches || []) {
-            matches.push({
-              id: m.teamMatchId,
-              round_id: round.roundId,
-              status: m.status,
-              table_number: m.tableNumber,
-            });
-          }
-        }
-        return versionTokenFromValue({ rounds, matches });
-      },
-      buildBody: async () => {
-        const { roundsForDate } = await import('./dateRound.js');
-        const date = new URL(request.url).searchParams.get('date');
-        return { rounds: roundsForDate(await repository.listSeasonSchedule({ seasonId }), date) };
-      },
-    });
+    const rounds = await repository.listSeasonSchedule({ seasonId });
+    return jsonResponse({ rounds });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListTeamStandingsRequest(
-  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    if (!(await repository.seasonExists({ seasonId }))) {
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    return conditionalJsonFromVersion(request, {
-      scope: `team-standings:${seasonId}`,
-      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
-      getVersion: async () => versionTokenFromValue(await repository.getSeasonStandingsVersion({ seasonId })),
-      buildBody: async () => {
-        const standings = await listTeamStandingsCommand({ seasonId }, repository);
-        return { standings };
-      },
-    });
+    const standings = await listTeamStandingsCommand(
+      { seasonId },
+      repository,
+    );
+
+    return jsonResponse({ standings });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleListIndividualStandingsRequest(
-  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
   try {
     const repository = createStandingsRepository(env, { fetch: fetchImpl });
-    if (!(await repository.seasonExists({ seasonId }))) {
+    const seasons = await repository.listPublicSeasons();
+    if (!seasons.some((season) => season.id === seasonId)) {
       return jsonResponse({ error: "Season not found" }, 404);
     }
-    return conditionalJsonFromVersion(request, {
-      scope: `individual-standings:${seasonId}`,
-      cacheControl: 'public, max-age=10, s-maxage=20, stale-while-revalidate=40',
-      getVersion: async () => versionTokenFromValue(await repository.getSeasonStandingsVersion({ seasonId })),
-      buildBody: async () => {
-        const standings = await listIndividualStandingsCommand({ seasonId }, repository);
-        return { standings };
-      },
-    });
+    const standings = await listIndividualStandingsCommand(
+      { seasonId },
+      repository,
+    );
+
+    return jsonResponse({ standings });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
 
 export async function handleGetSeasonPrizeSummaryRequest(
-  request,
   env,
   seasonId,
   { fetch: fetchImpl = globalThis.fetch } = {},
@@ -1906,31 +1157,8 @@ export async function handleGetSeasonPrizeSummaryRequest(
       { seasonId },
       repository,
     );
-    return conditionalJsonResponse(request || new Request('https://example.test/api/prizes'), { summary }, {
-      cacheControl: 'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
-    });
-  } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
-  }
-}
 
-
-export async function handleGetCurrentPrizeSummaryRequest(
-  request,
-  env,
-  { fetch: fetchImpl = globalThis.fetch } = {},
-) {
-  try {
-    const standingsRepository = createStandingsRepository(env, { fetch: fetchImpl });
-    const seasons = await standingsRepository.listPublicSeasons();
-    const preferred =
-      seasons.find((season) => String(season.status || '').toLowerCase() === 'active')
-      || seasons.find((season) => String(season.status || '').toLowerCase() === 'playoffs')
-      || seasons[0];
-    if (!preferred?.id) {
-      return jsonResponse({ error: 'No public seasons available for prize summary.' }, 404);
-    }
-    return handleGetSeasonPrizeSummaryRequest(request, env, preferred.id, { fetch: fetchImpl });
+    return jsonResponse({ summary });
   } catch (error) {
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
@@ -2035,10 +1263,6 @@ export async function handleRecordPlayerMatchRackRequest(
       },
       repository,
     );
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-      const { closeDruTableAfterRack } = await import('./druTeamResult.js');
-      await closeDruTableAfterRack(env, playerMatchId, fetchImpl);
-    }
 
     return jsonResponse({ rack }, 201);
   } catch (error) {
@@ -2075,50 +1299,8 @@ export async function handleFinalizePlayerMatchRequest(
   playerMatchId,
   { fetch: fetchImpl = globalThis.fetch } = {},
 ) {
-  let seasonId = null;
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-      const { scoreNeedsBothTeams } = await import('./scoreFlow.js');
-      const { privatePostgrestProfile, withSupabaseSchema } = await import('./supabaseSchema.js');
-      const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-      const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-      const key = env.SUPABASE_SERVICE_ROLE_KEY;
-      const headers = { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' };
-      const privateHeaders = { ...headers, 'accept-profile': privatePostgrestProfile('dru'), 'content-profile': privatePostgrestProfile('dru') };
-      const playerResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=team_match_id`, { headers });
-      const teamMatchId = playerResponse.ok ? (await playerResponse.json())?.[0]?.team_match_id : null;
-      const teamResponse = teamMatchId
-        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=team_a_id,team_b_id,season_id`, { headers })
-        : null;
-      const team = teamResponse?.ok ? (await teamResponse.json())?.[0] : null;
-      const lineupResponse = team
-        ? await fetchWithSchema(`${base}/rest/v1/team_lineup_slots?team_id=in.(${team.team_a_id},${team.team_b_id})&select=team_id,player_id`, { headers: privateHeaders })
-        : null;
-      const lineups = lineupResponse?.ok ? await lineupResponse.json() : [];
-      const hasPlayers = (teamId) => (lineups || []).some((row) => row.team_id === teamId && row.player_id);
-      const gate = scoreNeedsBothTeams({
-        teamAId: team?.team_a_id,
-        teamBId: team?.team_b_id,
-        lineupA: team && hasPlayers(team.team_a_id),
-        lineupB: team && hasPlayers(team.team_b_id),
-      });
-      if (!gate.ok) return jsonResponse({ error: gate.text }, 409);
-      const { practiceScoreAllowed } = await import('./scoreFlow.js');
-      const playersResponse = await fetchWithSchema(`${base}/rest/v1/player_matches?id=eq.${playerMatchId}&select=player_a_id,player_b_id,team_match_id`, { headers });
-      const playerRow = playersResponse.ok ? (await playersResponse.json())?.[0] : null;
-      const seasonResponse = teamMatchId
-        ? await fetchWithSchema(`${base}/rest/v1/team_matches?id=eq.${teamMatchId}&select=season_id`, { headers })
-        : null;
-      seasonId = seasonResponse?.ok ? (await seasonResponse.json())?.[0]?.season_id : null;
-      const ids = [playerRow?.player_a_id, playerRow?.player_b_id].filter(Boolean);
-      const paymentResponse = seasonId && ids.length
-        ? await fetchWithSchema(`${base}/rest/v1/payment_status?season_id=eq.${seasonId}&player_id=in.(${ids.join(',')})&select=player_id,status`, { headers: privateHeaders })
-        : null;
-      const payments = paymentResponse?.ok ? await paymentResponse.json() : [];
-      const paid = practiceScoreAllowed(ids.map((id) => (payments || []).find((row) => row.player_id === id)));
-      if (!paid.ok) return jsonResponse({ error: paid.text }, 409);
-    }
     const repository = createScoringRepository(env, { fetch: fetchImpl });
     const match = await finalizePlayerMatchCommand(
       {
@@ -2127,17 +1309,9 @@ export async function handleFinalizePlayerMatchRequest(
       },
       repository,
     );
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && seasonId) {
-      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
-      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
-    }
 
     return jsonResponse({ match });
   } catch (error) {
-    if (String(env?.ENVIRONMENT || '').trim() === 'dru' && seasonId) {
-      const { closeFinishedDruTeamMatches } = await import('./druTeamResult.js');
-      await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
-    }
     return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
   }
 }
@@ -2174,7 +1348,6 @@ export async function handleCorrectPlayerMatchRequest(
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    url.pathname = normalizeApiPathname(url.pathname);
     const version = versionMetadata(env);
     const publishScheduleMatch = url.pathname.match(
       /^\/api\/admin\/seasons\/([^/]+)\/publish-schedule$/,
@@ -2230,51 +1403,6 @@ export default {
     const membershipRequestCancelMatch = url.pathname.match(
       /^\/api\/team-membership-requests\/([^/]+)\/cancel$/,
     );
-    const teamPracticeMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/practice$/,
-    );
-    if (url.pathname === '/api/me/notifications' && request.method === 'GET') {
-      return handleListMyNotificationsRequest(request, env);
-    }
-    if (url.pathname === '/api/me/notifications/read-all' || url.pathname === '/api/me/notifications/mark-all-read') {
-      return handleMarkAllNotificationsReadRequest(request, env);
-    }
-    const notificationReadMatch = url.pathname.match(/^\/api\/me\/notifications\/([^/]+)\/read$/);
-    if (notificationReadMatch) {
-      if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
-        return jsonResponse({ error: 'Method not allowed' }, 405);
-      }
-      return handleMarkNotificationReadRequest(
-        request,
-        env,
-        decodeURIComponent(notificationReadMatch[1]),
-      );
-    }
-    if (url.pathname === '/api/admin/audit-events' && request.method === 'GET') {
-      return handleListAdminAuditEventsRequest(request, env);
-    }
-    if (url.pathname === '/api/admin/audit-webhooks/flush') {
-      return handleFlushAdminAuditWebhooksRequest(request, env);
-    }
-    if (url.pathname === '/api/admin/notifications/broadcast') {
-      return handleAdminBroadcastNotificationRequest(request, env);
-    }
-    const teamMatchDisputeMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/dispute$/,
-    );
-    if (teamMatchDisputeMatch) {
-      return handleTeamMatchDisputeRequest(
-        request,
-        env,
-        decodeURIComponent(teamMatchDisputeMatch[1]),
-      );
-    }
-    const teamMatchMakeupProposeMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/makeup$/,
-    );
-    const teamMatchMakeupRespondMatch = url.pathname.match(
-      /^\/api\/team-matches\/([^/]+)\/makeup\/respond$/,
-    );
     const teamInvitationMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/invitations$/,
     );
@@ -2302,36 +1430,35 @@ export default {
     const freeAgentAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/free-agent-availability\/me$/,
     );
-    const seasonFreeAgentsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/free-agents$/,
-    );
     const rosterAvailabilityMatch = url.pathname.match(
       /^\/api\/rounds\/([^/]+)\/availability\/me$/,
     );
     const eligibleFreeAgentsMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/(?:eligible-free-agents|free-agents)$/,
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/eligible-free-agents$/,
     );
     const teamRoundAvailabilityMatch = url.pathname.match(
       /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/availability$/,
     );
     const teamLineupMatch = url.pathname.match(
-      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineups?$/,
+      /^\/api\/teams\/([^/]+)\/rounds\/([^/]+)\/lineup$/,
     );
     const seasonScheduleMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/(?:schedule|rounds)$/,
+      /^\/api\/seasons\/([^/]+)\/schedule$/,
     );
     const teamStandingsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/(?:team-standings|standings)$/,
+      /^\/api\/seasons\/([^/]+)\/team-standings$/,
     );
     const individualStandingsMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/(?:individual-standings|player-standings)$/,
+      /^\/api\/seasons\/([^/]+)\/individual-standings$/,
     );
     const seasonPrizesMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/(?:prizes|awards|prize-summary)$/,
+      /^\/api\/seasons\/([^/]+)\/prizes$/,
     );
+    // PostgreSQL UUID columns accept the full 8-4-4-4-12 hex form. Seeded JFL
+    // seasons use non-RFC version/variant bits but are still real stored IDs.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const requireSeasonUuid = (value) => {
-      // Hex-shape only (shared isUuid) so persisted non-RFC seed season ids remain readable.
-      if (!isUuid(String(value || "").trim())) {
+      if (!UUID_RE.test(String(value || ""))) {
         return jsonResponse({ error: "That season or match link is invalid." }, 400);
       }
       return null;
@@ -2376,8 +1503,7 @@ export default {
     }
 
     if (url.pathname === "/health/environment") {
-      const readiness = environmentReadiness(env, { host: url.hostname || request.headers.get('host') });
-      const failedChecks = (readiness.checks || []).filter((item) => !item.ok).map((item) => item.name);
+      const readiness = environmentReadiness(env);
       return jsonResponse(
         {
           service: serviceName,
@@ -2386,70 +1512,12 @@ export default {
           deployedAt: version.timestamp,
           ok: readiness.ok,
           environment: readiness.environment,
-          host: readiness.host,
-          expectedHostEnvironment: readiness.expectedHostEnvironment,
-          hostMatchesEnvironment: readiness.hostMatchesEnvironment,
+          expectedSupabaseProjectRef: readiness.expectedSupabaseProjectRef,
           expectedSupabaseSchema: readiness.expectedSupabaseSchema,
-          expectedPrivateSupabaseSchema: readiness.expectedPrivateSupabaseSchema,
-          checks: readiness.checks || [],
-          failedChecks,
-          noAuthTeamTest: {
-            note: 'JFL/DRU only: unauthenticated /api/me/* uses BETA_AUTH_BYPASS + BETA_ACTOR_USER_ID',
-            requires: ['ENVIRONMENT=jfl|dru', 'BETA_AUTH_BYPASS=1', 'BETA_ACTOR_USER_ID', 'SUPABASE_SCHEMA=lane'],
-          },
+          supabase: readiness.supabase,
+          checks: readiness.checks,
         },
         readiness.ok ? 200 : 503,
-      );
-    }
-
-    if (url.pathname === "/health/features") {
-      // Lightweight schema probes for operator/agent readiness (no secrets returned).
-      const features = {
-        teamPractice: { ready: false, detail: 'not_checked' },
-      };
-      try {
-        const supabaseUrl = stripTrailingSlashes(String(env.SUPABASE_URL || ''));
-        const key = env.SUPABASE_SERVICE_ROLE_KEY;
-        if (!supabaseUrl || !key) {
-          features.teamPractice = { ready: false, detail: 'missing_supabase_env' };
-        } else {
-          const schema = String(env.SUPABASE_SCHEMA || 'public').trim() || 'public';
-          const response = await fetch(
-            `${supabaseUrl}/rest/v1/teams?select=id,practice_location,practice_schedule,practice_recurrence,practice_on&limit=1`,
-            {
-              method: 'GET',
-              headers: {
-                apikey: key,
-                authorization: `Bearer ${key}`,
-                accept: 'application/json',
-                'accept-profile': schema,
-                'content-profile': schema,
-              },
-            },
-          );
-          const text = await response.text();
-          if (response.ok) {
-            features.teamPractice = { ready: true, detail: 'ok' };
-          } else if (/practice_location|42703|PGRST/i.test(text)) {
-            features.teamPractice = { ready: false, detail: 'migration_pending' };
-          } else {
-            features.teamPractice = { ready: false, detail: `http_${response.status}` };
-          }
-        }
-      } catch {
-        features.teamPractice = { ready: false, detail: 'probe_failed' };
-      }
-      const allReady = Object.values(features).every((f) => f && f.ready);
-      return Response.json(
-        {
-          ok: true,
-          service: serviceName,
-          version: version.id,
-          deployedAt: version.timestamp,
-          features,
-          allReady,
-        },
-        { status: 200, headers: { 'cache-control': 'no-store' } },
       );
     }
 
@@ -2466,26 +1534,12 @@ export default {
       });
     }
 
-
-    if (url.pathname === "/players") {
+    if (url.pathname === "/standings") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(druModernRequested(request) ? renderJflPlayersDirectory() : renderPlayersDirectoryPage(), {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      });
-    }
-
-if (url.pathname === "/standings") {
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-
-      return new Response(druModernRequested(request) ? renderJflModernStandings() : renderStandingsPage(), {
+      return new Response(renderStandingsPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2498,34 +1552,20 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      try {
-        const html = renderPrizesPage();
-        return new Response(html, {
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-store",
-          },
-        });
-      } catch (error) {
-        return new Response(
-          `<!doctype html><html lang="en"><body><h1>Prizes unavailable</h1><p>${String(error?.message || error)}</p><p><a href="/">Home</a></p></body></html>`,
-          {
-            status: 500,
-            headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
-          },
-        );
-      }
+      return new Response(renderPrizesPage(), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
     }
 
-    if (url.pathname === "/admin/season-setup") {
-      return Response.redirect(new URL("/season-setup", url), 302);
-    }
     if (url.pathname === "/season-setup") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderSeasonSetupPage(), {
+      return new Response(renderSeasonSetupPage({ allowCreate: env.ENVIRONMENT === 'jfl' }), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2551,7 +1591,7 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(druModernRequested(request) ? modernizeJflProfileHtml(renderProfilePage(env)) : renderProfilePage(env), {
+      return new Response(renderProfilePage(env), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2572,16 +1612,12 @@ if (url.pathname === "/standings") {
       });
     }
 
-    if (url.pathname.startsWith("/teams/") && url.pathname !== "/teams/") {
-      const teamId = decodeURIComponent(url.pathname.slice("/teams/".length).split("/")[0] || "");
-      if (teamId) return Response.redirect(new URL("/teams?team=" + encodeURIComponent(teamId), url), 302);
-    }
-    if (url.pathname === "/teams" || url.pathname.startsWith("/teams/")) {
+    if (url.pathname === "/teams") {
       if (request.method !== "GET") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(druModernRequested(request) ? renderJflModernTeams() : renderTeamsPage(), {
+      return new Response(renderTeamsPage(), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",
@@ -2725,41 +1761,6 @@ if (url.pathname === "/standings") {
       );
     }
 
-    if (url.pathname === "/api/me/profile/standing-availability") {
-      if (request.method === "PUT") {
-        return handleSaveOwnStandingAvailabilityRequest(request, env);
-      }
-      return jsonResponse({ error: "Method not allowed" }, 405);
-    }
-
-    const druOpenMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/open-scoring$/);
-    if (druOpenMatch && request.method === 'POST') {
-      if (String(env.ENVIRONMENT || '').trim() !== 'dru') return jsonResponse({ error: 'Not found' }, 404);
-      await authenticateSupabaseUser(request, env);
-      const { openDruMatchForScoring } = await import('./druScoreOpen.js');
-      return jsonResponse(await openDruMatchForScoring(env, druOpenMatch[1]));
-    }
-
-const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/score$/);
-    if (druScoreRace && request.method === 'POST') {
-      if (String(env.ENVIRONMENT || '').trim() !== 'dru') return jsonResponse({ error: 'Not found' }, 404);
-      await authenticateSupabaseUser(request, env);
-      const body = await request.json().catch(() => ({}));
-      const { recordDruRaceResult } = await import('./druScoreOpen.js');
-      const scored = await recordDruRaceResult(env, druScoreRace[1], body.winnerSide);
-      return jsonResponse(scored, scored.saved ? 200 : 404);
-    }
-
-    const druScoreMatch = url.pathname.match(/^\/api\/dru\/matches\/([^/]+)\/score$/);
-    if (druScoreMatch && request.method === 'POST') {
-      if (String(env.ENVIRONMENT || '').trim() !== 'dru') return jsonResponse({ error: 'Not found' }, 404);
-      await authenticateSupabaseUser(request, env);
-      const body = await request.json().catch(() => ({}));
-      const { scoreDruTeamMatch } = await import('./druScoreOpen.js');
-      const scored = await scoreDruTeamMatch(env, druScoreMatch[1], body.winnerSide, undefined, { racksA: body.racksA, racksB: body.racksB });
-      return jsonResponse(scored, scored.status || (scored.saved ? 200 : 400));
-    }
-
     if (url.pathname === "/api/me/profile") {
       if (request.method === "GET") {
         return handleGetOwnProfileRequest(request, env);
@@ -2779,23 +1780,9 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       return handleListOwnTeamManagementRequest(request, env);
     }
 
-    if (url.pathname === "/api/me/team-membership-requests" || url.pathname === "/api/me/membership-requests") {
+    if (url.pathname === "/api/me/team-membership-requests") {
       if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405);
       return handleListOwnTeamMembershipRequestsRequest(request, env);
-    }
-
-    const tradeCounterpartiesMatch = url.pathname.match(
-      /^\/api\/seasons\/([^/]+)\/trade-counterparties$/,
-    );
-    if (tradeCounterpartiesMatch) {
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-      return handleListTradeCounterpartyOptionsRequest(
-        request,
-        env,
-        decodeURIComponent(tradeCounterpartiesMatch[1]),
-      );
     }
 
     if (url.pathname === "/api/me/trades") {
@@ -2804,16 +1791,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       }
 
       return handleListOwnTeamTradesRequest(request, env);
-    }
-
-    if (
-      url.pathname === "/api/me/invitations"
-      || url.pathname === "/api/me/team-invitations"
-    ) {
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-      return handleListOwnInvitationsRequest(request, env);
     }
 
     if (createTeamMatch) {
@@ -2891,46 +1868,7 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       );
     }
 
-    if (teamPracticeMatch) {
-      const practiceTeamId = decodeURIComponent(teamPracticeMatch[1]);
-      if (request.method === "GET") {
-        return handleGetTeamPracticeRequest(request, env, practiceTeamId);
-      }
-      if (request.method !== "PUT" && request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-
-      return handleUpdateTeamPracticeRequest(
-        request,
-        env,
-        practiceTeamId,
-      );
-    }
-
-    if (teamMatchMakeupProposeMatch) {
-      return handleProposeTeamMatchMakeupRequest(
-        request,
-        env,
-        decodeURIComponent(teamMatchMakeupProposeMatch[1]),
-      );
-    }
-
-    if (teamMatchMakeupRespondMatch) {
-      return handleRespondTeamMatchMakeupRequest(
-        request,
-        env,
-        decodeURIComponent(teamMatchMakeupRespondMatch[1]),
-      );
-    }
-
     if (teamInvitationMatch) {
-      if (request.method === "GET") {
-        return handleListTeamInvitationsRequest(
-          request,
-          env,
-          decodeURIComponent(teamInvitationMatch[1]),
-        );
-      }
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -2943,10 +1881,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
     }
 
     if (teamTradeProposalMatch) {
-      if (request.method === "GET") {
-        // Same payload as /api/me/trades; captains probing team-scoped path no longer get 405.
-        return handleListOwnTeamTradesRequest(request, env);
-      }
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
@@ -3018,17 +1952,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       );
     }
 
-    if (seasonFreeAgentsMatch) {
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-      return handleListSeasonFreeAgentsRequest(
-        request,
-        env,
-        decodeURIComponent(seasonFreeAgentsMatch[1]),
-      );
-    }
-
     if (registerFreeAgentMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -3042,7 +1965,7 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
     }
 
     if (freeAgentAvailabilityMatch) {
-      if (request.method !== "PUT" && request.method !== "POST") {
+      if (request.method !== "PUT") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
@@ -3054,7 +1977,7 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
     }
 
     if (rosterAvailabilityMatch) {
-      if (request.method !== "PUT" && request.method !== "POST") {
+      if (request.method !== "PUT") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
@@ -3081,20 +2004,18 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
     }
 
     if (teamRoundAvailabilityMatch) {
-      const teamId = decodeURIComponent(teamRoundAvailabilityMatch[1]);
-      const roundId = decodeURIComponent(teamRoundAvailabilityMatch[2]);
-      if (request.method === "GET") {
-        return handleListTeamRoundAvailabilityRequest(
-          request,
-          env,
-          { teamId, roundId },
-        );
+      if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
       }
-      // Captains/players probing team-scoped path to set their own status
-      if (request.method === "PUT" || request.method === "POST") {
-        return handleSetRosterAvailabilityRequest(request, env, roundId);
-      }
-      return jsonResponse({ error: "Method not allowed" }, 405);
+
+      return handleListTeamRoundAvailabilityRequest(
+        request,
+        env,
+        {
+          teamId: decodeURIComponent(teamRoundAvailabilityMatch[1]),
+          roundId: decodeURIComponent(teamRoundAvailabilityMatch[2]),
+        },
+      );
     }
 
     if (teamLineupMatch) {
@@ -3122,20 +2043,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
-
-    if (url.pathname === "/api/prizes" || url.pathname === "/api/prize-pool") {
-      if (request.method === "HEAD") {
-        return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
-      }
-      if (request.method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: { allow: "GET, HEAD, OPTIONS", "cache-control": "no-store" } });
-      }
-      if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-      return handleGetCurrentPrizeSummaryRequest(request, env);
-    }
-
     if (url.pathname === "/api/seasons") {
       if (request.method === "HEAD") {
         return new Response(null, { status: 200, headers: { "cache-control": "no-store", "content-type": "application/json" } });
@@ -3147,7 +2054,7 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return handleListPublicSeasonsRequest(request, env);
+      return handleListPublicSeasonsRequest(env);
     }
 
     if (seasonScheduleMatch) {
@@ -3156,7 +2063,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       }
 
       return handleListSeasonScheduleRequest(
-        request,
         env,
         decodeURIComponent(seasonScheduleMatch[1]),
       );
@@ -3168,7 +2074,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       }
 
       return handleListTeamStandingsRequest(
-        request,
         env,
         decodeURIComponent(teamStandingsMatch[1]),
       );
@@ -3180,7 +2085,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       }
 
       return handleListIndividualStandingsRequest(
-        request,
         env,
         decodeURIComponent(individualStandingsMatch[1]),
       );
@@ -3192,7 +2096,6 @@ const druScoreRace = url.pathname.match(/^\/api\/dru\/player-matches\/([^/]+)\/s
       }
 
       return handleGetSeasonPrizeSummaryRequest(
-        request,
         env,
         decodeURIComponent(seasonPrizesMatch[1]),
       );

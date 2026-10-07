@@ -7,65 +7,52 @@ export const liveRackLedgerAdapterSource = String.raw`
     let expectedOwnRacks=[];
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
-    function isOpenAuthLane(){const h=String(location.hostname||'');return h.startsWith('dru.')||h.startsWith('jfl.')||h.startsWith('gamma.');}
     function showSignInRecovery(){
       const context=document.querySelector('[data-match-context]');
       if(context)context.innerHTML='<a href="/profile">Open Profile to sign in</a>';
-    }
-    function setTransportHint(message){
-      const status=document.querySelector('[data-status]');
-      if(!status||!message)return;
-      status.textContent=message;
-      status.dataset.tone='error';
     }
     function requireContext(){
       const token=accessToken();
       if(!matchId)throw new Error('Choose a match from the scorecard list.');
       if(!scoringTeamId)throw new Error('Choose which team you are scoring for.');
-      if(!token&&!isOpenAuthLane()){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
+      if(!token){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
       return{matchId,scoringTeamId,token};
     }
-    async function api(path,options={},attempt=0){
-      if(typeof navigator!=='undefined'&&navigator.onLine===false){
-        setTransportHint('You are offline. Reconnect, then try again — the last saved racks are still on the server.');
-        throw new Error('You are offline. Check your connection and try again.');
-      }
+    function retryAfterSeconds(response){
+      const value=response.headers?.get('retry-after');
+      const numeric=Number(value);
+      if(value&&Number.isFinite(numeric)&&numeric>0)return Math.min(Math.ceil(numeric),120);
+      const date=value&&Date.parse(value);
+      if(date&&Number.isFinite(date))return Math.min(Math.max(Math.ceil((date-Date.now())/1000),1),120);
+      return 15;
+    }
+    async function api(path,options={}){
       const inputs=requireContext();
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
       const separator=base.includes('?')?'&':'?';
       const contextualPath=base+separator+'scoringTeamId='+encodeURIComponent(inputs.scoringTeamId);
-      let response;
-      try{
-        response=await fetch(contextualPath,{...options,headers:{...(inputs.token?{authorization:'Bearer '+inputs.token}:{}), 'content-type':'application/json',...(options.headers||{})}});
-      }catch(error){
-        if(attempt<1){
-          await new Promise((resolve)=>setTimeout(resolve,450));
-          return api(path,options,attempt+1);
-        }
-        setTransportHint('Network error scoring this match. Your last successful save is on the server — retry when the signal is back.');
-        throw new Error('Network error. Retry in a moment.');
-      }
+      const response=await fetch(contextualPath,{...options,headers:{authorization:'Bearer '+inputs.token,'content-type':'application/json',...(options.headers||{})}});
       let body={};
       try{body=await response.json()}catch{}
       if(response.status===401){sessionStorage.removeItem('fd.accessToken');showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
+      if(response.status===429){
+        const seconds=retryAfterSeconds(response);
+        const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
+        failure.status=429;
+        failure.retryAfterSeconds=seconds;
+        throw failure;
+      }
       if(!response.ok){
         const message=body.error||'Request failed';
         if(message==='Score record is already complete'){
           throw new Error('Your side already reached the race target. Submit it now, or edit/undo a rack if your score is wrong.');
         }
-        throw new Error(message);
+        const failure=new Error(message);
+        failure.status=response.status;
+        throw failure;
       }
       return body;
     }
-
-    window.addEventListener('offline',()=>setTransportHint('Offline — rack taps will not save until you reconnect.'));
-    window.addEventListener('online',()=>{
-      const status=document.querySelector('[data-status]');
-      if(status&&/offline|network error/i.test(status.textContent||'')){
-        status.textContent='Back online. Refreshing scorecard…';
-        status.dataset.tone='ok';
-      }
-    });
 
     window.fdRackLedgerAdapter={
       mode:'live',

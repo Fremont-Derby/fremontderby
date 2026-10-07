@@ -1,4 +1,5 @@
 import { decorateHtmlWithShell } from './appShell.js';
+import { publicSeasonSelectionBrowserSource } from './publicSeasonSelection.js';
 
 export function publicPlayoffRounds(rounds = []) {
   return (Array.isArray(rounds) ? rounds : [])
@@ -53,12 +54,21 @@ const styles = `<style>
 const script = `<script>
 (() => {
   const project = (${publicPlayoffRounds.toString()});
+  const chooseSeason = (${publicSeasonSelectionBrowserSource});
   const root=document.querySelector('[data-public-playoffs]');
   const season=root.querySelector('[data-season]');
   const rounds=root.querySelector('[data-rounds]');
   const empty=root.querySelector('[data-empty]');
   const status=root.querySelector('[data-status]');
   let requestNumber=0;
+  let bootNumber=0;
+  function clear(){rounds.replaceChildren();empty.hidden=true}
+  function rememberSeason(id){
+    const url=new URL(location.href);if(id)url.searchParams.set('season',id);else url.searchParams.delete('season');
+    history.replaceState(null,'',url.pathname+url.search+url.hash);
+    empty.querySelector('a').href='/schedule'+(id?'?season='+encodeURIComponent(id):'');
+    try{if(id)localStorage.setItem('fd.playoffsSeasonId',id)}catch{}
+  }
   function state(message,tone='muted'){status.textContent=message;status.dataset.tone=tone}
   async function getJson(path){const response=await fetch(path);if(!response.ok)throw new Error('Postseason data is unavailable.');return response.json()}
   function addText(parent,tag,value,className){const el=document.createElement(tag);el.textContent=value;if(className)el.className=className;parent.append(el);return el}
@@ -87,20 +97,23 @@ const script = `<script>
   }
   async function load(){
     const id=season.value;const request=++requestNumber;
-    if(!id){render([]);return}
+    clear();rememberSeason(id);
+    if(!id){state('No published season is available.');return}
     state('Loading bracket…');
     try{const body=await getJson('/api/seasons/'+encodeURIComponent(id)+'/schedule');if(request!==requestNumber)return;render(project(body.rounds));
-      try{localStorage.setItem('fd.playoffsSeasonId',id)}catch{}
-    }catch{if(request!==requestNumber)return;rounds.replaceChildren();empty.hidden=true;state('Postseason data is unavailable. Try again.','error')}
+    }catch{if(request!==requestNumber)return;clear();state('Postseason data is unavailable. Try again.','error')}
   }
   async function boot(){
+    const request=++bootNumber;++requestNumber;clear();season.disabled=true;
     state('Loading seasons…');
-    try{const body=await getJson('/api/seasons');const seasons=Array.isArray(body.seasons)?body.seasons:[];season.replaceChildren();
+    try{const body=await getJson('/api/seasons');const seasons=Array.isArray(body.seasons)?body.seasons:[];
+      if(request!==bootNumber)return;
+      season.replaceChildren();
       for(const item of seasons){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' — '+item.status;season.append(option)}
       let remembered='';try{remembered=localStorage.getItem('fd.playoffsSeasonId')||''}catch{}
-      const preferred=seasons.find(item=>item.id===remembered)||seasons.find(item=>item.status==='playoffs')||seasons.find(item=>item.status==='complete')||seasons[0];
-      if(preferred)season.value=preferred.id;await load();
-    }catch{state('Postseason data is unavailable. Try again.','error')}
+      const preferred=chooseSeason(seasons,{explicitId:new URL(location.href).searchParams.get('season')||'',rememberedId:remembered});
+      season.value=preferred?.id||'';season.disabled=false;await load();
+    }catch{if(request!==bootNumber)return;state('Postseason data is unavailable. Try again.','error')}
   }
   season.addEventListener('change',load);root.querySelector('[data-retry]').addEventListener('click',boot);boot();
 })();

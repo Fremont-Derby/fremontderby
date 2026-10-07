@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   validate:
-    name: PR card contract / validate
+    name: pr-card-contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

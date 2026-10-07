@@ -1,5 +1,4 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -9,7 +8,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return stripTrailingSlashes(value);
+  return value.replace(/\/+$/, '');
 }
 
 function jsonHeaders(serviceRoleKey) {
@@ -109,6 +108,8 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
     async saveSeasonSetup({
       actorUserId,
       seasonId,
+      createNew = false,
+      seasonPurpose = 'league',
       seasonName,
       leagueNight,
       firstRoundDate,
@@ -121,12 +122,14 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
       playoffTeamCount,
       playoffAnchorTiebreaker,
     }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/configure_season_setup`, {
+      if (createNew && (env.ENVIRONMENT !== 'jfl' || seasonId)) throw new Error('Distinct season creation is available only in JFL without an existing target');
+      const rpc = createNew ? 'create_season_setup' : 'configure_season_setup';
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${rpc}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           actor_user_id: actorUserId,
-          target_season_id: seasonId,
+          ...(createNew ? { configured_purpose: seasonPurpose } : { target_season_id: seasonId }),
           configured_season_name: seasonName,
           configured_league_night: leagueNight,
           configured_first_round_date: firstRoundDate,

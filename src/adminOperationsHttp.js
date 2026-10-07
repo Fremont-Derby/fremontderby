@@ -1,8 +1,6 @@
 import { environmentReadiness } from './environmentReadiness.js';
 import { createAdminOperationsRepository } from './adminOperationsRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import { safeClientErrorMessage } from './requestSanitize.js';
 
 const severityRank = { healthy: 0, warning: 1, critical: 2 };
 const lineupWarningWindowMs = 2 * 60 * 60 * 1000;
@@ -246,12 +244,15 @@ export function buildAdminOperationsOverview(raw, readiness) {
     },
     rating: { latestUpdatedAt: raw.latestRatingUpdate },
     environment: readiness,
+    qaFeedback: raw.qaFeedback ?? null,
     actions,
   };
 }
 
-export function adminOperationsStatusForError(error) {
-  return rpcErrorStatus(error);
+function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
+  if (/League admin access/i.test(error.message)) return 403;
+  return 502;
 }
 
 export async function handleAdminOperationsRequest(
@@ -262,16 +263,15 @@ export async function handleAdminOperationsRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const repository = createAdminOperationsRepository(env, { fetch: fetchImpl });
-    const seasonId = new URL(request.url).searchParams.get('season');
-    const raw = await repository.getOverview({ actorUserId: actor.id, seasonId });
+    const raw = await repository.getOverview({ actorUserId: actor.id });
     return Response.json(
       { overview: buildAdminOperationsOverview(raw, environmentReadiness(env)) },
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch (error) {
     return Response.json(
-      { error: safeClientErrorMessage(error) },
-      { status: adminOperationsStatusForError(error), headers: { 'cache-control': 'no-store' } },
+      { error: error.message },
+      { status: statusForError(error), headers: { 'cache-control': 'no-store' } },
     );
   }
 }

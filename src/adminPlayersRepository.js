@@ -1,5 +1,4 @@
-import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
+import { withSupabaseSchema } from './supabaseSchema.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) throw new Error(`${name} is required`);
@@ -7,7 +6,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return stripTrailingSlashes(value);
+  return value.replace(/\/+$/, '');
 }
 
 async function parseResponse(response) {
@@ -144,33 +143,6 @@ export function createAdminPlayersRepository(
       };
     },
 
-
-    async setPaymentStatus({ actorUserId, playerId, seasonId, status }) {
-      if (!actorUserId) throw new Error('Sign in from Profile to use league admin tools.');
-      const headers = {
-        apikey: serviceRoleKey,
-        authorization: `Bearer ${serviceRoleKey}`,
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'content-profile': privatePostgrestProfile(env?.ENVIRONMENT),
-        'accept-profile': privatePostgrestProfile(env?.ENVIRONMENT),
-        prefer: 'resolution=merge-duplicates,return=minimal',
-      };
-      await requestJson(fetchImpl, `${baseUrl}/rest/v1/payment_status?on_conflict=season_id,player_id`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify([{
-          season_id: seasonId,
-          player_id: playerId,
-          status,
-          amount_due_cents: 0,
-          amount_paid_cents: 0,
-          updated_at: new Date().toISOString(),
-        }]),
-      });
-      return { playerId, seasonId, paymentStatus: status };
-    },
-
     async setRosterMembership({
       actorUserId,
       playerId,
@@ -196,37 +168,6 @@ export function createAdminPlayersRepository(
         role: row?.role ?? 'player',
         endsAt: row?.ends_at ?? null,
       };
-    },
-
-    /** #92 Record immutable rating observation (admin provisional / official / estimate). */
-    async recomputeDerbyEstimate({ actorUserId, playerId }) {
-      const rows = await rpc('recompute_derby_estimate_for_player', {
-        actor_user_id: actorUserId,
-        target_player_id: playerId,
-      });
-      return Array.isArray(rows) ? rows[0] : rows;
-    },
-
-    async recordRatingObservation({
-      actorUserId,
-      playerId,
-      sourceKind = 'admin_provisional',
-      ratingValue,
-      robustness = null,
-      confidence = null,
-      note = null,
-    }) {
-      const rows = await rpc('record_rating_observation', {
-        actor_user_id: actorUserId,
-        target_player_id: playerId,
-        observation_source_kind: sourceKind,
-        observation_rating_value: Number(ratingValue),
-        observation_robustness: robustness,
-        observation_games_count: null,
-        observation_confidence: confidence,
-        observation_provenance: note ? { note: String(note) } : {},
-      });
-      return Array.isArray(rows) ? rows[0] : rows;
     },
   };
 }

@@ -1,5 +1,3 @@
-import { readSanitizedJsonBody } from './requestSanitize.js';
-import { jsonNoStore } from './httpJson.js';
 import {
   chooseTeamMatchTeamCommand,
   listMyTeamMatchChoicesCommand,
@@ -7,13 +5,21 @@ import {
 import { createTeamMatchChoiceRepository } from './teamMatchChoiceRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
-const jsonResponse = jsonNoStore;
-
-async function readJsonBody(request) {
-  return readSanitizedJsonBody(request);
+function jsonResponse(body, status = 200) {
+  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-export function teamMatchChoiceStatusForError(error) {
+async function readJsonBody(request) {
+  const text = await request.text();
+  if (!text.trim()) return {};
+  const body = JSON.parse(text);
+  if (!body || Array.isArray(body) || typeof body !== 'object') {
+    throw new Error('Request body must be a JSON object');
+  }
+  return body;
+}
+
+function statusForError(error) {
   if (error instanceof AuthError) return error.status;
   const message = error?.message || '';
   if (message.includes('Player profile is required')) return 403;
@@ -45,7 +51,7 @@ export const teamMatchChoiceHttpHandlers = {
     } catch (error) {
       return jsonResponse(
         { error: publicError(error, 'Team choices are unavailable right now. Please try again.') },
-        teamMatchChoiceStatusForError(error),
+        statusForError(error),
       );
     }
   },
@@ -67,7 +73,7 @@ export const teamMatchChoiceHttpHandlers = {
     } catch (error) {
       return jsonResponse(
         { error: publicError(error, 'We could not save your team choice. Please try again.') },
-        teamMatchChoiceStatusForError(error),
+        statusForError(error),
       );
     }
   },

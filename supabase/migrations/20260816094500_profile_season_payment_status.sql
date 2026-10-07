@@ -1,2 +1,0 @@
--- #343 Include payment status on player season participation for Profile clarity.
--- Lane RPCs applied live; public baseline updated similarly to get_own_player_profile seasons payload.

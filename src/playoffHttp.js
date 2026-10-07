@@ -1,4 +1,3 @@
-import { readSanitizedJsonBody, safeClientErrorMessage } from './requestSanitize.js';
 import {
   advanceSeasonToChampionshipCommand,
   startSeasonPlayoffsCommand,
@@ -6,7 +5,6 @@ import {
 } from './playoffCommands.js';
 import { createPlayoffRepository } from './playoffRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -16,11 +14,42 @@ function jsonResponse(body, status = 200) {
 }
 
 async function readJsonBody(request) {
-  return readSanitizedJsonBody(request);
+  try {
+    const text = await request.text();
+    if (!text.trim()) return {};
+    const body = JSON.parse(text);
+    if (!body || Array.isArray(body) || typeof body !== 'object') {
+      throw new Error('Request body must be a JSON object');
+    }
+    return body;
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error('Request body must be valid JSON');
+    throw error;
+  }
 }
 
-export function playoffStatusForError(error) {
-  return rpcErrorStatus(error);
+function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
+  const message = error?.message || 'Request failed';
+  if (message.includes('Actor is not a league admin')) return 403;
+  if (message.includes('Only the active captain')) return 403;
+  if (message.includes('Supabase request failed with 401')) return 401;
+  if (message.includes('Supabase request failed with 403')) return 403;
+  if (message.includes('Season not found') || message.includes('Team matchup not found')) return 404;
+  if (
+    message.includes('regular season')
+    || message.includes('seven')
+    || message.includes('already')
+    || message.includes('playoff')
+    || message.includes('Postseason')
+    || message.includes('complete')
+    || message.includes('semifinal')
+    || message.includes('championship')
+    || message.includes('tied')
+    || message.includes('locked')
+    || message.includes('4+')
+  ) return 409;
+  return 400;
 }
 
 export function createPlayoffHttpHandlers({
@@ -31,38 +60,6 @@ export function createPlayoffHttpHandlers({
     async start(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       try {
         const actor = await authenticate(request, env, { fetch: fetchImpl });
-        if (String(env?.ENVIRONMENT || '').trim() === 'dru') {
-          const { withSupabaseSchema } = await import('./supabaseSchema.js');
-          const fetchWithSchema = withSupabaseSchema(fetchImpl, env);
-          const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-          const key = env.SUPABASE_SERVICE_ROLE_KEY;
-          const seasonResponse = await fetchWithSchema(`${base}/rest/v1/seasons?id=eq.${seasonId}&select=status`, {
-            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
-          });
-          const seasonRows = seasonResponse.ok ? await seasonResponse.json() : [];
-          const seasonStatus = String(seasonRows[0]?.status || '');
-          if (seasonStatus === 'registration' || seasonStatus === 'draft' || seasonStatus === 'new') {
-            return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
-          }
-
-          const { practicePlayoffsReady } = await import('./druTeamResult.js');
-          const roundResponse = await fetchWithSchema(`${base}/rest/v1/rounds?season_id=eq.${seasonId}&stage=eq.regular&select=id`, {
-            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
-          });
-          const roundIds = roundResponse.ok ? (await roundResponse.json()).map((row) => row.id).filter(Boolean) : [];
-          const matchUrl = roundIds.length
-            ? `${base}/rest/v1/team_matches?season_id=eq.${seasonId}&round_id=in.(${roundIds.join(',')})&select=status,winner_team_id`
-            : `${base}/rest/v1/team_matches?season_id=eq.${seasonId}&select=status,winner_team_id`;
-          const response = await fetchWithSchema(matchUrl, {
-            headers: { apikey: key, authorization: `Bearer ${key}`, accept: 'application/json' },
-          });
-          const rows = response.ok ? await response.json() : [];
-          if (!practicePlayoffsReady(rows)) return jsonResponse({ error: 'All seven regular-season matchups must be complete before playoffs.' }, 409);
-          const { writeDruPracticeResults, closeFinishedDruTeamMatches, closeOpenDruPracticeMatches } = await import('./druTeamResult.js');
-          await writeDruPracticeResults(env, seasonId, fetchImpl);
-          await closeFinishedDruTeamMatches(env, { seasonId }, fetchImpl);
-          await closeOpenDruPracticeMatches(env, seasonId, fetchImpl);
-        }
         const repository = createRepository(env, { fetch: fetchImpl });
         const playoffs = await startSeasonPlayoffsCommand(
           { seasonId, actorUserId: actor.id },
@@ -70,7 +67,7 @@ export function createPlayoffHttpHandlers({
         );
         return jsonResponse({ playoffs }, 201);
       } catch (error) {
-        return jsonResponse({ error: safeClientErrorMessage(error) }, playoffStatusForError(error));
+        return jsonResponse({ error: error.message }, statusForError(error));
       }
     },
 
@@ -84,7 +81,7 @@ export function createPlayoffHttpHandlers({
         );
         return jsonResponse({ championship }, 201);
       } catch (error) {
-        return jsonResponse({ error: safeClientErrorMessage(error) }, playoffStatusForError(error));
+        return jsonResponse({ error: error.message }, statusForError(error));
       }
     },
 
@@ -105,7 +102,7 @@ export function createPlayoffHttpHandlers({
         );
         return jsonResponse({ lineup }, 201);
       } catch (error) {
-        return jsonResponse({ error: safeClientErrorMessage(error) }, playoffStatusForError(error));
+        return jsonResponse({ error: error.message }, statusForError(error));
       }
     },
   };

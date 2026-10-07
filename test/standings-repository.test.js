@@ -7,17 +7,28 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-secret',
 };
 
-test('standings repository lists team standings through the standings RPC', async () => {
+test('standings repository lists team standings with public captain and roster context', async () => {
   const calls = [];
-  const fetch = async (url, init) => {
-    calls.push({ url, init });
-    return new Response(JSON.stringify([{
+  const responses = [
+    [{
       season_id: 'season-1',
       team_id: 'team-1',
       standings_rank: 1,
       standing_points: 2,
       match_points: 3,
-    }]), {
+    }],
+    [
+      { team_id: 'team-1', player_id: 'player-1', role: 'captain' },
+      { team_id: 'team-1', player_id: 'player-2', role: 'player' },
+    ],
+    [
+      { id: 'player-1', display_name: 'Casey Captain' },
+      { id: 'player-2', display_name: 'Morgan Member' },
+    ],
+  ];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify(responses.shift()), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
@@ -32,6 +43,15 @@ test('standings repository lists team standings through the standings RPC', asyn
     target_season_id: 'season-1',
   });
   assert.equal(standings[0].team_id, 'team-1');
+  assert.equal(standings[0].captain_display_name, 'Casey Captain');
+  assert.equal(standings[0].roster_count, 2);
+  assert.deepEqual(standings[0].roster, [
+    { playerId: 'player-1', displayName: 'Casey Captain', role: 'captain' },
+    { playerId: 'player-2', displayName: 'Morgan Member', role: 'player' },
+  ]);
+  assert.match(calls[1].url, /\/rest\/v1\/team_memberships\?/);
+  assert.doesNotMatch(calls[1].url, /role=eq\.captain/);
+  assert.match(calls[2].url, /\/rest\/v1\/players\?/);
 });
 
 test('standings repository lists individual standings through the standings RPC', async () => {
@@ -108,7 +128,6 @@ test('standings repository lists public seasons with registration progress', asy
       headers: { 'content-type': 'application/json' },
     });
   };
-
   const repository = createStandingsRepository(env, { fetch });
   const seasons = await repository.listPublicSeasons();
 
@@ -160,7 +179,6 @@ test('standings repository returns a sanitized human-readable season schedule', 
       { id: 'team-1', name: 'Breakers' },
       { id: 'team-2', name: 'Rack Pack' },
     ],
-    [],
   ];
   const fetch = async (url, init) => {
     calls.push({ url, init });
@@ -179,31 +197,16 @@ test('standings repository returns a sanitized human-readable season schedule', 
     scheduledOn: '2026-09-03',
     status: 'scheduled',
     stage: 'regular',
-    lineupDeadlineAt: null,
     matches: [{
       teamMatchId: 'match-1',
-      teamAId: 'team-1',
-      teamBId: 'team-2',
       teamAName: 'Breakers',
       teamBName: 'Rack Pack',
       tableNumber: 4,
       status: 'scheduled',
-      winnerTeamId: null,
-      winnerTeamName: null,
-      makeupOn: null,
-      makeupLocation: null,
-      makeupStatus: null,
-      makeupNote: null,
-      makeupProposedByTeamId: null,
-      winnerTeamId: null,
-      racksA: 0,
-          racksB: 0,
-          winnerName: null,
     }],
   }]);
   assert.match(calls[0].url, /\/rest\/v1\/rounds\?/);
   assert.match(calls[1].url, /\/rest\/v1\/team_matches\?/);
   assert.match(calls[2].url, /\/rest\/v1\/teams\?/);
-  assert.match(calls[3].url, /\/rest\/v1\/player_matches\?/);
   assert.ok(calls.every((call) => call.init.headers.apikey === 'service-role-secret'));
 });

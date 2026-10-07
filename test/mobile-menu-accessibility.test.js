@@ -38,17 +38,26 @@ test('current mobile destination is explicit beyond color and remains touch frie
   assert.ok(contrast('#06341f', '#e8f3ec') >= 4.5);
 });
 
-test('open mobile drawer visually wins over and disables the competing quick dock', () => {
+test('open mobile drawer keeps quick dock visually lit while disabling navigation', () => {
   assert.match(mobileMenuStyles, /\.fd-shell:has\(\.fd-nav-menu\[open\]\) \{ z-index: 1200; \}/);
   assert.match(mobileMenuStyles, /\.fd-shell:has\(\.fd-nav-menu\[open\]\) \+ \.fd-mobile-dock/);
+  assert.match(mobileMenuStyles, /opacity: 1/);
+  assert.doesNotMatch(mobileMenuStyles, /opacity: \.2/);
   assert.match(mobileMenuStyles, /pointer-events: none/);
   assert.match(mobileMenuScript, /dock\.inert = open/);
+});
+
+test('mobile drawer dismisses on outside pointer without dismissing inside interactions', () => {
+  assert.match(mobileMenuScript, /document\.addEventListener\('pointerdown'/);
+  assert.match(mobileMenuScript, /!menu\.open \|\| menu\.contains\(event\.target\)/);
+  assert.match(mobileMenuScript, /closeMenu\(\)/);
+  assert.match(mobileMenuScript, /menu\.open = false/);
 });
 
 test('mobile drawer moves focus inside on open and Escape returns focus to Menu', () => {
   assert.match(mobileMenuScript, /drawer\.querySelector\('a'\)\?\.focus\(\)/);
   assert.match(mobileMenuScript, /event\.key !== 'Escape'/);
-  assert.match(mobileMenuScript, /menu\.open = false/);
+  assert.match(mobileMenuScript, /closeMenu\(\{ restoreFocus: true \}\)/);
   assert.match(mobileMenuScript, /summary\.focus\(\)/);
 });
 
@@ -67,6 +76,7 @@ test('mobile menu accessibility layer is injected only into HTML', async () => {
   assert.equal((html.match(/data-fd-mobile-menu-accessibility/g) || []).length, 2);
   assert.match(html, /\.fd-shell \.fd-nav--mobile a/);
   assert.match(html, /dock\.inert = open/);
+  assert.match(html, /document\.addEventListener\('pointerdown'/);
 
   const json = JSON.stringify({ ok: true });
   const jsonResponse = await injectMobileMenuAccessibility(new Response(json, {
