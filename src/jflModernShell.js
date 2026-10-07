@@ -267,7 +267,9 @@ export const jflModernShellStyles = `
       gap: 6px !important;
     }
     .fd-shell[data-fd-modern-shell="true"] .fd-brand > span:last-child { display: none; }
-    .fd-env-badge { margin-right: auto; gap: 4px; padding-inline: 7px; font-size: .62rem; }
+    .fd-env-badge { margin-right: auto; gap: 4px; padding-inline: 7px; font-size: .62rem; min-width: 0; flex: 1 1 0; display: grid; grid-template-columns: auto minmax(0, 1fr); white-space: normal; }
+    .fd-env-badge strong, .fd-env-badge code { white-space: nowrap; }
+    .fd-env-badge [data-fd-jfl-deploy-time] { grid-column: 1 / -1; overflow-wrap: anywhere; }
     .fd-env-badge span { display: inline !important; }
     .fd-nav--modern-primary { display: none !important; }
     .fd-message-notifications { margin-left: 0 !important; }

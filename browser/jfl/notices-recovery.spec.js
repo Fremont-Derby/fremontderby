@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { renderJflNotificationsPage } from '../../src/jflNotificationsPage.js';
+import { decorateJflModernShell } from '../../src/jflModernShell.js';
 
-const sourceMode = process.env.PLAYWRIGHT_NOTICES_SOURCE === '1';
+const mode = process.env.PLAYWRIGHT_NOTICES_SOURCE || '0';
+const sourceMode = mode !== '0';
+const sourceEnv = { ENVIRONMENT: 'jfl', CF_VERSION_METADATA: { tag: 'a'.repeat(40), timestamp: '2026-10-06T09:08:00.000Z', id: 'synthetic-build-only' } };
 const notices = [
   { id: 'read', title: 'Older read notice', kind: 'league_update', readAt: '2026-10-01T00:00:00Z', createdAt: '2026-10-01T00:00:00Z', href: '/schedule?season=synthetic' },
   { id: 'new', title: 'Recent unread notice', kind: 'lineup_ready', readAt: null, createdAt: '2026-10-03T00:00:00Z', href: '/lineup?season=synthetic' },
@@ -15,7 +18,7 @@ async function openNotices(browser, request, mobile, initial = { notifications: 
     expect(health.ok()).toBe(true);
     expect(await health.json()).toMatchObject({ environment: 'jfl', expectedSupabaseSchema: 'jfl', ok: true, versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
   }
-  const context = await browser.newContext({ baseURL: sourceMode ? 'https://notices.test' : process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
+  const context = await browser.newContext({ baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
     viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 }, isMobile: mobile, hasTouch: mobile });
   await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'));
   const page = await context.newPage();
@@ -33,7 +36,12 @@ async function openNotices(browser, request, mobile, initial = { notifications: 
       await route.fulfill({ status: initialStatus, contentType: 'application/json', body: JSON.stringify(initial) });
     }
   });
-  if (sourceMode) await page.route('https://notices.test/notifications', route => route.fulfill({ contentType: 'text/html', body: renderJflNotificationsPage() }));
+  if (sourceMode) await page.route('https://jfl.fremontderby.com/notifications', async route => {
+    let html;
+    if (mode === 'bundled') { const { default: worker } = await import('../../dist/routerEntry.js'); html = await (await worker.fetch(new Request(route.request().url()), sourceEnv, {})).text(); }
+    else html = await (await decorateJflModernShell(new Response(renderJflNotificationsPage(), { headers: { 'content-type': 'text/html' } }), new Request(route.request().url()), sourceEnv)).text();
+    await route.fulfill({ contentType: 'text/html', body: html });
+  });
   await page.goto('/notifications');
   await expect.poll(() => reads.length).toBe(1);
   return { page, context, reads, writes, respond: (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }) };
@@ -41,6 +49,20 @@ async function openNotices(browser, request, mobile, initial = { notifications: 
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  test(`populated notices and long content fit the viewport (${device})`, async ({ browser, request }) => {
+    const long = 'Synthetic'.repeat(45);
+    const f = await openNotices(browser, request, mobile, { notifications: [...notices, { id: 'long', title: long, body: long, kind: long, createdAt: '2026-10-06T00:00:00Z', readAt: null, href: '/schedule?season=synthetic' }] });
+    try {
+      await expect(f.page.locator('.notice-card')).toHaveCount(4);
+      await expect(f.page.locator('.notice-card').first()).toContainText(long);
+      expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      for (const element of await f.page.locator('.notices, .notice-card, .notice-card button, .notice-card a').all()) {
+        const bounds = await element.boundingBox(); expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(mobile ? 320 : 1280);
+      }
+      await expect(f.page.locator('.notice-card').first().getByRole('link', { name: 'Open related page' })).toHaveAttribute('href', '/schedule?season=synthetic');
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
   test(`list failure recovers with explicit reload and no writes (${device})`, async ({ browser, request }) => {
     const f = await openNotices(browser, request, mobile, { error: 'Synthetic list unavailable' }, 502);
     try {
