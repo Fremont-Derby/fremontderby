@@ -1,8 +1,8 @@
-# War-game kit plan
+# War-game test branch plan
 
 Saved 2026-10-07. Source is docs/dru/war-game-runbook.md on fremontderby-dru. The rules that file follows are cited there, under Project rules these docs follow.
 
-- Shipped branch: fremontderby-dru. The DRU site deploys this. A kit branch is never deployed there.
+- Shipped branch: fremontderby-dru. The DRU site deploys this. A test branch branch is never deployed there.
 - War game 1: dru/war-game-1-race-conditions. Pass is one final score and a recorded conflict. Stop at the raced night.
 - War game 2: dru/war-game-2-input-validation. Pass is the expected refusal.
 - War game 3: dru/war-game-3-messages. Pass is one saved message, or the expected refusal.
@@ -17,7 +17,7 @@ Saved 2026-10-07. Source is docs/dru/war-game-runbook.md on fremontderby-dru. Th
 
 Lane keep, put back after every JFL grab, stays on the shipped branch: sign-in token, worker config, practice phone.
 
-Stop categories: his bugs, kit gaps, lane keep.
+Stop categories: his bugs, test-branch gaps, lane keep.
 Every night writes a call list: method, path, status, time.
 Each war game has ten negative test points in the playbook. A point that gets the expected refusal passes. A silent overwrite fails.
 A host limit is written under Host obstacles in the playbook. Do not skip it and do not call it a product bug.

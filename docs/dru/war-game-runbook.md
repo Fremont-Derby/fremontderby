@@ -53,31 +53,31 @@ Environment boundary, from `docs/ENVIRONMENTS.md` sections "DRU" and "JFL and DR
 What these docs add, and where a correction would go:
 
 - A war game is a night on the live DRU screens. A page of made-up scores does not count. Correction goes in this file.
-- Kit code stays on `dru/war-game-N-<focus>` and is not deployed. Correction goes in this file.
+- Test-branch code stays on `dru/war-game-N-<focus>` and is not deployed. Correction goes in this file.
 - A host limit is written under Host obstacles. Correction goes in this file.
 - A free agent can play any team on any night and stays a free agent. A roster switch is a different write. If the product rule changes, the correction belongs in `docs/DATA_MODEL.md` or the roster card, and this file follows it.
 
 ## Branches
 
-`fremontderby-dru` is the branch the DRU site deploys. A comparison of JFL to DRU is a comparison against that branch. Do not put war-game kit code on it.
+`fremontderby-dru` is the branch the DRU site deploys. A comparison of JFL to DRU is a comparison against that branch. Do not put war-game test-branch code on it.
 
-Each war game gets a number. War game 1 is the first kit. Its branch is `dru/war-game-1-race-conditions`. War game 2 is `dru/war-game-2-input-validation`. The test plan for that number lives in this runbook under that number. The branch is not a deploy source and is not offered to JFL.
+Each war game gets a number. War game 1 is the first war game. Its branch is `dru/war-game-1-race-conditions`. War game 2 is `dru/war-game-2-input-validation`. The points for that number lives in this runbook under that number. The branch is not a deploy source and is not offered to JFL.
 
-After a JFL grab: reset `fremontderby-dru` to `fremontderby-jfl`, put the three lane keep pieces back, and deploy that. The keep pieces are the sign-in token in `src/supabaseAuth.js`, the worker config, and the practice phone. The kit is a harness that talks to the live site, or a throwaway preview. Do not deploy `dru/war-game-N-<focus>` to dru.fremontderby.com. The call back door never goes on the shipped worker.
+After a JFL grab: reset `fremontderby-dru` to `fremontderby-jfl`, put the three lane keep pieces back, and deploy that. The keep pieces are the sign-in token in `src/supabaseAuth.js`, the worker config, and the practice phone. The war-game branch is a script that talks to the live site, or a throwaway preview. Do not deploy `dru/war-game-N-<focus>` to dru.fremontderby.com. The call back door never goes on the shipped worker.
 
 When a night stops, name the category before fixing anything.
 
-- His bugs. Still in his tree. A card for JFL, not a kit change.
-- Kit gaps. Streamlining that exists only so this lane can test. Belongs on `dru/war-game-N-<focus>`.
-- Lane keep. Sign-in died after a grab, or the worker config or the practice phone is missing. Put the keep piece back. Not his bug, and not a kit gap.
+- His bugs. Still in his tree. A card for JFL, not a change to the test branch.
+- Test-branch gaps. Streamlining that exists only so this lane can test. Belongs on `dru/war-game-N-<focus>`.
+- Lane keep. Sign-in died after a grab, or the worker config or the practice phone is missing. Put the keep piece back. Not his bug, and not a gap in the test branch.
 
-## Kit levels
+## War game levels
 
 Every war game has a testing line. That line is what the night is trying to prove. A point that does not serve that line does not belong on that war game.
 
-Every war game is a negative test. The number is the focus, not a difficulty ladder. A later number does not replace an earlier one. All kit code stays on its own `dru/war-game-N-<focus>` branch. The shipped branch does not get these screens.
+Every war game is a negative test. The number is the focus, not a difficulty ladder. A later number does not replace an earlier one. All war-game test code stays on its own `dru/war-game-N-<focus>` branch. The shipped branch does not get these screens.
 
-1. Race conditions. War game 1, `dru/war-game-1-race-conditions`. Testing: two people writing the same match at the same time must not silently flip the score. Pass: two overlapping writes leave one final score and a recorded conflict, not a silent flip. Shape: four tables, two games on a table (eight-ball and nine-ball), two captains writing one match, one lock against one score. The kit fires those from a barrier, not as fast as a chat can click. Stop at the raced night. A champion is not this pass.
+1. Race conditions. War game 1, `dru/war-game-1-race-conditions`. Testing: two people writing the same match at the same time must not silently flip the score. Pass: two overlapping writes leave one final score and a recorded conflict, not a silent flip. Shape: four tables, two games on a table (eight-ball and nine-ball), two captains writing one match, one lock against one score. The script fires those from a barrier, not as fast as a chat can click. Stop at the raced night. A champion is not this pass.
    - Two captains save the same rack at the same time, opposite winners.
    - Two captains save the team match at the same time, opposite sides.
    - A lineup lock and a score save start together.
@@ -223,11 +223,11 @@ Verdict is pass, fail, or host. Host means a 429, a timeout, or a throttle, and 
 
 After a save that should have landed, reload three surfaces. The schedule, the scorecard, and the standings must show the same score. If they disagree, the point fails even if one page looks right.
 
-## What the kit is for
+## What the test branch is for
 
 
 
-One tournament night. Four tables. Several matches at once. Eight-ball and nine-ball. People score and lock lineups at the same time. The kit exists to fuzz that: overlapping score saves, two captains writing the same match, a lineup lock racing a score, a second save flipping a finished match. The point is race conditions, not a screen JFL should see on the shipped branch.
+One tournament night. Four tables. Several matches at once. Eight-ball and nine-ball. People score and lock lineups at the same time. The test branch exists to fuzz that: overlapping score saves, two captains writing the same match, a lineup lock racing a score, a second save flipping a finished match. The point is race conditions, not a screen JFL should see on the shipped branch.
 
 ## Entropy first
 
@@ -311,10 +311,10 @@ Write these lines before stopping:
 - Seed, season name, season id, version tag.
 - Teams and the `555` phones used.
 - Which random branches ran.
-- War game number, focus, and kit branch. Example: war game 1, race conditions, `dru/war-game-1-race-conditions`.
+- War game number, focus, and test branch. Example: war game 1, race conditions, `dru/war-game-1-race-conditions`.
 - Pass line for that number, and whether it passed.
-- The live site stayed on `fremontderby-dru`. The kit was a harness or a preview, not a deploy of the kit branch.
-- Stop category if the night stopped: his bug, kit gap, or lane keep.
+- The live site stayed on `fremontderby-dru`. The test branch was a script or a preview, not a deploy of that branch.
+- Stop category if the night stopped: his bug, test-branch gap, or lane keep.
 - Call list: method, path, status, and time for every request this night.
 - Host obstacle, if one tripped: request, status or sentence, and the line added under Host obstacles.
 - Expected refusal and actual sentence, when a refusal was the point.
@@ -330,6 +330,6 @@ Write these lines before stopping:
 - Do not merge, push, or open a pull request from this walk.
 - Do not touch Gamma or production.
 - Do not invent a score in a note and call the night done. The schedule page has to show Final.
-- Do not deploy a kit branch to dru.fremontderby.com.
+- Do not deploy a war-game test branch to dru.fremontderby.com.
 - Do not treat an expected refusal as a bug. Record the expected sentence and the actual sentence.
 - Do not hide a host limit. A 429, a timeout, or a throttle goes in Host obstacles.

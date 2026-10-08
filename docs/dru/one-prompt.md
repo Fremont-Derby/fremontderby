@@ -13,7 +13,7 @@ War game 9 is wrong season. War game 10 is wrong actor. Pass lines are in the pl
 War game 11 is a team switch before the season opens. Join A, switch to B, switch back to A, switch to C. A free agent can play any team any night and stays a free agent. Do not treat that fill as a switch.
 If a request cap, a 429, or a timeout stops a point, add a line under Host obstacles in the playbook before you stop. Do not leave it only in the chat.
 
-The live site stays on `fremontderby-dru`. Do not deploy the kit branch.
+The live site stays on `fremontderby-dru`. Do not deploy the test branch branch.
 
 Last line:
 
