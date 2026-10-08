@@ -333,3 +333,13 @@ Write these lines before stopping:
 - Do not deploy a war-game test branch to dru.fremontderby.com.
 - Do not treat an expected refusal as a bug. Record the expected sentence and the actual sentence.
 - Do not hide a host limit. A 429, a timeout, or a throttle goes in Host obstacles.
+
+## Work record
+
+Written 2026-10-07 by the DRU lane, on `fremontderby-dru`. This is a record of the doc work, not a new war game.
+
+- The playbook was added under `docs/dru/` so the author can see the rules the night follows. Pull request #3545, card #3544. The word kit was used for the test branch and then removed. It was not a name and not an acronym.
+- The author proposed a war game 3 correction on pull request #3546, branch `chatgpt/issue-3544-messaging-contract`. That pull request was not merged. His branch was not changed.
+- The same correction was copied onto a DRU branch and merged in pull request #3547, card #3548. War game 3 now tests general chat, team chat, and direct messages with opt-in off and on. A match thread is not part of that night.
+- The rules cited in this file were read from `AGENTS.md`, `.github/agents/dru.agent.md`, `.github/agents/jfl.agent.md`, `docs/ENVIRONMENTS.md`, and issue #2883. Those sources were not edited.
+
