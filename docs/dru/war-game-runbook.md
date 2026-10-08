@@ -99,17 +99,17 @@ Every war game is a negative test. The number is the focus, not a difficulty lad
    - A negative rack score.
    - A player who is not on the team is slotted.
    - Confirm is clicked with no rack filled.
-3. Messages. War game 3, `dru/war-game-3-messages`. Testing: an empty send, a wrong thread, and a send after final must not become a second message. Pass: an empty send, the wrong match thread, a message after the match is final, and two sends at once each return the expected sentence or one saved message, not two.
-   - Send an empty message.
-   - Send only spaces.
-   - Send into the wrong match thread.
-   - Send after the match is final.
-   - Two captains send at the same time.
-   - The same captain sends twice with no wait.
-   - Send before the lineup is locked.
-   - Send to a match on another season.
-   - Send, refresh, send the same text again.
-   - Send while the other captain deletes or leaves the thread.
+3. Messaging privacy and channel authorization. War game 3, `dru/war-game-3-messages`. Test only the supported opt-in channels: general, team, and direct messages. Match-specific threads are intentionally unsupported; do not require or recreate them. Pass: opted-out users cannot receive or send through disabled channels; unauthorized users cannot access team/direct conversations; authorized opted-in messages persist once without duplication. Record expected and actual behavior for each point.
+   - General chat disabled: attempt to send; expect refusal or unavailable control.
+   - Team chat disabled: attempt to send; expect refusal or unavailable control.
+   - Direct messages disabled: attempt to send; expect refusal or unavailable control.
+   - All channels disabled: verify no message can be sent or received through those channels.
+   - Enable general chat: authorized message persists after refresh.
+   - Enable team chat: member message persists after refresh.
+   - Nonmember attempts team chat: expect access refusal.
+   - Enable direct messages: authorized conversation persists after refresh.
+   - Unauthorized actor attempts to read another direct conversation: expect refusal.
+   - Two rapid sends of the same request: verify no unintended duplicate delivery; record actual behavior.
 4. Schedules. War game 4, `dru/war-game-4-schedules`. Testing: a night cannot close, and playoffs cannot start, while a regular match is open. Pass: a makeup lands on this season, a round left open blocks close, a foreign date is refused, and playoffs refuse until the regular night is final. This is the war game that names a champion.
    - Publish with no teams.
    - Publish twice.
