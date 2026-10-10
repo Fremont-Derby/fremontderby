@@ -48,7 +48,7 @@ Environment boundary, from `docs/ENVIRONMENTS.md` sections "DRU" and "JFL and DR
 
 - Test auth bypass is allowed only on JFL and DRU, and must fail closed on gamma and production. The switch is `BETA_AUTH_BYPASS`.
 - A DRU worker must fail closed on the production project or the wrong schema.
-- These docs may name the practice phone. `555` numbers are fake captain phones for a war game, not a publish bypass. Those stay in this folder.
+- These docs may name the fake phone. `555` numbers are fake captain phones for a war game, not a publish bypass. Those stay in this folder.
 
 What these docs add, and where a correction would go:
 
@@ -63,13 +63,13 @@ What these docs add, and where a correction would go:
 
 Each war game gets a number. War game 1 is the first war game. Its branch is `dru/war-game-1-race-conditions`. War game 2 is `dru/war-game-2-input-validation`. The points for that number lives in this runbook under that number. The branch is not a deploy source and is not offered to JFL.
 
-After a JFL grab: reset `fremontderby-dru` to `fremontderby-jfl`, put the three lane keep pieces back, and deploy that. The keep pieces are the sign-in token in `src/supabaseAuth.js`, the worker config, and the practice phone. The war-game branch is a script that talks to the live site, or a throwaway preview. Do not deploy `dru/war-game-N-<focus>` to dru.fremontderby.com. The call back door never goes on the shipped worker.
+After a JFL grab: reset `fremontderby-dru` to `fremontderby-jfl`, put the three lane keep pieces back, and deploy that. The keep pieces are the sign-in token in `src/supabaseAuth.js`, the worker config, and the fake phone. The war-game branch is a script that talks to the live site, or a throwaway preview. Do not deploy `dru/war-game-N-<focus>` to dru.fremontderby.com. The call back door never goes on the shipped worker.
 
 When a night stops, name the category before fixing anything.
 
 - His bugs. Still in his tree. A card for JFL, not a change to the test branch.
 - Test-branch gaps. Streamlining that exists only so this lane can test. Belongs on `dru/war-game-N-<focus>`.
-- Lane keep. Sign-in died after a grab, or the worker config or the practice phone is missing. Put the keep piece back. Not his bug, and not a gap in the test branch.
+- Lane keep. Sign-in died after a grab, or the worker config or the fake phone is missing. Put the keep piece back. Not his bug, and not a gap in the test branch.
 
 ## War game levels
 
@@ -238,7 +238,7 @@ Before any click, roll a seed and write it at the top of the notes.
 - Season name: two kid-safe words plus the seed. Example: `Star Button Night 2347`. Never reuse a name already on the season menu.
 - Team names: four kid-safe names that include the seed. Example: `Star Button Crew 2347`, `Puddle Duck Club 2347`, `Lemon Marble Kids 2347`, `Acorn Pocket Roll 2347`.
 - Player names: kid-safe, unique, include the seed. Example: `Moss Button 2347`, `Ribbon Duck 2347`.
-- Captain phones: `555` plus the seed plus a team digit. Example: `5552347001`. These are fake practice numbers. Save them through the admin phone path. Do not use a real phone.
+- Captain phones: `555` plus the seed plus a team digit. Example: `5552347001`. These are fake numbers. Save them through the admin phone path. Do not use a real phone.
 - Pick one random branch from each list below. Write the picks down. Another chat must not copy the same branch set.
 
 Word bank, pick without repeating inside the night: Star, Puddle, Lemon, Acorn, Marble, Button, Ribbon, Pocket, Clover, Fern, Otter, Lantern, Kite, Paper, Brook, Duck, Cue, Sparrow, Firefly, Moth, Willow, Maple, Cedar, Birch, Hazel, Rowan, Compass, Wagon, Cloud, Cinnamon.
@@ -262,7 +262,7 @@ Standings: `/standings`
 
 1. Create the season on Season setup. Name it from the seed. League night Wednesday. First round a Wednesday. Tables `1,2,3,4`. Playoff teams 4. Save setup. Record the season id from the season menu. Status should be registration.
 2. Create four teams. Prefer the New team box on Admin Teams. If that page stays on "Loading seasons…", the page is demanding a Google token the DRU actor does not have. The same button posts to `/api/admin/seasons/{seasonId}/prepared-teams` with `{ "teamName": "..." }`. Use that only as the button's own request, then confirm the teams on Season setup.
-3. Give each team a captain and three players. Save the `555` practice numbers on the admin phone path before publish. Do not waive by a database edit. If the lineup lock says "Lineup players could not be waived", the team has more than the players in the lineup. Remove the extra roster players on the team screen, then lock again. Do not ship a code change from this runbook.
+3. Give each team a captain and three players. Save the fake `555` numbers on the admin phone path before publish. Do not waive by a database edit. If the lineup lock says "Lineup players could not be waived", the team has more than the players in the lineup. Remove the extra roster players on the team screen, then lock again. Do not ship a code change from this runbook.
 4. Publish the schedule from Season setup. Confirm seven rounds on the schedule page for this season only.
 5. Walk one league night on the real screens. Check in, set the lineup, lock it, open the scorecard, enter racks, confirm, finalize. Reload and confirm the schedule says Final.
 6. Run the random negative branch, then one makeup, then one captain disagreement.
@@ -309,7 +309,7 @@ Known obstacles:
 Write these lines before stopping:
 
 - Seed, season name, season id, version tag.
-- Teams and the `555` practice phones used.
+- Teams and the fake `555` phones used.
 - Which random branches ran.
 - War game number, focus, and test branch. Example: war game 1, race conditions, `dru/war-game-1-race-conditions`.
 - Pass line for that number, and whether it passed.
