@@ -9,10 +9,6 @@ test('profileDirectMessageConsentEnhancer.js loads and exports its named members
     assert.notEqual(mod[name], undefined);
   }
 });
-test('profileDirectMessageConsentEnhancer.js exports enhanceProfileDirectMessageConsent as a defined value', async () => {
-  const mod = await import('../src/profileDirectMessageConsentEnhancer.js');
-  assert.notEqual(mod.enhanceProfileDirectMessageConsent, undefined, 'enhanceProfileDirectMessageConsent is missing');
-});
 test('profilePage.js loads and exports its named members', async () => {
   const mod = await import('../src/profilePage.js');
   const expected = ["renderProfilePage"];
@@ -20,10 +16,6 @@ test('profilePage.js loads and exports its named members', async () => {
     assert.ok(name in mod, 'profilePage.js is missing ' + name);
     assert.notEqual(mod[name], undefined);
   }
-});
-test('profilePage.js exports renderProfilePage as a defined value', async () => {
-  const mod = await import('../src/profilePage.js');
-  assert.notEqual(mod.renderProfilePage, undefined, 'renderProfilePage is missing');
 });
 test('profilePlayerClaimEnhancer.js loads and exports its named members', async () => {
   const mod = await import('../src/profilePlayerClaimEnhancer.js');
@@ -33,10 +25,6 @@ test('profilePlayerClaimEnhancer.js loads and exports its named members', async 
     assert.notEqual(mod[name], undefined);
   }
 });
-test('profilePlayerClaimEnhancer.js exports enhanceProfilePlayerClaim as a defined value', async () => {
-  const mod = await import('../src/profilePlayerClaimEnhancer.js');
-  assert.notEqual(mod.enhanceProfilePlayerClaim, undefined, 'enhanceProfilePlayerClaim is missing');
-});
 test('profileSeasonRegistrationEnhancer.js loads and exports its named members', async () => {
   const mod = await import('../src/profileSeasonRegistrationEnhancer.js');
   const expected = ["enhanceProfileSeasonRegistration"];
@@ -44,10 +32,6 @@ test('profileSeasonRegistrationEnhancer.js loads and exports its named members',
     assert.ok(name in mod, 'profileSeasonRegistrationEnhancer.js is missing ' + name);
     assert.notEqual(mod[name], undefined);
   }
-});
-test('profileSeasonRegistrationEnhancer.js exports enhanceProfileSeasonRegistration as a defined value', async () => {
-  const mod = await import('../src/profileSeasonRegistrationEnhancer.js');
-  assert.notEqual(mod.enhanceProfileSeasonRegistration, undefined, 'enhanceProfileSeasonRegistration is missing');
 });
 test('profileSocialChatConsentEnhancer.js loads and exports its named members', async () => {
   const mod = await import('../src/profileSocialChatConsentEnhancer.js');
@@ -57,10 +41,6 @@ test('profileSocialChatConsentEnhancer.js loads and exports its named members', 
     assert.notEqual(mod[name], undefined);
   }
 });
-test('profileSocialChatConsentEnhancer.js exports enhanceProfileSocialChatConsent as a defined value', async () => {
-  const mod = await import('../src/profileSocialChatConsentEnhancer.js');
-  assert.notEqual(mod.enhanceProfileSocialChatConsent, undefined, 'enhanceProfileSocialChatConsent is missing');
-});
 test('publicPages.js loads and exports its named members', async () => {
   const mod = await import('../src/publicPages.js');
   const expected = ["renderIntroPage","renderRulesPage"];
@@ -68,14 +48,6 @@ test('publicPages.js loads and exports its named members', async () => {
     assert.ok(name in mod, 'publicPages.js is missing ' + name);
     assert.notEqual(mod[name], undefined);
   }
-});
-test('publicPages.js exports renderIntroPage as a defined value', async () => {
-  const mod = await import('../src/publicPages.js');
-  assert.notEqual(mod.renderIntroPage, undefined, 'renderIntroPage is missing');
-});
-test('publicPages.js exports renderRulesPage as a defined value', async () => {
-  const mod = await import('../src/publicPages.js');
-  assert.notEqual(mod.renderRulesPage, undefined, 'renderRulesPage is missing');
 });
 test('publicSeasonSelection.js loads and exports its named members', async () => {
   const mod = await import('../src/publicSeasonSelection.js');
@@ -85,14 +57,6 @@ test('publicSeasonSelection.js loads and exports its named members', async () =>
     assert.notEqual(mod[name], undefined);
   }
 });
-test('publicSeasonSelection.js exports choosePublicSeason as a defined value', async () => {
-  const mod = await import('../src/publicSeasonSelection.js');
-  assert.notEqual(mod.choosePublicSeason, undefined, 'choosePublicSeason is missing');
-});
-test('publicSeasonSelection.js exports publicSeasonSelectionBrowserSource as a defined value', async () => {
-  const mod = await import('../src/publicSeasonSelection.js');
-  assert.notEqual(mod.publicSeasonSelectionBrowserSource, undefined, 'publicSeasonSelectionBrowserSource is missing');
-});
 test('publicSeasonSelectionEnhancer.js loads and exports its named members', async () => {
   const mod = await import('../src/publicSeasonSelectionEnhancer.js');
   const expected = ["enhancePublicSeasonSelection"];
@@ -100,10 +64,6 @@ test('publicSeasonSelectionEnhancer.js loads and exports its named members', asy
     assert.ok(name in mod, 'publicSeasonSelectionEnhancer.js is missing ' + name);
     assert.notEqual(mod[name], undefined);
   }
-});
-test('publicSeasonSelectionEnhancer.js exports enhancePublicSeasonSelection as a defined value', async () => {
-  const mod = await import('../src/publicSeasonSelectionEnhancer.js');
-  assert.notEqual(mod.enhancePublicSeasonSelection, undefined, 'enhancePublicSeasonSelection is missing');
 });
 test('publicSurfaceTheme.js loads and exports its named members', async () => {
   const mod = await import('../src/publicSurfaceTheme.js');
@@ -113,14 +73,6 @@ test('publicSurfaceTheme.js loads and exports its named members', async () => {
     assert.notEqual(mod[name], undefined);
   }
 });
-test('publicSurfaceTheme.js exports publicSurfaceThemeStyles as a defined value', async () => {
-  const mod = await import('../src/publicSurfaceTheme.js');
-  assert.notEqual(mod.publicSurfaceThemeStyles, undefined, 'publicSurfaceThemeStyles is missing');
-});
-test('publicSurfaceTheme.js exports injectPublicSurfaceTheme as a defined value', async () => {
-  const mod = await import('../src/publicSurfaceTheme.js');
-  assert.notEqual(mod.injectPublicSurfaceTheme, undefined, 'injectPublicSurfaceTheme is missing');
-});
 test('qaCaptainAddPlayersMission.js loads and exports its named members', async () => {
   const mod = await import('../src/qaCaptainAddPlayersMission.js');
   const expected = ["buildCaptainAddPlayersFixture","activeCaptainAddPlayersMission","routeQaCaptainAddPlayersMission","enhanceQaCaptainAddPlayersMission"];
@@ -128,20 +80,4 @@ test('qaCaptainAddPlayersMission.js loads and exports its named members', async 
     assert.ok(name in mod, 'qaCaptainAddPlayersMission.js is missing ' + name);
     assert.notEqual(mod[name], undefined);
   }
-});
-test('qaCaptainAddPlayersMission.js exports buildCaptainAddPlayersFixture as a defined value', async () => {
-  const mod = await import('../src/qaCaptainAddPlayersMission.js');
-  assert.notEqual(mod.buildCaptainAddPlayersFixture, undefined, 'buildCaptainAddPlayersFixture is missing');
-});
-test('qaCaptainAddPlayersMission.js exports activeCaptainAddPlayersMission as a defined value', async () => {
-  const mod = await import('../src/qaCaptainAddPlayersMission.js');
-  assert.notEqual(mod.activeCaptainAddPlayersMission, undefined, 'activeCaptainAddPlayersMission is missing');
-});
-test('qaCaptainAddPlayersMission.js exports routeQaCaptainAddPlayersMission as a defined value', async () => {
-  const mod = await import('../src/qaCaptainAddPlayersMission.js');
-  assert.notEqual(mod.routeQaCaptainAddPlayersMission, undefined, 'routeQaCaptainAddPlayersMission is missing');
-});
-test('qaCaptainAddPlayersMission.js exports enhanceQaCaptainAddPlayersMission as a defined value', async () => {
-  const mod = await import('../src/qaCaptainAddPlayersMission.js');
-  assert.notEqual(mod.enhanceQaCaptainAddPlayersMission, undefined, 'enhanceQaCaptainAddPlayersMission is missing');
 });
