@@ -1,6 +1,6 @@
 import { privatePostgrestProfile, withSupabaseSchema } from './supabaseSchema.js';
 
-export function practicePhoneFor(playerId) {
+export function fakePhoneFor(playerId) {
   const digits = String(playerId || '').replace(/\D/g, '');
   const tail = (digits + '0101010').slice(0, 7);
   return `555${tail}`;
@@ -14,7 +14,7 @@ async function writePhone(env, fetchImpl, playerId) {
   const base = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key || !playerId) return false;
-  const phone = practicePhoneFor(playerId);
+  const phone = fakePhoneFor(playerId);
   const response = await fetchImpl(`${base}/rest/v1/player_contacts?on_conflict=player_id`, {
     method: 'POST',
     headers: {
@@ -29,7 +29,7 @@ async function writePhone(env, fetchImpl, playerId) {
   return response.ok;
 }
 
-export async function ensureDruPracticePhone(env, playerId, fetchImpl = globalThis.fetch) {
+export async function ensureDruFakePhone(env, playerId, fetchImpl = globalThis.fetch) {
   if (!druOnly(env)) return false;
   return writePhone(env, withSupabaseSchema(fetchImpl, env), playerId);
 }

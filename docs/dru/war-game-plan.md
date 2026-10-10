@@ -15,7 +15,7 @@ Saved 2026-10-07. Source is docs/dru/war-game-runbook.md on fremontderby-dru. Th
 - War game 10: dru/war-game-10-wrong-actor. A signed-out page, a non-captain, or the other captain cannot land a write.
 - War game 11: dru/war-game-11-team-switch. A roster switch moves the membership. A free agent can play any team any night and stays a free agent.
 
-Lane keep, put back after every JFL grab, stays on the shipped branch: sign-in token, worker config, practice phone.
+Lane keep, put back after every JFL grab, stays on the shipped branch: sign-in token, worker config, fake phone.
 
 Stop categories: his bugs, test-branch gaps, lane keep.
 Every night writes a call list: method, path, status, time.

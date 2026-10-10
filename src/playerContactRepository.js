@@ -62,5 +62,12 @@ export function createPlayerContactRepository(
         target_player_id: playerId,
       });
     },
+    setAdminPlayer({ actorUserId, playerId, phone }) {
+      return rpc('set_admin_player_phone', {
+        actor_user_id: actorUserId,
+        target_player_id: playerId,
+        profile_phone: phone,
+      });
+    },
   };
 }
