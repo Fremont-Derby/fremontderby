@@ -35,3 +35,16 @@ jobs:
             exit 1
           fi
           node -e 'const rows=JSON.parse(require("fs").readFileSync("/tmp/probe.json","utf8")); console.log(rows.map(r=>r.nspname).join(","))'
+      - uses: actions/checkout@v4
+      - name: Apply DRU admin phone migration
+        env:
+          SUPABASE_ACCESS_TOKEN2: ${{ secrets.SUPABASE_ACCESS_TOKEN2 }}
+        run: |
+          sql=$(cat supabase/migrations/20261010191200_dru_set_admin_player_phone.sql)
+          payload=$(node -e 'const fs=require("fs"); const sql=fs.readFileSync(0,"utf8"); process.stdout.write(JSON.stringify({query:sql}))' <<< "$sql")
+          code=$(curl -sS -o /tmp/apply.json -w '%{http_code}' -X POST -H "authorization: Bearer $SUPABASE_ACCESS_TOKEN2" -H 'content-type: application/json' --data "$payload" 'https://api.supabase.com/v1/projects/oqkkvqkerusepyokzbmt/database/query')
+          echo "apply http $code"
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then exit 1; fi
+          verify="select has_function_privilege('anon', 'dru.set_admin_player_phone(uuid,uuid,text)', 'execute') as anon_exec, has_function_privilege('authenticated', 'dru.set_admin_player_phone(uuid,uuid,text)', 'execute') as auth_exec, has_function_privilege('service_role', 'dru.set_admin_player_phone(uuid,uuid,text)', 'execute') as service_exec"
+          curl -sS -o /tmp/verify.json -X POST -H "authorization: Bearer $SUPABASE_ACCESS_TOKEN2" -H 'content-type: application/json' --data "$(node -e 'process.stdout.write(JSON.stringify({query:process.argv[1],read_only:true}))' "$verify")" 'https://api.supabase.com/v1/projects/oqkkvqkerusepyokzbmt/database/query'
+          node -e 'const rows=JSON.parse(require("fs").readFileSync("/tmp/verify.json","utf8")); const row=rows[0]; if(!row||row.anon_exec||row.auth_exec||!row.service_exec){console.log(JSON.stringify(rows)); process.exit(1)} console.log("applied fail-closed")'
