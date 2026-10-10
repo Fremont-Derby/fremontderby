@@ -14,7 +14,7 @@ test('JFL fixture workflow guards the staging project and rejects production', (
   assert.match(workflow, /github\.ref == 'refs\/heads\/fremontderby-jfl'/);
   assert.match(workflow, /runs-on: ubuntu-latest/);
   assert.doesNotMatch(workflow, /pull_request:/);
-  assert.match(workflow, /secrets\.SUPABASE_ACCESS_TOKEN/);
+  assert.match(workflow, /secrets\.SUPABASE_ACCESS_TOKEN2/);
   assert.doesNotMatch(workflow, /GAMMA_DATABASE_URL|PRODUCTION_DATABASE_URL/);
   assert.match(apply, /read_only: readOnly/);
   assert.doesNotMatch(apply, /console\.log\(.*token|JSON\.stringify\(body\)/);
