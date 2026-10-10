@@ -38,3 +38,10 @@ export function getAdminPlayerContactCommand({ actorUserId, playerId }, reposito
   requireRepository(repository, 'getAdminPlayer');
   return repository.getAdminPlayer({ actorUserId, playerId });
 }
+
+export function setAdminPlayerContactCommand({ actorUserId, playerId, phone }, repository) {
+  requireActor(actorUserId);
+  if (!playerId) throw new Error('playerId is required');
+  requireRepository(repository, 'setAdminPlayer');
+  return repository.setAdminPlayer({ actorUserId, playerId, phone: normalizePhone(phone) });
+}
