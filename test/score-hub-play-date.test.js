@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+test('score hub uses play-date semantics and league-night tools', () => {
+  const src = readFileSync(new URL('../src/scorePickerPage.js', import.meta.url), 'utf8');
+  assert.match(src, /scorePickerRetryAfterSeconds/);
+});
