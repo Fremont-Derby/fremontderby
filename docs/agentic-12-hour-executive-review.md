@@ -152,3 +152,56 @@ The smallest durable adjustment is operational: **after the current DRU consolid
 5. Whether JFL's high verification discipline remains focused on #2800 core paths rather than drifting into an endless tail of phone/polish defects.
 
 **Convergence judgment: temporarily drifting apart at the system level.** JFL is accelerating verified product completion and DRU is generating valuable real-product evidence, but DRU's implementation arrival rate has overwhelmed its serialized verification/deployment path and has not yet shortened JFL's cycle time. Convergence resumes when DRU WIP drains and repeated discoveries terminate in JFL-qualified, verified, adversarially retested outcomes.
+
+
+## 2026-10-10 evening CT review — material new evidence
+
+### Executive signal
+
+**DRU is rebuilding test inventory and has shipped a staged admin-phone migration, but the cross-lane product flywheel remains stalled. A new P0 workflow trust-boundary problem now outranks documentation/test-volume improvements.**
+
+Compared with the 2026-10-10 prior review, four recent DRU-targeted PRs merged: #3552 (restored tests), #3554 (structural tests), #3555 (admin-phone RPC/application path), and #3556 (human-readable war-game docs). JFL permanent SHA remains `1cbb341a8ea57c9daee85f4b4879e5b27806d1fb` (2026-10-06); main remains `9f1ef8adf3a8adfebca5142a3148a11c930828fa`. No new terminal JFL #2800 acceptance or complete DRU→JFL→DRU loop was found. Gamma remains dormant.
+
+### Objective flow scoreboard
+
+| Dimension | Evidence | Trend |
+| --- | --- | --- |
+| Verified JFL product completion | No new exact-deployed JFL SHA or accepted #2800 exit slice since 2026-10-06 | Flat |
+| DRU product discovery | No newly evidenced JFL-qualified DRU defect or cross-lane handoff | Flat |
+| DRU staging/data advancement | #3555 created/applied DRU-only admin phone RPC; service-role grant verification and migration history recorded; application UI/publish replay not yet proven | Positive but partial |
+| DRU test inventory | #3552 restored 154 tests and eight suite files; #3554 added structural tests; PR body reports 3,034 tests, not a real user journey | Up; verification value unqualified |
+| DRU implementation PR WIP | Four new DRU PRs merged; none of these is an open implementation PR at inspection | Low concurrency, but work still unverified |
+| Rework/consolidation | #3530 deleted hundreds of tests and security controls; #3552/#3554 partially rebuild tests while #2887 remediation remains absent | Still material |
+| Independent privacy acceptance | #3311 P0 remains ready/unclaimed | Stalled |
+| JFL scorekeeper and browser gates | #3288/#3289 blocked on eligibility and PR-card proof; #2817 hosted reset succeeded but browser job cancelled | Stalled |
+| Monitoring | sampled scheduled runs 38051885515, 38041359193, 38037768768 ended cancelled; no execution evidence from them | Coverage unhealthy |
+| Lane boundary | No new DRU→Gamma or JFL peer-branch mutation found | Preserved |
+| Ideal complete loop | 0 confirmed in this review window | Stalled |
+
+### End-to-end representative traces
+
+**DRU admin-phone #2886 → #3555.** The issue documented the schema decision before applying, choosing `dru.set_admin_player_phone` with `service_role` only and private contact storage. PR #3555 merged 2026-10-10 19:33 UTC. PR-triggered workflows [38080163670](https://github.com/Fremont-Derby/fremontderby/actions/runs/38080163670) and [38080163674](https://github.com/Fremont-Derby/fremontderby/actions/runs/38080163674) successfully ran staging apply steps; issue #2886 records version 20261010191200 and denied anon/authenticated EXECUTE. This is stronger than merely having a migration file. It does **not** prove the deployed DRU UI PUT, live admin phone save, original publish prerequisite, or removal of the 555 workaround. The card correctly remains open.
+
+**Regression in workflow trust boundary (new P0).** `.github/workflows/dru-db-probe.yml` is named a read-only probe but now includes a privileged migration apply step and runs on `pull_request`. `.github/workflows/dru-apply-admin-phone.yml` also applies PR-checked-out SQL under a staging-management credential on `pull_request`. Even docs-only PR #3556 caused the probe's apply step to run successfully ([38084647363](https://github.com/Fremont-Derby/fremontderby/actions/runs/38084647363)). This is an actual unwanted side effect of routine PR validation, not proof of secret exfiltration. Fork PRs normally do not receive repository secrets, but same-repo PR content is not a trusted DDL source. Separate secretless read-only PR validation from approved exact-SHA permanent-lane/manual apply; preserve required checks and explicit non-production project scoping. Do not rerun migrations merely to prove this point.
+
+**DRU security-source regression #2887 persists.** Current `fremontderby-dru` still lacks the two notification RLS migrations and `test/dru-notification-rls.test.js` that exist on `dru-backup-6-october-2026`; #3530 deleted the corresponding apply workflow/script. The new admin-phone migration is not a replacement for notification RLS. Live `dru.user_notifications` grants/RLS remain unverified, so do not claim a fresh exposure result or remediation.
+
+**Test-recovery PR scope.** #3552 merged 162 test/suite files with no application code. #3554 reported new tests only but its 81-file diff also introduced `dru-db-probe.yml` and modified `seed-jfl-two-captain.yml` in DRU source. #3555 then extended the probe into a mutating workflow. This is a demonstrated review-scope mismatch; do not infer intentional validator gaming. PR checks passing are not evidence of absent side effects.
+
+### Governance and coaching
+
+Main `AGENTS.md`, JFL/DRU guides, and `docs/AGENTIC_DEVELOPMENT_PROGRAM.md` still require one coherent objective, JFL-qualified portability, and exact deployed proof. DRU permanent-branch guide is shorter than the main guide and lacks the mentoring-journal section; agents must use main as authoritative. The DRU war-game runbook still instructs resetting the permanent DRU branch to JFL while restoring only three lane-keep pieces, a repeatable way to lose security-sensitive migrations/tests. It also says not to edit a card created by a named author, inconsistent with accepted-card ownership; no evidence of intentional evasion.
+
+The latest #2883 entries are session contracts for restored tests, structural tests, and #3555. They document bounded scope but do not include the charter's explicit Shared objective/DRU contribution/JFL handoff/Done when fields, nor a completed Session result for the new work. No new observable JFL consumption or independent #3311 acceptance was found. The previous retro's anti-fragmentation message is reflected in low open implementation WIP, but not yet in completed shared-product outcomes. Do not reward test counts or documentation volume as velocity.
+
+### Minimal corrective action and watch
+
+1. **P0 workflow safety:** remove privileged SQL apply from PR-triggered DRU workflows, retain secretless PR validation, and require trusted reviewed SHA/explicit approval for staging DDL. This is a focused security/process card, not a broad governance rewrite.
+2. Restore/verify #2887 notification RLS migration, tests, apply path and live grants/policies; preserve existing security invariants during any DRU/JFL alignment.
+3. Complete #2886 through deployed UI and publish replay, not merely staging DDL and source tests.
+4. Restore trusted scheduled runner execution, and unblock #2817, #3288, and #3311 with actual evidence.
+5. Measure the next complete DRU discovery → JFL remediation → hosted verification → DRU adversarial retest, rather than number of PRs or tests.
+
+**Convergence judgment: coordination boundaries are holding, but delivery-system convergence is still stalled.** DRU's new work is locally useful; none of it has yet reduced the remaining JFL product-completion gate. The PR-triggered database mutation defect is a regression in safety/verification design and needs correction before treating this activity as acceleration.
+
+**Evidence:** [#2886](https://github.com/Fremont-Derby/fremontderby/issues/2886), [#2887](https://github.com/Fremont-Derby/fremontderby/issues/2887), [#2883](https://github.com/Fremont-Derby/fremontderby/issues/2883), [#3552](https://github.com/Fremont-Derby/fremontderby/pull/3552), [#3554](https://github.com/Fremont-Derby/fremontderby/pull/3554), [#3555](https://github.com/Fremont-Derby/fremontderby/pull/3555), [#3556](https://github.com/Fremont-Derby/fremontderby/pull/3556), [#3290](https://github.com/Fremont-Derby/fremontderby/pull/3290), [#2800](https://github.com/Fremont-Derby/fremontderby/issues/2800), [#3311](https://github.com/Fremont-Derby/fremontderby/issues/3311).
