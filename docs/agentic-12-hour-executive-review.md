@@ -18,6 +18,15 @@ Track only signals supported by repository evidence.
 
 PR, commit, issue, and journal counts are context only, never velocity scores.
 
+## Resolution-first review rule
+
+A review should reduce an actual blocker, not merely rediscover it. Choose at most one highest-impact unresolved program constraint and classify the **next action**, not the agent: **safe fix now**, **awaiting required proof/review**, or **requires an explicit product-owner/authority decision**. Prefer an allowed correction on the existing card/PR over a new issue or status comment. Record the owner, exact acceptance evidence, and changed state only when this materially affects execution. Never count a green unit test, merged PR, or DRU-only result as completed JFL human acceptance.
+
+If the same finding has not changed, reuse its canonical GitHub record and do not re-report it as progress. If a write or CI rerun is blocked, distinguish that tooling limitation from product-policy ambiguity; do not relabel or bypass checks to manufacture closure. Preserve the P0 security and lane boundaries even when a quick process fix would make a check green.
+
+**2026-10-13 execution check:** #3290's neutral steward owner text was corrected after its last failed PR-card run (38141964628); that historical run rejected descriptive JFL/DRU words as dual ownership and then demanded a DRU journal link. A fresh trusted validation is required before changing the validator. This report-only update is a normal PR synchronization, not proof of check success; verify the resulting checks before merge.
+
+
 ## Baseline — 2026-10-05
 
 The initial inspection found positive JFL product flow and valuable DRU discoveries, but excess DRU WIP, DRU-only scoring conveniences, and weak discovery-to-JFL portability. Governance corrections established trusted-main validation, DRU mentoring/journal expectations, shared mission guidance, and a release-source boundary that keeps DRU out of Gamma/production.
