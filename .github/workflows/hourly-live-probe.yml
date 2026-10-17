@@ -1,4 +1,5 @@
-# Backup probe when GitHub-hosted is down; CF cron remains primary.
+# Scheduled public endpoint probe; run on GitHub-hosted Linux by default.
+# Manual dispatch can select a trusted self-hosted runner with bash installed.
 name: Hourly live probe
 
 on:
