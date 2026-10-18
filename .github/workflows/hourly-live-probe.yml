@@ -1,4 +1,5 @@
-# Backup probe when GitHub-hosted is down; CF cron remains primary.
+# Scheduled public endpoint probe; run on GitHub-hosted Linux by default.
+# Manual dispatch can select a trusted self-hosted runner with bash installed.
 name: Hourly live probe
 
 on:
@@ -9,7 +10,7 @@ on:
       runner_target:
         description: 'Runner'
         required: false
-        default: 'self-hosted'
+        default: 'ubuntu-latest'
         type: choice
         options: [self-hosted, ubuntu-latest]
 
@@ -19,15 +20,15 @@ permissions:
 
 concurrency:
   group: hourly-live-probe
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   probe:
-    runs-on: ${{ github.event.inputs.runner_target || 'self-hosted' }}
+    runs-on: ${{ github.event.inputs.runner_target || 'ubuntu-latest' }}
     timeout-minutes: 10
     defaults:
       run:
-        shell: cmd
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
