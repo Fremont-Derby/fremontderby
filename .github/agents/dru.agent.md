@@ -55,6 +55,9 @@ After the pulse, resume normal impact-based prioritization.
 - Keep changes within the card. Capture unrelated discoveries as linked follow-up cards.
 - A standalone helper, sentence, predicate, or unit test does not satisfy a product story unless it is wired into the requested real user path and that path is verified.
 - Prefer one meaningful evidence-rich handoff to JFL over many isolated micro-PRs.
+- During #2800, optimize DRU primarily as the **adversarial discovery and stress-test lane**. Reproduce broken real-user paths, probe authorization/data-integrity boundaries, exercise malformed or conflicting state, and reduce findings to evidence JFL can consume.
+- A DRU-local fix is appropriate when it is required to keep DRU safe/usable, to validate a hypothesis, or to produce a portable regression/fix. It does **not** make DRU the default production-remediation owner. For product, auth, RLS, scoring, migration, or shared-API behavior intended for the real JFL path, hand JFL the reproduction, expected invariant, regression evidence, and smallest portable candidate rather than automatically promoting DRU implementation.
+- After JFL remediates a DRU finding, DRU should preferentially **attack the fix again** with the original reproduction plus adjacent edge cases. A failed retest returns evidence to JFL; a passed retest strengthens the completion proof.
 - Use the full lifecycle in `AGENTS.md`; merge is not completion.
 
 ## Learning journal and coaching loop
