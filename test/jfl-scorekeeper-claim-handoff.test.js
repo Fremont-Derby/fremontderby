@@ -34,6 +34,8 @@ test('current scorekeeper can release or deny and all RPCs remain service-role o
     assert.match(sql, new RegExp('revoke all on function '+signature+' from public,anon,authenticated', 'i'));
     assert.match(sql, new RegExp('grant execute on function '+signature+' to service_role', 'i'));
   }
+  assert.match(sql, /revoke all on function jfl_private\.score_claim_actor_is_eligible\(uuid,jfl\.player_matches,uuid\) from public,anon,authenticated/i);
+  assert.match(sql, /grant execute on function jfl_private\.score_claim_actor_is_eligible\(uuid,jfl\.player_matches,uuid\) to service_role/i);
 });
 
 test('claim ownership does not redefine the authoritative score tracker', () => {
