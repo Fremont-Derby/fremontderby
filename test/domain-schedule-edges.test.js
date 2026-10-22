@@ -17,6 +17,13 @@ test('generateRoundRobin rejects non-8 rosters and duplicates', () => {
   );
 });
 
+test('schedule calculation does not mutate the selected team list', () => {
+  const selectedTeams = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const priorSelection = [...selectedTeams];
+  generateRoundRobin(selectedTeams);
+  assert.deepEqual(selectedTeams, priorSelection);
+});
+
 const chart = [
   { maxDiff: 49, strongerTo: 5, weakerTo: 5 },
   { maxDiff: 99, strongerTo: 6, weakerTo: 5 },
