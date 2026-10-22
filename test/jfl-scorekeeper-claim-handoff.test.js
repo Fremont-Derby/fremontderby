@@ -60,6 +60,7 @@ test('takeover recipient is revalidated at both transfer points', () => {
   }
   assert.match(autoTransfer, /ownerUserId',claim\.owner_user_id/i);
   assert.match(ownerResponse, /ownerUserId',claim\.owner_user_id/i);
+  assert.equal((sql.match(/'player_match\.scorekeeper_takeover_ineligible'/g) || []).length, 2);
 });
 
 test('eligibility revalidation fails closed for ended membership and competition restrictions', () => {
