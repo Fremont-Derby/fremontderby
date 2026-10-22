@@ -73,3 +73,8 @@ test('eligibility revalidation fails closed for ended membership and competition
   assert.match(sql, /match_tracker_for_scoring_team\(actor_user_id,target_match,target_scoring_team_id\)/i);
   assert.match(sql, /player_competition_restrictions/i);
 });
+
+test('every PL/pgSQL body uses balanced double-dollar delimiters', () => {
+  assert.doesNotMatch(sql, /(?:as|end;)\s+\$;/i);
+  assert.equal((sql.match(/as \$\$/g) || []).length, (sql.match(/end; \$\$;/g) || []).length);
+});

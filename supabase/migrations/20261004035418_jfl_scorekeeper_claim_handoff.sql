@@ -41,16 +41,16 @@ begin
    where r.season_id=target_match.season_id and r.player_id=actor_player_id and r.lifted_at is null limit 1;
   if restriction_reason is not null then raise exception 'Actor is marked ineligible for competition: %',restriction_reason; end if;
   return actor_player_id;
-end; $;
+end; $$;
 
 create or replace function jfl_private.score_claim_actor_is_eligible(actor_user_id uuid,target_match jfl.player_matches,target_scoring_team_id uuid)
-returns boolean language plpgsql stable security definer set search_path='' as $
+returns boolean language plpgsql stable security definer set search_path='' as $$
 begin
   perform jfl_private.require_score_claim_actor(actor_user_id,target_match,target_scoring_team_id);
   return true;
 exception when raise_exception then
   return false;
-end; $;
+end; $$;
 
 create or replace function jfl_private.resolve_expired_score_takeover(target_player_match_id uuid,target_scoring_team_id uuid)
 returns void language plpgsql security definer set search_path='' as $$
