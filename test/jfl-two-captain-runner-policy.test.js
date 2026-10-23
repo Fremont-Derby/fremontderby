@@ -27,6 +27,8 @@ test('staging key remains on GitHub-hosted reset job and browser artifacts retai
   assert.match(browser, /PLAYWRIGHT_EXPECTED_SHA: \$\{\{ github\.sha \}\}/);
   assert.match(hosted, /scheduled_on: \$\{\{ steps\.prepare\.outputs\.scheduled_on \}\}/);
   assert.match(browser, /PLAYWRIGHT_FIXTURE_DATE: \$\{\{ needs\.reset-fixture\.outputs\.scheduled_on \}\}/);
+  assert.match(browser, /PLAYWRIGHT_LIVE_SEASON_READBACK: '1'/);
+  assert.doesNotMatch(hosted, /PLAYWRIGHT_LIVE_SEASON_READBACK/);
   assert.match(browser, /if: always\(\)[\s\S]*playwright-report\/\s*\n\s*test-results\//);
   // Browser specs import a Wrangler-emitted bundle even when visiting live pages.
   assert.match(browser, /run: npm run build/);
