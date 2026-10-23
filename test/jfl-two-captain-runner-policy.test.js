@@ -22,6 +22,7 @@ test('staging key remains on GitHub-hosted reset job and browser artifacts retai
   assert.match(hosted, /reset-fixture:[\s\S]*runs-on: ubuntu-latest/);
   assert.match(hosted, /STAGING_SUPABASE_SERVICE_ROLE_KEY: \$\{\{ secrets\.STAGING_SUPABASE_SERVICE_ROLE_KEY \}\}/);
   assert.doesNotMatch(browser, /secrets\.|STAGING_SUPABASE_SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(browser, /PLAYWRIGHT_BROWSERS_PATH|powershell/i);
   assert.match(browser, /needs: reset-fixture/);
   assert.match(browser, /PLAYWRIGHT_EXPECTED_SHA: \$\{\{ github\.sha \}\}/);
   assert.match(hosted, /scheduled_on: \$\{\{ steps\.prepare\.outputs\.scheduled_on \}\}/);
