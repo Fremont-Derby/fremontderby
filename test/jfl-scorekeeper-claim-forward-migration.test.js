@@ -26,6 +26,11 @@ test('eligibility repair is a new forward-only migration', () => {
     sql,
     /create or replace function jfl_private\.score_claim_actor_is_eligible/i,
   );
+  assert.match(
+    sql,
+    /require_score_claim_actor\(\s*actor_user_id,\s*target_match,\s*target_scoring_team_id\s*\)/i,
+  );
+  assert.match(sql, /exception when raise_exception then\s*return false/i);
 });
 
 test('expired takeover revalidates its recipient before ownership changes', () => {
