@@ -4,11 +4,14 @@ import test from 'node:test';
 
 const workflow = await readFile(new URL('../.github/workflows/jfl-two-captain-browser.yml', import.meta.url), 'utf8');
 
-test('persistent browser runner checks out only the trusted permanent JFL push', () => {
+test('ephemeral browser runner checks out only the trusted permanent JFL push', () => {
   assert.match(workflow, /on:\s*\n\s*push:\s*\n\s*branches: \[fremontderby-jfl\]/);
   assert.doesNotMatch(workflow, /pull_request|workflow_dispatch/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/fremontderby-jfl' && github\.actor == 'subiki'/);
-  assert.match(workflow, /group: fremont-browser\s*\n\s*labels: \[self-hosted, Windows, X64, fremont-browser\]/);
+  // Browser execution is on an ephemeral hosted machine; never run PR code on a persistent group.
+  assert.match(workflow, /browser:\\s*\\n\\s*needs: reset-fixture\\s*\\n\\s*runs-on: ubuntu-latest/);
+  assert.doesNotMatch(workflow, /self-hosted|Windows, X64, fremont-browser/);
+  assert.match(workflow, /npx playwright install --with-deps chromium/);
   assert.equal((workflow.match(/ref: \$\{\{ github\.sha \}\}/g) || []).length, 2);
   assert.equal((workflow.match(/persist-credentials: false/g) || []).length, 2);
 });
