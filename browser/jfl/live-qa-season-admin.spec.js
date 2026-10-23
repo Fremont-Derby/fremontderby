@@ -12,6 +12,9 @@ const qa = Object.freeze({
 
 test.skip(process.env.PLAYWRIGHT_LIVE_SEASON_READBACK !== '1',
   'Live QA history is read only on trusted permanent JFL pushes, never public PRs.');
+// Public repository workflow artifacts must never retain actor token responses or
+// QA roster/schedule screenshots. Assert state in CI without recording a trace.
+test.use({ trace: 'off', screenshot: 'off', video: 'off' });
 
 test.beforeAll(async ({ request }) => {
   const expectedSha = process.env.PLAYWRIGHT_EXPECTED_SHA || '';
