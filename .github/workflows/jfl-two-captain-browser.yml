@@ -44,6 +44,7 @@ jobs:
       PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
       PLAYWRIGHT_EXPECTED_SHA: ${{ github.sha }}
       PLAYWRIGHT_FIXTURE_DATE: ${{ needs.reset-fixture.outputs.scheduled_on }}
+      PLAYWRIGHT_LIVE_SEASON_READBACK: '1'
     steps:
       - uses: actions/checkout@v4
         with:
