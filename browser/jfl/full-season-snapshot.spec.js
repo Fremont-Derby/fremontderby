@@ -171,7 +171,7 @@ async function openSeasonBrowser(browser, mobile) {
       contentType: 'text/html', body: renderJflModernSchedule(),
     }));
     await context.route('**/standings*', route => route.fulfill({
-      contentType: 'text/html', body: standingsHtml,
+      contentType: 'text/html', body: await standingsHtml.text(),
     }));
     await context.route('**/playoffs*', route => route.fulfill({
       contentType: 'text/html', body: renderJflPublicPlayoffs(),
