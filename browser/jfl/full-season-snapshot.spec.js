@@ -167,14 +167,14 @@ async function openSeasonBrowser(browser, mobile) {
   if (sourceMode) {
     const standingsHtml = await enhancePublicSeasonSelection(new Response(renderJflModernStandings(),
       { headers: { 'content-type': 'text/html' } }), '/standings');
-    await context.route('**/schedule*', route => route.fulfill({
+    await context.route(origin + '/schedule*', route => route.fulfill({
       contentType: 'text/html', body: renderJflModernSchedule(),
     }));
     const standingsDocument = await standingsHtml.text();
-    await context.route('**/standings*', route => route.fulfill({
+    await context.route(origin + '/standings*', route => route.fulfill({
       contentType: 'text/html', body: standingsDocument,
     }));
-    await context.route('**/playoffs*', route => route.fulfill({
+    await context.route(origin + '/playoffs*', route => route.fulfill({
       contentType: 'text/html', body: renderJflPublicPlayoffs(),
     }));
   }
