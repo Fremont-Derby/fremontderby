@@ -27,4 +27,8 @@ test('staging key remains on GitHub-hosted reset job and browser artifacts retai
   assert.match(hosted, /scheduled_on: \$\{\{ steps\.prepare\.outputs\.scheduled_on \}\}/);
   assert.match(browser, /PLAYWRIGHT_FIXTURE_DATE: \$\{\{ needs\.reset-fixture\.outputs\.scheduled_on \}\}/);
   assert.match(browser, /if: always\(\)[\s\S]*playwright-report\/\s*\n\s*test-results\//);
+  // Browser specs import a Wrangler-emitted bundle even when visiting live pages.
+  assert.match(browser, /run: npm run build/);
+  assert.ok(browser.indexOf('run: npm run build') > browser.indexOf('run: npm ci'));
+  assert.ok(browser.indexOf('run: npm run build') < browser.indexOf('run: npm run test:browser:jfl'));
 });
