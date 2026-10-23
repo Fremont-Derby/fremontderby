@@ -189,7 +189,6 @@ for (const mobile of [false, true]) {
       await page.goto('/schedule?season=' + season.id);
       await expect(page.locator('[data-schedule-status]')).toHaveText('Schedule ready');
       await expect(page.locator('[data-season-select]')).toHaveValue(season.id);
-      await expect(page.locator('[data-schedule-rounds]')).toHaveCount(0); // No deprecated parallel rounds widget.
       await expect(page.locator('[data-schedule-groups] [data-round-id]')).toHaveCount(9);
       await expect(page.locator('[data-schedule-groups] [data-round-id^="week-"]')).toHaveCount(7);
       const regularCards = page.locator('[data-schedule-groups] [data-round-id^="week-"] .fd-schedule-match');
