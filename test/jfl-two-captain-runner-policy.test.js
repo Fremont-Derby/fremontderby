@@ -9,7 +9,7 @@ test('ephemeral browser runner checks out only the trusted permanent JFL push', 
   assert.doesNotMatch(workflow, /pull_request|workflow_dispatch/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/fremontderby-jfl' && github\.actor == 'subiki'/);
   // Browser execution is on an ephemeral hosted machine; never run PR code on a persistent group.
-  assert.match(workflow, /browser:\\s*\\n\\s*needs: reset-fixture\\s*\\n\\s*runs-on: ubuntu-latest/);
+  assert.match(workflow, /browser:\s*\n\s*needs: reset-fixture\s*\n\s*runs-on: ubuntu-latest/);
   assert.doesNotMatch(workflow, /self-hosted|Windows, X64, fremont-browser/);
   assert.match(workflow, /npx playwright install --with-deps chromium/);
   assert.equal((workflow.match(/ref: \$\{\{ github\.sha \}\}/g) || []).length, 2);
