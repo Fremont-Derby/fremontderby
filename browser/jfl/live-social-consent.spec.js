@@ -593,7 +593,11 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       const outcome = await sendWithQualifiedRecovery({
         send: async () => {
           await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
-          await expect(sender.page.locator('[data-thread-select]')).toHaveValue('team:' + teamFixture.id);
+          // The normal inbox picker deliberately hides QA team options.
+          // Qualify the selected conversation through its visible title,
+          // season, deep link and the exact outbound route guard instead.
+          await expect(sender.page.locator('[data-chat-name]')).toHaveText(teamFixture.name);
+          await expect(sender.page.locator('[data-chat-season]')).toHaveText('QA Persona Lab');
           await expect(sender.page.locator('[data-message-input]')).toHaveValue(marker);
           const pending = sender.page.waitForResponse(response => new URL(response.url()).pathname === path
             && response.request().method() === 'POST');
