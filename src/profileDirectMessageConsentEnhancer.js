@@ -34,7 +34,7 @@ const script = `<script data-dm-consent-script>
       if(response.status===429){
         const seconds=retrySeconds(response.headers.get('Retry-After'));
         toggle.checked=false;
-        status.textContent='Messaging privacy is temporarily rate limited. '+(method==='PUT'?'Save was not confirmed. ':'')+
+        status.textContent='Could not confirm messaging privacy: temporarily rate limited. '+(method==='PUT'?'Save was not confirmed. ':'')+
           (seconds?'Wait '+seconds+' seconds, then select Reload messaging privacy.':'Wait before selecting Reload messaging privacy to try again.')+
           ' Confirm the saved setting before choosing and saving a new change.';
         if(seconds){retryUntil=Date.now()+seconds*1000;retryTimer=setTimeout(()=>{
