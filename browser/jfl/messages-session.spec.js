@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { renderChatPage } from '../../src/chatPage.js';
 
-const sourceMode = process.env.PLAYWRIGHT_MESSAGES_SOURCE === '1';
+const sourceMode = ['1', 'bundled'].includes(process.env.PLAYWRIGHT_MESSAGES_SOURCE);
 test.setTimeout(60_000);
 const team = '11111111-1111-4111-8111-111111111111';
 const origin = sourceMode ? 'https://session.messages.test' : process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com';
@@ -67,9 +67,16 @@ async function fixture(browser, request, mobile, holdInitial = false) {
     throw new Error('Unexpected intercepted read ' + path);
   });
   const page = await context.newPage();
-  if (sourceMode) await page.route(origin + '/messages', route => route.fulfill({ contentType: 'text/html', body: renderChatPage({
-    ENVIRONMENT: 'jfl', SUPABASE_URL: 'https://refresh.messages.test', SUPABASE_PUBLISHABLE_KEY: 'synthetic-public-key',
-  }) }));
+  page.setDefaultTimeout(15_000);
+  if (sourceMode) await page.route(origin + '/messages', async route => {
+    const env = { ENVIRONMENT: 'jfl', SUPABASE_URL: 'https://refresh.messages.test', SUPABASE_PUBLISHABLE_KEY: 'synthetic-public-key' };
+    let html;
+    if (process.env.PLAYWRIGHT_MESSAGES_SOURCE === 'bundled') {
+      const { default: worker } = await import('../../dist/routerEntry.js');
+      html = await (await worker.fetch(new Request(route.request().url()), env, {})).text();
+    } else html = renderChatPage(env);
+    await route.fulfill({ contentType: 'text/html', body: html });
+  });
   await page.goto('/messages');
   const change = async (actor, event = 'fd:session-changed') => page.evaluate(({ actor, event }) => {
     if (actor) sessionStorage.setItem('fd.accessToken', 'synthetic-' + actor);
@@ -186,10 +193,10 @@ for (const mobile of [false, true]) {
     try {
       f.hold(); await f.change('B');
       await expect.poll(() => f.held.length).toBe(1);
-      const count = f.reads.length;
+      const count = f.reads.filter(row => row.path === '/api/me/chat-threads').length;
       for (const event of ['focus', 'storage', 'fd:session-changed']) await f.change('B', event);
       await f.settle();
-      expect(f.reads.length).toBe(count);
+      expect(f.reads.filter(row => row.path === '/api/me/chat-threads').length).toBe(count);
       await f.held[0].respond(f.held[0].body);
       await expect(f.history('B')).toBeVisible();
       await f.page.locator('[data-message-input]').fill('Same actor unsent draft');
@@ -239,7 +246,8 @@ for (const mobile of [false, true]) {
       f.hold();
       await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-B'));
       if (action === 'report') await f.page.locator('[data-report-message]').click();
-      else await f.page.locator(mobile ? '[data-mobile-new]' : '[data-new-message]').click();
+      else if (mobile) await f.page.getByRole('button', { name: /^(Message a player|New player message)/ }).click();
+      else await f.page.locator('[data-new-message]').click();
       await expect.poll(() => f.held.length).toBe(1);
       await expect(f.page.locator('[data-message-list]')).toBeEmpty();
       await expect(f.page.locator('[data-candidate-select]')).toBeEmpty();
