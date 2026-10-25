@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
+import { sendWithQualifiedRecovery } from './synthetic-send-recovery.js';
 
 // #3575: the trusted live-fixture job already supplies this opt-in and exact
 // deployment SHA. Public PRs must never mutate hosted persona preferences.
@@ -344,13 +345,27 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
     const actors = [];
     const markerId = crypto.randomUUID();
     const marker = 'JFL synthetic delivery acceptance ' + markerId;
-    let conversationId, sendAttempted = false, cleanupVerified = false;
+    let conversationId, sendAttempted = false, cleanupVerified = false, primaryError;
+    let allowedSends = 0, authorizedSends = 1, deniedSends = 0;
     try {
       for (const [label, key, player] of [
         ['Admin Captain', 'admin-captain', directFixture.sender],
         ['Regular Captain', 'regular-captain', directFixture.recipient],
       ]) {
         const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
+        await context.route('**/api/**', async route => {
+          const req = route.request(), path = new URL(req.url()).pathname;
+          if (req.method() === 'POST' && path.endsWith('/messages')) {
+            let body;
+            try { body = req.postDataJSON(); } catch { /* Reject below. */ }
+            if (player !== directFixture.sender || !conversationId || path !== '/api/direct-conversations/' + conversationId + '/messages'
+              || body?.body !== marker || allowedSends >= authorizedSends) {
+              deniedSends++; await route.abort(); return;
+            }
+            allowedSends++;
+          }
+          await route.continue();
+        });
         const page = await context.newPage();
         page.setDefaultTimeout(15_000);
         const actor = { context, page, player, label };
@@ -408,14 +423,37 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       const input = sender.page.locator('[data-message-input]');
       await expect(input).toBeEnabled();
       await input.fill(marker);
-      const pending = sender.page.waitForResponse(response => new URL(response.url()).pathname === `/api/direct-conversations/${conversationId}/messages`
-        && response.request().method() === 'POST');
       console.info('Synthetic-only recovery IDs: run=' + markerId + '; conversation=' + conversationId);
-      sendAttempted = true;
-      await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
-      const sent = await pending;
+      const outcome = await sendWithQualifiedRecovery({
+        send: async () => {
+          await expect(sender.page.locator('[data-thread-select]')).toHaveValue('direct:' + conversationId);
+          await expect(input).toHaveValue(marker);
+          const pending = sender.page.waitForResponse(response => new URL(response.url()).pathname === `/api/direct-conversations/${conversationId}/messages`
+            && response.request().method() === 'POST');
+          sendAttempted = true;
+          await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
+          const response = await pending;
+          return { status: response.status(), retryAfter: response.headers()['retry-after'], response };
+        },
+        wait: ms => sender.page.waitForTimeout(ms),
+        markerAbsent: async () => {
+          for (const actor of actors) {
+            const result = await actorRequest(actor.page, `/api/direct-conversations/${conversationId}/messages?limit=50`);
+            expect(result.status).toBe(200);
+            expect(Array.isArray(result.body.messages)).toBe(true);
+            if (result.body.messages.some(row => row.body === marker)) return false;
+          }
+          return true;
+        },
+        authorizeRetry: () => { authorizedSends++; },
+        onResponse: result => console.info('Synthetic direct send classification: ' + JSON.stringify(result)),
+      });
+      const sent = outcome.response;
       expect(sent.status(), 'Send must be confirmed; never blindly replay a message').toBe(201);
       expect(Boolean((await sent.json()).message), 'Confirmed message required').toBe(true);
+      expect(allowedSends).toBeGreaterThanOrEqual(1);
+      expect(allowedSends).toBeLessThanOrEqual(3);
+      expect(deniedSends).toBe(0);
       await openQualifiedMessages(recipient.page, '/messages?direct=' + encodeURIComponent(conversationId), true);
       await expect(recipient.page.locator('[data-thread-select]')).toHaveValue('direct:' + conversationId);
       await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
@@ -424,8 +462,10 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
       expect(await recipient.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       console.info('Exact synthetic recipient received marker and refresh confirmed persistence.');
+    } catch (error) {
+      primaryError = error;
     } finally {
-      const errors = [];
+      const errors = primaryError ? [primaryError] : [];
       const [sender, recipient] = actors;
       try {
         if (sendAttempted && conversationId && sender && recipient) {
@@ -445,6 +485,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         finally { await actor.context.close(); }
       }
       if (sendAttempted && !cleanupVerified) console.info('Exact synthetic marker cleanup remains unverified; no other message was touched.');
+      if (deniedSends) errors.push(new Error('An unqualified or out-of-scope Direct send was blocked'));
       if (errors.length) throw new AggregateError(errors, 'Synthetic delivery cleanup or preference restoration failed');
     }
   });
