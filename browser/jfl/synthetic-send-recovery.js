@@ -24,3 +24,26 @@ export async function sendWithQualifiedRecovery({ send, markerAbsent, wait, auth
     authorizeRetry();
   }
 }
+
+// Conversation starts already use a server-enforced unique season/player pair.
+// Before a known-rejected new UI start, both authenticated inboxes must agree:
+// the same exact mutually writable conversation, or no conversation on either.
+export function qualifyConversationReadback(senderRows, recipientRows, fixture) {
+  const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
+  if (!fixture || ![fixture.season, fixture.sender, fixture.recipient].every(uuid)
+    || fixture.sender === fixture.recipient) throw new Error('Synthetic conversation identities are unqualified');
+  for (const rows of [senderRows, recipientRows]) {
+    if (!Array.isArray(rows) || rows.some(row => !row || !uuid(row.conversation_id)
+      || !uuid(row.season_id) || !uuid(row.other_player_id) || typeof row.can_send !== 'boolean')) {
+      throw new Error('Synthetic conversation inbox readback is malformed');
+    }
+  }
+  const outgoing = senderRows.filter(row => row.season_id === fixture.season && row.other_player_id === fixture.recipient);
+  const incoming = recipientRows.filter(row => row.season_id === fixture.season && row.other_player_id === fixture.sender);
+  if (!outgoing.length && !incoming.length) return null;
+  if (outgoing.length !== 1 || incoming.length !== 1 || outgoing[0].conversation_id !== incoming[0].conversation_id
+    || outgoing[0].can_send !== true || incoming[0].can_send !== true) {
+    throw new Error('Synthetic conversation inboxes do not agree on one writable target');
+  }
+  return outgoing[0].conversation_id;
+}
