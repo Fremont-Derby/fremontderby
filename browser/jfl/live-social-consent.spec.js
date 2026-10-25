@@ -643,7 +643,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: sha,
     });
     const actors = [], markerId = crypto.randomUUID(), marker = 'JFL synthetic General delivery acceptance ' + markerId;
-    let sendAttempted = false, cleanupVerified = false, allowedSends = 0, deniedSends = 0, primaryError;
+    let sendAttempted = false, cleanupVerified = false, allowedSends = 0, authorizedSends = 1, deniedSends = 0, primaryError;
     const generalChannel = channels.find(channel => channel.key === 'general');
     const path = '/api/seasons/' + directFixture.season + '/messages';
     async function selectGeneral(page) {
@@ -666,7 +666,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
           if (req.method() === 'POST' && pathname.endsWith('/messages')) {
             let body;
             try { body = req.postDataJSON(); } catch { /* Reject below. */ }
-            if (player !== directFixture.sender || pathname !== path || body?.body !== marker || allowedSends !== 0) {
+            if (player !== directFixture.sender || pathname !== path || body?.body !== marker || allowedSends >= authorizedSends) {
               deniedSends++; await route.abort(); return;
             }
             allowedSends++;
@@ -700,14 +700,34 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       await selectGeneral(sender.page);
       await selectGeneral(recipient.page);
       await sender.page.locator('[data-message-input]').fill(marker);
-      const response = sender.page.waitForResponse(result => new URL(result.url()).pathname === path && result.request().method() === 'POST');
       console.info('Synthetic General delivery attempt marker=' + markerId + '; season=' + directFixture.season);
-      sendAttempted = true;
-      await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
-      const sent = await response;
-      expect(sent.status(), 'General send cannot be replayed').toBe(201);
+      const outcome = await sendWithQualifiedRecovery({
+        send: async () => {
+          await expect(sender.page).toHaveURL(new RegExp('/messages\\?league=' + directFixture.season + '$'));
+          await expect(sender.page.locator('[data-chat-season]')).toHaveText('QA Persona Lab');
+          await expect(sender.page.locator('[data-message-input]')).toHaveValue(marker);
+          const pending = sender.page.waitForResponse(result => new URL(result.url()).pathname === path && result.request().method() === 'POST');
+          sendAttempted = true;
+          await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
+          const response = await pending;
+          return { status: response.status(), retryAfter: response.headers()['retry-after'], response };
+        },
+        wait: ms => sender.page.waitForTimeout(ms),
+        markerAbsent: async () => {
+          for (const actor of actors) {
+            const result = await actorRequest(actor.page, path + '?limit=50');
+            expect(result.status).toBe(200); expect(Array.isArray(result.body.messages)).toBe(true);
+            if (result.body.messages.some(row => row.body === marker)) return false;
+          }
+          return true;
+        },
+        authorizeRetry: () => { authorizedSends++; },
+        onResponse: result => console.info('Synthetic General send classification: ' + JSON.stringify(result)),
+      });
+      const sent = outcome.response;
+      expect(sent.status(), 'Unknown General send outcomes cannot be replayed').toBe(201);
       expect(Boolean((await sent.json()).message)).toBe(true);
-      expect(allowedSends).toBe(1); expect(deniedSends).toBe(0);
+      expect(allowedSends).toBeGreaterThanOrEqual(1); expect(allowedSends).toBeLessThanOrEqual(3); expect(deniedSends).toBe(0);
       for (let visit = 0; visit < 2; visit++) {
         await selectGeneral(recipient.page);
         await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
