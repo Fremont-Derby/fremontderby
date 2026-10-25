@@ -230,6 +230,37 @@ async function openQualifiedMessages(page, href, conversation = false) {
   } finally { page.off('response', observe); }
 }
 
+async function openQualifiedTeamLink(page, href) {
+  const rejected = [];
+  const link = page.getByRole('link', { name: 'Team messages', exact: true }).and(page.locator('a[href="' + href + '"]'));
+  const core = new Set(['/teams', '/api/me/teams', '/api/me/team-membership-requests', '/api/seasons']);
+  const observe = response => {
+    const path = new URL(response.url()).pathname;
+    if (response.request().method() === 'GET' && response.status() >= 400
+      && (core.has(path) || path.startsWith('/api/seasons/') && /\/(teams|team-registration\/me)$/.test(path))) rejected.push(response);
+  };
+  page.on('response', observe);
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      rejected.length = 0;
+      await page.goto('/teams');
+      const ready = async () => await link.count() === 1 && await link.isVisible()
+        && await page.locator('[data-teams-content]').isVisible();
+      await expect.poll(async () => await ready() || rejected.length > 0
+        || await page.locator('[data-teams-status]').getAttribute('data-tone') === 'error').toBe(true);
+      if (await ready()) { await link.click(); return; }
+      console.info('Teams core read classifications: ' + JSON.stringify(rejected.map(response => ({
+        path: new URL(response.url()).pathname.replace(/[a-f0-9-]{36}/g, ':id'), status: response.status(),
+        hasRetryAfter: Boolean(response.headers()['retry-after']),
+      }))));
+      expect(rejected.length, 'Missing Team messages entry needs endpoint evidence, not a guessed retry').toBeGreaterThan(0);
+      for (const response of rejected) expect(response.status(), 'Only captured core429 permits same-view read recovery').toBe(429);
+      expect(attempt, 'Teams core read recovery exhausted').toBeLessThan(2);
+      for (const response of rejected) await cooldown(page, response);
+    }
+  } finally { page.off('response', observe); }
+}
+
 async function removeSyntheticMarker({ sender, recipient, actors, marker, messageType, threadId }) {
   expect(['direct', 'team']).toContain(messageType);
   const messagesPath = (messageType === 'direct' ? '/api/direct-conversations/' : '/api/teams/') + threadId + '/messages?limit=50';
@@ -508,10 +539,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       }
       // Use the canonical Teams page's existing link, preserving QA fixture
       // hiding in the ordinary Messages inbox rather than exposing test rooms.
-      await sender.page.goto('/teams');
-      const link = sender.page.locator('a.chat-link[href="' + href + '"]');
-      await expect(link).toHaveCount(1);
-      await link.click();
+      await openQualifiedTeamLink(sender.page, href);
       await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
       await openQualifiedMessages(sender.page, href, true);
       await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
