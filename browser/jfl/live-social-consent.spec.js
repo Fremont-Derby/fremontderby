@@ -442,6 +442,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
     const markerId = crypto.randomUUID();
     const marker = 'JFL synthetic team delivery acceptance ' + markerId;
     let sendAttempted = false, cleanupVerified = false;
+    let allowedSends = 0, deniedSends = 0;
     const href = '/messages?team=' + teamFixture.id;
     try {
       for (const [label, key, player] of [
@@ -449,6 +450,24 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         ['Player A', 'player-a', teamFixture.recipient],
       ]) {
         const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
+        // Pass real requests/responses unchanged, but block any accidental send
+        // outside this exact private QA team/marker or any duplicate/replay.
+        await context.route('**/api/**', async route => {
+          const request = route.request();
+          const path = new URL(request.url()).pathname;
+          if (request.method() === 'POST' && path.endsWith('/messages')) {
+            let body;
+            try { body = request.postDataJSON(); } catch { /* Fail closed below. */ }
+            if (player !== directFixture.sender || path !== '/api/teams/' + teamFixture.id + '/messages'
+              || body?.body !== marker || allowedSends !== 0) {
+              deniedSends++;
+              await route.abort();
+              return;
+            }
+            allowedSends++;
+          }
+          await route.continue();
+        });
         const page = await context.newPage();
         page.setDefaultTimeout(15_000);
         const actor = { context, page, label, player };
@@ -505,6 +524,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       const sent = await sentResponse;
       expect(sent.status(), 'Team send must be confirmed without write replay').toBe(201);
       expect(Boolean((await sent.json()).message), 'Confirmed team message required').toBe(true);
+      expect(allowedSends).toBe(1);
+      expect(deniedSends).toBe(0);
       for (let visit = 0; visit < 2; visit++) {
         await openQualifiedMessages(recipient.page, href, true);
         await expect(recipient.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
@@ -532,6 +553,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         finally { await actor.context.close(); }
       }
       if (sendAttempted && !cleanupVerified) console.info('Exact synthetic team marker cleanup remains unverified; no other message was touched.');
+      if (deniedSends) errors.push(new Error('An out-of-scope or duplicate message send was blocked before network delivery'));
       if (errors.length) throw new AggregateError(errors, 'Synthetic team delivery cleanup or consent restoration failed');
     }
   });
