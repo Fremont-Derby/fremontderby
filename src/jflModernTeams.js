@@ -182,6 +182,7 @@ export const jflModernTeamsStyles = `
   .fd-team-card__actions{display:flex;gap:8px;flex-wrap:wrap}.fd-team-card__actions button,.fd-team-card__actions a,.fd-team-card__invite button,.fd-team-card__roster button,.fd-team-card__work-actions button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:7px 13px;border:2px solid var(--fd-green-dark);border-radius:10px;background:var(--fd-green);color:#fff;font:inherit;font-weight:950;text-decoration:none}.fd-team-button--quiet,.fd-team-card__roster button{background:#fff!important;color:#17412f!important;border-color:#89968d!important}
   .fd-teams__state{margin-top:18px;padding:24px;border:2px dashed var(--fd-line);border-radius:16px;text-align:center;color:var(--fd-muted)}.fd-teams__inbox,.fd-teams__formation{margin-top:28px}.fd-teams__panel,.fd-teams__formation-body{padding:16px;border:2px solid var(--fd-line);border-radius:16px;background:#fff}.fd-teams__formation>summary{min-height:52px;display:flex;align-items:center;padding:0 16px;border:2px solid var(--fd-line);border-radius:14px;background:#fff;color:var(--fd-green);font-weight:950}.fd-teams__formation-form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px}.fd-teams__formation-form input,.fd-teams__formation-form select{min-height:48px;padding:0 12px;border:2px solid #aab5ad;border-radius:10px;font:inherit}.fd-teams__formation-form button{min-height:48px;padding:0 16px;border:0;border-radius:10px;background:var(--fd-green);color:#fff;font-weight:950}
   .fd-teams button:focus-visible,.fd-teams a:focus-visible,.fd-teams input:focus-visible,.fd-teams select:focus-visible,.fd-teams summary:focus-visible{outline:3px solid #00693d;outline-offset:3px}
+  [data-teams-reload],[data-teams-sign-in]{min-height:44px;padding:10px 16px;border:2px solid var(--fd-green-dark);border-radius:10px;background:var(--fd-green-dark);color:#fff;font:inherit;font-weight:850;text-align:center;text-decoration:none}[data-teams-reload]:disabled{opacity:.6;cursor:wait}
   @media(max-width:720px){.fd-teams__cards,.fd-teams__formation-form{grid-template-columns:1fr}.fd-team-card{padding:22px}.fd-team-card__actions{display:grid}.fd-team-card__actions>*{width:100%}}
   @media(max-width:520px){.fd-teams__section-head{display:grid}.fd-team-card__invite{grid-template-columns:1fr}.fd-team-card__invite button{width:100%}.fd-team-card__work-row{grid-template-columns:1fr}}
   @media(max-width:390px){.fd-team-card__facts{grid-template-columns:1fr}.fd-team-card__roster li{grid-template-columns:minmax(0,1fr) auto}.fd-team-card__roster button{grid-column:1/-1;width:100%}}
@@ -204,6 +205,8 @@ function teamsClientScript() {
   let openTeamId = sessionStorage.getItem(openTeamKey) || '';
   let management = {}, requestData = {}, registrations = [], cards = [];
   const statusEl = q('[data-teams-status]'), contentEl = q('[data-teams-content]'), stateEl = q('[data-teams-state]');
+  const reloadEl = q('[data-teams-reload]'), signInEl = q('[data-teams-sign-in]');
+  let pendingRead = null, pendingWrite = null, viewToken = '', observedToken = token(), retryUntil = 0, retryTimer = null, savedNotice = '';
   const mineSection = q('[data-my-teams-section]'), mineList = q('[data-my-team-list]');
   const directorySection = q('[data-team-directory-section]'), directoryList = q('[data-team-directory]'), directoryEmpty = q('[data-team-directory-empty]');
   const searchInput = q('[data-team-search]'), filters = qa('[data-team-filter]');
@@ -213,7 +216,82 @@ function teamsClientScript() {
   const node = (tag,cls,text) => { const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; };
   const button = (label,action,id,quiet=false) => { const e=node('button',quiet?'fd-team-button--quiet':'',label); e.type='button'; e.dataset.teamAction=action; if(id)e.dataset.actionId=id; return e; };
   const initials = (name) => clean(name||'Team').split(/\s+/).filter(Boolean).slice(0,2).map((w)=>w[0]).join('').toUpperCase()||'T';
-  async function api(path,options={}) { if(!token()) throw Object.assign(new Error('Sign in to manage teams.'),{status:401}); const r=await fetch(path,{...options,headers:{authorization:'Bearer '+token(),'content-type':'application/json',...(options.headers||{})}}); const text=await r.text(); let body={}; try{body=text?JSON.parse(text):{};}catch{body={error:text};} if(!r.ok) throw Object.assign(new Error(body.error||'Request failed'),{status:r.status}); return body; }
+  const sessionError = () => Object.assign(new Error('Your sign-in changed. Reload teams to continue.'), { sessionChanged: true });
+  function updateReload() {
+    clearTimeout(retryTimer);
+    const remaining = Math.max(0, Math.ceil((retryUntil - Date.now()) / 1000));
+    reloadEl.disabled = Boolean(pendingRead || pendingWrite) || remaining > 0;
+    reloadEl.textContent = remaining ? 'Reload teams (' + remaining + 's)' : 'Reload teams';
+    if (remaining) retryTimer = setTimeout(updateReload, 1000);
+  }
+  function showFailure(error) {
+    contentEl.hidden = true;
+    stateEl.hidden = false;
+    stateEl.textContent = (savedNotice ? savedNotice + ' ' : '') + error.message;
+    stateEl.dataset.tone = 'error';
+    setStatus(savedNotice ? savedNotice + ' Reload teams to see the latest information.' : error.message, savedNotice ? 'muted' : 'error');
+    signInEl.hidden = error.status !== 401;
+    reloadEl.hidden = error.status === 401;
+    updateReload();
+  }
+  function syncSession() {
+    if (observedToken === token()) return;
+    observedToken = token();
+    pendingRead = null; pendingWrite = null; viewToken = ''; retryUntil = 0; savedNotice = '';
+    management = {}; requestData = {}; registrations = []; cards = [];
+    mineList.replaceChildren(); directoryList.replaceChildren(); invitationsEl.replaceChildren(); formationItems.replaceChildren();
+    teamNameInput.value = ''; searchInput.value = ''; seasonSelect.replaceChildren();
+    showFailure(token() ? sessionError() : Object.assign(new Error('Sign in to see teams.'), { status: 401 }));
+  }
+  function retrySeconds(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return 0;
+    const numeric = Number(raw);
+    const seconds = Number.isFinite(numeric) ? numeric : Math.ceil((Date.parse(raw) - Date.now()) / 1000);
+    return Number.isFinite(seconds) && seconds > 0 && seconds <= 300 ? Math.ceil(seconds) : 0;
+  }
+  function safeError(body, fallback) {
+    const value = typeof body?.error === 'string' ? body.error.trim() : '';
+    if (!value || value.length > 240 || /[<>]|supabase|sqlstate|permission denied for|cloudflare|stack trace|schema\b/i.test(value)) return fallback;
+    return (${friendlyTeamsError.toString()})(value);
+  }
+  async function api(path, options = {}) {
+    const { sessionToken, ...requestOptions } = options;
+    const access = sessionToken || token();
+    if (!access) throw Object.assign(new Error('Your sign-in expired. Open Profile and sign in again.'), { status: 401 });
+    if (access !== token()) throw sessionError();
+    if (retryUntil > Date.now()) throw Object.assign(new Error('Too many requests. Wait before reloading teams.'), { status: 429 });
+    const method = requestOptions.method || 'GET';
+    let response, text;
+    try {
+      response = await fetch(path, { ...requestOptions, headers: { authorization: 'Bearer ' + access,
+        'content-type': 'application/json', ...(requestOptions.headers || {}) } });
+      if (access !== token()) throw sessionError();
+      text = await response.text();
+    } catch (error) {
+      if (access !== token() || error.sessionChanged) throw sessionError();
+      throw new Error(method === 'GET' ? 'Could not load teams. Reload teams to try again.' : 'Could not confirm that change. Reload teams before trying again.');
+    }
+    if (access !== token()) throw sessionError();
+    let body;
+    try { body = text ? JSON.parse(text) : null; } catch { /* Never display response documents or private backend details. */ }
+    if (response.status === 401) throw Object.assign(new Error('Your sign-in expired. Open Profile and sign in again.'), { status: 401 });
+    if (response.status === 429) {
+      const seconds = retrySeconds(response.headers.get('Retry-After'));
+      if (seconds) retryUntil = Math.max(retryUntil, Date.now() + seconds * 1000);
+      updateReload();
+      throw Object.assign(new Error('Too many requests. ' + (seconds ? 'Wait ' + seconds + ' seconds, then reload teams.' : 'Please wait, then reload teams.')), { status: 429 });
+    }
+    if (!response.ok) {
+      const fallback = response.status === 403 ? 'You do not have access to that team action.' : 'Could not complete the request. Reload teams to try again.';
+      throw Object.assign(new Error(response.status >= 500 ? fallback : safeError(body, fallback)), { status: response.status });
+    }
+    if (response.status === 204 && method !== 'GET') return {};
+    if (!/\bapplication\/(?:[a-z0-9.+-]+\+)?json\b/i.test(response.headers.get('content-type') || '')
+      || !body || typeof body !== 'object' || Array.isArray(body)) throw new Error(method === 'GET'
+      ? 'Could not load teams. Reload teams to try again.' : 'Could not confirm that change. Reload teams before trying again.');
+    return body;
+  }
   function syncFilters(){ filters.forEach((b)=>b.setAttribute('aria-pressed',String(b.dataset.teamFilter===filter))); }
   function normalize(){ return (${normalizeTeamCards.toString()})(management,requestData); }
   function renderRoster(team,target){
@@ -240,15 +318,84 @@ function teamsClientScript() {
     const actions=node('div','fd-team-card__actions'); for(const action of (${visibleTeamActions.toString()})(team)){ if(action==='message'){const a=node('a','','Team messages');a.href='/messages?team='+encodeURIComponent(team.teamId);actions.append(a);} else if(action==='cancel')actions.append(button('Cancel request','cancel',team.pendingRequestId,true)); else actions.append(button('Request to join','join',team.teamId)); } article.append(actions); return article;
   }
   function renderCards(){ syncFilters(); mineList.replaceChildren(); directoryList.replaceChildren(); const query=clean(searchInput.value).toLowerCase(); const visible=cards.filter((t)=>{if(query&&!clean(t.teamName+' '+t.seasonName).toLowerCase().includes(query))return false;if(filter==='mine')return t.isMine;if(filter==='open')return t.relationship==='none';return true;}); const mine=visible.filter((t)=>t.isMine), others=visible.filter((t)=>!t.isMine); mine.forEach((t)=>mineList.append(renderCard(t))); others.forEach((t)=>directoryList.append(renderCard(t))); mineSection.hidden=!mine.length;directorySection.hidden=!others.length;directoryEmpty.hidden=!!visible.length; }
-  async function loadLeagueTeams(seasons){ const active=(seasons||[]).filter((s)=>['active','playoffs'].includes(s.status)); const chunks=await Promise.all(active.map(async(s)=>{try{const body=await api('/api/seasons/'+encodeURIComponent(s.id)+'/team-standings');return(body.standings||[]).map((row)=>({teamId:row.team_id,teamName:row.team_name,seasonId:s.id,seasonName:s.name,captainName:row.captain_display_name||'',rosterCount:Number.isFinite(Number(row.roster_count))?Number(row.roster_count):null,roster:Array.isArray(row.roster)?row.roster:[],relationship:'directory'}));}catch{return[];}}));return chunks.flat(); }
+  async function loadLeagueTeams(seasons, read = api){ const active=(seasons||[]).filter((s)=>['active','playoffs'].includes(s.status)); const chunks=await Promise.all(active.map(async(s)=>{try{const body=await read('/api/seasons/'+encodeURIComponent(s.id)+'/team-standings');return(body.standings||[]).map((row)=>({teamId:row.team_id,teamName:row.team_name,seasonId:s.id,seasonName:s.name,captainName:row.captain_display_name||'',rosterCount:Number.isFinite(Number(row.roster_count))?Number(row.roster_count):null,roster:Array.isArray(row.roster)?row.roster:[],relationship:'directory'}));}catch{return[];}}));return chunks.flat(); }
   function renderInbox(){ invitationsEl.replaceChildren(); const items=management.invitations||[]; for(const item of items){const row=node('div','fd-team-card__work-row');row.append(node('strong','',item.teamName||'Team'));const actions=node('div','fd-team-card__work-actions');actions.append(button('Accept','accept-invite',item.invitationId),button('Decline','decline-invite',item.invitationId,true));row.append(actions);invitationsEl.append(row);} inboxEl.hidden=!items.length; }
   function renderFormation(seasons){ formationItems.replaceChildren(); const open=(${availableTeamApplicationSeasons.toString()})(seasons,registrations); seasonSelect.replaceChildren(); if(open.length)open.forEach((s)=>seasonSelect.append(new Option(s.name+' · New team application',s.id))); else seasonSelect.append(new Option('No registration season is open','')); seasonSelect.disabled=!open.length;teamNameInput.disabled=!open.length;formationForm.querySelector('button').disabled=!open.length; for(const reg of registrations){for(const item of reg.applications||[]){const p=node('p','', (item.proposedTeamName||'New team')+' · '+clean(item.status||'submitted'));formationItems.append(p);}}
   }
-  async function load(){ if(!token()){stateEl.hidden=false;stateEl.textContent='Sign in to see teams.';contentEl.hidden=true;return;} setStatus('Loading teams…'); try{const[teamBody,requestBody,seasonBody]=await Promise.all([api('/api/me/teams'),api('/api/me/team-membership-requests'),api('/api/seasons')]); const seasons=seasonBody.seasons||[]; registrations=await Promise.all(seasons.filter((s)=>s.status==='registration').map(async(s)=>{const body=await api('/api/seasons/'+encodeURIComponent(s.id)+'/team-registration/me');return{...(body.registration||{}),seasonId:s.id};})); management=teamBody.teamManagement||{}; requestData=requestBody.requests||{}; requestData.league_teams=await loadLeagueTeams(seasons); cards=normalize(); renderCards();renderInbox();renderFormation(seasons);contentEl.hidden=false;stateEl.hidden=true;setStatus(cards.length?cards.length+' teams available':'No teams available','ok');}catch(error){contentEl.hidden=true;stateEl.hidden=false;stateEl.textContent=error.message||'Could not load teams';setStatus(error.message||'Could not load teams','error');}}
+  async function load({ saved = '' } = {}) {
+    syncSession();
+    const access = token();
+    if (pendingRead?.token === access || pendingWrite && !saved || retryUntil > Date.now()) return false;
+    if (!access) { showFailure(Object.assign(new Error('Sign in to see teams.'), { status: 401 })); return false; }
+    if (saved) savedNotice = saved;
+    const pending = { token: access }; pendingRead = pending;
+    const current = () => pendingRead === pending && token() === access;
+    const read = path => api(path, { sessionToken: access });
+    const selectedSeason = seasonSelect.value;
+    setStatus('Loading teams…'); updateReload(); reloadEl.hidden = false; signInEl.hidden = true;
+    contentEl.hidden = true; stateEl.hidden = false; stateEl.textContent = 'Loading teams…'; delete stateEl.dataset.tone;
+    try {
+      const [teamBody, requestBody, seasonBody] = await Promise.all([read('/api/me/teams'), read('/api/me/team-membership-requests'), read('/api/seasons')]);
+      if (!current()) return false;
+      if (!teamBody.teamManagement || typeof teamBody.teamManagement !== 'object' || Array.isArray(teamBody.teamManagement)
+        || !requestBody.requests || typeof requestBody.requests !== 'object' || Array.isArray(requestBody.requests) || !Array.isArray(seasonBody.seasons)) {
+        throw new Error('Could not load teams. Reload teams to try again.');
+      }
+      const seasons = seasonBody.seasons;
+      const nextRegistrations = await Promise.all(seasons.filter(s => s.status === 'registration').map(async s => {
+        const body = await read('/api/seasons/' + encodeURIComponent(s.id) + '/team-registration/me');
+        if (!body.registration || typeof body.registration !== 'object' || Array.isArray(body.registration)) throw new Error('Could not load team registration. Reload teams to try again.');
+        return { ...body.registration, seasonId: s.id };
+      }));
+      if (!current()) return false;
+      const leagueTeams = await loadLeagueTeams(seasons, read);
+      if (!current()) return false;
+      registrations = nextRegistrations; management = teamBody.teamManagement; requestData = requestBody.requests;
+      requestData.league_teams = leagueTeams; cards = normalize(); renderCards(); renderInbox(); renderFormation(seasons);
+      if (Array.from(seasonSelect.options).some(option => option.value === selectedSeason)) seasonSelect.value = selectedSeason;
+      contentEl.hidden = false; stateEl.hidden = true; delete stateEl.dataset.tone; viewToken = access;
+      setStatus(savedNotice || (cards.length ? cards.length + ' teams available' : 'No teams available'), 'ok'); savedNotice = '';
+      return true;
+    } catch (error) {
+      if (current()) showFailure(error);
+      return false;
+    } finally {
+      if (pendingRead === pending) { pendingRead = null; syncSession(); updateReload(); }
+    }
+  }
   async function mutate(action,id){ if(action==='join')await api('/api/teams/'+encodeURIComponent(id)+'/membership-request',{method:'POST',body:'{}'}); if(action==='cancel')await api('/api/team-membership-requests/'+encodeURIComponent(id)+'/cancel',{method:'POST',body:'{}'}); if(action==='accept-invite'||action==='decline-invite')await api('/api/team-invitations/'+encodeURIComponent(id)+'/respond',{method:'POST',body:JSON.stringify({response:action==='accept-invite'?'accepted':'declined'})}); if(action==='cancel-invite')await api('/api/team-invitations/'+encodeURIComponent(id)+'/cancel',{method:'POST',body:'{}'}); if(action==='approve-request'||action==='decline-request')await api('/api/team-membership-requests/'+encodeURIComponent(id)+'/respond',{method:'POST',body:JSON.stringify({response:action==='approve-request'?'approved':'declined'})}); if(action==='remove')await api('/api/team-memberships/'+encodeURIComponent(id)+'/remove',{method:'POST',body:'{}'}); if(action==='invite'){const select=q('[data-invite-select="'+CSS.escape(id)+'"]');if(!select?.value)throw new Error('Choose a player to invite.');await api('/api/teams/'+encodeURIComponent(id)+'/invitations',{method:'POST',body:JSON.stringify({playerId:select.value})});}}
   filters.forEach((b)=>b.addEventListener('click',()=>{filter=b.dataset.teamFilter;sessionStorage.setItem(filterKey,filter);const url=new URL(location.href);url.searchParams.set('view',filter);history.replaceState(null,'',url);renderCards();})); searchInput.addEventListener('input',renderCards);
-  document.addEventListener('click',async(e)=>{const c=e.target.closest('[data-team-action]');if(!c)return;const action=c.dataset.teamAction,id=c.dataset.actionId||'';c.disabled=true;try{await mutate(action,id);await load();setStatus('Team updated','ok');}catch(error){c.disabled=false;setStatus(error.message||'Could not update team','error');}});
-  formationForm.addEventListener('submit',async(e)=>{e.preventDefault();const seasonId=seasonSelect.value,teamName=clean(teamNameInput.value);if(!seasonId||!teamName){setStatus('Choose a season and enter a team name.','error');return;}try{await api('/api/seasons/'+encodeURIComponent(seasonId)+'/team-applications',{method:'POST',body:JSON.stringify({teamName})});teamNameInput.value='';await load();setStatus('New team application submitted','ok');}catch(error){setStatus(error.message||'Could not submit team application','error');}});
+  document.addEventListener('click', async e => {
+    const control = e.target.closest('[data-team-action]'); if (!control) return;
+    syncSession(); if (!viewToken || viewToken !== token()) { showFailure(sessionError()); return; }
+    if (pendingRead || pendingWrite) return;
+    const access = token(), pending = { token: token() }; pendingWrite = pending; control.disabled = true;
+    setStatus('Saving change…'); updateReload();
+    try {
+      await mutate(control.dataset.teamAction, control.dataset.actionId || '');
+      if (access !== token()) { syncSession(); return; }
+      await load({ saved: 'Change saved.' });
+    } catch (error) { if (access === token()) showFailure(error); else syncSession(); }
+    finally { if (pendingWrite === pending) { pendingWrite = null; control.disabled = false; updateReload(); } }
+  });
+  formationForm.addEventListener('submit', async e => {
+    e.preventDefault(); syncSession();
+    if (!viewToken || viewToken !== token()) { showFailure(sessionError()); return; }
+    if (pendingRead || pendingWrite) return;
+    const seasonId = seasonSelect.value, teamName = clean(teamNameInput.value);
+    if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; }
+    const access = token(), submit = formationForm.querySelector('button'), pending = { token: token() };
+    pendingWrite = pending; submit.disabled = true; setStatus('Saving team application…'); updateReload();
+    try {
+      await api('/api/seasons/' + encodeURIComponent(seasonId) + '/team-applications', { method: 'POST', body: JSON.stringify({ teamName }) });
+      if (access !== token()) { syncSession(); return; }
+      teamNameInput.value = ''; await load({ saved: 'New team application saved.' });
+    } catch (error) { if (access === token()) showFailure(error); else syncSession(); }
+    finally { if (pendingWrite === pending) { pendingWrite = null; submit.disabled = !seasonSelect.value; updateReload(); } }
+  });
+  reloadEl.addEventListener('click', () => { load(); });
+  window.addEventListener('fd:session-changed', syncSession);
+  window.addEventListener('storage', syncSession);
   syncFilters(); load();
 })();`;
 }
@@ -256,7 +403,7 @@ function teamsClientScript() {
 function teamsDocument() {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Teams · Fremont Derby</title><style>${jflModernTeamsStyles}</style></head><body>
   <main class="fd-teams" data-fd-modern-teams="true"><header><h1>Teams</h1><p class="fd-teams__lede">Find a team quickly. Compact cards show the captain and player count; expand a team only when you want its roster.</p></header>
-  <section class="fd-teams__toolbar"><label>Search teams<input type="search" data-team-search placeholder="Team or season"/></label><div class="fd-teams__filters" aria-label="Team filters"><button type="button" data-team-filter="all" aria-pressed="true">All teams</button><button type="button" data-team-filter="mine" aria-pressed="false">My teams</button><button type="button" data-team-filter="open" aria-pressed="false">Open to join</button></div><p class="fd-teams__status" data-teams-status role="status">Loading teams…</p></section>
+  <section class="fd-teams__toolbar"><label>Search teams<input type="search" data-team-search placeholder="Team or season"/></label><div class="fd-teams__filters" aria-label="Team filters"><button type="button" data-team-filter="all" aria-pressed="true">All teams</button><button type="button" data-team-filter="mine" aria-pressed="false">My teams</button><button type="button" data-team-filter="open" aria-pressed="false">Open to join</button></div><p class="fd-teams__status" data-teams-status role="status">Loading teams…</p><button type="button" data-teams-reload>Reload teams</button><a href="/profile" data-teams-sign-in hidden>Sign in again</a></section>
   <div class="fd-teams__state" data-teams-state>Loading teams…</div><div data-teams-content hidden>
   <section class="fd-teams__section" data-my-teams-section hidden><div class="fd-teams__section-head"><h2>My teams</h2><span>Current memberships first</span></div><div class="fd-teams__cards" data-my-team-list></div></section>
   <section class="fd-teams__section" data-team-directory-section hidden><div class="fd-teams__section-head"><h2>League teams</h2><span>Tap View players for the roster</span></div><div class="fd-teams__cards" data-team-directory></div></section><div class="fd-teams__state" data-team-directory-empty hidden>No matching teams.</div>
