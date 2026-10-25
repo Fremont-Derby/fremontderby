@@ -23,7 +23,8 @@ async function cooldown(page, response) {
   const header = response.headers()['retry-after'];
   const numeric = header?.trim() ? Number(header) : NaN;
   const parsed = Number.isFinite(numeric) ? numeric : Math.ceil((Date.parse(header) - Date.now()) / 1000);
-  const seconds = Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) : 15;
+  const seconds = Math.ceil(parsed);
+  expect(Number.isFinite(seconds) && seconds > 0, 'Validated Retry-After required; do not guess a recovery wait').toBe(true);
   expect(seconds, 'Excessive Retry-After must fail closed').toBeLessThanOrEqual(60);
   console.info(`Live consent HTTP429 recovery; cooldown=${seconds + 1}s.`);
   await page.waitForTimeout((seconds + 1) * 1000);
