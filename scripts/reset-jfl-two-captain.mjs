@@ -1,6 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { appendFile } from 'node:fs/promises';
+import { qualifyJflGeneralAudience } from './qualify-jfl-general-audience.mjs';
 
 const jflUrl = 'https://jfl.fremontderby.com';
 const stagingUrl = 'https://oqkkvqkerusepyokzbmt.supabase.co';
@@ -122,13 +123,17 @@ export async function resetJflTwoCaptainFixture({ fetchImpl = fetch, serviceRole
     mutationState = 'reset-confirmed-date-unconfirmed';
     report();
     await prepareFixtureDate(fetchImpl, serviceRoleKey, scheduledOn);
+    phase = 'general-audience';
+    mutationState = 'reset-and-date-confirmed';
+    report();
+    const generalAudience = await qualifyJflGeneralAudience({ fetchImpl, serviceRoleKey });
     phase = 'post-reset-health';
     mutationState = 'reset-and-date-confirmed';
     report();
     await readExactJflHealth(fetchImpl, expectedSha);
     phase = 'complete';
     report();
-    return { resetLineups: rows[0].reset_lineups, scheduledOn };
+    return { resetLineups: rows[0].reset_lineups, scheduledOn, generalAudienceDigest: generalAudience.audienceDigest };
   } catch (error) {
     // Only our constant diagnostics are safe to print. Fetch/JSON errors can
     // contain private response data or credentials; never surface their text.
@@ -148,7 +153,7 @@ async function main() {
   if (process.env.GITHUB_OUTPUT) {
     await appendFile(process.env.GITHUB_OUTPUT, `scheduled_on=${result.scheduledOn}\n`);
   }
-  console.log(`PASS: exact-SHA JFL QA fixture reset; prior lineups=${result.resetLineups}; scheduledOn=${result.scheduledOn}`);
+  console.log(`PASS: exact-SHA JFL QA fixture reset; prior lineups=${result.resetLineups}; scheduledOn=${result.scheduledOn}; generalAudience=${result.generalAudienceDigest}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
