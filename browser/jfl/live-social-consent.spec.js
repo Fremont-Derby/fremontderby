@@ -116,14 +116,9 @@ for (const [device, viewport] of [['phone', { width: 320, height: 844 }], ['desk
     let original;
     try {
       await assumePersona(page, 'Admin Captain');
-      const identity = await page.evaluate(async () => {
-        const response = await fetch('/api/test-persona', { headers: {
-          authorization: 'Bearer ' + sessionStorage.getItem('fd.accessToken'),
-        } });
-        const body = await response.json();
-        return { status: response.status, environment: body.environment, key: body.current?.key };
-      });
-      expect(identity).toEqual({ status: 200, environment: 'jfl', key: 'admin-captain' });
+      const identity = await actorRequest(page, '/api/test-persona');
+      expect({ status: identity.status, environment: identity.body?.environment, key: identity.body?.current?.key })
+        .toEqual({ status: 200, environment: 'jfl', key: 'admin-captain' });
       original = await snapshot(page);
       console.info('Synthetic consent baseline admin-captain: ' + JSON.stringify(original));
       for (const channel of channels) {
@@ -171,6 +166,11 @@ async function actorRequest(page, path, method = 'GET', body) {
       try { parsed = await response.json(); } catch { /* Inspect status before any JSON requirement; never log the body. */ }
       return { status: response.status, retry: response.headers.get('Retry-After'), body: parsed };
     }, { path, method, body });
+    if (method === 'GET' && (result.status >= 400 || !result.body || typeof result.body !== 'object')) {
+      console.info('Synthetic actor read classification: ' + JSON.stringify({
+        path: path.replace(/[a-f0-9-]{36}/g, ':id'), status: result.status, hasRetryAfter: Boolean(result.retry),
+      }));
+    }
     // Never replay a mutation, including one with an unknown network outcome.
     if (method !== 'GET' || result.status !== 429) {
       if (method === 'GET' && (!result.body || typeof result.body !== 'object')) throw new Error('Synthetic messaging response was not JSON; HTTP ' + result.status);
