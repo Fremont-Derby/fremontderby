@@ -642,8 +642,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
     expect(await (await request.get('/health/environment')).json()).toMatchObject({
       ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: sha,
     });
-    const actors = [], marker = 'JFL synthetic General delivery acceptance ' + crypto.randomUUID();
-    let sendAttempted = false, cleanupVerified = false, allowedSends = 0, deniedSends = 0;
+    const actors = [], markerId = crypto.randomUUID(), marker = 'JFL synthetic General delivery acceptance ' + markerId;
+    let sendAttempted = false, cleanupVerified = false, allowedSends = 0, deniedSends = 0, primaryError;
     const generalChannel = channels.find(channel => channel.key === 'general');
     const path = '/api/seasons/' + directFixture.season + '/messages';
     async function selectGeneral(page) {
@@ -701,6 +701,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       await selectGeneral(recipient.page);
       await sender.page.locator('[data-message-input]').fill(marker);
       const response = sender.page.waitForResponse(result => new URL(result.url()).pathname === path && result.request().method() === 'POST');
+      console.info('Synthetic General delivery attempt marker=' + markerId + '; season=' + directFixture.season);
       sendAttempted = true;
       await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
       const sent = await response;
@@ -712,8 +713,10 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
       }
       expect(await recipient.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } catch (error) {
+      primaryError = error;
     } finally {
-      const errors = [];
+      const errors = primaryError ? [primaryError] : [];
       if (sendAttempted && actors.length === 2) {
         try {
           await removeSyntheticMarker({ sender: actors[0], recipient: actors[1], actors, marker, messageType: 'league', threadId: directFixture.season });
