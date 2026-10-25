@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
-import { sendWithQualifiedRecovery } from './synthetic-send-recovery.js';
+import { qualifyConversationReadback, sendWithQualifiedRecovery } from './synthetic-send-recovery.js';
 
 // #3575: the trusted live-fixture job already supplies this opt-in and exact
 // deployment SHA. Public PRs must never mutate hosted persona preferences.
@@ -347,6 +347,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
     const marker = 'JFL synthetic delivery acceptance ' + markerId;
     let conversationId, sendAttempted = false, cleanupVerified = false, primaryError;
     let allowedSends = 0, authorizedSends = 1, deniedSends = 0;
+    let allowedStarts = 0, authorizedStarts = 1, deniedStarts = 0;
     try {
       for (const [label, key, player] of [
         ['Admin Captain', 'admin-captain', directFixture.sender],
@@ -355,6 +356,15 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
         await context.route('**/api/**', async route => {
           const req = route.request(), path = new URL(req.url()).pathname;
+          if (req.method() === 'POST' && path === '/api/direct-conversations') {
+            let body;
+            try { body = req.postDataJSON(); } catch { /* Reject below. */ }
+            if (player !== directFixture.sender || body?.seasonId !== directFixture.season
+              || body?.playerId !== directFixture.recipient || Object.keys(body).length !== 2 || allowedStarts >= authorizedStarts) {
+              deniedStarts++; await route.abort(); return;
+            }
+            allowedStarts++;
+          }
           if (req.method() === 'POST' && path.endsWith('/messages')) {
             let body;
             try { body = req.postDataJSON(); } catch { /* Reject below. */ }
@@ -409,13 +419,40 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       if (device === 'phone') await sender.page.getByRole('button', { name: /^Message a player/ }).click();
       else await sender.page.locator('[data-new-message]').click();
       await form.locator('select').selectOption(directFixture.season + '|' + directFixture.recipient);
-      const start = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/direct-conversations'
-        && response.request().method() === 'POST');
-      await form.getByRole('button', { name: 'Start message', exact: true }).click();
-      const started = await start;
+      const startOutcome = await sendWithQualifiedRecovery({
+        send: async () => {
+          await expect(form.locator('select')).toHaveValue(directFixture.season + '|' + directFixture.recipient);
+          const pending = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/direct-conversations'
+            && response.request().method() === 'POST');
+          await form.getByRole('button', { name: 'Start message', exact: true }).click();
+          const response = await pending;
+          return { status: response.status(), retryAfter: response.headers()['retry-after'], response };
+        },
+        wait: ms => sender.page.waitForTimeout(ms),
+        markerAbsent: async () => {
+          const inboxes = [];
+          for (const actor of actors) {
+            const result = await actorRequest(actor.page, '/api/me/direct-message-inbox');
+            expect(result.status).toBe(200); inboxes.push(result.body.conversations);
+          }
+          const existingId = qualifyConversationReadback(inboxes[0], inboxes[1], directFixture);
+          if (!existingId) return true;
+          for (const actor of actors) {
+            const result = await actorRequest(actor.page, `/api/direct-conversations/${existingId}/messages?limit=50`);
+            expect(result.status).toBe(200); expect(Array.isArray(result.body.messages)).toBe(true);
+            if (result.body.messages.some(row => row.body === marker)) return false;
+          }
+          return true;
+        },
+        authorizeRetry: () => { authorizedStarts++; },
+        onResponse: result => console.info('Synthetic conversation start classification: ' + JSON.stringify(result)),
+      });
+      const started = startOutcome.response;
       expect(started.status(), 'Conversation creation must be confirmed without write replay').toBe(201);
       expect(started.request().postDataJSON()).toEqual({ seasonId: directFixture.season, playerId: directFixture.recipient });
       const conversation = (await started.json()).conversation;
+      expect(conversation).toMatchObject({ season_id: directFixture.season, other_player_id: directFixture.recipient });
+      expect(allowedStarts).toBeGreaterThanOrEqual(1); expect(allowedStarts).toBeLessThanOrEqual(3); expect(deniedStarts).toBe(0);
       conversationId = conversation.conversation_id;
       expect(conversationId).toMatch(/^[a-f0-9-]{36}$/);
       await openQualifiedMessages(sender.page, '/messages?direct=' + encodeURIComponent(conversationId), true);
@@ -486,6 +523,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       }
       if (sendAttempted && !cleanupVerified) console.info('Exact synthetic marker cleanup remains unverified; no other message was touched.');
       if (deniedSends) errors.push(new Error('An unqualified or out-of-scope Direct send was blocked'));
+      if (deniedStarts) errors.push(new Error('An unqualified Direct conversation start was blocked'));
       if (errors.length) throw new AggregateError(errors, 'Synthetic delivery cleanup or preference restoration failed');
     }
   });
