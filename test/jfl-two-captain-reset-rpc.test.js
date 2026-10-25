@@ -30,7 +30,12 @@ function fixtureFetch(calls, overrides = {}) {
     if (path.endsWith('/reset_two_captain_qa')) {
       return Response.json([{ team_match_id: fixtureId, reset_lineups: 1 }]);
     }
-    if (path.endsWith('/seasons')) return Response.json([{ id: seasonId, purpose: 'qa' }]);
+    const suffix = n => String(n).padStart(12, '0');
+    const counted = rows => Response.json(rows, { headers: { 'content-range': rows.length ? `0-${rows.length - 1}/${rows.length}` : '*/0' } });
+    if (path.endsWith('/seasons')) return counted([{ id: seasonId, purpose: 'qa' }]);
+    if (path.endsWith('/season_players')) return counted([]);
+    if (path.endsWith('/team_memberships')) return counted(Array.from({ length: 7 }, (_, i) => ({ player_id: '18580000-2000-4000-8000-' + suffix(i + 1) })));
+    if (path.endsWith('/players')) return counted(Array.from({ length: 7 }, (_, i) => ({ id: '18580000-2000-4000-8000-' + suffix(i + 1), user_id: '18580000-0000-4000-8000-' + suffix(i + 1) })));
     assert.equal(path, '/rest/v1/rounds');
     const query = new URL(url).searchParams;
     assert.equal(query.get('id'), `eq.${roundId}`);
@@ -64,7 +69,8 @@ test('hosted preflight checks exact live SHA before reset and never exposes the 
   const result = await resetJflTwoCaptainFixture({ fetchImpl, serviceRoleKey: 'test-secret', expectedSha: 'sha', now: '2026-10-03T00:00:00Z' });
   assert.equal(result.resetLineups, 1);
   assert.equal(result.scheduledOn, '2026-10-10');
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 12);
+  assert.equal(result.generalAudienceDigest, '81bb1f6cccaaf5125ec546abaa5b4065');
   assert.match(calls[2].url, /oqkkvqkerusepyokzbmt\.supabase\.co\/rest\/v1\/rpc\/reset_two_captain_qa$/);
   assert.equal(calls[2].options.headers['content-profile'], 'jfl');
 
@@ -198,4 +204,16 @@ test('same-day trusted resets replay safely with the same date and bounded mutat
   assert.equal(calls.filter(({ options }) => options.method === 'PATCH').length, 2);
   assert.ok(calls.filter(({ options }) => options.method === 'PATCH').every(({ options }) =>
     options.body === '{"scheduled_on":"2026-10-10"}'));
+});
+
+test('unknown General audience prevents completed reset preflight from authorizing browser work', async () => {
+  const calls = [], phases = [];
+  await assert.rejects(resetJflTwoCaptainFixture({
+    fetchImpl: fixtureFetch(calls, { '/rest/v1/team_memberships': () => Response.json([{ player_id: 'unexpected' }],
+      { headers: { 'content-range': '0-0/1' } }) }),
+    serviceRoleKey: 'test-secret', expectedSha: 'sha', onPhase: phase => phases.push(phase),
+  }), /phase=general-audience; mutationState=reset-and-date-confirmed: Request or response validation failed/);
+  assert.equal(phases.some(phase => phase.includes('phase=complete;')), false);
+  assert.equal(calls.filter(({ options }) => options.method === 'POST').length, 1);
+  assert.equal(calls.filter(({ options }) => options.method === 'PATCH').length, 1);
 });
