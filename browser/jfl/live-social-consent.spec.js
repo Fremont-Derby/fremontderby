@@ -23,7 +23,8 @@ async function cooldown(page, response) {
   const header = response.headers()['retry-after'];
   const numeric = header?.trim() ? Number(header) : NaN;
   const parsed = Number.isFinite(numeric) ? numeric : Math.ceil((Date.parse(header) - Date.now()) / 1000);
-  const seconds = Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) : 15;
+  const seconds = Math.ceil(parsed);
+  expect(Number.isFinite(seconds) && seconds > 0, 'Validated Retry-After required; do not guess a recovery wait').toBe(true);
   expect(seconds, 'Excessive Retry-After must fail closed').toBeLessThanOrEqual(60);
   console.info(`Live consent HTTP429 recovery; cooldown=${seconds + 1}s.`);
   await page.waitForTimeout((seconds + 1) * 1000);
@@ -226,6 +227,37 @@ async function openQualifiedMessages(page, href, conversation = false) {
       expect(attempt, 'Messages read recovery exhausted; preserve the blocker').toBeLessThan(2);
       await page.waitForTimeout((wait + 1) * 1000);
       // Reopen the same authenticated read path. Never recreate a conversation or replay a send.
+    }
+  } finally { page.off('response', observe); }
+}
+
+async function openQualifiedTeamLink(page, href) {
+  const rejected = [];
+  const link = page.getByRole('link', { name: 'Team messages', exact: true }).and(page.locator('a[href="' + href + '"]'));
+  const core = new Set(['/teams', '/api/me/teams', '/api/me/team-membership-requests', '/api/seasons']);
+  const observe = response => {
+    const path = new URL(response.url()).pathname;
+    if (response.request().method() === 'GET' && response.status() >= 400
+      && (core.has(path) || path.startsWith('/api/seasons/') && /\/(teams|team-registration\/me)$/.test(path))) rejected.push(response);
+  };
+  page.on('response', observe);
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      rejected.length = 0;
+      await page.goto('/teams');
+      const ready = async () => await link.count() === 1 && await link.isVisible()
+        && await page.locator('[data-teams-content]').isVisible();
+      await expect.poll(async () => await ready() || rejected.length > 0
+        || await page.locator('[data-teams-status]').getAttribute('data-tone') === 'error').toBe(true);
+      if (await ready()) { await link.click(); return; }
+      console.info('Teams core read classifications: ' + JSON.stringify(rejected.map(response => ({
+        path: new URL(response.url()).pathname.replace(/[a-f0-9-]{36}/g, ':id'), status: response.status(),
+        hasRetryAfter: Boolean(response.headers()['retry-after']),
+      }))));
+      expect(rejected.length, 'Missing Team messages entry needs endpoint evidence, not a guessed retry').toBeGreaterThan(0);
+      for (const response of rejected) expect(response.status(), 'Only captured core429 permits same-view read recovery').toBe(429);
+      expect(attempt, 'Teams core read recovery exhausted').toBeLessThan(2);
+      for (const response of rejected) await cooldown(page, response);
     }
   } finally { page.off('response', observe); }
 }
@@ -442,6 +474,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
     const markerId = crypto.randomUUID();
     const marker = 'JFL synthetic team delivery acceptance ' + markerId;
     let sendAttempted = false, cleanupVerified = false;
+    let allowedSends = 0, deniedSends = 0;
     const href = '/messages?team=' + teamFixture.id;
     try {
       for (const [label, key, player] of [
@@ -449,6 +482,24 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         ['Player A', 'player-a', teamFixture.recipient],
       ]) {
         const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
+        // Pass real requests/responses unchanged, but block any accidental send
+        // outside this exact private QA team/marker or any duplicate/replay.
+        await context.route('**/api/**', async route => {
+          const request = route.request();
+          const path = new URL(request.url()).pathname;
+          if (request.method() === 'POST' && path.endsWith('/messages')) {
+            let body;
+            try { body = request.postDataJSON(); } catch { /* Fail closed below. */ }
+            if (player !== directFixture.sender || path !== '/api/teams/' + teamFixture.id + '/messages'
+              || body?.body !== marker || allowedSends !== 0) {
+              deniedSends++;
+              await route.abort();
+              return;
+            }
+            allowedSends++;
+          }
+          await route.continue();
+        });
         const page = await context.newPage();
         page.setDefaultTimeout(15_000);
         const actor = { context, page, label, player };
@@ -479,6 +530,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         && teams[0].teamName === teamFixture.name, 'Exact isolated QA team/season contract required').toBe(true);
       expect(teams[0].roster?.map(row => row.playerId).sort(), 'Only the three fixed synthetic players may receive this team marker').toEqual(teamFixture.roster);
       expect(teams[0].roster.find(row => row.playerId === directFixture.sender)?.role).toBe('captain');
+      const fixtureRound = teams[0].lineupRounds?.find(row => row.roundId === '18580000-1200-4000-8000-000000000001');
+      expect(fixtureRound?.scheduledOn, 'Current fixture date must match the successful trusted reset').toBe(process.env.PLAYWRIGHT_FIXTURE_DATE);
       console.info('Exact QA team and complete synthetic-only three-player audience qualified.');
       const teamChannel = channels.find(channel => channel.key === 'team');
       for (const actor of actors) {
@@ -487,12 +540,10 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       }
       // Use the canonical Teams page's existing link, preserving QA fixture
       // hiding in the ordinary Messages inbox rather than exposing test rooms.
-      await sender.page.goto('/teams');
-      const link = sender.page.locator('a.chat-link[href="' + href + '"]');
-      await expect(link).toHaveCount(1);
-      await link.click();
+      await openQualifiedTeamLink(sender.page, href);
       await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
       await openQualifiedMessages(sender.page, href, true);
+      await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
       await expect(sender.page.locator('[data-message-input]')).toBeEnabled();
       await sender.page.locator('[data-message-input]').fill(marker);
       const sentResponse = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/teams/' + teamFixture.id + '/messages'
@@ -503,6 +554,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       const sent = await sentResponse;
       expect(sent.status(), 'Team send must be confirmed without write replay').toBe(201);
       expect(Boolean((await sent.json()).message), 'Confirmed team message required').toBe(true);
+      expect(allowedSends).toBe(1);
+      expect(deniedSends).toBe(0);
       for (let visit = 0; visit < 2; visit++) {
         await openQualifiedMessages(recipient.page, href, true);
         await expect(recipient.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
@@ -530,6 +583,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         finally { await actor.context.close(); }
       }
       if (sendAttempted && !cleanupVerified) console.info('Exact synthetic team marker cleanup remains unverified; no other message was touched.');
+      if (deniedSends) errors.push(new Error('An out-of-scope or duplicate message send was blocked before network delivery'));
       if (errors.length) throw new AggregateError(errors, 'Synthetic team delivery cleanup or consent restoration failed');
     }
   });
