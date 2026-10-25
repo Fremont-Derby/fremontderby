@@ -245,6 +245,48 @@ export function renderChatPage(env = {}) {
     let reachedConversationStart = false;
     let reportingMessageId = '';
     let retryAt = 0, pausePolls = false, rateGeneration = 0;
+    let session = { token: token() };
+    let loadingThreads = null;
+    function staleSession() {
+      const error = new Error('Session changed'); error.code = 'stale_session'; return error;
+    }
+    function syncSession() {
+      const current = token();
+      if (current === session.token) return false;
+      const owner = { token: current };
+      session = owner;
+      conversationEpoch += 1;
+      loadingThreads = null; loadingMessages = false; sendingMessage = false;
+      retryAt = 0; pausePolls = false; rateGeneration += 1;
+      threads = []; candidates = []; currentKey = ''; displayedMessages = [];
+      canLoadOlder = false; reachedConversationStart = false; reportingMessageId = '';
+      threadListEl.replaceChildren(); threadSelectEl.replaceChildren(); messageListEl.replaceChildren();
+      candidateSelectEl.replaceChildren(); mobileCandidateSelectEl.replaceChildren();
+      chatNameEl.textContent = 'Select a conversation'; chatSeasonEl.textContent = '';
+      messageInputEl.value = ''; messageInputEl.disabled = true; sendButtonEl.disabled = true;
+      reportDetailsEl.value = ''; reportReasonEl.value = 'harassment';
+      if (reportDialogEl.open) reportDialogEl.close();
+      newDirectFormEl.hidden = true; mobileNewDirectFormEl.hidden = true;
+      document.querySelector('[data-moderation-link]').hidden = true;
+      layoutEl.hidden = true; hidePageState();
+      const url = new URL(location.href);
+      for (const key of ['team', 'direct', 'league', 'matchup']) url.searchParams.delete(key);
+      history.replaceState({}, '', url.pathname + url.search);
+      if (!current) showSignedOut(false);
+      else {
+        signedOutEl.hidden = true;
+        setStatus('Loading conversations…');
+        queueMicrotask(() => {
+          if (session !== owner || token() !== owner.token) return;
+          runLoadThreads(); run(detectModerator);
+        });
+      }
+      return true;
+    }
+    function ownsSession(owner) {
+      syncSession();
+      return owner === session;
+    }
     function retrySeconds(value) {
       if (!value || !value.trim()) return 0;
       const numeric = Number(value);
@@ -270,6 +312,7 @@ export function renderChatPage(env = {}) {
       retryAt = 0; pausePolls = false; rateGeneration += 1;
       sessionStorage.removeItem('fd.accessToken');
       sessionStorage.removeItem('fd.refreshToken');
+      syncSession();
     }
     function makeAction(label, { href, onClick, secondary = false } = {}) {
       const action = href ? document.createElement('a') : document.createElement('button');
@@ -310,21 +353,37 @@ export function renderChatPage(env = {}) {
       } catch { /* Upstream HTML and malformed bodies must never become visible errors. */ }
       return { invalidResponse: true };
     }
-    async function refreshSession() {
-      if (!config.supabaseUrl || !config.supabasePublishableKey || !refreshToken()) return false;
+    async function refreshSession(owner) {
+      if (owner.refreshing) return owner.refreshing;
+      const pending = performSessionRefresh(owner);
+      owner.refreshing = pending;
+      try { return await pending; }
+      finally { if (owner.refreshing === pending) owner.refreshing = null; }
+    }
+    async function performSessionRefresh(owner) {
+      const priorToken = owner.token;
+      const priorRefresh = refreshToken();
+      if (!config.supabaseUrl || !config.supabasePublishableKey || !priorRefresh) return false;
       const response = await fetch(config.supabaseUrl.replace(/\\\/+$/, '') + '/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
         headers: { apikey: config.supabasePublishableKey, 'content-type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken() }),
+        body: JSON.stringify({ refresh_token: priorRefresh }),
       });
+      if (!ownsSession(owner) || owner.token !== priorToken || refreshToken() !== priorRefresh) throw staleSession();
       if (!response.ok) return false;
       const body = await parseJson(response);
+      if (!ownsSession(owner) || owner.token !== priorToken || refreshToken() !== priorRefresh) throw staleSession();
       if (!body.access_token) return false;
       sessionStorage.setItem('fd.accessToken', body.access_token);
       if (body.refresh_token) sessionStorage.setItem('fd.refreshToken', body.refresh_token);
+      // A refresh of the still-current session retains its private draft and
+      // request ownership. External changes always create a new owner above.
+      owner.token = body.access_token;
       return true;
     }
     async function api(path, options = {}, retry = true) {
+      if (syncSession()) throw staleSession();
+      const owner = session;
       const accessToken = token();
       if (!accessToken) {
         const error = new Error('Sign in is required');
@@ -337,11 +396,12 @@ export function renderChatPage(env = {}) {
         ...options,
         headers: { authorization: 'Bearer ' + accessToken, 'content-type': 'application/json' },
       });
-      if (accessToken !== token()) {
-        const error = new Error('Session changed'); error.code = 'stale_session'; throw error;
-      }
+      if (!ownsSession(owner)) throw staleSession();
       if (response.status === 401 && retry) {
-        if (await refreshSession()) return api(path, options, false);
+        if (accessToken !== owner.token) return api(path, options, false);
+        const refreshed = await refreshSession(owner);
+        if (!ownsSession(owner)) throw staleSession();
+        if (refreshed) return api(path, options, false);
         const error = new Error('Your sign-in expired');
         error.code = 'session_expired';
         throw error;
@@ -354,6 +414,7 @@ export function renderChatPage(env = {}) {
       }
       if (response.status >= 500) throw new Error('Messages are temporarily unavailable. Try again shortly.');
       const body = await parseJson(response);
+      if (!ownsSession(owner)) throw staleSession();
       if (body.invalidResponse) throw new Error('Messages are temporarily unavailable. Try again shortly.');
       if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Request failed');
       if ((options.method || 'GET') === 'GET' && generation === rateGeneration) { retryAt = 0; pausePolls = false; }
@@ -438,6 +499,7 @@ export function renderChatPage(env = {}) {
       }
     }
     function openNewMessage() {
+      if (syncSession()) return;
       if (!candidates.length) {
         setStatus('No other registered players are available to message yet');
         return;
@@ -445,6 +507,7 @@ export function renderChatPage(env = {}) {
       newDirectFormEl.hidden = !newDirectFormEl.hidden;
     }
     function openMobileNewMessage() {
+      if (syncSession()) return;
       if (!candidates.length) {
         setStatus('No other registered players are available to message yet');
         return;
@@ -574,14 +637,17 @@ export function renderChatPage(env = {}) {
       return base + '/messages' + suffix;
     }
     async function markRead(thread, messages) {
+      const owner = session;
       const latest = messages[messages.length - 1];
       if (!latest) return;
       await api(messagePath(thread, '/read'), {
         method: 'POST', body: JSON.stringify({ readAt: latest.created_at }),
       });
+      if (!ownsSession(owner)) return;
       window.dispatchEvent(new CustomEvent('fd:messages-read'));
     }
     async function loadMessages(quiet = false) {
+      const owner = session;
       const thread = currentThread();
       if (!thread || loadingMessages) return;
       loadingMessages = true;
@@ -589,7 +655,7 @@ export function renderChatPage(env = {}) {
       try {
         if (!quiet) setStatus('Loading messages…');
         const body = await api(messagePath(thread) + '?limit=50');
-        if (selectedEpoch !== conversationEpoch) return;
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         const messages = Array.isArray(body.messages) ? body.messages : [];
         if (quiet) {
           const byId = new Map(displayedMessages.map((message) => [message.message_id, message]));
@@ -604,7 +670,7 @@ export function renderChatPage(env = {}) {
         }
         renderMessages(displayedMessages);
         await markRead(thread, displayedMessages);
-        if (selectedEpoch !== conversationEpoch) return;
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         if (!quiet) setStatus('Messages loaded', 'ok');
       } catch (error) {
         if (selectedEpoch === conversationEpoch) throw error;
@@ -613,6 +679,7 @@ export function renderChatPage(env = {}) {
       }
     }
     async function loadOlderMessages() {
+      const owner = session;
       const thread = currentThread();
       const oldest = displayedMessages[0];
       if (!thread || !oldest || !canLoadOlder || loadingMessages) return;
@@ -624,7 +691,7 @@ export function renderChatPage(env = {}) {
         const query = '?limit=50&before=' + encodeURIComponent(oldest.created_at)
           + '&beforeMessageId=' + encodeURIComponent(oldest.message_id);
         const body = await api(messagePath(thread) + query);
-        if (selectedEpoch !== conversationEpoch) return;
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         const older = Array.isArray(body.messages) ? body.messages : [];
         const byId = new Map([...older, ...displayedMessages].map((message) => [message.message_id, message]));
         displayedMessages = [...byId.values()].sort((a, b) =>
@@ -700,6 +767,7 @@ export function renderChatPage(env = {}) {
       return rows.map((row) => ({ key: 'matchup:' + row.team_match_id, type: 'matchup', id: row.team_match_id, name: row.team_a_name + ' vs ' + row.team_b_name, season: row.season_name + ' · Round ' + row.round_number, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     async function loadThreads({ preserveSelection = true } = {}) {
+      const owner = session;
       signedOutEl.hidden = true;
       hidePageState();
       layoutEl.hidden = false;
@@ -711,6 +779,7 @@ export function renderChatPage(env = {}) {
         config.matchupChatEnabled ? api('/api/me/matchup-chat-threads') : Promise.resolve({ threads: [] }),
         api('/api/me/direct-message-candidates'),
       ]);
+      if (!ownsSession(owner)) return;
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
         ...normalizedMatchupThreads(Array.isArray(matchupBody.threads) ? matchupBody.threads : []),
@@ -733,6 +802,7 @@ export function renderChatPage(env = {}) {
         || threads[0]?.key
         || '';
       await selectThread(initial);
+      if (!ownsSession(owner)) return;
       if (!config.matchupChatEnabled && params.has('matchup')) {
         setStatus('Matchup chat is retired. Use General Chat, Team Chat, or Direct Messages.', 'muted');
       } else {
@@ -740,9 +810,11 @@ export function renderChatPage(env = {}) {
       }
     }
     async function refreshThreadMetadata() {
+      const owner = session;
       const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
         api('/api/me/chat-threads'), api('/api/me/direct-message-inbox'), api('/api/me/league-chat-threads'), config.matchupChatEnabled ? api('/api/me/matchup-chat-threads') : Promise.resolve({ threads: [] }), api('/api/me/direct-message-candidates'),
       ]);
+      if (!ownsSession(owner)) return;
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
         ...normalizedMatchupThreads(Array.isArray(matchupBody.threads) ? matchupBody.threads : []),
@@ -754,14 +826,17 @@ export function renderChatPage(env = {}) {
       renderThreads();
     }
     async function detectModerator() {
+      const owner = session;
       try {
         await api('/api/admin/chat-reports?limit=1');
+        if (!ownsSession(owner)) return;
         document.querySelector('[data-moderation-link]').hidden = false;
       } catch (error) {
         if (!/League admin access/i.test(error.message)) throw error;
       }
     }
     async function sendMessage() {
+      const owner = session;
       const thread = currentThread();
       const body = messageInputEl.value.trim();
       if (!thread || !body || thread.canSend === false || sendingMessage) return;
@@ -772,55 +847,66 @@ export function renderChatPage(env = {}) {
       setStatus('Sending…');
       try {
         await api(messagePath(thread), { method: 'POST', body: JSON.stringify({ body, clientMessageId: crypto.randomUUID() }) });
-        if (selectedEpoch !== conversationEpoch) return;
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         messageInputEl.value = '';
         await loadMessages();
-        if (selectedEpoch === conversationEpoch) setStatus('Sent', 'ok');
+        if (ownsSession(owner) && selectedEpoch === conversationEpoch) setStatus('Sent', 'ok');
       } catch (error) {
+        if (!ownsSession(owner)) return;
         if (selectedEpoch === conversationEpoch || error?.code === 'session_expired' || error?.code === 'session_required') throw error;
         setStatus('Send to ' + thread.name + ' could not be confirmed. Check that conversation before retrying.', 'error');
       } finally {
-        sendingMessage = false;
-        const latestThread = currentThread();
-        const enabled = Boolean(latestThread && latestThread.canSend !== false);
-        messageInputEl.disabled = !enabled;
-        sendButtonEl.disabled = !enabled;
-        if (enabled) messageInputEl.focus();
+        if (ownsSession(owner)) {
+          sendingMessage = false;
+          const latestThread = currentThread();
+          const enabled = Boolean(latestThread && latestThread.canSend !== false);
+          messageInputEl.disabled = !enabled;
+          sendButtonEl.disabled = !enabled;
+          if (enabled) messageInputEl.focus();
+        }
       }
     }
     async function startDirectConversation(select) {
+      const owner = session;
       const value = select.value;
       if (!value) throw new Error('Choose a player');
       const [seasonId, playerId] = value.split('|');
       setStatus('Starting player message…');
       const body = await api('/api/direct-conversations', { method: 'POST', body: JSON.stringify({ seasonId, playerId }) });
+      if (!ownsSession(owner)) return;
       newDirectFormEl.hidden = true;
       mobileNewDirectFormEl.hidden = true;
       currentKey = 'direct:' + body.conversation.conversation_id;
       await loadThreads({ preserveSelection: true });
     }
     async function toggleBlock() {
+      const owner = session;
       const thread = currentThread();
       if (!thread || thread.type !== 'direct') return;
       const unblocking = Boolean(thread.blockedByMe);
       if (!unblocking && !window.confirm('Block ' + thread.name + '? You will not be able to message each other.')) return;
       await api('/api/players/' + encodeURIComponent(thread.otherPlayerId) + '/block', { method: unblocking ? 'DELETE' : 'POST', body: '{}' });
+      if (!ownsSession(owner)) return;
       await loadThreads({ preserveSelection: true });
+      if (!ownsSession(owner)) return;
       setStatus(unblocking ? 'Player unblocked' : 'Player blocked', 'ok');
     }
     function openReport(messageId) {
+      if (syncSession()) return;
       reportingMessageId = messageId;
       reportReasonEl.value = 'harassment';
       reportDetailsEl.value = '';
       reportDialogEl.showModal();
     }
     async function submitReport() {
+      const owner = session;
       const thread = currentThread();
       if (!thread || !reportingMessageId) return;
       await api('/api/chat-reports', {
         method: 'POST',
         body: JSON.stringify({ messageType: thread.type, messageId: reportingMessageId, reason: reportReasonEl.value, details: reportDetailsEl.value }),
       });
+      if (!ownsSession(owner)) return;
       reportDialogEl.close();
       reportingMessageId = '';
       setStatus('Report submitted to league admins', 'ok');
@@ -848,11 +934,19 @@ export function renderChatPage(env = {}) {
       }
     }
     async function run(action) {
-      try { await action(); } catch (error) { handleError(error); }
+      if (syncSession()) return;
+      const owner = session;
+      try { await action(); } catch (error) { if (ownsSession(owner)) handleError(error); }
     }
     async function runLoadThreads() {
+      if (syncSession() || loadingThreads) return;
+      const owner = session;
+      const pending = {};
+      loadingThreads = pending;
       hidePageState();
-      try { await loadThreads(); } catch (error) { handleError(error, { loadFailure: true }); }
+      try { await loadThreads(); }
+      catch (error) { if (ownsSession(owner)) handleError(error, { loadFailure: true }); }
+      finally { if (ownsSession(owner) && loadingThreads === pending) loadingThreads = null; }
     }
 
     threadListEl.addEventListener('click', (event) => {
@@ -878,6 +972,10 @@ export function renderChatPage(env = {}) {
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); run(sendMessage); }
     });
 
+    window.addEventListener('fd:session-changed', syncSession);
+    window.addEventListener('storage', syncSession);
+    window.addEventListener('focus', syncSession);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncSession(); });
     if (token()) {
       signedOutEl.hidden = true;
       layoutEl.hidden = false;
@@ -888,6 +986,7 @@ export function renderChatPage(env = {}) {
     }
     let pollCount = 0;
     setInterval(() => {
+      if (syncSession()) return;
       if (!pollingReady()) return;
       if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
       pollCount += 1;
