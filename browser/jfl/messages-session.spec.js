@@ -246,7 +246,7 @@ for (const mobile of [false, true]) {
       f.hold();
       await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-B'));
       if (action === 'report') await f.page.locator('[data-report-message]').click();
-      else if (mobile) await f.page.getByRole('button', { name: /^(Message a player|New player message)$/ }).click();
+      else if (mobile) await f.page.getByRole('button', { name: /^(Message a player|New player message)/ }).click();
       else await f.page.locator('[data-new-message]').click();
       await expect.poll(() => f.held.length).toBe(1);
       await expect(f.page.locator('[data-message-list]')).toBeEmpty();
