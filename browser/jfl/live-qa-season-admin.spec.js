@@ -141,8 +141,21 @@ test(`admin reads both persisted QA schedules, changes season, and cannot accide
 }
 
 test('anonymous public season list excludes the existing full-length QA fixtures', async ({ request }) => {
-  const response = await request.get('/api/seasons');
-  expect(response.ok()).toBe(true);
+  let response;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await request.get('/api/seasons');
+    if (response.status() !== 429) break;
+    const header = response.headers()['retry-after'];
+    const numeric = header?.trim() ? Number(header) : NaN;
+    const seconds = Number.isFinite(numeric) ? Math.ceil(numeric) : Math.ceil((Date.parse(header) - Date.now()) / 1000);
+    console.info('Anonymous season read HTTP429; qualified Retry-After=' + (Number.isFinite(seconds) && seconds > 0 && seconds <= 60 ? seconds : 'unqualified'));
+    expect(Number.isFinite(seconds) && seconds > 0 && seconds <= 60, 'Validated bounded Retry-After required; never guess').toBe(true);
+    expect(attempt, 'Anonymous public read recovery exhausted').toBeLessThan(2);
+    await new Promise(resolve => setTimeout(resolve, (seconds + 1) * 1000));
+  }
+  console.info('Anonymous season read final HTTP' + response.status());
+  expect(response.status(), 'Public season read must succeed without bypass').toBe(200);
+  expect(response.headers()['content-type']).toMatch(/application\/json/i);
   const body = await response.json();
   expect(Array.isArray(body.seasons)).toBe(true);
   const publicIds = new Set(body.seasons.map(season => season.id));
