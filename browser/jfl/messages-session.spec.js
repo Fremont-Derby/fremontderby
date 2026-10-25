@@ -57,7 +57,9 @@ async function fixture(browser, request, mobile, holdInitial = false) {
       return respond(body);
     }
     if (path === '/api/me/direct-message-inbox') return respond({ conversations: [] });
-    if (path === '/api/me/direct-message-candidates') return respond({ candidates: [] });
+    if (path === '/api/me/direct-message-candidates') return respond({ candidates: [{
+      season_id: 'synthetic-season', player_id: 'synthetic-peer', display_name: actor + ' synthetic candidate', season_name: 'Synthetic',
+    }] });
     if (path.endsWith('chat-threads')) return respond({ threads: [] });
     if (path === '/api/admin/chat-reports') return respond({ error: 'League admin access required' }, 403);
     if (path.endsWith('/messages')) return respond({ messages: [{ message_id: actor + '-synthetic', body: actor + ' private synthetic history',
@@ -99,6 +101,7 @@ for (const mobile of [false, true]) {
         await expect(f.page.locator('[data-message-input]')).toBeDisabled();
         await expect(f.page.locator('[data-report-dialog]')).not.toHaveAttribute('open', '');
         await expect(f.page.locator('[data-report-details]')).toHaveValue('');
+        await expect(f.page.locator('[data-candidate-select]')).toBeEmpty();
         await expect.poll(() => f.held.length).toBe(1);
         await f.held[0].respond(f.held[0].body);
         await expect(f.history('B')).toBeVisible();
@@ -227,6 +230,23 @@ for (const mobile of [false, true]) {
       await expect(f.page.locator('[data-status]')).toHaveText('Messages ready');
       await expect(f.page.locator('[data-message-input]')).toHaveValue('Same identity draft survives refresh');
       expect(f.refreshes).toHaveLength(1); expect(f.sends).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+
+  for (const action of ['report', 'new message']) test(`Messages ${action} observes an eventless session change before opening private controls (${device})`, async ({ browser, request }) => {
+    const f = await fixture(browser, request, mobile);
+    try {
+      f.hold();
+      await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-B'));
+      if (action === 'report') await f.page.locator('[data-report-message]').click();
+      else await f.page.locator(mobile ? '[data-mobile-new]' : '[data-new-message]').click();
+      await expect.poll(() => f.held.length).toBe(1);
+      await expect(f.page.locator('[data-message-list]')).toBeEmpty();
+      await expect(f.page.locator('[data-candidate-select]')).toBeEmpty();
+      await expect(f.page.locator('[data-report-dialog]')).not.toHaveAttribute('open', '');
+      await f.held[0].respond(f.held[0].body);
+      await expect(f.history('B')).toBeVisible();
+      expect(f.sends).toHaveLength(0);
     } finally { await f.context.close(); }
   });
 

@@ -499,6 +499,7 @@ export function renderChatPage(env = {}) {
       }
     }
     function openNewMessage() {
+      if (syncSession()) return;
       if (!candidates.length) {
         setStatus('No other registered players are available to message yet');
         return;
@@ -506,6 +507,7 @@ export function renderChatPage(env = {}) {
       newDirectFormEl.hidden = !newDirectFormEl.hidden;
     }
     function openMobileNewMessage() {
+      if (syncSession()) return;
       if (!candidates.length) {
         setStatus('No other registered players are available to message yet');
         return;
@@ -890,6 +892,7 @@ export function renderChatPage(env = {}) {
       setStatus(unblocking ? 'Player unblocked' : 'Player blocked', 'ok');
     }
     function openReport(messageId) {
+      if (syncSession()) return;
       reportingMessageId = messageId;
       reportReasonEl.value = 'harassment';
       reportDetailsEl.value = '';
