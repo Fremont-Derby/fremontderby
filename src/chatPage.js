@@ -244,6 +244,21 @@ export function renderChatPage(env = {}) {
     let canLoadOlder = false;
     let reachedConversationStart = false;
     let reportingMessageId = '';
+    let retryAt = 0, pausePolls = false, rateGeneration = 0;
+    function retrySeconds(value) {
+      if (!value || !value.trim()) return 0;
+      const numeric = Number(value);
+      const seconds = Number.isFinite(numeric) ? Math.ceil(numeric) : Math.ceil((Date.parse(value) - Date.now()) / 1000);
+      return Number.isFinite(seconds) && seconds > 0 && seconds <= 86400 ? seconds : 0;
+    }
+    function busyError() {
+      const seconds = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+      return new Error('Messages are temporarily busy. ' + (seconds ? 'Wait ' + seconds + ' seconds before trying again.' : 'Wait before trying again.'));
+    }
+    function pollingReady() {
+      if (retryAt && Date.now() >= retryAt) { retryAt = 0; pausePolls = false; }
+      return !pausePolls;
+    }
 
     function token() { return sessionStorage.getItem('fd.accessToken') || ''; }
     function refreshToken() { return sessionStorage.getItem('fd.refreshToken') || ''; }
@@ -252,6 +267,7 @@ export function renderChatPage(env = {}) {
       statusEl.dataset.tone = tone || 'muted';
     }
     function clearSession() {
+      retryAt = 0; pausePolls = false; rateGeneration += 1;
       sessionStorage.removeItem('fd.accessToken');
       sessionStorage.removeItem('fd.refreshToken');
     }
@@ -315,21 +331,32 @@ export function renderChatPage(env = {}) {
         error.code = 'session_required';
         throw error;
       }
+      if (retryAt > Date.now()) throw busyError();
+      const generation = rateGeneration;
       const response = await fetch(path, {
         ...options,
         headers: { authorization: 'Bearer ' + accessToken, 'content-type': 'application/json' },
       });
+      if (accessToken !== token()) {
+        const error = new Error('Session changed'); error.code = 'stale_session'; throw error;
+      }
       if (response.status === 401 && retry) {
         if (await refreshSession()) return api(path, options, false);
         const error = new Error('Your sign-in expired');
         error.code = 'session_expired';
         throw error;
       }
-      if (response.status === 429) throw new Error('Messages are temporarily busy. Wait before trying again.');
+      if (response.status === 429) {
+        const seconds = retrySeconds(response.headers.get('Retry-After'));
+        if (seconds) retryAt = Math.max(retryAt, Date.now() + seconds * 1000);
+        pausePolls = true; rateGeneration += 1;
+        throw busyError();
+      }
       if (response.status >= 500) throw new Error('Messages are temporarily unavailable. Try again shortly.');
       const body = await parseJson(response);
       if (body.invalidResponse) throw new Error('Messages are temporarily unavailable. Try again shortly.');
       if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Request failed');
+      if ((options.method || 'GET') === 'GET' && generation === rateGeneration) { retryAt = 0; pausePolls = false; }
       return body;
     }
     function formatTime(value) {
@@ -805,6 +832,7 @@ export function renderChatPage(env = {}) {
       return message || 'We could not load your conversations.';
     }
     function handleError(error, { loadFailure = false } = {}) {
+      if (error?.code === 'stale_session') return;
       if (error?.code === 'session_expired' || error?.code === 'session_required') {
         showSignedOut(error.code === 'session_expired');
         return;
@@ -860,6 +888,7 @@ export function renderChatPage(env = {}) {
     }
     let pollCount = 0;
     setInterval(() => {
+      if (!pollingReady()) return;
       if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
       pollCount += 1;
       if (!document.hidden && token() && pollCount % 4 === 0) run(refreshThreadMetadata);
