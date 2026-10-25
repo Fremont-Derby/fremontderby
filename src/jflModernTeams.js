@@ -319,7 +319,21 @@ function teamsClientScript() {
     const actions=node('div','fd-team-card__actions'); for(const action of (${visibleTeamActions.toString()})(team)){ if(action==='message'){const a=node('a','','Team messages');a.href='/messages?team='+encodeURIComponent(team.teamId);actions.append(a);} else if(action==='cancel')actions.append(button('Cancel request','cancel',team.pendingRequestId,true)); else actions.append(button('Request to join','join',team.teamId)); } article.append(actions); return article;
   }
   function renderCards(){ syncFilters(); mineList.replaceChildren(); directoryList.replaceChildren(); const query=clean(searchInput.value).toLowerCase(); const visible=cards.filter((t)=>{if(query&&!clean(t.teamName+' '+t.seasonName).toLowerCase().includes(query))return false;if(filter==='mine')return t.isMine;if(filter==='open')return t.relationship==='none';return true;}); const mine=visible.filter((t)=>t.isMine), others=visible.filter((t)=>!t.isMine); mine.forEach((t)=>mineList.append(renderCard(t))); others.forEach((t)=>directoryList.append(renderCard(t))); mineSection.hidden=!mine.length;directorySection.hidden=!others.length;directoryEmpty.hidden=!!visible.length; }
-  async function loadLeagueTeams(seasons, read = api){ const active=(seasons||[]).filter((s)=>['active','playoffs'].includes(s.status)); const chunks=await Promise.all(active.map(async(s)=>{try{const body=await read('/api/seasons/'+encodeURIComponent(s.id)+'/team-standings');return(body.standings||[]).map((row)=>({teamId:row.team_id,teamName:row.team_name,seasonId:s.id,seasonName:s.name,captainName:row.captain_display_name||'',rosterCount:Number.isFinite(Number(row.roster_count))?Number(row.roster_count):null,roster:Array.isArray(row.roster)?row.roster:[],relationship:'directory'}));}catch{return[];}}));return chunks.flat(); }
+  async function loadLeagueTeams(seasons, read = api) {
+    const active = (seasons || []).filter(s => ['active', 'playoffs'].includes(s.status));
+    const chunks = await Promise.all(active.map(async s => {
+      const body = await read('/api/seasons/' + encodeURIComponent(s.id) + '/team-standings');
+      if (!Array.isArray(body.standings) || body.standings.some(row => !row || typeof row !== 'object'
+        || typeof row.team_id !== 'string' || !row.team_id.trim()
+        || typeof row.team_name !== 'string' || !row.team_name.trim())) {
+        throw new Error('Could not load the league team directory. Reload teams to try again.');
+      }
+      return body.standings.map(row => ({ teamId: row.team_id, teamName: row.team_name, seasonId: s.id, seasonName: s.name,
+        captainName: row.captain_display_name || '', rosterCount:Number.isFinite(Number(row.roster_count)) ? Number(row.roster_count) : null,
+        roster:Array.isArray(row.roster) ? row.roster : [], relationship: 'directory' }));
+    }));
+    return chunks.flat();
+  }
   function renderInbox(){ invitationsEl.replaceChildren(); const items=management.invitations||[]; for(const item of items){const row=node('div','fd-team-card__work-row');row.append(node('strong','',item.teamName||'Team'));const actions=node('div','fd-team-card__work-actions');actions.append(button('Accept','accept-invite',item.invitationId),button('Decline','decline-invite',item.invitationId,true));row.append(actions);invitationsEl.append(row);} inboxEl.hidden=!items.length; }
   function renderFormation(seasons){ formationItems.replaceChildren(); const open=(${availableTeamApplicationSeasons.toString()})(seasons,registrations); seasonSelect.replaceChildren(); if(open.length)open.forEach((s)=>seasonSelect.append(new Option(s.name+' · New team application',s.id))); else seasonSelect.append(new Option('No registration season is open','')); seasonSelect.disabled=!open.length;teamNameInput.disabled=!open.length;formationForm.querySelector('button').disabled=!open.length; for(const reg of registrations){for(const item of reg.applications||[]){const p=node('p','', (item.proposedTeamName||'New team')+' · '+clean(item.status||'submitted'));formationItems.append(p);}}
   }
