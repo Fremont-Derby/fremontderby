@@ -183,27 +183,33 @@ async function actorRequest(page, path, method = 'GET', body) {
 }
 
 async function openQualifiedMessages(page, href, conversation = false) {
-  const rejected = [];
+  const rejected = [], failures = [];
   const corePaths = new Set(['/messages', '/api/me/chat-threads', '/api/me/direct-message-inbox',
     '/api/me/league-chat-threads', '/api/me/direct-message-candidates']);
   const observe = response => {
     const path = new URL(response.url()).pathname;
-    if (response.request().method() === 'GET' && response.status() >= 400
-      && (corePaths.has(path) || path.startsWith('/api/direct-conversations/') && path.endsWith('/messages'))) rejected.push(response);
+    if (response.status() < 400) return;
+    const method = response.request().method();
+    if (path === '/messages' || path.startsWith('/api/')) failures.push(response);
+    const read = method === 'GET' && (corePaths.has(path) || path.startsWith('/api/direct-conversations/') && path.endsWith('/messages'));
+    const readMarker = method === 'POST' && path.startsWith('/api/direct-conversations/') && path.endsWith('/messages/read');
+    if (read || readMarker) rejected.push(response);
   };
   page.on('response', observe);
   const ready = async () => {
     const control = page.locator(conversation ? '[data-message-input]' : '[data-new-message]');
-    return await control.count() > 0 && await control.isEnabled() && await page.locator('[data-chat-layout]').isVisible()
+    const status = await page.locator('[data-status]').textContent().catch(() => '');
+    return /^(Messages ready|Messages loaded|No conversations yet)$/.test(status || '') && await control.count() > 0 && await control.isEnabled() && await page.locator('[data-chat-layout]').isVisible()
       && (conversation || await page.locator('[data-candidate-select] option[value=\"' + directFixture.season + '|' + directFixture.recipient + '\"]').count() === 1);
   };
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
-      rejected.length = 0;
+      rejected.length = 0; failures.length = 0;
       await page.goto(href);
       await expect.poll(async () => await ready() || rejected.length > 0
         || await page.locator('[data-page-state]').isVisible(), { timeout: 15_000 }).toBe(true);
       if (await ready()) return;
+      if (!rejected.length) console.info('Messages failed-read classifications: ' + JSON.stringify(failures.map(response => ({ method: response.request().method(), path: new URL(response.url()).pathname, status: response.status(), hasRetryAfter: Boolean(response.headers()['retry-after']) }))));
       expect(rejected.length, 'A failed Messages load needs captured endpoint/status evidence before recovery').toBeGreaterThan(0);
       let wait = 0;
       for (const response of rejected) {
@@ -211,9 +217,9 @@ async function openQualifiedMessages(page, href, conversation = false) {
         const header = response.headers()['retry-after'];
         const numeric = header?.trim() ? Number(header) : NaN;
         const seconds = Number.isFinite(numeric) ? Math.ceil(numeric) : Math.ceil((Date.parse(header) - Date.now()) / 1000);
-        console.info('Messages qualification GET ' + path + ': HTTP ' + response.status()
+        console.info('Messages qualification ' + response.request().method() + ' ' + path + ': HTTP ' + response.status()
           + '; bounded Retry-After=' + (Number.isFinite(seconds) && seconds > 0 && seconds <= 60 ? seconds : 'unqualified'));
-        expect(response.status(), 'Only an observed GET429 permits explicit read recovery').toBe(429);
+        expect(response.status(), 'Only observed429 on reads/read-markers permits explicit same-view recovery').toBe(429);
         expect(Number.isFinite(seconds) && seconds > 0 && seconds <= 60, 'Validated bounded Retry-After required; do not guess').toBe(true);
         wait = Math.max(wait, seconds);
       }
