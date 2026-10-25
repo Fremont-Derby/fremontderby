@@ -514,6 +514,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       await link.click();
       await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
       await openQualifiedMessages(sender.page, href, true);
+      await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
       await expect(sender.page.locator('[data-message-input]')).toBeEnabled();
       await sender.page.locator('[data-message-input]').fill(marker);
       const sentResponse = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/teams/' + teamFixture.id + '/messages'
