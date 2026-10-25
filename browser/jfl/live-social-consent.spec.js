@@ -514,8 +514,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
     const actors = [];
     const markerId = crypto.randomUUID();
     const marker = 'JFL synthetic team delivery acceptance ' + markerId;
-    let sendAttempted = false, cleanupVerified = false;
-    let allowedSends = 0, deniedSends = 0;
+    let sendAttempted = false, cleanupVerified = false, primaryError;
+    let allowedSends = 0, authorizedSends = 1, deniedSends = 0;
     const href = '/messages?team=' + teamFixture.id;
     try {
       for (const [label, key, player] of [
@@ -524,7 +524,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       ]) {
         const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
         // Pass real requests/responses unchanged, but block any accidental send
-        // outside this exact private QA team/marker or any duplicate/replay.
+        // outside this exact private QA team/marker or without a newly
+        // qualified explicit action after a confirmed rejection.
         await context.route('**/api/**', async route => {
           const request = route.request();
           const path = new URL(request.url()).pathname;
@@ -532,7 +533,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
             let body;
             try { body = request.postDataJSON(); } catch { /* Fail closed below. */ }
             if (player !== directFixture.sender || path !== '/api/teams/' + teamFixture.id + '/messages'
-              || body?.body !== marker || allowedSends !== 0) {
+              || body?.body !== marker || allowedSends >= authorizedSends) {
               deniedSends++;
               await route.abort();
               return;
@@ -587,15 +588,38 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
       await expect(sender.page.locator('[data-message-input]')).toBeEnabled();
       await sender.page.locator('[data-message-input]').fill(marker);
-      const sentResponse = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/teams/' + teamFixture.id + '/messages'
-        && response.request().method() === 'POST');
       console.info('Synthetic team delivery attempt marker=' + markerId + '; team=' + teamFixture.id);
-      sendAttempted = true;
-      await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
-      const sent = await sentResponse;
-      expect(sent.status(), 'Team send must be confirmed without write replay').toBe(201);
+      const path = '/api/teams/' + teamFixture.id + '/messages';
+      const outcome = await sendWithQualifiedRecovery({
+        send: async () => {
+          await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
+          await expect(sender.page.locator('[data-thread-select]')).toHaveValue('team:' + teamFixture.id);
+          await expect(sender.page.locator('[data-message-input]')).toHaveValue(marker);
+          const pending = sender.page.waitForResponse(response => new URL(response.url()).pathname === path
+            && response.request().method() === 'POST');
+          sendAttempted = true;
+          await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
+          const response = await pending;
+          return { status: response.status(), retryAfter: response.headers()['retry-after'], response };
+        },
+        wait: ms => sender.page.waitForTimeout(ms),
+        markerAbsent: async () => {
+          for (const actor of actors) {
+            const result = await actorRequest(actor.page, path + '?limit=50');
+            expect(result.status).toBe(200);
+            expect(Array.isArray(result.body.messages)).toBe(true);
+            if (result.body.messages.some(row => row.body === marker)) return false;
+          }
+          return true;
+        },
+        authorizeRetry: () => { authorizedSends++; },
+        onResponse: result => console.info('Synthetic team send classification: ' + JSON.stringify(result)),
+      });
+      const sent = outcome.response;
+      expect(sent.status(), 'Unknown Team send outcomes cannot be replayed').toBe(201);
       expect(Boolean((await sent.json()).message), 'Confirmed team message required').toBe(true);
-      expect(allowedSends).toBe(1);
+      expect(allowedSends).toBeGreaterThanOrEqual(1);
+      expect(allowedSends).toBeLessThanOrEqual(3);
       expect(deniedSends).toBe(0);
       for (let visit = 0; visit < 2; visit++) {
         await openQualifiedMessages(recipient.page, href, true);
@@ -604,8 +628,10 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       }
       expect(await recipient.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       console.info('Exact same-team synthetic recipient received marker and refresh confirmed persistence.');
+    } catch (error) {
+      primaryError = error;
     } finally {
-      const errors = [];
+      const errors = primaryError ? [primaryError] : [];
       if (sendAttempted && actors.length === 2) {
         try {
           await removeSyntheticMarker({ sender: actors[0], recipient: actors[1], actors, marker, messageType: 'team', threadId: teamFixture.id });
