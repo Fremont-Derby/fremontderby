@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { renderJflNotificationsPage } from '../../src/jflNotificationsPage.js';
 
 test.setTimeout(60_000);
-const source = process.env.PLAYWRIGHT_NOTICES_SOURCE === '1';
+const source = ['1', 'bundled'].includes(process.env.PLAYWRIGHT_NOTICES_SOURCE);
 const origin = source ? 'https://session.notices.test' : process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com';
 
 async function open(browser, request, mobile, holdInitial = false) {
@@ -53,7 +53,14 @@ async function open(browser, request, mobile, holdInitial = false) {
     } });
   });
   const page = await context.newPage();
-  if (source) await page.route(origin + '/notifications', route => route.fulfill({ contentType: 'text/html', body: renderJflNotificationsPage() }));
+  if (source) await page.route(origin + '/notifications', async route => {
+    let html;
+    if (process.env.PLAYWRIGHT_NOTICES_SOURCE === 'bundled') {
+      const { default: worker } = await import('../../dist/routerEntry.js');
+      html = await (await worker.fetch(new Request(route.request().url()), { ENVIRONMENT: 'jfl' }, {})).text();
+    } else html = renderJflNotificationsPage();
+    await route.fulfill({ contentType: 'text/html', body: html });
+  });
   await page.goto('/notifications');
   const change = (actor, event = 'fd:session-changed') => page.evaluate(({ actor, event }) => {
     if (actor) sessionStorage.setItem('fd.accessToken', 'synthetic-' + actor);
