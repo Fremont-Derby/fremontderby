@@ -10,7 +10,7 @@ const teamB = '22222222-2222-4222-8222-222222222222';
 const message = (body, index = 0) => ({ message_id: `synthetic-${body}-${index}`,
   body, author_display_name: 'Synthetic teammate', created_at: '2026-10-01T12:00:00Z', is_own: true });
 
-async function openMessages(browser, request, mobile, failure = null) {
+async function openMessages(browser, request, mobile, failure = null, clock = false) {
   if (!sourceMode) {
     expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
     const health = await request.get('/health/environment');
@@ -26,6 +26,8 @@ async function openMessages(browser, request, mobile, failure = null) {
   // mutation is sent to a server; only the deployed page HTML is read live.
   await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'));
   const page = await context.newPage();
+  if (clock) await page.clock.install({ time: new Date('2026-10-25T08:00:00Z') });
+  const reads = [];
   const held = [];
   let failLoad = failure;
   let holdNext = false;
@@ -35,6 +37,7 @@ async function openMessages(browser, request, mobile, failure = null) {
   await context.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
+    if (route.request().method() === 'GET') reads.push(path);
     let body = {};
     const respond = data => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
     if (route.request().method() !== 'GET') {
@@ -87,7 +90,7 @@ async function openMessages(browser, request, mobile, failure = null) {
     const root = mobile ? '.fd-mobile-inbox' : '[data-thread-list]';
     await page.locator(`${root} [data-thread-key="team:${id}"]`).click();
   };
-  return { context, page, held, writes, sends, select, hold: () => { holdNext = true; }, paginate: () => { older = true; } };
+  return { context, page, held, writes, sends, reads, readCount: () => reads.filter(path => ['/api/me/chat-threads', '/api/me/direct-message-inbox', '/api/me/league-chat-threads', '/api/me/matchup-chat-threads', '/api/me/direct-message-candidates'].includes(path) || path.endsWith('/messages')).length, select, hold: () => { holdNext = true; }, paginate: () => { older = true; } };
 }
 
 async function settleResponse(page, response) {
@@ -256,6 +259,107 @@ for (const mobile of [false, true]) {
       await expect(f.page.locator('[data-chat-layout]')).toBeHidden();
       await expect(f.page.locator('[data-signed-out] a[href="/profile"]')).toBeVisible();
       await expect(f.page.locator('body')).not.toContainText('PRIVATE_AUTH_DETAIL');
+      expect(f.sends).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+}
+
+for (const mobile of [false, true]) for (const format of ['seconds', 'date']) {
+  test(`Retry-After suppresses premature polling ${format} (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+    const f = await openMessages(browser, request, mobile, null, true);
+    try {
+      let failed = false;
+      await f.page.route('**/api/teams/**', async route => {
+        const path = new URL(route.request().url()).pathname;
+        if (!failed && route.request().method() === 'GET' && path.includes(teamA) && path.endsWith('/messages')) {
+          failed = true;
+          f.reads.push(path);
+          const header = format === 'seconds' ? '10' : await f.page.evaluate(() => new Date(Date.now() + 10000).toUTCString());
+          return route.fulfill({ status: 429, headers: { 'Retry-After': header }, json: {} });
+        }
+        return route.fallback();
+      });
+      await f.page.clock.runFor(4000);
+      await expect.poll(() => failed).toBe(true);
+      await expect(f.page.locator('[data-status]')).toContainText('temporarily busy');
+      const before = f.readCount();
+      await f.page.clock.runFor(8000);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(f.readCount(), 'No more automatic reads before observed10s deadline').toBe(before);
+      await f.page.clock.runFor(5000);
+      await expect.poll(() => f.readCount()).toBeGreaterThan(before);
+      expect(f.sends).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+}
+
+for (const mobile of [false, true]) {
+  for (const format of ['seconds', 'date']) {
+    test(`explicit load recovery respects Retry-After ${format} (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+      const date = 'Sun, 25 Oct 2026 08:00:10 GMT';
+      const f = await openMessages(browser, request, mobile, { status: 429, headers: { 'Retry-After': format === 'seconds' ? '10' : date }, json: {} }, true);
+      try {
+        await expect(f.page.locator('[data-status]')).toContainText('Wait 10 seconds');
+        const before = f.readCount();
+        await f.page.locator('[data-page-state]').getByRole('button', { name: 'Try again', exact: true }).click();
+        await expect(f.page.locator('[data-page-state]')).toBeVisible();
+        expect(f.readCount()).toBe(before);
+        await f.page.clock.runFor(11000);
+        await f.page.locator('[data-page-state]').getByRole('button', { name: 'Try again', exact: true }).click();
+        await expect(f.page.locator('[data-message-list]')).toContainText('A current');
+        expect(f.sends).toHaveLength(0);
+      } finally { await f.context.close(); }
+    });
+  }
+  test(`send cooldown retains draft and requires new explicit send (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+    const f = await openMessages(browser, request, mobile, null, true);
+    try {
+      const input = f.page.locator('[data-message-input]');
+      await input.fill('Synthetic cooldown draft'); await input.press('Enter');
+      await expect.poll(() => f.sends.length).toBe(1);
+      await f.sends[0].route.fulfill({ status: 429, headers: { 'Retry-After': '10' }, json: {} });
+      await expect(f.page.locator('[data-status]')).toContainText('Wait 10 seconds');
+      await input.press('Enter');
+      await expect(input).toHaveValue('Synthetic cooldown draft');
+      expect(f.sends).toHaveLength(1);
+      const reads = f.readCount();
+      await f.page.clock.runFor(9000); await new Promise(resolve => setTimeout(resolve, 100));
+      expect(f.readCount()).toBe(reads); expect(f.sends).toHaveLength(1);
+      await f.page.clock.runFor(2000);
+      expect(f.sends).toHaveLength(1);
+      await input.press('Enter'); await expect.poll(() => f.sends.length).toBe(2);
+      expect(f.sends[1].body.clientMessageId).not.toBe(f.sends[0].body.clientMessageId);
+      await f.sends[1].route.fulfill({ status: 200, json: { message: {} } });
+      await expect(f.page.locator('[data-status]')).toHaveText('Sent');
+      await expect(input).toHaveValue('');
+    } finally { await f.context.close(); }
+  });
+  for (const header of [null, 'not-a-date', '99999999999']) test(`unqualified Retry-After ${header} pauses polling until explicit read (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+    const f = await openMessages(browser, request, mobile, { status: 429, headers: header === null ? {} : { 'Retry-After': header }, json: {} }, true);
+    try {
+      const reads = f.readCount();
+      await f.page.clock.runFor(60000); await new Promise(resolve => setTimeout(resolve, 100));
+      expect(f.readCount()).toBe(reads);
+      await f.page.locator('[data-page-state]').getByRole('button', { name: 'Try again', exact: true }).click();
+      await expect(f.page.locator('[data-message-list]')).toContainText('A current');
+      expect(f.sends).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+}
+
+for (const mobile of [false, true]) {
+  test(`old-session429 cannot pause a new session (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+    const f = await openMessages(browser, request, mobile, null, true);
+    try {
+      f.hold(); await f.page.clock.runFor(4000);
+      await expect.poll(() => f.held.length).toBe(1);
+      await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-new-session'));
+      await f.held[0].route.fulfill({ status: 429, headers: { 'Retry-After': '10' }, json: {} });
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await expect(f.page.locator('[data-status]')).not.toContainText('temporarily busy');
+      const reads = f.readCount();
+      await f.page.clock.runFor(4000); await new Promise(resolve => setTimeout(resolve, 100));
+      await expect.poll(() => f.readCount()).toBeGreaterThan(reads);
       expect(f.sends).toHaveLength(0);
     } finally { await f.context.close(); }
   });
