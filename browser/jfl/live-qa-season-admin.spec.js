@@ -77,6 +77,8 @@ test(`admin reads both persisted QA schedules, changes season, and cannot accide
     if (path !== '/api/admin/seasons' && path !== `/api/admin/seasons/${selectedSeason}/setup`
       && path !== `/api/admin/seasons/${selectedSeason}/team-registration`) return;
     const seconds = Number(response.headers()['retry-after']);
+    console.info(JSON.stringify({ method: 'GET', path: path.replace(selectedSeason, ':selected-season'),
+      status: response.status(), retryAfter: response.headers()['retry-after'] || null }));
     throttles.push({ status: response.status(), seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : 15 });
   });
   try {
