@@ -193,8 +193,8 @@ async function openQualifiedMessages(page, href, conversation = false) {
     if (response.status() < 400) return;
     const method = response.request().method();
     if (path === '/messages' || path.startsWith('/api/')) failures.push(response);
-    const read = method === 'GET' && (corePaths.has(path) || (path.startsWith('/api/direct-conversations/') || path.startsWith('/api/teams/')) && path.endsWith('/messages'));
-    const readMarker = method === 'POST' && (path.startsWith('/api/direct-conversations/') || path.startsWith('/api/teams/')) && path.endsWith('/messages/read');
+    const read = method === 'GET' && (corePaths.has(path) || (path.startsWith('/api/direct-conversations/') || path.startsWith('/api/teams/') || path.startsWith('/api/seasons/')) && path.endsWith('/messages'));
+    const readMarker = method === 'POST' && (path.startsWith('/api/direct-conversations/') || path.startsWith('/api/teams/') || path.startsWith('/api/seasons/')) && path.endsWith('/messages/read');
     if (read || readMarker) rejected.push(response);
   };
   page.on('response', observe);
@@ -264,11 +264,11 @@ async function openQualifiedTeamLink(page, href) {
 }
 
 async function removeSyntheticMarker({ sender, recipient, actors, marker, messageType, threadId }) {
-  expect(['direct', 'team']).toContain(messageType);
-  const messagesPath = (messageType === 'direct' ? '/api/direct-conversations/' : '/api/teams/') + threadId + '/messages?limit=50';
-  const inboxPath = messageType === 'direct' ? '/api/me/direct-message-inbox' : '/api/me/chat-threads';
+  expect(['direct', 'team', 'league']).toContain(messageType);
+  const messagesPath = (messageType === 'direct' ? '/api/direct-conversations/' : messageType === 'league' ? '/api/seasons/' : '/api/teams/') + threadId + '/messages?limit=50';
+  const inboxPath = messageType === 'direct' ? '/api/me/direct-message-inbox' : messageType === 'league' ? '/api/me/league-chat-threads' : '/api/me/chat-threads';
   const rowsKey = messageType === 'direct' ? 'conversations' : 'threads';
-  const idKey = messageType === 'direct' ? 'conversation_id' : 'team_id';
+  const idKey = messageType === 'direct' ? 'conversation_id' : messageType === 'league' ? 'season_id' : 'team_id';
   const messages = await actorRequest(recipient.page, messagesPath);
   expect(messages.status).toBe(200);
   const exact = messages.body.messages?.filter(message => message.body === marker) || [];
@@ -626,6 +626,114 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       if (sendAttempted && !cleanupVerified) console.info('Exact synthetic team marker cleanup remains unverified; no other message was touched.');
       if (deniedSends) errors.push(new Error('An out-of-scope or duplicate message send was blocked before network delivery'));
       if (errors.length) throw new AggregateError(errors, 'Synthetic team delivery cleanup or consent restoration failed');
+    }
+  });
+}
+
+for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['phone', { width: 320, height: 844 }]]) {
+  test(`live synthetic General message persists and exact marker is removed (${device})`, async ({ browser, request }) => {
+    test.setTimeout(600_000);
+    // A trusted reset (or explicitly qualified local run) must supply this
+    // complete audience receipt. Missing receipt fails before any preference.
+    expect(process.env.PLAYWRIGHT_GENERAL_AUDIENCE_DIGEST).toBe('81bb1f6cccaaf5125ec546abaa5b4065');
+    const sha = process.env.PLAYWRIGHT_EXPECTED_SHA || '';
+    expect(sha).toMatch(/^[a-f0-9]{40}$/);
+    expect(process.env.PLAYWRIGHT_FIXTURE_DATE).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(await (await request.get('/health/environment')).json()).toMatchObject({
+      ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: sha,
+    });
+    const actors = [], marker = 'JFL synthetic General delivery acceptance ' + crypto.randomUUID();
+    let sendAttempted = false, cleanupVerified = false, allowedSends = 0, deniedSends = 0;
+    const generalChannel = channels.find(channel => channel.key === 'general');
+    const path = '/api/seasons/' + directFixture.season + '/messages';
+    async function selectGeneral(page) {
+      await openQualifiedMessages(page, '/messages', true);
+      const choice = page.locator('[data-thread-key="league:' + directFixture.season + '"]:visible').first();
+      await expect(choice, 'Canonical General entry must expose the exact qualified private QA season').toBeVisible();
+      await choice.click();
+      await expect(page).toHaveURL(new RegExp('/messages\\?league=' + directFixture.season + '$'));
+      await expect(page.locator('[data-chat-season]')).toHaveText('QA Persona Lab');
+      await expect(page.locator('[data-message-input]')).toBeEnabled();
+    }
+    try {
+      for (const [label, key, player] of [
+        ['Admin Captain', 'admin-captain', directFixture.sender],
+        ['Regular Captain', 'regular-captain', directFixture.recipient],
+      ]) {
+        const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
+        await context.route('**/api/**', async route => {
+          const req = route.request(), pathname = new URL(req.url()).pathname;
+          if (req.method() === 'POST' && pathname.endsWith('/messages')) {
+            let body;
+            try { body = req.postDataJSON(); } catch { /* Reject below. */ }
+            if (player !== directFixture.sender || pathname !== path || body?.body !== marker || allowedSends !== 0) {
+              deniedSends++; await route.abort(); return;
+            }
+            allowedSends++;
+          }
+          await route.continue();
+        });
+        const page = await context.newPage(); page.setDefaultTimeout(15_000);
+        const actor = { context, page, label, player }; actors.push(actor);
+        readThrottles.set(page, new Map());
+        page.on('response', response => {
+          const pathname = new URL(response.url()).pathname;
+          if (response.request().method() !== 'GET' || !channels.some(channel => channel.path === pathname)) return;
+          if (response.status() >= 400) readThrottles.get(page).set(pathname, response);
+          else readThrottles.get(page).delete(pathname);
+        });
+        await assumePersona(page, label);
+        const identity = await actorRequest(page, '/api/test-persona');
+        expect(identity.status).toBe(200);
+        expect(identity.body.environment === 'jfl' && identity.body.current?.key === key).toBe(true);
+        const profile = await actorRequest(page, '/api/me/profile');
+        expect(profile.status).toBe(200); expect(profile.body.profile?.id).toBe(player);
+        actor.original = await snapshot(page);
+        console.info('Synthetic General baseline ' + key + ': ' + JSON.stringify(actor.original));
+      }
+      for (const actor of actors) {
+        await save(actor.page, generalChannel, true, actor.label);
+        expect(await snapshot(actor.page)).toEqual({ ...actor.original, general: true });
+      }
+      const [sender, recipient] = actors;
+      // No synthetic route, hidden-option manipulation or substitute season.
+      await selectGeneral(sender.page);
+      await selectGeneral(recipient.page);
+      await sender.page.locator('[data-message-input]').fill(marker);
+      const response = sender.page.waitForResponse(result => new URL(result.url()).pathname === path && result.request().method() === 'POST');
+      sendAttempted = true;
+      await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
+      const sent = await response;
+      expect(sent.status(), 'General send cannot be replayed').toBe(201);
+      expect(Boolean((await sent.json()).message)).toBe(true);
+      expect(allowedSends).toBe(1); expect(deniedSends).toBe(0);
+      for (let visit = 0; visit < 2; visit++) {
+        await selectGeneral(recipient.page);
+        await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
+      }
+      expect(await recipient.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally {
+      const errors = [];
+      if (sendAttempted && actors.length === 2) {
+        try {
+          await removeSyntheticMarker({ sender: actors[0], recipient: actors[1], actors, marker, messageType: 'league', threadId: directFixture.season });
+          cleanupVerified = true;
+        } catch (error) { errors.push(error); }
+      }
+      for (const actor of actors) {
+        try {
+          if (actor.original) {
+            await assumePersona(actor.page, actor.label);
+            await save(actor.page, generalChannel, actor.original.general, actor.label);
+            expect(await snapshot(actor.page)).toEqual(actor.original);
+            console.info('Synthetic General actor original consent values restored and verified.');
+          }
+        } catch (error) { errors.push(error); }
+        finally { await actor.context.close(); }
+      }
+      if (sendAttempted && !cleanupVerified) console.info('Exact synthetic General marker cleanup remains unverified.');
+      if (deniedSends) errors.push(new Error('An out-of-scope or duplicate General send was blocked'));
+      if (errors.length) throw new AggregateError(errors, 'Synthetic General cleanup or restoration failed');
     }
   });
 }
