@@ -479,6 +479,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         && teams[0].teamName === teamFixture.name, 'Exact isolated QA team/season contract required').toBe(true);
       expect(teams[0].roster?.map(row => row.playerId).sort(), 'Only the three fixed synthetic players may receive this team marker').toEqual(teamFixture.roster);
       expect(teams[0].roster.find(row => row.playerId === directFixture.sender)?.role).toBe('captain');
+      const fixtureRound = teams[0].lineupRounds?.find(row => row.roundId === '18580000-1200-4000-8000-000000000001');
+      expect(fixtureRound?.scheduledOn, 'Current fixture date must match the successful trusted reset').toBe(process.env.PLAYWRIGHT_FIXTURE_DATE);
       console.info('Exact QA team and complete synthetic-only three-player audience qualified.');
       const teamChannel = channels.find(channel => channel.key === 'team');
       for (const actor of actors) {
