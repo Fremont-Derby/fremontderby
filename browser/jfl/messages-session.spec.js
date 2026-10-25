@@ -67,6 +67,7 @@ async function fixture(browser, request, mobile, holdInitial = false) {
     throw new Error('Unexpected intercepted read ' + path);
   });
   const page = await context.newPage();
+  page.setDefaultTimeout(15_000);
   if (sourceMode) await page.route(origin + '/messages', async route => {
     const env = { ENVIRONMENT: 'jfl', SUPABASE_URL: 'https://refresh.messages.test', SUPABASE_PUBLISHABLE_KEY: 'synthetic-public-key' };
     let html;
@@ -245,7 +246,8 @@ for (const mobile of [false, true]) {
       f.hold();
       await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-B'));
       if (action === 'report') await f.page.locator('[data-report-message]').click();
-      else await f.page.locator(mobile ? '[data-mobile-new]' : '[data-new-message]').click();
+      else if (mobile) await f.page.getByRole('button', { name: /^(Message a player|New player message)$/ }).click();
+      else await f.page.locator('[data-new-message]').click();
       await expect.poll(() => f.held.length).toBe(1);
       await expect(f.page.locator('[data-message-list]')).toBeEmpty();
       await expect(f.page.locator('[data-candidate-select]')).toBeEmpty();
