@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { qualifiedSendWait, sendWithQualifiedRecovery } from '../browser/jfl/synthetic-send-recovery.js';
+import { qualifiedSendWait, qualifyConversationReadback, sendWithQualifiedRecovery } from '../browser/jfl/synthetic-send-recovery.js';
 
 test('known rejection waits and proves absence before authorizing one new UI action', async () => {
   const events = [];
@@ -55,4 +55,31 @@ test('three confirmed rejections exhaust the budget without an extra wait/action
   await assert.rejects(sendWithQualifiedRecovery({ send: async () => { sends++; return { status: 429, retryAfter: '1' }; },
     wait: async () => { waits++; }, markerAbsent: async () => true, authorizeRetry: () => { authorizations++; } }), /exhausted/);
   assert.deepEqual([sends, waits, authorizations], [3, 2, 2]);
+});
+
+const fixture = { season: '11111111-1111-4111-8111-111111111111', sender: '22222222-2222-4222-8222-222222222222', recipient: '33333333-3333-4333-8333-333333333333' };
+const conversation = '44444444-4444-4444-8444-444444444444';
+const outgoing = { conversation_id: conversation, season_id: fixture.season, other_player_id: fixture.recipient, can_send: true };
+const incoming = { ...outgoing, other_player_id: fixture.sender };
+test('both inboxes agree on the exact mutually writable conversation', () => {
+  assert.equal(qualifyConversationReadback([outgoing], [incoming], fixture), conversation);
+  assert.deepEqual(qualifyConversationReadback([], [], fixture), null);
+});
+for (const [name, sender, recipient] of [
+  ['asymmetric existence', [outgoing], []],
+  ['duplicate target', [outgoing, outgoing], [incoming]],
+  ['inconsistent conversation', [outgoing], [{ ...incoming, conversation_id: fixture.sender }]],
+  ['wrong season on one side', [outgoing], [{ ...incoming, season_id: fixture.recipient }]],
+  ['sender blocked', [{ ...outgoing, can_send: false }], [incoming]],
+  ['recipient blocked', [outgoing], [{ ...incoming, can_send: false }]],
+  ['missing rows', undefined, [incoming]],
+  ['invalid unrelated row', [outgoing, {}], [incoming]],
+  ['invalid conversation identity', [outgoing], [{ ...incoming, conversation_id: '-'.repeat(36) }]],
+  ['malformed permission', [outgoing], [{ ...incoming, can_send: 'true' }]],
+]) test(`conversation ${name} cannot qualify a new start`, () => {
+  assert.throws(() => qualifyConversationReadback(sender, recipient, fixture));
+});
+test('conversation readback refuses an unqualified or same-person fixture', () => {
+  assert.throws(() => qualifyConversationReadback([], [], { ...fixture, sender: fixture.recipient }));
+  assert.throws(() => qualifyConversationReadback([], [], { ...fixture, season: '' }));
 });
