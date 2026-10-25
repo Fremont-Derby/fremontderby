@@ -23,7 +23,8 @@ async function cooldown(page, response) {
   const header = response.headers()['retry-after'];
   const numeric = header?.trim() ? Number(header) : NaN;
   const parsed = Number.isFinite(numeric) ? numeric : Math.ceil((Date.parse(header) - Date.now()) / 1000);
-  const seconds = Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) : 15;
+  const seconds = Math.ceil(parsed);
+  expect(Number.isFinite(seconds) && seconds > 0, 'Validated Retry-After required; do not guess a recovery wait').toBe(true);
   expect(seconds, 'Excessive Retry-After must fail closed').toBeLessThanOrEqual(60);
   console.info(`Live consent HTTP429 recovery; cooldown=${seconds + 1}s.`);
   await page.waitForTimeout((seconds + 1) * 1000);
@@ -191,8 +192,8 @@ async function openQualifiedMessages(page, href, conversation = false) {
     if (response.status() < 400) return;
     const method = response.request().method();
     if (path === '/messages' || path.startsWith('/api/')) failures.push(response);
-    const read = method === 'GET' && (corePaths.has(path) || path.startsWith('/api/direct-conversations/') && path.endsWith('/messages'));
-    const readMarker = method === 'POST' && path.startsWith('/api/direct-conversations/') && path.endsWith('/messages/read');
+    const read = method === 'GET' && (corePaths.has(path) || (path.startsWith('/api/direct-conversations/') || path.startsWith('/api/teams/')) && path.endsWith('/messages'));
+    const readMarker = method === 'POST' && (path.startsWith('/api/direct-conversations/') || path.startsWith('/api/teams/')) && path.endsWith('/messages/read');
     if (read || readMarker) rejected.push(response);
   };
   page.on('response', observe);
@@ -228,6 +229,108 @@ async function openQualifiedMessages(page, href, conversation = false) {
       // Reopen the same authenticated read path. Never recreate a conversation or replay a send.
     }
   } finally { page.off('response', observe); }
+}
+
+async function openQualifiedTeamLink(page, href) {
+  const rejected = [];
+  const link = page.getByRole('link', { name: 'Team messages', exact: true }).and(page.locator('a[href="' + href + '"]'));
+  const core = new Set(['/teams', '/api/me/teams', '/api/me/team-membership-requests', '/api/seasons']);
+  const observe = response => {
+    const path = new URL(response.url()).pathname;
+    if (response.request().method() === 'GET' && response.status() >= 400
+      && (core.has(path) || path.startsWith('/api/seasons/') && /\/(teams|team-registration\/me)$/.test(path))) rejected.push(response);
+  };
+  page.on('response', observe);
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      rejected.length = 0;
+      await page.goto('/teams');
+      const ready = async () => await link.count() === 1 && await link.isVisible()
+        && await page.locator('[data-teams-content]').isVisible();
+      await expect.poll(async () => await ready() || rejected.length > 0
+        || await page.locator('[data-teams-status]').getAttribute('data-tone') === 'error').toBe(true);
+      if (await ready()) { await link.click(); return; }
+      console.info('Teams core read classifications: ' + JSON.stringify(rejected.map(response => ({
+        path: new URL(response.url()).pathname.replace(/[a-f0-9-]{36}/g, ':id'), status: response.status(),
+        hasRetryAfter: Boolean(response.headers()['retry-after']),
+      }))));
+      expect(rejected.length, 'Missing Team messages entry needs endpoint evidence, not a guessed retry').toBeGreaterThan(0);
+      for (const response of rejected) expect(response.status(), 'Only captured core429 permits same-view read recovery').toBe(429);
+      expect(attempt, 'Teams core read recovery exhausted').toBeLessThan(2);
+      for (const response of rejected) await cooldown(page, response);
+    }
+  } finally { page.off('response', observe); }
+}
+
+async function removeSyntheticMarker({ sender, recipient, actors, marker, messageType, threadId }) {
+  expect(['direct', 'team']).toContain(messageType);
+  const messagesPath = (messageType === 'direct' ? '/api/direct-conversations/' : '/api/teams/') + threadId + '/messages?limit=50';
+  const inboxPath = messageType === 'direct' ? '/api/me/direct-message-inbox' : '/api/me/chat-threads';
+  const rowsKey = messageType === 'direct' ? 'conversations' : 'threads';
+  const idKey = messageType === 'direct' ? 'conversation_id' : 'team_id';
+  const messages = await actorRequest(recipient.page, messagesPath);
+  expect(messages.status).toBe(200);
+  const exact = messages.body.messages?.filter(message => message.body === marker) || [];
+  expect(exact.length, 'Exactly one marker must be recovered before cleanup').toBe(1);
+  const messageId = exact[0].message_id;
+  console.info('Synthetic-only cleanup message ID=' + messageId);
+  expect(exact[0].is_own, 'Recipient must not be the synthetic sender').toBe(false);
+  const readReport = async () => {
+    const response = await actorRequest(sender.page, '/api/admin/chat-reports?limit=100');
+    expect(response.status).toBe(200);
+    const matches = response.body.reports?.filter(row => row.message_id === messageId && row.message_body === marker) || [];
+    expect(matches.length, 'Only one exact-marker report may be used').toBeLessThanOrEqual(1);
+    return matches[0];
+  };
+  const waitRejectedCleanup = async response => {
+    expect(response.status, 'Only a confirmed429 permits a new cleanup attempt after readback').toBe(429);
+    const raw = response.retry?.trim();
+    const numeric = raw ? Number(raw) : NaN;
+    const seconds = Number.isFinite(numeric) ? Math.ceil(numeric) : Math.ceil((Date.parse(raw) - Date.now()) / 1000);
+    expect(Number.isFinite(seconds) && seconds > 0 && seconds <= 60, 'Cleanup Retry-After must be qualified').toBe(true);
+    console.info('Exact-marker cleanup rejected429; validated wait=' + seconds + 's before authoritative readback.');
+    await recipient.page.waitForTimeout((seconds + 1) * 1000);
+  };
+  let report = await readReport();
+  for (let attempt = 0; !report && attempt < 3; attempt++) {
+    const result = await actorRequest(recipient.page, '/api/chat-reports', 'POST', {
+      messageType, messageId, reason: 'other', details: 'Synthetic acceptance marker cleanup only',
+    });
+    if (result.status === 429) await waitRejectedCleanup(result);
+    else expect(result.status, 'Unknown report outcomes must not be replayed').toBe(201);
+    report = await readReport();
+    if (result.status !== 429) expect(Boolean(report), 'A confirmed report must never be posted again').toBe(true);
+  }
+  expect(Boolean(report), 'Exact marker report must be confirmed before removal').toBe(true);
+  let removed = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await actorRequest(sender.page, `/api/admin/chat-reports/${report.report_id}/resolve`, 'POST', {
+      resolution: 'resolved', note: 'Synthetic acceptance marker cleanup only', removeMessage: true,
+    });
+    if (result.status !== 429) {
+      expect(result.status, 'Unknown moderation outcomes must not be replayed').toBe(200);
+      removed = true; break;
+    }
+    await waitRejectedCleanup(result);
+    const readback = await actorRequest(recipient.page, messagesPath);
+    expect(readback.status).toBe(200);
+    if (!readback.body.messages?.some(row => row.message_id === messageId)) { removed = true; break; }
+    const reportReadback = await readReport();
+    expect(Boolean(reportReadback) && reportReadback.status !== 'resolved', 'Ambiguous moderation must not be replayed').toBe(true);
+  }
+  expect(removed, 'Exact-marker moderation must be confirmed').toBe(true);
+  for (const actor of actors) {
+    const after = await actorRequest(actor.page, messagesPath);
+    expect(after.status).toBe(200);
+    expect(after.body.messages?.some(message => message.message_id === messageId || message.body === marker),
+      'Soft-removed marker must disappear from both participant reads').toBe(false);
+    const inbox = await actorRequest(actor.page, inboxPath);
+    expect(inbox.status).toBe(200);
+    expect(Array.isArray(inbox.body[rowsKey])).toBe(true);
+    expect(inbox.body[rowsKey].some(row => row[idKey] === threadId && row.last_message_body === marker),
+      'Soft-removed marker must not survive in inbox previews').toBe(false);
+  }
+  console.info('Only the exact synthetic marker was soft-removed; report/audit/conversation rows may remain.');
 }
 
 for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['phone', { width: 320, height: 844 }]]) {
@@ -326,70 +429,8 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       const [sender, recipient] = actors;
       try {
         if (sendAttempted && conversationId && sender && recipient) {
-          const messages = await actorRequest(recipient.page, `/api/direct-conversations/${conversationId}/messages?limit=50`);
-          expect(messages.status).toBe(200);
-          const exact = messages.body.messages?.filter(message => message.body === marker) || [];
-          expect(exact.length, 'Exactly one marker must be recovered before cleanup').toBe(1);
-          const messageId = exact[0].message_id;
-          console.info('Synthetic-only cleanup message ID=' + messageId);
-          expect(exact[0].is_own, 'Recipient must not be the synthetic sender').toBe(false);
-          const readReport = async () => {
-            const response = await actorRequest(sender.page, '/api/admin/chat-reports?limit=100');
-            expect(response.status).toBe(200);
-            const matches = response.body.reports?.filter(row => row.message_id === messageId && row.message_body === marker) || [];
-            expect(matches.length, 'Only one exact-marker report may be used').toBeLessThanOrEqual(1);
-            return matches[0];
-          };
-          const waitRejectedCleanup = async response => {
-            expect(response.status, 'Only a confirmed429 permits a new cleanup attempt after readback').toBe(429);
-            const raw = response.retry?.trim();
-            const numeric = raw ? Number(raw) : NaN;
-            const seconds = Number.isFinite(numeric) ? Math.ceil(numeric) : Math.ceil((Date.parse(raw) - Date.now()) / 1000);
-            expect(Number.isFinite(seconds) && seconds > 0 && seconds <= 60, 'Cleanup Retry-After must be qualified').toBe(true);
-            console.info('Exact-marker cleanup rejected429; validated wait=' + seconds + 's before authoritative readback.');
-            await recipient.page.waitForTimeout((seconds + 1) * 1000);
-          };
-          let report = await readReport();
-          for (let attempt = 0; !report && attempt < 3; attempt++) {
-            const result = await actorRequest(recipient.page, '/api/chat-reports', 'POST', {
-              messageType: 'direct', messageId, reason: 'other', details: 'Synthetic acceptance marker cleanup only',
-            });
-            if (result.status === 429) await waitRejectedCleanup(result);
-            else expect(result.status, 'Unknown report outcomes must not be replayed').toBe(201);
-            report = await readReport();
-            if (result.status !== 429) expect(Boolean(report), 'A confirmed report must never be posted again').toBe(true);
-          }
-          expect(Boolean(report), 'Exact marker report must be confirmed before removal').toBe(true);
-          let removed = false;
-          for (let attempt = 0; attempt < 3; attempt++) {
-            const result = await actorRequest(sender.page, `/api/admin/chat-reports/${report.report_id}/resolve`, 'POST', {
-              resolution: 'resolved', note: 'Synthetic acceptance marker cleanup only', removeMessage: true,
-            });
-            if (result.status !== 429) {
-              expect(result.status, 'Unknown moderation outcomes must not be replayed').toBe(200);
-              removed = true; break;
-            }
-            await waitRejectedCleanup(result);
-            const readback = await actorRequest(recipient.page, `/api/direct-conversations/${conversationId}/messages?limit=50`);
-            expect(readback.status).toBe(200);
-            if (!readback.body.messages?.some(row => row.message_id === messageId)) { removed = true; break; }
-            const reportReadback = await readReport();
-            expect(Boolean(reportReadback) && reportReadback.status !== 'resolved', 'Ambiguous moderation must not be replayed').toBe(true);
-          }
-          expect(removed, 'Exact-marker moderation must be confirmed').toBe(true);
-          for (const actor of actors) {
-            const after = await actorRequest(actor.page, `/api/direct-conversations/${conversationId}/messages?limit=50`);
-            expect(after.status).toBe(200);
-            expect(after.body.messages?.some(message => message.message_id === messageId || message.body === marker),
-              'Soft-removed marker must disappear from both participant reads').toBe(false);
-            const inbox = await actorRequest(actor.page, '/api/me/direct-message-inbox');
-            expect(inbox.status).toBe(200);
-            expect(Array.isArray(inbox.body.conversations)).toBe(true);
-            expect(inbox.body.conversations.some(row => row.conversation_id === conversationId && row.last_message_body === marker),
-              'Soft-removed marker must not survive in inbox previews').toBe(false);
-          }
+          await removeSyntheticMarker({ sender, recipient, actors, marker, messageType: 'direct', threadId: conversationId });
           cleanupVerified = true;
-          console.info('Only the exact synthetic marker was soft-removed; report/audit/conversation rows may remain.');
         }
       } catch (error) { errors.push(error); }
       for (const actor of actors) {
@@ -405,6 +446,145 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
       }
       if (sendAttempted && !cleanupVerified) console.info('Exact synthetic marker cleanup remains unverified; no other message was touched.');
       if (errors.length) throw new AggregateError(errors, 'Synthetic delivery cleanup or preference restoration failed');
+    }
+  });
+}
+
+// #3588: source design is qualified locally only after the preceding trusted
+// fixture run finishes. The reset guards QA purpose; this additionally verifies
+// the complete team audience before touching a preference or sending a marker.
+const teamFixture = {
+  id: '18580000-1100-4000-8000-000000000001',
+  name: 'Persona Test Team A',
+  recipient: '18580000-2000-4000-8000-000000000004',
+  roster: ['18580000-2000-4000-8000-000000000002', '18580000-2000-4000-8000-000000000004',
+    '18580000-2000-4000-8000-000000000006'],
+};
+
+for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['phone', { width: 320, height: 844 }]]) {
+  test(`live synthetic team message persists and exact marker is removed (${device})`, async ({ browser, request }) => {
+    test.setTimeout(600_000);
+    const sha = process.env.PLAYWRIGHT_EXPECTED_SHA || '';
+    expect(sha).toMatch(/^[a-f0-9]{40}$/);
+    expect(process.env.PLAYWRIGHT_FIXTURE_DATE).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(await (await request.get('/health/environment')).json()).toMatchObject({
+      ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: sha,
+    });
+    const actors = [];
+    const markerId = crypto.randomUUID();
+    const marker = 'JFL synthetic team delivery acceptance ' + markerId;
+    let sendAttempted = false, cleanupVerified = false;
+    let allowedSends = 0, deniedSends = 0;
+    const href = '/messages?team=' + teamFixture.id;
+    try {
+      for (const [label, key, player] of [
+        ['Admin Captain', 'admin-captain', directFixture.sender],
+        ['Player A', 'player-a', teamFixture.recipient],
+      ]) {
+        const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
+        // Pass real requests/responses unchanged, but block any accidental send
+        // outside this exact private QA team/marker or any duplicate/replay.
+        await context.route('**/api/**', async route => {
+          const request = route.request();
+          const path = new URL(request.url()).pathname;
+          if (request.method() === 'POST' && path.endsWith('/messages')) {
+            let body;
+            try { body = request.postDataJSON(); } catch { /* Fail closed below. */ }
+            if (player !== directFixture.sender || path !== '/api/teams/' + teamFixture.id + '/messages'
+              || body?.body !== marker || allowedSends !== 0) {
+              deniedSends++;
+              await route.abort();
+              return;
+            }
+            allowedSends++;
+          }
+          await route.continue();
+        });
+        const page = await context.newPage();
+        page.setDefaultTimeout(15_000);
+        const actor = { context, page, label, player };
+        actors.push(actor);
+        readThrottles.set(page, new Map());
+        page.on('response', response => {
+          const path = new URL(response.url()).pathname;
+          if (response.request().method() !== 'GET' || !channels.some(channel => channel.path === path)) return;
+          if (response.status() >= 400) readThrottles.get(page).set(path, response);
+          else readThrottles.get(page).delete(path);
+        });
+        await assumePersona(page, label);
+        const identity = await actorRequest(page, '/api/test-persona');
+        expect(identity.status).toBe(200);
+        expect(identity.body.environment === 'jfl' && identity.body.current?.key === key, 'Exact synthetic team actor required').toBe(true);
+        const profile = await actorRequest(page, '/api/me/profile');
+        expect(profile.status).toBe(200);
+        expect(profile.body.profile?.id === player, 'Exact fixed QA player required').toBe(true);
+        actor.original = await snapshot(page);
+        console.info('Synthetic team consent baseline ' + key + ': ' + JSON.stringify(actor.original));
+      }
+      const [sender, recipient] = actors;
+      const management = await actorRequest(sender.page, '/api/me/teams');
+      expect(management.status).toBe(200);
+      const teams = management.body.teamManagement?.captain_teams?.filter(row => row.teamId === teamFixture.id) || [];
+      expect(teams.length, 'One exact synthetic team required').toBe(1);
+      expect(teams[0].seasonId === directFixture.season && teams[0].seasonName === 'QA Persona Lab'
+        && teams[0].teamName === teamFixture.name, 'Exact isolated QA team/season contract required').toBe(true);
+      expect(teams[0].roster?.map(row => row.playerId).sort(), 'Only the three fixed synthetic players may receive this team marker').toEqual(teamFixture.roster);
+      expect(teams[0].roster.find(row => row.playerId === directFixture.sender)?.role).toBe('captain');
+      const fixtureRound = teams[0].lineupRounds?.find(row => row.roundId === '18580000-1200-4000-8000-000000000001');
+      expect(fixtureRound?.scheduledOn, 'Current fixture date must match the successful trusted reset').toBe(process.env.PLAYWRIGHT_FIXTURE_DATE);
+      console.info('Exact QA team and complete synthetic-only three-player audience qualified.');
+      const teamChannel = channels.find(channel => channel.key === 'team');
+      for (const actor of actors) {
+        await save(actor.page, teamChannel, true, actor.label);
+        expect(await snapshot(actor.page)).toEqual({ ...actor.original, team: true });
+      }
+      // Use the canonical Teams page's existing link, preserving QA fixture
+      // hiding in the ordinary Messages inbox rather than exposing test rooms.
+      await openQualifiedTeamLink(sender.page, href);
+      await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
+      await openQualifiedMessages(sender.page, href, true);
+      await expect(sender.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
+      await expect(sender.page.locator('[data-message-input]')).toBeEnabled();
+      await sender.page.locator('[data-message-input]').fill(marker);
+      const sentResponse = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/teams/' + teamFixture.id + '/messages'
+        && response.request().method() === 'POST');
+      console.info('Synthetic team delivery attempt marker=' + markerId + '; team=' + teamFixture.id);
+      sendAttempted = true;
+      await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
+      const sent = await sentResponse;
+      expect(sent.status(), 'Team send must be confirmed without write replay').toBe(201);
+      expect(Boolean((await sent.json()).message), 'Confirmed team message required').toBe(true);
+      expect(allowedSends).toBe(1);
+      expect(deniedSends).toBe(0);
+      for (let visit = 0; visit < 2; visit++) {
+        await openQualifiedMessages(recipient.page, href, true);
+        await expect(recipient.page).toHaveURL(new RegExp('/messages\\?team=' + teamFixture.id + '$'));
+        await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
+      }
+      expect(await recipient.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      console.info('Exact same-team synthetic recipient received marker and refresh confirmed persistence.');
+    } finally {
+      const errors = [];
+      if (sendAttempted && actors.length === 2) {
+        try {
+          await removeSyntheticMarker({ sender: actors[0], recipient: actors[1], actors, marker, messageType: 'team', threadId: teamFixture.id });
+          cleanupVerified = true;
+        } catch (error) { errors.push(error); }
+      }
+      for (const actor of actors) {
+        try {
+          if (actor.original) {
+            await assumePersona(actor.page, actor.label);
+            await save(actor.page, channels.find(channel => channel.key === 'team'), actor.original.team, actor.label);
+            expect(await snapshot(actor.page), 'All original synthetic team actor channel values restored').toEqual(actor.original);
+            console.info('Synthetic team-delivery actor original consent values restored and verified.');
+          }
+        } catch (error) { errors.push(error); }
+        finally { await actor.context.close(); }
+      }
+      if (sendAttempted && !cleanupVerified) console.info('Exact synthetic team marker cleanup remains unverified; no other message was touched.');
+      if (deniedSends) errors.push(new Error('An out-of-scope or duplicate message send was blocked before network delivery'));
+      if (errors.length) throw new AggregateError(errors, 'Synthetic team delivery cleanup or consent restoration failed');
     }
   });
 }
