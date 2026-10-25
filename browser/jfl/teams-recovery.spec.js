@@ -186,10 +186,12 @@ for (const mobile of [false, true]) {
     });
   }
 
-  test(`unconfirmed mutation outcome reloads without another mutation (${device})`, async ({ browser, request }) => {
+  for (const status of [200, 503]) {
+  test(`unconfirmed mutation ${status} outcome reloads without another mutation (${device})`, async ({ browser, request }) => {
     const f = await openTeams(browser, request, mobile);
     try {
-      f.failMutation({ status: 200, contentType: 'text/html', body: '<html>' + secret + '</html>' });
+      f.failMutation(status === 200 ? { status, contentType: 'text/html', body: '<html>' + secret + '</html>' }
+        : { status, contentType: 'application/json', body: JSON.stringify({ error: secret }) });
       await f.page.getByRole('button', { name: 'Accept', exact: true }).click();
       await expect(f.state).toContainText('Could not confirm');
       await expect(f.state).not.toContainText(secret);
@@ -200,6 +202,7 @@ for (const mobile of [false, true]) {
       expect(f.writes).toHaveLength(1);
     } finally { await f.context.close(); }
   });
+  }
 
   test(`Teams reload stays single-flight while its read is pending (${device})`, async ({ browser, request }) => {
     const f = await openTeams(browser, request, mobile);

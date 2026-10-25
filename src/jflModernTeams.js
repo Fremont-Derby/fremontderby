@@ -283,7 +283,8 @@ function teamsClientScript() {
       throw Object.assign(new Error('Too many requests. ' + (seconds ? 'Wait ' + seconds + ' seconds, then reload teams.' : 'Please wait, then reload teams.')), { status: 429 });
     }
     if (!response.ok) {
-      const fallback = response.status === 403 ? 'You do not have access to that team action.' : 'Could not complete the request. Reload teams to try again.';
+      const fallback = response.status === 403 ? 'You do not have access to that team action.' : (method === 'GET'
+        ? 'Could not complete the request. Reload teams to try again.' : 'Could not confirm that change. Reload teams before trying again.');
       throw Object.assign(new Error(response.status >= 500 ? fallback : safeError(body, fallback)), { status: response.status });
     }
     if (response.status === 204 && method !== 'GET') return {};
