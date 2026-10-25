@@ -293,8 +293,9 @@ const shellScript = `<script data-fd-message-indicator-script>
     const previewList = document.querySelector('[data-message-preview-list]');
     const previewTotal = document.querySelector('[data-message-preview-total]');
     if (!notifications || !indicator || !badge || !previewList || !previewTotal) return;
-    let loading = false;
+    let loading = null;
     const token = () => sessionStorage.getItem('fd.accessToken') || '';
+    let sessionToken = token();
     const relativeTime = (value) => {
       const elapsed = Date.now() - Date.parse(value || '');
       if (!Number.isFinite(elapsed) || elapsed < 60000) return 'now';
@@ -349,29 +350,51 @@ const shellScript = `<script data-fd-message-indicator-script>
       indicator.title = label;
       renderPreviews(previews, unread);
     };
+    const syncSession = () => {
+      const current = token();
+      if (current !== sessionToken) {
+        sessionToken = current;
+        // Old requests retain their own identity and cannot block the new session.
+        loading = null;
+        render(0);
+        setOpen(false);
+      }
+      return current;
+    };
     const refresh = async () => {
+      syncSession();
       const accessToken = token();
       if (!accessToken) { render(0); return; }
       notifications.hidden = false;
       if (loading || document.hidden) return;
-      loading = true;
+      const pending = {};
+      loading = pending;
+      const isCurrent = () => {
+        syncSession();
+        return loading === pending && accessToken === sessionToken;
+      };
       try {
         const response = await fetch('/api/me/message-notification-summary', {
           headers: { authorization: 'Bearer ' + accessToken },
         });
+        if (!isCurrent()) return;
         if (response.status === 401) { render(0); return; }
         if (!response.ok) return;
         const body = await response.json();
+        if (!isCurrent()) return;
         render(body.unreadCount, body.previews);
       } catch {
         // Keep the icon usable when a background refresh temporarily fails.
       } finally {
-        loading = false;
+        syncSession();
+        if (loading === pending) loading = null;
       }
     };
     render(0);
     refresh();
     window.addEventListener('focus', refresh);
+    window.addEventListener('storage', refresh);
+    window.addEventListener('fd:session-changed', refresh);
     window.addEventListener('fd:messages-read', refresh);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
     notifications.addEventListener('mouseenter', () => setOpen(true));
