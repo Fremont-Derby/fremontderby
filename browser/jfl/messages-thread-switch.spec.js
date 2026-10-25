@@ -10,7 +10,7 @@ const teamB = '22222222-2222-4222-8222-222222222222';
 const message = (body, index = 0) => ({ message_id: `synthetic-${body}-${index}`,
   body, author_display_name: 'Synthetic teammate', created_at: '2026-10-01T12:00:00Z', is_own: true });
 
-async function openMessages(browser, request, mobile) {
+async function openMessages(browser, request, mobile, failure = null) {
   if (!sourceMode) {
     expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
     const health = await request.get('/health/environment');
@@ -20,13 +20,14 @@ async function openMessages(browser, request, mobile) {
   }
   const context = await browser.newContext({ baseURL: sourceMode ? 'https://messages.test' :
     process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com',
-    viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 900 },
+    viewport: mobile ? { width: 320, height: 844 } : { width: 1280, height: 900 },
     isMobile: mobile, hasTouch: mobile });
   // This fake session is confined to intercepted requests. No private history or
   // mutation is sent to a server; only the deployed page HTML is read live.
   await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'));
   const page = await context.newPage();
   const held = [];
+  let failLoad = failure;
   let holdNext = false;
   let older = false;
   const writes = [];
@@ -44,6 +45,10 @@ async function openMessages(browser, request, mobile) {
       }
       expect(path.endsWith('/messages/read'), 'Never send real message writes in this regression').toBe(true);
       return respond({});
+    }
+    if (path === '/api/me/chat-threads' && failLoad) {
+      const rejected = failLoad; failLoad = null;
+      return route.fulfill(rejected);
     }
     if (path === '/api/test-persona') return route.fulfill({ status: 404, body: '{}' });
     if (path === '/api/me/message-notification-summary') body = { unreadCount: 0, previews: [] };
@@ -75,7 +80,9 @@ async function openMessages(browser, request, mobile) {
     await page.route('https://messages.test/messages', route => route.fulfill({ contentType: 'text/html', body: html }));
   }
   await page.goto('/messages');
-  await expect(page.locator('[data-message-list]')).toContainText('A current');
+  if (failure?.status === 401) await expect(page.locator('[data-signed-out]')).toBeVisible();
+  else if (failure) await expect(page.locator('[data-page-state]')).toBeVisible();
+  else await expect(page.locator('[data-message-list]')).toContainText('A current');
   const select = async id => {
     const root = mobile ? '.fd-mobile-inbox' : '[data-thread-list]';
     await page.locator(`${root} [data-thread-key="team:${id}"]`).click();
@@ -196,5 +203,60 @@ for (const mobile of [false, true]) {
       await expect(fixture.page.locator('[data-load-older]')).toBeHidden();
       await expect(fixture.page.locator('[data-chat-name]')).toHaveText('Regression Team B');
     } finally { await fixture.context.close(); }
+  });
+}
+
+// #3580: controlled edge/service failures; no real histories or mutations.
+for (const mobile of [false, true]) {
+  for (const [status, contentType, body, expected] of [
+    [429, 'text/html', '<!doctype html><title>Cloudflare1015</title>PRIVATE_EDGE_METADATA', 'Messages are temporarily busy. Wait before trying again.'],
+    [503, 'text/html', '<html>PRIVATE_SERVICE_DETAIL</html>', 'Messages are temporarily unavailable. Try again shortly.'],
+    [200, 'text/html', '<html>PRIVATE_INVALID_SUCCESS</html>', 'Messages are temporarily unavailable. Try again shortly.'],
+    [403, 'application/json', JSON.stringify({ error: '<html>PRIVATE_DENIAL_DETAIL</html>' }), 'We could not load your conversations.'],
+    [200, 'application/json', 'null', 'Messages are temporarily unavailable. Try again shortly.'],
+  ]) {
+    test(`upstream ${status} ${contentType} load is safe and explicit retry recovers (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+      const f = await openMessages(browser, request, mobile, { status, contentType, body });
+      try {
+        await expect(f.page.locator('[data-status]')).toHaveText(expected);
+        await expect(f.page.locator('[data-chat-layout]')).toBeHidden();
+        await expect(f.page.locator('body')).not.toContainText('PRIVATE_');
+        await expect(f.page.locator('body')).not.toContainText('Cloudflare1015');
+        expect(f.sends).toHaveLength(0);
+        await f.page.locator('[data-page-state]').getByRole('button', { name: 'Try again', exact: true }).click();
+        await expect(f.page.locator('[data-message-list]')).toContainText('A current');
+        await expect(f.page.locator('[data-chat-layout]')).toBeVisible();
+        expect(f.sends).toHaveLength(0);
+        expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      } finally { await f.context.close(); }
+    });
+  }
+  test(`nonJSON throttled send keeps draft and never replays (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+    const f = await openMessages(browser, request, mobile);
+    try {
+      const input = f.page.locator('[data-message-input]');
+      await input.fill('Synthetic unsent draft'); await input.press('Enter');
+      await expect.poll(() => f.sends.length).toBe(1);
+      await f.sends[0].route.fulfill({ status: 429, contentType: 'text/html', body: '<html>PRIVATE_SEND_DETAIL</html>' });
+      await expect(f.page.locator('[data-status]')).toHaveText('Messages are temporarily busy. Wait before trying again.');
+      await expect(input).toHaveValue('Synthetic unsent draft'); await expect(input).toBeEnabled();
+      await expect(f.page.locator('body')).not.toContainText('PRIVATE_SEND_DETAIL');
+      await f.page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      expect(f.sends).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
+}
+
+for (const mobile of [false, true]) {
+  test(`nonJSON401 preserves expired-session sign-in recovery (${mobile ? 'phone320' : 'desktop'})`, async ({ browser, request }) => {
+    const f = await openMessages(browser, request, mobile, { status: 401, contentType: 'text/html', body: '<html>PRIVATE_AUTH_DETAIL</html>' });
+    try {
+      await expect(f.page.locator('[data-signed-out]')).toBeVisible();
+      await expect(f.page.locator('[data-status]')).toHaveText('Sign in again to open messages');
+      await expect(f.page.locator('[data-chat-layout]')).toBeHidden();
+      await expect(f.page.locator('[data-signed-out] a[href="/profile"]')).toBeVisible();
+      await expect(f.page.locator('body')).not.toContainText('PRIVATE_AUTH_DETAIL');
+      expect(f.sends).toHaveLength(0);
+    } finally { await f.context.close(); }
   });
 }

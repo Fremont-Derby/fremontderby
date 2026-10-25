@@ -288,8 +288,11 @@ export function renderChatPage(env = {}) {
     }
     async function parseJson(response) {
       const text = await response.text();
-      if (!text) return {};
-      try { return JSON.parse(text); } catch { return { error: text }; }
+      try {
+        const body = JSON.parse(text);
+        if (body && typeof body === 'object' && !Array.isArray(body)) return body;
+      } catch { /* Upstream HTML and malformed bodies must never become visible errors. */ }
+      return { invalidResponse: true };
     }
     async function refreshSession() {
       if (!config.supabaseUrl || !config.supabasePublishableKey || !refreshToken()) return false;
@@ -322,8 +325,11 @@ export function renderChatPage(env = {}) {
         error.code = 'session_expired';
         throw error;
       }
+      if (response.status === 429) throw new Error('Messages are temporarily busy. Wait before trying again.');
+      if (response.status >= 500) throw new Error('Messages are temporarily unavailable. Try again shortly.');
       const body = await parseJson(response);
-      if (!response.ok) throw new Error(body.error || 'Request failed');
+      if (body.invalidResponse) throw new Error('Messages are temporarily unavailable. Try again shortly.');
+      if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Request failed');
       return body;
     }
     function formatTime(value) {
@@ -794,6 +800,7 @@ export function renderChatPage(env = {}) {
     }
     function friendlyFailure(error) {
       const message = String(error?.message || '');
+      if (/[<>]|&(?:lt|gt);/i.test(message) || message.length > 240) return 'We could not load your conversations.';
       if (/supabase|bearer|uuid|rpc|permission denied|schema private|postgres|request failed/i.test(message)) return 'We could not load your conversations.';
       return message || 'We could not load your conversations.';
     }
