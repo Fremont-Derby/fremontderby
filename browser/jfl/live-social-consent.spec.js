@@ -30,13 +30,13 @@ async function read(page, channel) {
   const toggle = page.locator(`[data-${channel.prefix}-consent-toggle]`);
   // Use the page's confirmed state instead of manufacturing extra GETs. A fresh
   // navigation already loads every channel through the production controller.
-  await expect.poll(async () => await toggle.isEnabled() || await reload.isEnabled()).toBe(true);
-  if (await toggle.isEnabled()) return toggle.isChecked();
   const priorThrottle = readThrottles.get(page)?.get(channel.path);
   if (priorThrottle) {
     readThrottles.get(page).delete(channel.path);
     await cooldown(page, priorThrottle);
   }
+  await expect.poll(async () => await toggle.isEnabled() || await reload.isEnabled()).toBe(true);
+  if (await toggle.isEnabled()) return toggle.isChecked();
   for (let attempt = 0; attempt < 4; attempt++) {
     await expect(reload).toBeEnabled();
     const pending = page.waitForResponse(response => new URL(response.url()).pathname === channel.path
