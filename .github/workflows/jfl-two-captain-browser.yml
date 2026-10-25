@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 15
     outputs:
       scheduled_on: ${{ steps.prepare.outputs.scheduled_on }}
+      general_audience_digest: ${{ steps.prepare.outputs.general_audience_digest }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,6 +45,7 @@ jobs:
       PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
       PLAYWRIGHT_EXPECTED_SHA: ${{ github.sha }}
       PLAYWRIGHT_FIXTURE_DATE: ${{ needs.reset-fixture.outputs.scheduled_on }}
+      PLAYWRIGHT_GENERAL_AUDIENCE_DIGEST: ${{ needs.reset-fixture.outputs.general_audience_digest }}
       PLAYWRIGHT_LIVE_SEASON_READBACK: '1'
     steps:
       - uses: actions/checkout@v4

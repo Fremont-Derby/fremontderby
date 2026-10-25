@@ -151,7 +151,7 @@ async function main() {
   // single-read gate followed by an unbounded deployment-transition race.
   const result = await resetJflTwoCaptainFixture({ serviceRoleKey, expectedSha, onPhase: console.log });
   if (process.env.GITHUB_OUTPUT) {
-    await appendFile(process.env.GITHUB_OUTPUT, `scheduled_on=${result.scheduledOn}\n`);
+    await appendFile(process.env.GITHUB_OUTPUT, `scheduled_on=${result.scheduledOn}\ngeneral_audience_digest=${result.generalAudienceDigest}\n`);
   }
   console.log(`PASS: exact-SHA JFL QA fixture reset; prior lineups=${result.resetLineups}; scheduledOn=${result.scheduledOn}; generalAudience=${result.generalAudienceDigest}`);
 }
