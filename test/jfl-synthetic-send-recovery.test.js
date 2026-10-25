@@ -31,6 +31,13 @@ for (const value of ['', '0', '-1', '1.5', '0x10', '61', 'junk', 'Sun, 25 Oct 20
 test('qualified HTTP-date is bounded against current time', () => {
   assert.equal(qualifiedSendWait('Sun, 25 Oct 2026 12:00:10 GMT', Date.parse('2026-10-25T12:00:00Z')), 10);
 });
+for (const retryAfter of ['', '0', 'invalid', '61']) test(`429 with unqualified header ${retryAfter || 'missing'} cannot reach wait/read/replay`, async () => {
+  let sends = 0;
+  await assert.rejects(sendWithQualifiedRecovery({ send: async () => { sends++; return { status: 429, retryAfter }; },
+    wait: () => assert.fail('unqualified wait'), markerAbsent: () => assert.fail('must not read'),
+    authorizeRetry: () => assert.fail('must not authorize') }), /unqualified/);
+  assert.equal(sends, 1);
+});
 for (const absent of [false, undefined, null, 'true']) test(`only confirmed boolean absence permits another send (${String(absent)})`, async () => {
   let sends = 0;
   await assert.rejects(sendWithQualifiedRecovery({ send: async () => { sends++; return { status: 429, retryAfter: '1' }; },
