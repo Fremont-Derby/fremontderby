@@ -329,8 +329,8 @@ function teamsClientScript() {
         throw new Error('Could not load the league team directory. Reload teams to try again.');
       }
       return body.standings.map(row => ({ teamId: row.team_id, teamName: row.team_name, seasonId: s.id, seasonName: s.name,
-        captainName: row.captain_display_name || '', rosterCount: Number.isFinite(Number(row.roster_count)) ? Number(row.roster_count) : null,
-        roster: Array.isArray(row.roster) ? row.roster : [], relationship: 'directory' }));
+        captainName: row.captain_display_name || '', rosterCount:Number.isFinite(Number(row.roster_count)) ? Number(row.roster_count) : null,
+        roster:Array.isArray(row.roster) ? row.roster : [], relationship: 'directory' }));
     }));
     return chunks.flat();
   }
