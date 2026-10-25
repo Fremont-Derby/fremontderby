@@ -63,10 +63,10 @@ async function snapshot(page) {
   return values;
 }
 
-async function save(page, channel, desired) {
+async function save(page, channel, desired, label = 'Admin Captain') {
   for (let attempt = 0; attempt < 3; attempt++) {
     if (await read(page, channel) === desired) return;
-    await expect(page.locator('[data-test-persona-banner]')).toContainText('Admin Captain');
+    await expect(page.locator('[data-test-persona-banner]')).toContainText(label);
     await page.locator(`[data-${channel.prefix}-consent-toggle]`).setChecked(desired);
     const pending = page.waitForResponse(response => new URL(response.url()).pathname === channel.path
       && response.request().method() === 'PUT');
@@ -139,6 +139,173 @@ for (const [device, viewport] of [['phone', { width: 320, height: 844 }], ['desk
       } finally {
         await context.close();
       }
+    }
+  });
+}
+
+// #3579: normal Messages UI delivery between the two existing private QA captains.
+// Cleanup uses the same authenticated report/moderation API as the product UI.
+// Only this run's exact synthetic marker may be reported or soft-removed.
+const directFixture = {
+  season: '18580000-1000-4000-8000-000000000000',
+  sender: '18580000-2000-4000-8000-000000000002',
+  recipient: '18580000-2000-4000-8000-000000000003',
+};
+
+async function actorRequest(page, path, method = 'GET', body) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await page.evaluate(async ({ path, method, body }) => {
+      const response = await fetch(path, { method, headers: {
+        authorization: 'Bearer ' + sessionStorage.getItem('fd.accessToken'), 'content-type': 'application/json',
+      }, ...(body ? { body: JSON.stringify(body) } : {}) });
+      let parsed = null;
+      try { parsed = await response.json(); } catch { /* Inspect status before any JSON requirement; never log the body. */ }
+      return { status: response.status, retry: response.headers.get('Retry-After'), body: parsed };
+    }, { path, method, body });
+    // Never replay a mutation, including one with an unknown network outcome.
+    if (method !== 'GET' || result.status !== 429) {
+      if (!result.body || typeof result.body !== 'object') throw new Error('Synthetic messaging response was not JSON; HTTP ' + result.status);
+      return result;
+    }
+    const seconds = Number(result.retry);
+    expect(Number.isFinite(seconds) && seconds > 0 && seconds <= 60, 'Qualified read Retry-After required').toBe(true);
+    await page.waitForTimeout((seconds + 1) * 1000);
+  }
+  throw new Error('Synthetic messaging read remained throttled');
+}
+
+for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['phone', { width: 320, height: 844 }]]) {
+  test(`live synthetic direct message persists and exact marker is removed (${device})`, async ({ browser, request }) => {
+    test.setTimeout(600_000);
+    const sha = process.env.PLAYWRIGHT_EXPECTED_SHA || '';
+    expect(sha).toMatch(/^[a-f0-9]{40}$/);
+    expect(await (await request.get('/health/environment')).json()).toMatchObject({
+      ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: sha,
+    });
+    const actors = [];
+    const markerId = crypto.randomUUID();
+    const marker = 'JFL synthetic delivery acceptance ' + markerId;
+    let conversationId, sendAttempted = false, cleanupVerified = false;
+    try {
+      for (const [label, key, player] of [
+        ['Admin Captain', 'admin-captain', directFixture.sender],
+        ['Regular Captain', 'regular-captain', directFixture.recipient],
+      ]) {
+        const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
+        const page = await context.newPage();
+        page.setDefaultTimeout(15_000);
+        const actor = { context, page, player, label };
+        actors.push(actor);
+        readThrottles.set(page, new Map());
+        page.on('response', response => {
+          if (response.request().method() !== 'GET') return;
+          const path = new URL(response.url()).pathname;
+          if (!channels.some(channel => channel.path === path)) return;
+          if (response.status() >= 400) readThrottles.get(page).set(path, response);
+          else if (response.ok()) readThrottles.get(page).delete(path);
+        });
+        await assumePersona(page, label);
+        const identity = await actorRequest(page, '/api/test-persona');
+        expect(identity.status).toBe(200);
+        expect(identity.body.environment === 'jfl' && identity.body.current?.key === key, 'Exact synthetic actor required').toBe(true);
+        const profile = await actorRequest(page, '/api/me/profile');
+        expect(profile.status).toBe(200);
+        expect(profile.body.profile?.id === player, 'Exact fixed QA player required').toBe(true);
+        actor.original = await snapshot(page);
+      }
+      const [sender, recipient] = actors;
+      const direct = channels.find(channel => channel.key === 'direct');
+      for (const actor of actors) {
+        await save(actor.page, direct, true, actor.label);
+        expect(await snapshot(actor.page)).toEqual({ ...actor.original, direct: true });
+      }
+      const candidates = await actorRequest(sender.page, '/api/me/direct-message-candidates');
+      expect(candidates.status).toBe(200);
+      expect(candidates.body.candidates?.filter(candidate => candidate.season_id === directFixture.season
+        && candidate.player_id === directFixture.recipient).length,
+      'Supported candidate must be the exact recipient in the fixed private QA season').toBe(1);
+      const reverse = await actorRequest(recipient.page, '/api/me/direct-message-candidates');
+      expect(reverse.status).toBe(200);
+      expect(reverse.body.candidates?.some(candidate => candidate.season_id === directFixture.season
+        && candidate.player_id === directFixture.sender), 'Both synthetic captains must be mutually discoverable').toBe(true);
+
+      await sender.page.goto('/messages');
+      const form = sender.page.locator(device === 'phone' ? '[data-mobile-new-direct]' : '[data-new-direct]');
+      if (device === 'phone') await sender.page.getByRole('button', { name: 'Message a player', exact: true }).click();
+      else await sender.page.locator('[data-new-message]').click();
+      await form.locator('select').selectOption(directFixture.season + '|' + directFixture.recipient);
+      const start = sender.page.waitForResponse(response => new URL(response.url()).pathname === '/api/direct-conversations'
+        && response.request().method() === 'POST');
+      await form.getByRole('button', { name: 'Start message', exact: true }).click();
+      const started = await start;
+      expect(started.status(), 'Conversation creation must be confirmed without write replay').toBe(201);
+      const conversation = (await started.json()).conversation;
+      conversationId = conversation.conversation_id;
+      expect(conversationId).toMatch(/^[a-f0-9-]{36}$/);
+      const input = sender.page.locator('[data-message-input]');
+      await expect(input).toBeEnabled();
+      await input.fill(marker);
+      const pending = sender.page.waitForResponse(response => new URL(response.url()).pathname === `/api/direct-conversations/${conversationId}/messages`
+        && response.request().method() === 'POST');
+      console.info('Synthetic-only recovery IDs: run=' + markerId + '; conversation=' + conversationId);
+      sendAttempted = true;
+      await sender.page.locator('[data-composer]').getByRole('button', { name: 'Send', exact: true }).click();
+      const sent = await pending;
+      expect(sent.status(), 'Send must be confirmed; never blindly replay a message').toBe(201);
+      expect(Boolean((await sent.json()).message), 'Confirmed message required').toBe(true);
+      await recipient.page.goto('/messages?direct=' + encodeURIComponent(conversationId));
+      await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
+      await recipient.page.reload();
+      await expect(recipient.page.locator('[data-message-list] .message-body').filter({ hasText: marker })).toHaveText(marker);
+      expect(await recipient.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      console.info('Exact synthetic recipient received marker and refresh confirmed persistence.');
+    } finally {
+      const errors = [];
+      const [sender, recipient] = actors;
+      try {
+        if (sendAttempted && conversationId && sender && recipient) {
+          const messages = await actorRequest(recipient.page, `/api/direct-conversations/${conversationId}/messages?limit=50`);
+          expect(messages.status).toBe(200);
+          const exact = messages.body.messages?.filter(message => message.body === marker) || [];
+          expect(exact.length, 'Exactly one marker must be recovered before cleanup').toBe(1);
+          const messageId = exact[0].message_id;
+          console.info('Synthetic-only cleanup message ID=' + messageId);
+          expect(exact[0].is_own, 'Recipient must not be the synthetic sender').toBe(false);
+          const report = await actorRequest(recipient.page, '/api/chat-reports', 'POST', {
+            messageType: 'direct', messageId, reason: 'other', details: 'Synthetic acceptance marker cleanup only',
+          });
+          expect(report.status, 'Report is sent once; unknown results must not be replayed').toBe(201);
+          const reports = await actorRequest(sender.page, '/api/admin/chat-reports?limit=100');
+          expect(reports.status).toBe(200);
+          const exactReport = reports.body.reports?.filter(row => row.message_id === messageId && row.message_body === marker) || [];
+          expect(exactReport.length, 'Only the exact marker report may be resolved').toBe(1);
+          const removed = await actorRequest(sender.page, `/api/admin/chat-reports/${exactReport[0].report_id}/resolve`, 'POST', {
+            resolution: 'resolved', note: 'Synthetic acceptance marker cleanup only', removeMessage: true,
+          });
+          expect(removed.status, 'Exact-marker moderation must be confirmed without replay').toBe(200);
+          for (const actor of actors) {
+            const after = await actorRequest(actor.page, `/api/direct-conversations/${conversationId}/messages?limit=50`);
+            expect(after.status).toBe(200);
+            expect(after.body.messages?.some(message => message.message_id === messageId || message.body === marker),
+              'Soft-removed marker must disappear from both participant reads').toBe(false);
+          }
+          cleanupVerified = true;
+          console.info('Only the exact synthetic marker was soft-removed; report/audit/conversation rows may remain.');
+        }
+      } catch (error) { errors.push(error); }
+      for (const actor of actors) {
+        try {
+          if (actor.original) {
+            await actor.page.goto('/profile');
+            await save(actor.page, channels.find(channel => channel.key === 'direct'), actor.original.direct, actor.label);
+            expect(await snapshot(actor.page), 'All original channel values restored').toEqual(actor.original);
+            console.info('Synthetic direct-delivery actor original consent values restored and verified.');
+          }
+        } catch (error) { errors.push(error); }
+        finally { await actor.context.close(); }
+      }
+      if (sendAttempted && !cleanupVerified) console.info('Exact synthetic marker cleanup remains unverified; no other message was touched.');
+      if (errors.length) throw new AggregateError(errors, 'Synthetic delivery cleanup or preference restoration failed');
     }
   });
 }
