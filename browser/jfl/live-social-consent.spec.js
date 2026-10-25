@@ -103,6 +103,7 @@ for (const [device, viewport] of [['phone', { width: 320, height: 844 }], ['desk
       expectedSupabaseSchema: 'jfl', versionTag: sha });
     const context = await browser.newContext({ viewport, isMobile: device === 'phone', hasTouch: device === 'phone' });
     const page = await context.newPage();
+    page.setDefaultTimeout(15_000);
     readThrottles.set(page, new Map());
     page.on('response', response => {
       if (response.request().method() !== 'GET') return;
@@ -123,11 +124,13 @@ for (const [device, viewport] of [['phone', { width: 320, height: 844 }], ['desk
       });
       expect(identity).toEqual({ status: 200, environment: 'jfl', key: 'admin-captain' });
       original = await snapshot(page);
+      console.info('Synthetic consent baseline admin-captain: ' + JSON.stringify(original));
       for (const channel of channels) {
         const desired = { ...original, [channel.key]: !original[channel.key] };
         await save(page, channel, desired[channel.key]);
         expect(await snapshot(page)).toEqual(desired);
         await page.reload();
+        await assumePersona(page, 'Admin Captain');
         await expect(page.locator('[data-test-persona-banner]')).toContainText('Admin Captain');
         expect(await snapshot(page)).toEqual(desired);
         await save(page, channel, original[channel.key]);
@@ -136,6 +139,7 @@ for (const [device, viewport] of [['phone', { width: 320, height: 844 }], ['desk
     } finally {
       try {
         if (original) {
+          await assumePersona(page, 'Admin Captain');
           for (const channel of channels) await save(page, channel, original[channel.key]);
           expect(await snapshot(page), 'Synthetic persona original consent values restored').toEqual(original);
           console.info('Synthetic persona original consent values restored and verified.');
@@ -258,6 +262,7 @@ for (const [device, viewport] of [['desktop', { width: 1280, height: 900 }], ['p
         expect(profile.status).toBe(200);
         expect(profile.body.profile?.id === player, 'Exact fixed QA player required').toBe(true);
         actor.original = await snapshot(page);
+        console.info('Synthetic consent baseline ' + key + ': ' + JSON.stringify(actor.original));
       }
       const [sender, recipient] = actors;
       const direct = channels.find(channel => channel.key === 'direct');
