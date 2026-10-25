@@ -167,3 +167,142 @@ for (const mobile of [false, true]) {
 
 }
 
+
+// Focused HTTP429 recovery regressions for all three production controllers.
+import { enhanceProfileDirectMessageConsent } from '../../src/profileDirectMessageConsentEnhancer.js';
+import { enhanceProfileSocialChatConsent } from '../../src/profileSocialChatConsentEnhancer.js';
+
+const source = process.env.PLAYWRIGHT_CONSENT_SOURCE === '1';
+const channels = [
+  { key: 'dm', path: '/api/me/direct-message-consent', field: 'directMessages' },
+  { key: 'social-general', path: '/api/me/social-chat-consent/general', field: 'enabled' },
+  { key: 'social-team', path: '/api/me/social-chat-consent/team', field: 'enabled' },
+];
+
+async function open(browser, request, channel, mobile) {
+  if (!source) {
+    expect(process.env.PLAYWRIGHT_EXPECTED_SHA).toMatch(/^[a-f0-9]{40}$/);
+    expect(await (await request.get('/health/environment')).json()).toMatchObject({
+      ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA,
+    });
+  }
+  const origin = source ? 'https://consent.test' : process.env.PLAYWRIGHT_BASE_URL || 'https://jfl.fremontderby.com';
+  const context = await browser.newContext({ baseURL: origin,
+    viewport: { width: mobile ? 320 : 1280, height: 900 }, isMobile: mobile, hasTouch: mobile });
+  await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-A'));
+  const page = await context.newPage();
+  await page.clock.install({ time: new Date('2026-10-25T05:00:00Z') });
+  const values = new Map(channels.map(c => [c.key, true]));
+  const writes = [], reads = [];
+  let failure;
+  await context.route('**/api/**', async route => {
+    const req = route.request(), c = channels.find(c => new URL(req.url()).pathname === c.path);
+    if (!c) {
+      expect(req.method(), 'Only synthetic consent endpoints may write').toBe('GET');
+      return route.fulfill({ json: {} });
+    }
+    if (req.method() === 'PUT') writes.push({ key: c.key, body: req.postDataJSON() });
+    else reads.push(c.key);
+    if (c.key === channel.key && failure?.method === req.method()) {
+      const f = failure; failure = undefined;
+      return route.fulfill({ status: f.status || 429,
+        headers: f.header === null ? {} : { 'Retry-After': f.header },
+        contentType: 'text/html', body: 'PRIVATE ERROR BODY MUST NOT DISPLAY' });
+    }
+    if (req.method() === 'PUT') values.set(c.key, req.postDataJSON()[c.field]);
+    return route.fulfill({ json: { [c.field]: values.get(c.key) } });
+  });
+  await context.route('**/auth/**', route => route.fulfill({ status: 401, json: {} }));
+  if (source) {
+    let html = new Response('<html><body><section class="stack" data-authenticated-content hidden></section></body></html>',
+      { headers: { 'content-type': 'text/html' } });
+    html = await enhanceProfileDirectMessageConsent(html);
+    html = await enhanceProfileSocialChatConsent(html);
+    const body = await html.text();
+    await page.route(origin + '/profile', route => route.fulfill({ contentType: 'text/html', body }));
+  }
+  await page.goto('/profile');
+  // The real Profile session controller hides this section for synthetic tokens.
+  // API interception and the production consent controllers are the proof scope.
+  await page.locator('[data-authenticated-content]').evaluate(el => { el.hidden = false; });
+  const el = suffix => page.locator(`[data-${channel.key}-consent-${suffix}]`);
+  await expect(el('toggle')).toBeChecked();
+  await expect(el('save')).toBeEnabled();
+  return { page, context, el, writes, reads, values,
+    fail: (method, header, status) => { failure = { method, header, status }; } };
+}
+
+for (const channel of channels) for (const mobile of [false, true]) {
+  const name = `${channel.key} ${mobile ? 'phone320' : 'desktop'}`;
+  for (const method of ['PUT', 'GET']) for (const format of ['seconds', 'date']) {
+    test(`throttled ${method} ${format} requires wait, readback and explicit save (${name})`, async ({ browser, request }) => {
+      const f = await open(browser, request, channel, mobile);
+      try {
+        const header = format === 'seconds' ? '10' : await f.page.evaluate(() => new Date(Date.now() + 10000).toUTCString());
+        f.fail(method, header);
+        if (method === 'PUT') { await f.el('toggle').uncheck(); await f.el('save').click(); }
+        else await f.el('reload').click();
+        await expect(f.el('status')).toContainText('Wait 10 seconds');
+        if (method === 'PUT') await expect(f.el('status')).toContainText('Save was not confirmed');
+        await expect(f.el('status')).not.toContainText('PRIVATE');
+        await expect(f.el('toggle')).toBeDisabled();
+        await expect(f.el('save')).toBeDisabled();
+        await expect(f.el('reload')).toBeDisabled();
+        const count = f.writes.length, reads = f.reads.length;
+        await f.el('reload').evaluate(el => el.dispatchEvent(new Event('click')));
+        await f.el('save').evaluate(el => {
+          el.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          el.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+        await f.page.clock.fastForward(11000);
+        await expect(f.el('reload')).toBeEnabled();
+        await expect(f.el('save')).toBeDisabled();
+        expect(f.writes).toHaveLength(count); expect(f.reads).toHaveLength(reads);
+        expect(f.values.get(channel.key), 'Rejected OFF must leave the authoritative ON value intact').toBe(true);
+        await f.el('reload').click();
+        await expect(f.el('toggle')).toBeChecked(); await expect(f.el('save')).toBeEnabled();
+        expect(f.writes).toHaveLength(count);
+        await f.el('toggle').uncheck(); await f.el('save').click();
+        await expect(f.el('status')).toContainText('OFF.');
+        expect(f.values.get(channel.key)).toBe(false);
+        for (const other of channels.filter(c => c !== channel)) {
+          expect(f.values.get(other.key)).toBe(true);
+          await expect(f.page.locator(`[data-${other.key}-consent-toggle]`)).toBeChecked();
+        }
+        expect(f.writes.every(w => w.key === channel.key)).toBe(true);
+        expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      } finally { await f.context.close(); }
+    });
+  }
+  test(`account change invalidates throttle timer (${name})`, async ({ browser, request }) => {
+    const f = await open(browser, request, channel, mobile);
+    try {
+      f.fail('PUT', '10'); await f.el('toggle').uncheck(); await f.el('save').click();
+      await expect(f.el('status')).toContainText('Wait 10 seconds');
+      await f.page.evaluate(() => {
+        sessionStorage.setItem('fd.accessToken', 'synthetic-B');
+        window.dispatchEvent(new Event('fd:session-changed'));
+      });
+      await expect(f.el('toggle')).toBeChecked(); await expect(f.el('save')).toBeEnabled();
+      await expect(f.el('status')).toContainText('ON.');
+      await f.page.clock.fastForward(11000);
+      await expect(f.el('status')).toContainText('ON.');
+      expect(f.writes).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
+  test(`invalid retry headers and non429 errors never claim saved or expose response (${name})`, async ({ browser, request }) => {
+    const f = await open(browser, request, channel, mobile);
+    try {
+      for (const header of [null, '-10', 'NaN', '999999999999', '2garbage', 'Sun, 25 Oct 2020 05:00:00 GMT']) {
+        f.fail('PUT', header); await f.el('toggle').uncheck(); await f.el('save').click();
+        await expect(f.el('status')).toContainText('Wait before selecting Reload');
+        await expect(f.el('status')).not.toContainText('PRIVATE');
+        await expect(f.el('save')).toBeDisabled();
+        await f.el('reload').click(); await expect(f.el('toggle')).toBeChecked();
+      }
+      f.fail('PUT', '10', 403); await f.el('toggle').uncheck(); await f.el('save').click();
+      await expect(f.el('status')).toHaveText('Could not confirm messaging privacy. Reload to try again.');
+      await expect(f.el('save')).toBeDisabled(); await expect(f.el('reload')).toBeEnabled();
+    } finally { await f.context.close(); }
+  });
+}
