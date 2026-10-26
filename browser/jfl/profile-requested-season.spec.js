@@ -5,6 +5,7 @@ import { enhanceProfileSeasonRegistration } from '../../src/profileSeasonRegistr
 const seasons = [{ id: 'season-a', name: 'Alpha registration', status: 'registration' },
   { id: 'season-b', name: 'Beta registration', status: 'registration' },
   { id: 'season-c', name: 'Closed season', status: 'active' }];
+test.setTimeout(45_000);
 let html;
 test.beforeAll(async ({ request }) => {
   if (process.env.PLAYWRIGHT_PROFILE_HTML === 'deployed') {
@@ -26,8 +27,9 @@ test.beforeAll(async ({ request }) => {
 
 async function open(browser, mobile, query, options = {}) {
   const context = await browser.newContext({ viewport: { width: mobile ? 320 : 1280, height: 900 } });
+  context.setDefaultTimeout(15_000);
   if (!options.signedOut) await context.addInitScript(() => {
-    if (window === window.top) sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only');
+    if (window === window.top && location.origin === 'https://jfl.fremontderby.com') sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only');
   });
   const reads = [], writes = [];
   let registration = options.registered ? { registrationStatus: 'active', paymentStatus: 'paid' } : null;
@@ -48,7 +50,11 @@ async function open(browser, mobile, query, options = {}) {
     return route.fulfill({ status: req.method() === 'GET' ? 200 : 403, json: {} });
   });
   const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
   await page.goto('https://jfl.fremontderby.com/profile' + query);
+  if (!options.signedOut) await expect(page.locator('[data-authenticated-content]')).toBeVisible();
+  expect(errors).toEqual([]);
   return { context, page, reads, writes };
 }
 
