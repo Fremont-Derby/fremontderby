@@ -6,6 +6,7 @@ on:
       - 'src/seasonPublishReadinessEnhancer.js'
       - 'src/seasonCloseEnhancer.js'
       - 'browser/jfl/operator-season-context.spec.js'
+      - 'browser/jfl/operator-session-response.spec.js'
       - '.github/workflows/operator-browser-regression.yml'
   push:
     branches: [fremontderby-jfl]
@@ -14,6 +15,7 @@ on:
       - 'src/seasonPublishReadinessEnhancer.js'
       - 'src/seasonCloseEnhancer.js'
       - 'browser/jfl/operator-season-context.spec.js'
+      - 'browser/jfl/operator-session-response.spec.js'
       - '.github/workflows/operator-browser-regression.yml'
 permissions:
   contents: read
@@ -32,7 +34,7 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test browser/jfl/operator-season-context.spec.js
+      - run: npx playwright test browser/jfl/operator-season-context.spec.js browser/jfl/operator-session-response.spec.js
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
