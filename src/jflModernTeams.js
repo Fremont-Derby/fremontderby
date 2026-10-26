@@ -211,6 +211,8 @@ function teamsClientScript() {
   const directorySection = q('[data-team-directory-section]'), directoryList = q('[data-team-directory]'), directoryEmpty = q('[data-team-directory-empty]');
   const searchInput = q('[data-team-search]'), filters = qa('[data-team-filter]');
   const formationForm = q('[data-team-formation-form]'), seasonSelect = q('[data-team-season]'), teamNameInput = q('[data-team-name]'), formationItems = q('[data-team-formation-items]');
+  const seasonHelp = q('[data-team-season-help]'), currentSeasonLink = q('[data-team-season-current]');
+  let applicationSeasonIds = [];
   const invitationsEl = q('[data-team-invitations]'), inboxEl = q('[data-teams-inbox]');
   const setStatus = (m,t='muted') => { statusEl.textContent=m; statusEl.dataset.tone=t; };
   const node = (tag,cls,text) => { const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; };
@@ -335,7 +337,29 @@ function teamsClientScript() {
     return chunks.flat();
   }
   function renderInbox(){ invitationsEl.replaceChildren(); const items=management.invitations||[]; for(const item of items){const row=node('div','fd-team-card__work-row');row.append(node('strong','',item.teamName||'Team'));const actions=node('div','fd-team-card__work-actions');actions.append(button('Accept','accept-invite',item.invitationId),button('Decline','decline-invite',item.invitationId,true));row.append(actions);invitationsEl.append(row);} inboxEl.hidden=!items.length; }
-  function renderFormation(seasons){ formationItems.replaceChildren(); const open=(${availableTeamApplicationSeasons.toString()})(seasons,registrations); seasonSelect.replaceChildren(); if(open.length)open.forEach((s)=>seasonSelect.append(new Option(s.name+' · New team application',s.id))); else seasonSelect.append(new Option('No registration season is open','')); seasonSelect.disabled=!open.length;teamNameInput.disabled=!open.length;formationForm.querySelector('button').disabled=!open.length; for(const reg of registrations){for(const item of reg.applications||[]){const p=node('p','', (item.proposedTeamName||'New team')+' · '+clean(item.status||'submitted'));formationItems.append(p);}}
+  function renderFormation(seasons, previousSelection) {
+    formationItems.replaceChildren();
+    const open = (${availableTeamApplicationSeasons.toString()})(seasons, registrations);
+    applicationSeasonIds = open.map(s => String(s.id));
+    const requested = new URLSearchParams(location.search).getAll('season');
+    const explicit = requested.length > 0;
+    const selected = explicit ? (requested.length === 1 ? requested[0] : '') : previousSelection;
+    const unavailable = explicit && (!selected || !applicationSeasonIds.includes(selected));
+    seasonSelect.replaceChildren();
+    if (unavailable) seasonSelect.append(new Option('Requested season unavailable', ''));
+    open.forEach(s => seasonSelect.append(new Option(s.name + ' · New team application', s.id)));
+    if (!open.length && !unavailable) seasonSelect.append(new Option('No registration season is open', ''));
+    if (unavailable) seasonSelect.value = '';
+    else if (applicationSeasonIds.includes(selected)) seasonSelect.value = selected;
+    seasonSelect.disabled = !open.length;
+    teamNameInput.disabled = !seasonSelect.value;
+    formationForm.querySelector('button').disabled = !seasonSelect.value;
+    seasonHelp.hidden = !unavailable;
+    currentSeasonLink.hidden = !unavailable;
+    seasonHelp.textContent = unavailable ? 'The requested season is not available for a new team application. Review your applications below or choose an available season.' : '';
+    for (const reg of registrations) for (const item of reg.applications || []) {
+      formationItems.append(node('p', '', (item.proposedTeamName || 'New team') + ' · ' + clean(item.status || 'submitted')));
+    }
   }
   async function load({ saved = '' } = {}) {
     syncSession();
@@ -366,8 +390,7 @@ function teamsClientScript() {
       const leagueTeams = await loadLeagueTeams(seasons, read);
       if (!current()) return false;
       registrations = nextRegistrations; management = teamBody.teamManagement; requestData = requestBody.requests;
-      requestData.league_teams = leagueTeams; cards = normalize(); renderCards(); renderInbox(); renderFormation(seasons);
-      if (Array.from(seasonSelect.options).some(option => option.value === selectedSeason)) seasonSelect.value = selectedSeason;
+      requestData.league_teams = leagueTeams; cards = normalize(); renderCards(); renderInbox(); renderFormation(seasons, selectedSeason);
       contentEl.hidden = false; stateEl.hidden = true; delete stateEl.dataset.tone; viewToken = access;
       setStatus(savedNotice || (cards.length ? cards.length + ' teams available' : 'No teams available'), 'ok'); savedNotice = '';
       return true;
@@ -398,6 +421,10 @@ function teamsClientScript() {
     if (!viewToken || viewToken !== token()) { showFailure(sessionError()); return; }
     if (pendingRead || pendingWrite) return;
     const seasonId = seasonSelect.value, teamName = clean(teamNameInput.value);
+    const requested = new URLSearchParams(location.search).getAll('season');
+    if (!applicationSeasonIds.includes(seasonId) || requested.length && (requested.length !== 1 || requested[0] !== seasonId)) {
+      setStatus('Choose an available season before applying.', 'error'); return;
+    }
     if (!seasonId || !teamName) { setStatus('Choose a season and enter a team name.', 'error'); return; }
     const access = token(), submit = formationForm.querySelector('button'), pending = { token: token() };
     pendingWrite = pending; submit.disabled = true; setStatus('Saving team application…'); updateReload();
@@ -407,6 +434,14 @@ function teamsClientScript() {
       teamNameInput.value = ''; await load({ saved: 'New team application saved.' });
     } catch (error) { if (access === token()) showFailure(error); else syncSession(); }
     finally { if (pendingWrite === pending) { pendingWrite = null; submit.disabled = !seasonSelect.value; updateReload(); } }
+  });
+  seasonSelect.addEventListener('change', () => {
+    const valid = applicationSeasonIds.includes(seasonSelect.value);
+    teamNameInput.disabled = !valid;
+    formationForm.querySelector('button').disabled = !valid || Boolean(pendingRead || pendingWrite);
+    if (!valid) return;
+    const url = new URL(location.href); url.searchParams.set('season', seasonSelect.value); history.replaceState(null, '', url);
+    seasonHelp.hidden = true; currentSeasonLink.hidden = true;
   });
   reloadEl.addEventListener('click', () => { load(); });
   window.addEventListener('fd:session-changed', syncSession);
@@ -423,7 +458,7 @@ function teamsDocument() {
   <section class="fd-teams__section" data-my-teams-section hidden><div class="fd-teams__section-head"><h2>My teams</h2><span>Current memberships first</span></div><div class="fd-teams__cards" data-my-team-list></div></section>
   <section class="fd-teams__section" data-team-directory-section hidden><div class="fd-teams__section-head"><h2>League teams</h2><span>Tap View players for the roster</span></div><div class="fd-teams__cards" data-team-directory></div></section><div class="fd-teams__state" data-team-directory-empty hidden>No matching teams.</div>
   <section class="fd-teams__inbox" data-teams-inbox hidden><article class="fd-teams__panel"><h2>My invitations</h2><div data-team-invitations></div></article></section>
-  <details class="fd-teams__formation"><summary>Start or return a team</summary><div class="fd-teams__formation-body"><form class="fd-teams__formation-form" data-team-formation-form><select data-team-season></select><input data-team-name maxlength="80" placeholder="New team name"/><button type="submit">Apply for a team slot</button></form><div data-team-formation-items></div></div></details></div>
+  <details class="fd-teams__formation"><summary>Start or return a team</summary><div class="fd-teams__formation-body"><form class="fd-teams__formation-form" data-team-formation-form><select data-team-season aria-label="Season for new team application"></select><input data-team-name maxlength="80" placeholder="New team name"/><button type="submit">Apply for a team slot</button></form><p data-team-season-help role="status" hidden></p><a href="/teams" data-team-season-current hidden>View current seasons</a><div data-team-formation-items></div></div></details></div>
   <p><a href="/teams?ui=legacy">View classic Teams</a></p></main><script>${teamsClientScript()}</script></body></html>`;
 }
 
