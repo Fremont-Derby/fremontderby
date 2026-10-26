@@ -93,7 +93,7 @@ try {
   const marked = (await rows('select * from jfl.mark_my_notification_read($1,$2)', [recipient, notices[0].id]))[0];
   assert.equal(marked.id, notices[0].id);
   assert(marked.read_at);
-  assert.equal((await rows('select * from jfl.mark_my_notification_read($1,$2)', [recipient, notices[0].id]))[0].read_at, marked.read_at);
+  assert.equal(new Date((await rows('select * from jfl.mark_my_notification_read($1,$2)', [recipient, notices[0].id]))[0].read_at).getTime(), new Date(marked.read_at).getTime());
   await db.exec('reset role');
   pass('recipient marks its Notice through the unchanged RPC; repeated read preserves timestamp');
   const readAt = (await rows('select read_at::text from jfl.user_notifications where id=$1', [notices[0].id]))[0].read_at;

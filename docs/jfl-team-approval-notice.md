@@ -17,14 +17,20 @@ grants and absence guards must all pass before installation.
 
 ## Current proof and limits
 
-Source preparation only until the card records installation and actual delivery.
+The card records installation and hosted rollback proof separately from actual
+delivery and browser acceptance. Neither installation nor rollback-only approval
+proves a persisted recipient journey.
 The local script runs the captured JFL approval/read functions on a **minimal**
 PostgreSQL fixture. It substitutes readiness/expiry helpers and therefore does
 not prove the hosted schema, roster/contact policy or application UI. PGlite
 0.5.12 uses PostgreSQL18.6; the qualified hosted project currently uses17.6.
-The local checks cover source/RLS guards, recipient/template, duplicate events,
+The 18 local checks cover source/RLS guards, recipient/template, duplicate events,
 read-state preservation, browser privilege denial, approval failure rollback,
-transaction rollback and peer-table preservation. Browser action tests intercept
+transaction rollback and peer-table preservation. The captured read-state RPC
+rejects a nonrecipient or missing Notice with `Notification not found`; the
+verifier catches that exact denial and proves the recipient stays unread.
+Recipient read and repeated-read timestamp preservation use the unchanged RPC.
+Browser action tests intercept
 all APIs; they prove the Notice/read/owned-team UI contract, not live delivery.
 
 To reproduce the local SQL proof, install `@electric-sql/pglite@0.5.12` in a
