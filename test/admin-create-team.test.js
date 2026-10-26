@@ -120,7 +120,7 @@ test('season teams UI exposes a phone-safe create flow and clear prepared state'
   assert.match(html, /New team name/);
   assert.match(html, /Not in season/);
   assert.match(html, /prepared-teams/);
-  assert.match(html, /createForm\.hidden=true/);
+  assert.match(html, /<form[^>]*data-create-form[^>]* hidden>/);
   assert.match(html, /@media\(max-width:520px\)/);
   assert.doesNotMatch(html, /Team ID/i);
 });

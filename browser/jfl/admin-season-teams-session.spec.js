@@ -165,4 +165,17 @@ for (const mobile of [false, true]) {
       await expect(f.page.locator('[data-create-button]')).toBeEnabled();
     } finally { await f.context.close(); }
   });
+  for (const action of ['create', 'captain', 'slot']) test(`Season Teams current ${action} failure restores controls without replay (${mobile})`, async ({ browser }) => {
+    const f = await open(browser, mobile);
+    try {
+      if (action === 'captain') { await f.page.getByRole('button', { name: 'Assign captain', exact: true }).click(); await f.page.locator('.captain-picker select').selectOption('player-A'); }
+      f.fail({ status: 429, headers: { 'Retry-After': '10' }, json: { error: 'Synthetic write throttled' } });
+      if (action === 'create') { await f.page.locator('[data-create-name]').fill('A Prepared Team'); await f.page.locator('[data-create-button]').click(); }
+      if (action === 'captain') await f.page.locator('.captain-picker button').click();
+      if (action === 'slot') await f.page.getByRole('button', { name: 'Add to season', exact: true }).click();
+      await expect(f.page.locator('[data-state]')).toContainText('Synthetic write throttled'); await settle(f.page);
+      expect(f.writes).toHaveLength(1); await expect(f.page.locator('[data-create-button]')).toBeEnabled(); await expect(f.page.getByRole('button', { name: 'Add to season', exact: true })).toBeEnabled();
+      expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBe('synthetic-A');
+    } finally { await f.context.close(); }
+  });
 }

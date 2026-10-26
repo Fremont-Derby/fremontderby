@@ -9,7 +9,8 @@ test('season team admin keeps action feedback visible on phones', () => {
   assert.match(html, /\.state\{position:fixed;/);
   assert.match(html, /\.state:empty\{display:none\}/);
   assert.match(html, /@media\(max-width:520px\)[\s\S]*\.state\{left:10px;right:10px;bottom:10px;width:auto;transform:none\}/);
-  assert.match(html, /setState\(error\.message,'error'\);button\.disabled=false/);
+  // Current-session write recovery is exercised by the controlled browser
+  // workflow; an unconditional old-button re-enable would violate isolation.
   assert.match(html, /reserved a season slot/);
   assert.match(html, /added to the season/);
 });
