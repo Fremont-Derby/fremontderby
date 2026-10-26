@@ -20,9 +20,9 @@ for (const scenario of ['admin', 'signed-out', 'denied', 'network', 'timeout', '
       handlers: {}, addEventListener(name,handler) { this.handlers[name]=handler; }, replaceChildren() {}, append() {}, setAttribute() {} });
     let calls = 0;
     const context = vm.createContext({
-      document: { querySelector(selector) { if (!elements.has(selector)) elements.set(selector, element()); return elements.get(selector); }, createElement: element },
+      document: { querySelector(selector) { if (!elements.has(selector)) elements.set(selector, element()); return elements.get(selector); }, createElement: element, addEventListener() {} },
       sessionStorage: { getItem: () => scenario === 'signed-out' ? '' : 'test-token' },
-      window: {}, AbortSignal: { timeout(ms) { assert.equal(ms,15000); return AbortSignal.timeout(ms); } }, location: { search: '?season=requested-season' }, URLSearchParams,
+      window: { addEventListener() {} }, AbortSignal: { timeout(ms) { assert.equal(ms,15000); return AbortSignal.timeout(ms); } }, location: { search: '?season=requested-season' }, URLSearchParams,
       fetch: async (url, options) => {
         calls++;
         assert.equal(url, '/api/admin/players');
@@ -40,7 +40,8 @@ for (const scenario of ['admin', 'signed-out', 'denied', 'network', 'timeout', '
     const status = elements.get('[data-status]');
     assert.equal(status.textContent, {admin: '0 players loaded.', 'signed-out': 'Sign in from Profile to use league admin tools.', denied: 'Admin access required', network: 'Network unavailable', timeout:'Player loading timed out. Try again.', throttled:'Wait 10 seconds'}[scenario]);
     assert.equal(calls, scenario === 'signed-out' ? 0 : 1);
-    assert.equal(elements.get('[data-retry]').hidden, scenario === 'admin' || scenario === 'throttled');
+    assert.equal(elements.get('[data-retry]').hidden, ['admin', 'throttled', 'signed-out'].includes(scenario));
+    if (scenario === 'signed-out') assert.equal(elements.get('[data-create-button]').disabled, true);
     if (scenario !== 'admin') assert.equal(elements.get('[data-list]').hidden, true);
     if (scenario === 'network' || scenario === 'timeout') {
       const retry = elements.get('[data-retry]').handlers.click;
