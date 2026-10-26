@@ -1,10 +1,13 @@
-import { safeJson } from './textEscape.js';
-
 function browserConfig(env = {}) {
   return {
+    matchupChatEnabled: env.ENVIRONMENT !== 'jfl',
     supabaseUrl: env.SUPABASE_URL || '',
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY || '',
   };
+}
+
+function safeJson(value) {
+  return JSON.stringify(value).replace(/</g, String.fromCharCode(92) + 'u003c');
 }
 
 export function renderChatPage(env = {}) {
@@ -29,9 +32,7 @@ export function renderChatPage(env = {}) {
       --danger: #ffaaa2;
     }
     * { box-sizing: border-box; }
-    button, a, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    input, select, textarea { font-size: 16px; }
-    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: radial-gradient(circle at 50% 0, #123b28, #07150f 34rem); }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 0, #123b28, #07150f 34rem); }
     button, textarea, select { font: inherit; }
     button, select, textarea { border: 1px solid var(--line); border-radius: 11px; }
     button { min-height: 44px; cursor: pointer; font-weight: 850; }
@@ -111,7 +112,7 @@ export function renderChatPage(env = {}) {
       .chat { grid-template-rows: auto auto minmax(260px, 1fr) auto; }
       .message-list { padding: 12px 10px; }
       .message { max-width: 88%; }
-      .composer { position: sticky; bottom: 0; padding: 9px; grid-template-columns: minmax(0, 1fr) auto;  padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px)); }
+      .composer { position: sticky; bottom: 0; padding: 9px; grid-template-columns: minmax(0, 1fr) auto; }
       .send { min-width: 72px; padding: 0 12px; }
       .empty-actions, .empty-actions a, .empty-actions button { width: 100%; }
     }
@@ -120,16 +121,11 @@ export function renderChatPage(env = {}) {
 <body>
   <main class="app">
     <header class="heading">
-      <div><h1>Messages</h1><div class="subhead">League, matchup, team, and player coordination without sharing phone numbers.</div></div>
-      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true"></div></div>
+      <div><h1>Messages</h1><div class="subhead">${env.ENVIRONMENT === 'jfl' ? 'General Chat, Team Chat, and Direct Messages without sharing phone numbers.' : 'League, matchup, team, and player coordination without sharing phone numbers.'}</div></div>
+      <div><a data-moderation-link href="/messages/moderation" hidden>Review reports</a><div class="status" data-status role="status" aria-live="polite" aria-atomic="true">Checking your messages…</div></div>
     </header>
-    <nav aria-label="League destinations" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px">
-      <a href="/schedule" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Schedule</a>
-      <a href="/scorecard" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Score</a>
-      <a href="/teams" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Teams</a>
-      <a href="/lineup" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Lineup</a>
-      <a href="/notifications" style="min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line,#315d45);border-radius:10px;color:inherit;text-decoration:none">Alerts</a>
-    </nav>
+
+    ${env.ENVIRONMENT === 'jfl' ? '<section class="state-card" data-matchup-retired hidden><h2>Matchup chat is retired</h2><p>Use General Chat, Team Chat, or Direct Messages for social conversations. Use Schedule and Scorecard for match-night actions.</p><div class="state-actions"><a class="state-action" href="/schedule">Open Schedule</a><a class="state-action" href="/profile">Chat preferences</a></div></section>' : ''}
 
     <section class="state-card" data-page-state data-tone="warning" hidden>
       <h2 data-page-state-title>Messages unavailable</h2>
@@ -139,11 +135,8 @@ export function renderChatPage(env = {}) {
 
     <section class="state-card" data-signed-out data-tone="warning" hidden>
       <h2 data-signed-out-title>Coordinate league night in one place</h2>
-      <p data-signed-out-detail>Sign in to read league, matchup, team, and player messages without sharing your phone number.</p>
-      <div class="state-actions">
-        <button type="button" class="state-action" data-google-signin>Continue with Google</button>
-        <a class="state-action" href="/profile?next=%2Fmessages" data-profile-signin>Open Profile</a>
-      </div>
+      <p data-signed-out-detail>${env.ENVIRONMENT === 'jfl' ? 'Sign in to read General Chat, Team Chat, and Direct Messages.' : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.'}</p>
+      <div class="state-actions"><a class="state-action" href="/profile">Sign in to message</a></div>
     </section>
 
     <section class="layout" data-chat-layout hidden>
@@ -208,7 +201,8 @@ export function renderChatPage(env = {}) {
 
   <script>
     const config = ${safeJson(browserConfig(env))};
-    function trimUrl(value){ let s=String(value||''); while(s.endsWith('/')) s=s.slice(0,-1); return s; }
+    const retiredNotice = document.querySelector('[data-matchup-retired]');
+    if (retiredNotice) retiredNotice.hidden = !new URLSearchParams(location.search).has('matchup');
     const statusEl = document.querySelector('[data-status]');
     const signedOutEl = document.querySelector('[data-signed-out]');
     const signedOutTitleEl = document.querySelector('[data-signed-out-title]');
@@ -244,24 +238,81 @@ export function renderChatPage(env = {}) {
     let candidates = [];
     let currentKey = '';
     let loadingMessages = false;
+    let conversationEpoch = 0;
+    let sendingMessage = false;
     let displayedMessages = [];
     let canLoadOlder = false;
     let reachedConversationStart = false;
     let reportingMessageId = '';
+    let retryAt = 0, pausePolls = false, rateGeneration = 0;
+    let session = { token: token() };
+    let loadingThreads = null;
+    function staleSession() {
+      const error = new Error('Session changed'); error.code = 'stale_session'; return error;
+    }
+    function syncSession() {
+      const current = token();
+      if (current === session.token) return false;
+      const owner = { token: current };
+      session = owner;
+      conversationEpoch += 1;
+      loadingThreads = null; loadingMessages = false; sendingMessage = false;
+      retryAt = 0; pausePolls = false; rateGeneration += 1;
+      threads = []; candidates = []; currentKey = ''; displayedMessages = [];
+      canLoadOlder = false; reachedConversationStart = false; reportingMessageId = '';
+      threadListEl.replaceChildren(); threadSelectEl.replaceChildren(); messageListEl.replaceChildren();
+      candidateSelectEl.replaceChildren(); mobileCandidateSelectEl.replaceChildren();
+      chatNameEl.textContent = 'Select a conversation'; chatSeasonEl.textContent = '';
+      messageInputEl.value = ''; messageInputEl.disabled = true; sendButtonEl.disabled = true;
+      reportDetailsEl.value = ''; reportReasonEl.value = 'harassment';
+      if (reportDialogEl.open) reportDialogEl.close();
+      newDirectFormEl.hidden = true; mobileNewDirectFormEl.hidden = true;
+      document.querySelector('[data-moderation-link]').hidden = true;
+      layoutEl.hidden = true; hidePageState();
+      const url = new URL(location.href);
+      for (const key of ['team', 'direct', 'league', 'matchup']) url.searchParams.delete(key);
+      history.replaceState({}, '', url.pathname + url.search);
+      if (!current) showSignedOut(false);
+      else {
+        signedOutEl.hidden = true;
+        setStatus('Loading conversations…');
+        queueMicrotask(() => {
+          if (session !== owner || token() !== owner.token) return;
+          runLoadThreads(); run(detectModerator);
+        });
+      }
+      return true;
+    }
+    function ownsSession(owner) {
+      syncSession();
+      return owner === session;
+    }
+    function retrySeconds(value) {
+      if (!value || !value.trim()) return 0;
+      const numeric = Number(value);
+      const seconds = Number.isFinite(numeric) ? Math.ceil(numeric) : Math.ceil((Date.parse(value) - Date.now()) / 1000);
+      return Number.isFinite(seconds) && seconds > 0 && seconds <= 86400 ? seconds : 0;
+    }
+    function busyError() {
+      const seconds = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+      return new Error('Messages are temporarily busy. ' + (seconds ? 'Wait ' + seconds + ' seconds before trying again.' : 'Wait before trying again.'));
+    }
+    function pollingReady() {
+      if (retryAt && Date.now() >= retryAt) { retryAt = 0; pausePolls = false; }
+      return !pausePolls;
+    }
 
     function token() { return sessionStorage.getItem('fd.accessToken') || ''; }
     function refreshToken() { return sessionStorage.getItem('fd.refreshToken') || ''; }
-    function setStatus(message, tone, opts = {}) {
-      if (window.fdSetStatus) {
-        window.fdSetStatus(statusEl, message, tone || 'muted', opts);
-        return;
-      }
+    function setStatus(message, tone) {
       statusEl.textContent = message;
       statusEl.dataset.tone = tone || 'muted';
     }
     function clearSession() {
+      retryAt = 0; pausePolls = false; rateGeneration += 1;
       sessionStorage.removeItem('fd.accessToken');
       sessionStorage.removeItem('fd.refreshToken');
+      syncSession();
     }
     function makeAction(label, { href, onClick, secondary = false } = {}) {
       const action = href ? document.createElement('a') : document.createElement('button');
@@ -284,98 +335,89 @@ export function renderChatPage(env = {}) {
       clearSession();
       layoutEl.hidden = true;
       hidePageState();
-      const matchupId = new URLSearchParams(location.search).get('matchup');
+      const matchupId = config.matchupChatEnabled && new URLSearchParams(location.search).get('matchup');
       signedOutTitleEl.textContent = expired ? 'Your sign-in expired' : (matchupId ? 'Sign in to open this matchup thread' : 'Coordinate league night in one place');
       signedOutDetailEl.textContent = expired
         ? 'Sign in again to reopen your conversations. Your messages were not changed.'
         : (matchupId
           ? 'After you sign in we will open the matchup conversation linked from the schedule.'
-          : 'Sign in to read league, matchup, team, and player messages without sharing your phone number.');
+          : (config.matchupChatEnabled ? 'Sign in to read league, matchup, team, and player messages without sharing your phone number.' : 'Sign in to read General Chat, Team Chat, and Direct Messages.'));
       signedOutEl.hidden = false;
       setStatus(expired ? 'Sign in again to open messages' : 'Sign in to open messages', expired ? 'error' : 'muted');
     }
     async function parseJson(response) {
       const text = await response.text();
-      if (!text) return {};
-      try { return JSON.parse(text); } catch { return { error: text }; }
+      try {
+        const body = JSON.parse(text);
+        if (body && typeof body === 'object' && !Array.isArray(body)) return body;
+      } catch { /* Upstream HTML and malformed bodies must never become visible errors. */ }
+      return { invalidResponse: true };
     }
-    function consumeOAuthCallback() {
-      const hash = window.location.hash.replace(/^#/, '');
-      const query = window.location.search.slice(1);
-      const params = new URLSearchParams(hash || query);
-      const authError = params.get('error_description') || params.get('error');
-      if (authError) {
-        history.replaceState({}, '', window.location.pathname + (window.location.search.includes('error') ? '' : window.location.search));
-        // Strip oauth params from query if present
-        const clean = new URL(window.location.href);
-        clean.hash = '';
-        ['error','error_description','error_code'].forEach((k)=>clean.searchParams.delete(k));
-        history.replaceState({}, '', clean.pathname + clean.search);
-        throw new Error(authError);
-      }
-      const accessToken = params.get('access_token');
-      if (!accessToken) return false;
-      sessionStorage.setItem('fd.accessToken', accessToken);
-      const nextRefresh = params.get('refresh_token') || '';
-      if (nextRefresh) sessionStorage.setItem('fd.refreshToken', nextRefresh);
-      else sessionStorage.removeItem('fd.refreshToken');
-      const clean = new URL(window.location.href);
-      clean.hash = '';
-      history.replaceState({}, '', clean.pathname + clean.search);
-      return true;
+    async function refreshSession(owner) {
+      if (owner.refreshing) return owner.refreshing;
+      const pending = performSessionRefresh(owner);
+      owner.refreshing = pending;
+      try { return await pending; }
+      finally { if (owner.refreshing === pending) owner.refreshing = null; }
     }
-    function signInWithGoogle() {
-      if (!config.supabaseUrl || !config.supabasePublishableKey) {
-        throw new Error('Sign-in is not configured on this environment');
-      }
-      const baseUrl = trimUrl(config.supabaseUrl);
-      const redirectTo = window.location.origin + '/messages' + (window.location.search || '');
-      const authorizeUrl = new URL(baseUrl + '/auth/v1/authorize');
-      authorizeUrl.searchParams.set('provider', 'google');
-      authorizeUrl.searchParams.set('redirect_to', redirectTo);
-      window.location.assign(authorizeUrl.toString());
-    }
-    async function refreshSession() {
-      if (!config.supabaseUrl || !config.supabasePublishableKey || !refreshToken()) return false;
-      const response = await fetch(trimUrl(config.supabaseUrl) + '/auth/v1/token?grant_type=refresh_token', {
+    async function performSessionRefresh(owner) {
+      const priorToken = owner.token;
+      const priorRefresh = refreshToken();
+      if (!config.supabaseUrl || !config.supabasePublishableKey || !priorRefresh) return false;
+      const response = await fetch(config.supabaseUrl.replace(/\\\/+$/, '') + '/auth/v1/token?grant_type=refresh_token', {
         method: 'POST',
         headers: { apikey: config.supabasePublishableKey, 'content-type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken() }),
+        body: JSON.stringify({ refresh_token: priorRefresh }),
       });
+      if (!ownsSession(owner) || owner.token !== priorToken || refreshToken() !== priorRefresh) throw staleSession();
       if (!response.ok) return false;
       const body = await parseJson(response);
+      if (!ownsSession(owner) || owner.token !== priorToken || refreshToken() !== priorRefresh) throw staleSession();
       if (!body.access_token) return false;
       sessionStorage.setItem('fd.accessToken', body.access_token);
       if (body.refresh_token) sessionStorage.setItem('fd.refreshToken', body.refresh_token);
+      // A refresh of the still-current session retains its private draft and
+      // request ownership. External changes always create a new owner above.
+      owner.token = body.access_token;
       return true;
     }
-    function isOpenAuthLane() {
-      const host = String(location.hostname || '');
-      return host.startsWith('dru.') || host.startsWith('jfl.') || host.startsWith('gamma.');
-    }
     async function api(path, options = {}, retry = true) {
+      if (syncSession()) throw staleSession();
+      const owner = session;
       const accessToken = token();
-      // Test lanes authenticate on the Worker (beta bypass). Require a browser
-      // session only on production-style hosts so Messages works without Google.
-      if (!accessToken && !isOpenAuthLane()) {
+      if (!accessToken) {
         const error = new Error('Sign in is required');
         error.code = 'session_required';
         throw error;
       }
-      const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
-      if (accessToken) headers.authorization = 'Bearer ' + accessToken;
+      if (retryAt > Date.now()) throw busyError();
+      const generation = rateGeneration;
       const response = await fetch(path, {
         ...options,
-        headers,
+        headers: { authorization: 'Bearer ' + accessToken, 'content-type': 'application/json' },
       });
+      if (!ownsSession(owner)) throw staleSession();
       if (response.status === 401 && retry) {
-        if (await refreshSession()) return api(path, options, false);
+        if (accessToken !== owner.token) return api(path, options, false);
+        const refreshed = await refreshSession(owner);
+        if (!ownsSession(owner)) throw staleSession();
+        if (refreshed) return api(path, options, false);
         const error = new Error('Your sign-in expired');
         error.code = 'session_expired';
         throw error;
       }
+      if (response.status === 429) {
+        const seconds = retrySeconds(response.headers.get('Retry-After'));
+        if (seconds) retryAt = Math.max(retryAt, Date.now() + seconds * 1000);
+        pausePolls = true; rateGeneration += 1;
+        throw busyError();
+      }
+      if (response.status >= 500) throw new Error('Messages are temporarily unavailable. Try again shortly.');
       const body = await parseJson(response);
-      if (!response.ok) throw new Error(body.error || 'Request failed');
+      if (!ownsSession(owner)) throw staleSession();
+      if (body.invalidResponse) throw new Error('Messages are temporarily unavailable. Try again shortly.');
+      if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Request failed');
+      if ((options.method || 'GET') === 'GET' && generation === rateGeneration) { retryAt = 0; pausePolls = false; }
       return body;
     }
     function formatTime(value) {
@@ -416,57 +458,39 @@ export function renderChatPage(env = {}) {
       return button;
     }
     function currentThread() { return threads.find((thread) => thread.key === currentKey) || null; }
-    function threadPreviewText(thread) {
-      return thread.canSend === false
-        ? (thread.type === 'league' || thread.type === 'matchup' ? 'Read-only' : 'Messaging unavailable')
-        : (thread.preview || 'No messages yet');
-    }
-    function paintThreadButton(button, thread) {
-      button.dataset.threadKey = thread.key;
-      button.dataset.active = String(thread.key === currentKey);
-      let name = button.querySelector('.thread-name');
-      if (!name) {
-        name = document.createElement('strong');
-        name.className = 'thread-name';
-        button.append(name);
-      }
-      name.textContent = thread.name;
-      let unread = button.querySelector('.unread');
-      if (Number(thread.unread) > 0) {
-        if (!unread) {
-          unread = document.createElement('span');
-          unread.className = 'unread';
-          name.insertAdjacentElement('afterend', unread);
-        }
-        unread.textContent = String(thread.unread);
-        unread.setAttribute('aria-label', String(thread.unread) + ' unread messages');
-      } else if (unread) {
-        unread.remove();
-      }
-      let preview = button.querySelector('.thread-preview');
-      if (!preview) {
-        preview = document.createElement('span');
-        preview.className = 'thread-preview';
-        button.append(preview);
-      }
-      preview.textContent = threadPreviewText(thread);
-    }
-    function appendSection(label, sectionThreads, group, listTarget) {
+    function appendSection(label, sectionThreads, group) {
       if (!sectionThreads.length) return;
-      if (listTarget) {
-        const sectionLabel = document.createElement('div');
-        sectionLabel.className = 'section-label';
-        sectionLabel.textContent = label;
-        listTarget.append(sectionLabel);
-        for (const thread of sectionThreads) {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'thread';
-          paintThreadButton(button, thread);
-          listTarget.append(button);
-        }
-      }
+      const sectionLabel = document.createElement('div');
+      sectionLabel.className = 'section-label';
+      sectionLabel.textContent = label;
+      threadListEl.append(sectionLabel);
       for (const thread of sectionThreads) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'thread';
+        button.dataset.threadKey = thread.key;
+        button.dataset.active = String(thread.key === currentKey);
+        const name = document.createElement('strong');
+        name.className = 'thread-name';
+        name.textContent = thread.name;
+        const preview = document.createElement('span');
+        preview.className = 'thread-preview';
+        preview.textContent = thread.canSend === false
+          ? (thread.type === 'league' || thread.type === 'matchup' ? 'Read-only' : 'Messaging unavailable')
+          : (thread.preview || 'No messages yet');
+        button.append(name);
+        if (Number(thread.unread) > 0) {
+          const unread = document.createElement('span');
+          unread.className = 'unread';
+          unread.textContent = String(thread.unread);
+          unread.setAttribute('aria-label', String(thread.unread) + ' unread messages');
+          button.append(unread);
+        } else {
+          button.append(document.createElement('span'));
+        }
+        button.append(preview);
+        threadListEl.append(button);
+
         const option = document.createElement('option');
         option.value = thread.key;
         option.textContent = thread.name + (Number(thread.unread) ? ' (' + thread.unread + ')' : '');
@@ -475,6 +499,7 @@ export function renderChatPage(env = {}) {
       }
     }
     function openNewMessage() {
+      if (syncSession()) return;
       if (!candidates.length) {
         setStatus('No other registered players are available to message yet');
         return;
@@ -482,6 +507,7 @@ export function renderChatPage(env = {}) {
       newDirectFormEl.hidden = !newDirectFormEl.hidden;
     }
     function openMobileNewMessage() {
+      if (syncSession()) return;
       if (!candidates.length) {
         setStatus('No other registered players are available to message yet');
         return;
@@ -489,17 +515,17 @@ export function renderChatPage(env = {}) {
       mobileNewDirectFormEl.hidden = !mobileNewDirectFormEl.hidden;
     }
     function renderThreads() {
+      threadListEl.replaceChildren();
       threadSelectEl.replaceChildren();
       if (!threads.length) {
-        threadListEl.replaceChildren();
         const actions = candidates.length
           ? [emptyButton('Start a player message', () => { newDirectFormEl.hidden = false; candidateSelectEl.focus(); }, true)]
-          : [emptyLink('Open Teams', '/teams', true), emptyLink('Open Players', '/players'), emptyLink('See tonight', '/schedule'), emptyLink('Score hub', '/scorecard'), emptyLink('Lineup', '/lineup')];
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule')];
         threadListEl.append(emptyState(
           'No conversations yet',
           candidates.length
             ? 'You can start a private league message with an eligible player.'
-            : 'Join a team or league-night matchup to unlock team, matchup, and player conversations.',
+            : (config.matchupChatEnabled ? 'Join a team or league-night matchup to unlock team, matchup, and player conversations.' : 'Open Profile to manage General Chat, Team Chat, and Direct Messages preferences.'),
           actions,
         ));
         const option = document.createElement('option');
@@ -507,20 +533,6 @@ export function renderChatPage(env = {}) {
         option.value = '';
         threadSelectEl.append(option);
         return;
-      }
-      const existingButtons = Array.from(threadListEl.querySelectorAll('button.thread'));
-      const existingKeys = existingButtons.map((button) => button.dataset.threadKey);
-      const nextKeys = threads.map((thread) => thread.key);
-      const structureSame = existingKeys.length === nextKeys.length
-        && existingKeys.every((key, index) => key === nextKeys[index])
-        && !threadListEl.querySelector('.empty');
-      if (structureSame) {
-        for (const thread of threads) {
-          const button = threadListEl.querySelector('button.thread[data-thread-key="' + thread.key.replace(/"/g, '') + '"]');
-          if (button) paintThreadButton(button, thread);
-        }
-      } else {
-        threadListEl.replaceChildren();
       }
       const leagueGroup = document.createElement('optgroup');
       leagueGroup.label = 'League rooms';
@@ -530,11 +542,10 @@ export function renderChatPage(env = {}) {
       directGroup.label = 'Player messages';
       const teamGroup = document.createElement('optgroup');
       teamGroup.label = 'Team chats';
-      const listTarget = structureSame ? null : threadListEl;
-      appendSection('League rooms', threads.filter((thread) => thread.type === 'league'), leagueGroup, listTarget);
-      appendSection('Matchup rooms', threads.filter((thread) => thread.type === 'matchup'), matchupGroup, listTarget);
-      appendSection('Player messages', threads.filter((thread) => thread.type === 'direct'), directGroup, listTarget);
-      appendSection('Team chats', threads.filter((thread) => thread.type === 'team'), teamGroup, listTarget);
+      appendSection('League rooms', threads.filter((thread) => thread.type === 'league'), leagueGroup);
+      appendSection('Matchup rooms', threads.filter((thread) => thread.type === 'matchup'), matchupGroup);
+      appendSection('Player messages', threads.filter((thread) => thread.type === 'direct'), directGroup);
+      appendSection('Team chats', threads.filter((thread) => thread.type === 'team'), teamGroup);
       if (leagueGroup.children.length) threadSelectEl.append(leagueGroup);
       if (matchupGroup.children.length) threadSelectEl.append(matchupGroup);
       if (directGroup.children.length) threadSelectEl.append(directGroup);
@@ -566,76 +577,49 @@ export function renderChatPage(env = {}) {
         for (const candidate of candidates) {
           const option = document.createElement('option');
           option.value = candidate.season_id + '|' + candidate.player_id;
-          const nameKey=String(candidate.display_name||'').trim().toLowerCase();
-          const sameName=candidates.filter((item)=>String(item.display_name||'').trim().toLowerCase()===nameKey).length>1;
-          option.textContent = candidate.display_name
-            + (sameName && candidate.player_id ? ' · #' + String(candidate.player_id).slice(-4) : '')
-            + ' · ' + (candidate.season_name||'Season')
-            + (candidate.team_name ? ' · ' + candidate.team_name : '');
+          option.textContent = candidate.display_name + ' · ' + candidate.season_name;
           select.append(option);
         }
       }
     }
-    function buildMessageArticle(message) {
-      const article = document.createElement('article');
-      article.className = 'message' + (message.is_own ? ' mine' : '');
-      article.dataset.messageId = message.message_id;
-      const meta = document.createElement('div');
-      meta.className = 'message-meta';
-      const author = document.createElement('span');
-      author.textContent = message.author_display_name
-        + (message.author_team_name ? ' · ' + message.author_team_name : '');
-      const time = document.createElement('time');
-      time.dateTime = message.created_at;
-      time.textContent = formatTime(message.created_at);
-      meta.append(author, time);
-      const body = document.createElement('div');
-      body.className = 'message-body';
-      body.textContent = message.body;
-      article.append(meta, body);
-      if (!message.is_own) {
-        const actions = document.createElement('div');
-        actions.className = 'message-actions';
-        const report = document.createElement('button');
-        report.type = 'button';
-        report.className = 'report';
-        report.dataset.reportMessage = message.message_id;
-        report.textContent = 'Report';
-        actions.append(report);
-        article.append(actions);
-      }
-      return article;
-    }
-    let lastMessagesSignature='';
-    function messagesSignature(messages){
-      return (messages||[]).map((m)=>[m.message_id||m.messageId||'',m.body||m.message_body||'',m.created_at||m.createdAt||''].join(':')).join('|');
-    }
-    function renderMessages(messages, { keepPosition = false, force = false } = {}) {
-      const sig=messagesSignature(messages);
-      if(!force&&sig&&sig===lastMessagesSignature&&messages.length){return}
-      lastMessagesSignature=sig;
+    function renderMessages(messages, { keepPosition = false } = {}) {
       const nearBottom = messageListEl.scrollHeight - messageListEl.scrollTop - messageListEl.clientHeight < 100;
+      messageListEl.replaceChildren();
       loadOlderButtonEl.hidden = !canLoadOlder;
+      messageListEl.append(loadOlderButtonEl);
       if (!messages.length) {
-        messageListEl.replaceChildren(loadOlderButtonEl);
         messageListEl.append(emptyState('No messages yet', 'Send the first message when you are ready.'));
         return;
       }
-      if (window.fdStableList) {
-        window.fdStableList(messageListEl, messages, {
-          key: (m) => String(m.message_id || ''),
-          signature: (m) => [m.body, m.created_at, m.is_own, m.author_display_name, m.author_team_name].join('|'),
-          render: (m) => buildMessageArticle(m),
-        });
-        // Keep "load older" as a non-keyed chrome node at the top.
-        if (loadOlderButtonEl.parentNode !== messageListEl) {
-          messageListEl.prepend(loadOlderButtonEl);
-        } else if (messageListEl.firstChild !== loadOlderButtonEl) {
-          messageListEl.prepend(loadOlderButtonEl);
+      for (const message of messages) {
+        const article = document.createElement('article');
+        article.className = 'message' + (message.is_own ? ' mine' : '');
+        article.dataset.messageId = message.message_id;
+        const meta = document.createElement('div');
+        meta.className = 'message-meta';
+        const author = document.createElement('span');
+        author.textContent = message.author_display_name
+          + (message.author_team_name ? ' · ' + message.author_team_name : '');
+        const time = document.createElement('time');
+        time.dateTime = message.created_at;
+        time.textContent = formatTime(message.created_at);
+        meta.append(author, time);
+        const body = document.createElement('div');
+        body.className = 'message-body';
+        body.textContent = message.body;
+        article.append(meta, body);
+        if (!message.is_own) {
+          const actions = document.createElement('div');
+          actions.className = 'message-actions';
+          const report = document.createElement('button');
+          report.type = 'button';
+          report.className = 'report';
+          report.dataset.reportMessage = message.message_id;
+          report.textContent = 'Report';
+          actions.append(report);
+          article.append(actions);
         }
-      } else {
-        messageListEl.replaceChildren(loadOlderButtonEl);
-        for (const message of messages) messageListEl.append(buildMessageArticle(message));
+        messageListEl.append(article);
       }
       if (!keepPosition && (nearBottom || messageListEl.dataset.initial !== 'done')) {
         messageListEl.scrollTop = messageListEl.scrollHeight;
@@ -653,23 +637,25 @@ export function renderChatPage(env = {}) {
       return base + '/messages' + suffix;
     }
     async function markRead(thread, messages) {
+      const owner = session;
       const latest = messages[messages.length - 1];
       if (!latest) return;
       await api(messagePath(thread, '/read'), {
         method: 'POST', body: JSON.stringify({ readAt: latest.created_at }),
       });
-      try { window.dispatchEvent(new CustomEvent('fd:messages-changed')); } catch (_) {}
+      if (!ownsSession(owner)) return;
       window.dispatchEvent(new CustomEvent('fd:messages-read'));
     }
     async function loadMessages(quiet = false) {
+      const owner = session;
       const thread = currentThread();
       if (!thread || loadingMessages) return;
       loadingMessages = true;
-      const selectedKey = thread.key;
+      const selectedEpoch = conversationEpoch;
       try {
         if (!quiet) setStatus('Loading messages…');
         const body = await api(messagePath(thread) + '?limit=50');
-        if (selectedKey !== currentKey) return;
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         const messages = Array.isArray(body.messages) ? body.messages : [];
         if (quiet) {
           const byId = new Map(displayedMessages.map((message) => [message.message_id, message]));
@@ -684,61 +670,76 @@ export function renderChatPage(env = {}) {
         }
         renderMessages(displayedMessages);
         await markRead(thread, displayedMessages);
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         if (!quiet) setStatus('Messages loaded', 'ok');
+      } catch (error) {
+        if (selectedEpoch === conversationEpoch) throw error;
       } finally {
-        loadingMessages = false;
+        if (selectedEpoch === conversationEpoch) loadingMessages = false;
       }
     }
     async function loadOlderMessages() {
+      const owner = session;
       const thread = currentThread();
       const oldest = displayedMessages[0];
       if (!thread || !oldest || !canLoadOlder || loadingMessages) return;
       loadingMessages = true;
       loadOlderButtonEl.disabled = true;
       const priorHeight = messageListEl.scrollHeight;
+      const selectedEpoch = conversationEpoch;
       try {
         const query = '?limit=50&before=' + encodeURIComponent(oldest.created_at)
           + '&beforeMessageId=' + encodeURIComponent(oldest.message_id);
         const body = await api(messagePath(thread) + query);
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         const older = Array.isArray(body.messages) ? body.messages : [];
         const byId = new Map([...older, ...displayedMessages].map((message) => [message.message_id, message]));
         displayedMessages = [...byId.values()].sort((a, b) =>
           a.created_at.localeCompare(b.created_at) || a.message_id.localeCompare(b.message_id));
         canLoadOlder = older.length === 50;
         reachedConversationStart = older.length < 50;
-        renderMessages(displayedMessages, { keepPosition: true, force: true });
+        renderMessages(displayedMessages, { keepPosition: true });
         messageListEl.scrollTop = messageListEl.scrollHeight - priorHeight;
         setStatus(older.length ? 'Older messages loaded' : 'Beginning of conversation', 'ok');
+      } catch (error) {
+        if (selectedEpoch === conversationEpoch) throw error;
       } finally {
-        loadingMessages = false;
-        loadOlderButtonEl.disabled = false;
+        if (selectedEpoch === conversationEpoch) {
+          loadingMessages = false;
+          loadOlderButtonEl.disabled = false;
+        }
       }
     }
     async function selectThread(key) {
+      // Each selection owns its own requests, including A -> B -> A.
+      conversationEpoch += 1;
+      loadingMessages = false;
+      loadOlderButtonEl.disabled = false;
       currentKey = key || '';
       const thread = currentThread();
       chatNameEl.textContent = thread ? thread.name : 'Select a conversation';
       chatSeasonEl.textContent = thread ? thread.season : '';
       const canSend = Boolean(thread && thread.canSend !== false);
       messageInputEl.disabled = !canSend;
-      sendButtonEl.disabled = !canSend;
+      sendButtonEl.disabled = !canSend || sendingMessage;
       messageInputEl.placeholder = canSend ? 'Write a message' : 'Messaging unavailable';
-      blockButtonEl.hidden = !thread || thread.type !== 'direct' || (thread.canSend === false && !thread.blockedByMe);
+      blockButtonEl.hidden = !thread || thread.type !== 'direct';
       blockButtonEl.textContent = thread?.blockedByMe ? 'Unblock' : 'Block';
       messageListEl.dataset.initial = '';
       displayedMessages = [];
       canLoadOlder = false;
       reachedConversationStart = false;
+      renderMessages([]);
       renderThreads();
       if (!thread) {
         const actions = candidates.length
           ? [emptyButton('Start a player message', () => { mobileNewDirectFormEl.hidden = false; mobileCandidateSelectEl.focus(); }, true)]
-          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule'), emptyLink('Score hub', '/scorecard'), emptyLink('Lineup', '/lineup')];
+          : [emptyLink('Open Teams', '/teams', true), emptyLink('See tonight', '/schedule')];
         messageListEl.replaceChildren(emptyState(
           'No conversations yet',
           candidates.length
-            ? 'Start a player message or wait for a team, matchup, or league room to appear.'
-            : 'Join a team or league-night matchup to unlock conversations.',
+            ? (config.matchupChatEnabled ? 'Start a player message or wait for a team, matchup, or league room to appear.' : 'Start a Direct Message or open General Chat or Team Chat.')
+            : (config.matchupChatEnabled ? 'Join a team or league-night matchup to unlock conversations.' : 'Open Profile to manage your social chat preferences.'),
           actions,
         ));
         return;
@@ -762,9 +763,11 @@ export function renderChatPage(env = {}) {
       return rows.map((row) => ({ key: 'league:' + row.season_id, type: 'league', id: row.season_id, name: 'League room', season: row.season_name, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     function normalizedMatchupThreads(rows) {
+      if (!config.matchupChatEnabled) return [];
       return rows.map((row) => ({ key: 'matchup:' + row.team_match_id, type: 'matchup', id: row.team_match_id, name: row.team_a_name + ' vs ' + row.team_b_name, season: row.season_name + ' · Round ' + row.round_number, preview: row.last_message_body, unread: row.unread_count, canSend: row.can_send }));
     }
     async function loadThreads({ preserveSelection = true } = {}) {
+      const owner = session;
       signedOutEl.hidden = true;
       hidePageState();
       layoutEl.hidden = false;
@@ -773,9 +776,10 @@ export function renderChatPage(env = {}) {
         api('/api/me/chat-threads'),
         api('/api/me/direct-message-inbox'),
         api('/api/me/league-chat-threads'),
-        api('/api/me/matchup-chat-threads'),
+        config.matchupChatEnabled ? api('/api/me/matchup-chat-threads') : Promise.resolve({ threads: [] }),
         api('/api/me/direct-message-candidates'),
       ]);
+      if (!ownsSession(owner)) return;
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
         ...normalizedMatchupThreads(Array.isArray(matchupBody.threads) ? matchupBody.threads : []),
@@ -785,7 +789,6 @@ export function renderChatPage(env = {}) {
       candidates = Array.isArray(candidateBody.candidates) ? candidateBody.candidates : [];
       renderCandidates();
       const params = new URLSearchParams(location.search);
-      const requestedPlayerId = params.get('player') || params.get('with') || '';
       const requestedKey = params.get('direct')
         ? 'direct:' + params.get('direct')
         : (params.get('team')
@@ -793,44 +796,25 @@ export function renderChatPage(env = {}) {
           : (params.get('league')
             ? 'league:' + params.get('league')
             : (params.get('matchup') ? 'matchup:' + params.get('matchup') : '')));
-      let playerThreadKey = '';
-      if (requestedPlayerId) {
-        const hit = threads.find((thread) => thread.type === 'direct' && String(thread.otherPlayerId || '') === String(requestedPlayerId));
-        if (hit) playerThreadKey = hit.key;
-      }
       const existing = preserveSelection && threads.some((thread) => thread.key === currentKey) ? currentKey : '';
       const initial = existing
-        || playerThreadKey
         || (threads.some((thread) => thread.key === requestedKey) ? requestedKey : '')
         || threads[0]?.key
         || '';
       await selectThread(initial);
-      // Deep-link: start a new DM when player id is known but no thread exists yet.
-      if (requestedPlayerId && !playerThreadKey && candidates.length) {
-        const match = candidates.find((c) => String(c.player_id || c.playerId || '') === String(requestedPlayerId));
-        if (match) {
-          const value = String(match.season_id || match.seasonId || '') + '|' + String(match.player_id || match.playerId || '');
-          if (candidateSelectEl) {
-            // ensure option exists
-            let found = false;
-            for (const opt of candidateSelectEl.options) { if (opt.value === value) { found = true; break; } }
-            if (!found) {
-              const option = document.createElement('option');
-              option.value = value;
-              option.textContent = match.display_name || match.displayName || 'Player';
-              candidateSelectEl.append(option);
-            }
-            candidateSelectEl.value = value;
-            newDirectFormEl.hidden = false;
-          }
-        }
+      if (!ownsSession(owner)) return;
+      if (!config.matchupChatEnabled && params.has('matchup')) {
+        setStatus('Matchup chat is retired. Use General Chat, Team Chat, or Direct Messages.', 'muted');
+      } else {
+        setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
       }
-      setStatus(threads.length ? 'Messages ready' : 'No conversations yet', threads.length ? 'ok' : 'muted');
     }
     async function refreshThreadMetadata() {
+      const owner = session;
       const [teamBody, directBody, leagueBody, matchupBody, candidateBody] = await Promise.all([
-        api('/api/me/chat-threads'), api('/api/me/direct-message-inbox'), api('/api/me/league-chat-threads'), api('/api/me/matchup-chat-threads'), api('/api/me/direct-message-candidates'),
+        api('/api/me/chat-threads'), api('/api/me/direct-message-inbox'), api('/api/me/league-chat-threads'), config.matchupChatEnabled ? api('/api/me/matchup-chat-threads') : Promise.resolve({ threads: [] }), api('/api/me/direct-message-candidates'),
       ]);
+      if (!ownsSession(owner)) return;
       threads = [
         ...normalizedLeagueThreads(Array.isArray(leagueBody.threads) ? leagueBody.threads : []),
         ...normalizedMatchupThreads(Array.isArray(matchupBody.threads) ? matchupBody.threads : []),
@@ -842,76 +826,99 @@ export function renderChatPage(env = {}) {
       renderThreads();
     }
     async function detectModerator() {
+      const owner = session;
       try {
         await api('/api/admin/chat-reports?limit=1');
+        if (!ownsSession(owner)) return;
         document.querySelector('[data-moderation-link]').hidden = false;
       } catch (error) {
         if (!/League admin access/i.test(error.message)) throw error;
       }
     }
     async function sendMessage() {
+      const owner = session;
       const thread = currentThread();
       const body = messageInputEl.value.trim();
-      if (!thread || !body || thread.canSend === false) return;
+      if (!thread || !body || thread.canSend === false || sendingMessage) return;
+      const selectedEpoch = conversationEpoch;
+      sendingMessage = true;
       messageInputEl.disabled = true;
       sendButtonEl.disabled = true;
       setStatus('Sending…');
       try {
         await api(messagePath(thread), { method: 'POST', body: JSON.stringify({ body, clientMessageId: crypto.randomUUID() }) });
+        if (!ownsSession(owner) || selectedEpoch !== conversationEpoch) return;
         messageInputEl.value = '';
-        await loadThreads({ preserveSelection: true });
-        setStatus('Sent', 'ok');
+        await loadMessages();
+        if (ownsSession(owner) && selectedEpoch === conversationEpoch) setStatus('Sent', 'ok');
+      } catch (error) {
+        if (!ownsSession(owner)) return;
+        if (selectedEpoch === conversationEpoch || error?.code === 'session_expired' || error?.code === 'session_required') throw error;
+        setStatus('Send to ' + thread.name + ' could not be confirmed. Check that conversation before retrying.', 'error');
       } finally {
-        const latestThread = currentThread();
-        const enabled = Boolean(latestThread && latestThread.canSend !== false);
-        messageInputEl.disabled = !enabled;
-        sendButtonEl.disabled = !enabled;
-        if (enabled) messageInputEl.focus();
+        if (ownsSession(owner)) {
+          sendingMessage = false;
+          const latestThread = currentThread();
+          const enabled = Boolean(latestThread && latestThread.canSend !== false);
+          messageInputEl.disabled = !enabled;
+          sendButtonEl.disabled = !enabled;
+          if (enabled) messageInputEl.focus();
+        }
       }
     }
     async function startDirectConversation(select) {
+      const owner = session;
       const value = select.value;
       if (!value) throw new Error('Choose a player');
       const [seasonId, playerId] = value.split('|');
       setStatus('Starting player message…');
       const body = await api('/api/direct-conversations', { method: 'POST', body: JSON.stringify({ seasonId, playerId }) });
+      if (!ownsSession(owner)) return;
       newDirectFormEl.hidden = true;
       mobileNewDirectFormEl.hidden = true;
       currentKey = 'direct:' + body.conversation.conversation_id;
       await loadThreads({ preserveSelection: true });
     }
     async function toggleBlock() {
+      const owner = session;
       const thread = currentThread();
       if (!thread || thread.type !== 'direct') return;
       const unblocking = Boolean(thread.blockedByMe);
       if (!unblocking && !window.confirm('Block ' + thread.name + '? You will not be able to message each other.')) return;
       await api('/api/players/' + encodeURIComponent(thread.otherPlayerId) + '/block', { method: unblocking ? 'DELETE' : 'POST', body: '{}' });
+      if (!ownsSession(owner)) return;
       await loadThreads({ preserveSelection: true });
+      if (!ownsSession(owner)) return;
       setStatus(unblocking ? 'Player unblocked' : 'Player blocked', 'ok');
     }
     function openReport(messageId) {
+      if (syncSession()) return;
       reportingMessageId = messageId;
       reportReasonEl.value = 'harassment';
       reportDetailsEl.value = '';
       reportDialogEl.showModal();
     }
     async function submitReport() {
+      const owner = session;
       const thread = currentThread();
       if (!thread || !reportingMessageId) return;
       await api('/api/chat-reports', {
         method: 'POST',
         body: JSON.stringify({ messageType: thread.type, messageId: reportingMessageId, reason: reportReasonEl.value, details: reportDetailsEl.value }),
       });
+      if (!ownsSession(owner)) return;
       reportDialogEl.close();
       reportingMessageId = '';
       setStatus('Report submitted to league admins', 'ok');
     }
     function friendlyFailure(error) {
       const message = String(error?.message || '');
+      if (/[<>]|&(?:lt|gt);/i.test(message) || message.length > 240) return 'We could not load your conversations.';
       if (/supabase|bearer|uuid|rpc|permission denied|schema private|postgres|request failed/i.test(message)) return 'We could not load your conversations.';
       return message || 'We could not load your conversations.';
     }
     function handleError(error, { loadFailure = false } = {}) {
+      if (error?.code === 'stale_session') return;
       if (error?.code === 'session_expired' || error?.code === 'session_required') {
         showSignedOut(error.code === 'session_expired');
         return;
@@ -927,11 +934,19 @@ export function renderChatPage(env = {}) {
       }
     }
     async function run(action) {
-      try { await action(); } catch (error) { handleError(error); }
+      if (syncSession()) return;
+      const owner = session;
+      try { await action(); } catch (error) { if (ownsSession(owner)) handleError(error); }
     }
     async function runLoadThreads() {
+      if (syncSession() || loadingThreads) return;
+      const owner = session;
+      const pending = {};
+      loadingThreads = pending;
       hidePageState();
-      try { await loadThreads(); } catch (error) { handleError(error, { loadFailure: true }); }
+      try { await loadThreads(); }
+      catch (error) { if (ownsSession(owner)) handleError(error, { loadFailure: true }); }
+      finally { if (ownsSession(owner) && loadingThreads === pending) loadingThreads = null; }
     }
 
     threadListEl.addEventListener('click', (event) => {
@@ -957,22 +972,11 @@ export function renderChatPage(env = {}) {
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); run(sendMessage); }
     });
 
-    const googleSignInButton = document.querySelector('[data-google-signin]');
-    if (googleSignInButton) {
-      googleSignInButton.addEventListener('click', () => {
-        try { signInWithGoogle(); }
-        catch (error) { setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : (error.message || 'Could not start Google sign-in')), 'error'); }
-      });
-    }
-    try {
-      if (consumeOAuthCallback()) {
-        setStatus('Signed in', 'ok');
-      }
-    } catch (error) {
-      showSignedOut(false);
-      setStatus((window.fdFriendlyError ? window.fdFriendlyError(error) : (error.message || 'Sign-in failed')), 'error');
-    }
-    if (token() || isOpenAuthLane()) {
+    window.addEventListener('fd:session-changed', syncSession);
+    window.addEventListener('storage', syncSession);
+    window.addEventListener('focus', syncSession);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncSession(); });
+    if (token()) {
       signedOutEl.hidden = true;
       layoutEl.hidden = false;
       runLoadThreads();
@@ -982,11 +986,12 @@ export function renderChatPage(env = {}) {
     }
     let pollCount = 0;
     setInterval(() => {
-      if (!document.hidden && (token() || isOpenAuthLane()) && currentKey) run(() => loadMessages(true));
+      if (syncSession()) return;
+      if (!pollingReady()) return;
+      if (!document.hidden && token() && currentKey) run(() => loadMessages(true));
       pollCount += 1;
-      if (!document.hidden && (token() || isOpenAuthLane()) && pollCount % 4 === 0) run(refreshThreadMetadata);
+      if (!document.hidden && token() && pollCount % 4 === 0) run(refreshThreadMetadata);
     }, 4000);
-    if(window.fdLiveRefresh)window.fdLiveRefresh.register(()=>{if(typeof refreshThreadMetadata==='function')refreshThreadMetadata();},{intervalMs:12000,immediate:false});
   </script>
 </body>
 </html>`;
