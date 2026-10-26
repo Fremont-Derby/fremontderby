@@ -39,6 +39,9 @@ function harness(getStatuses, postStatuses = [200], retryAfter = '10', flapBanne
     },
     waitForTimeout: async (duration) => { delays.push(duration); },
     locator: (selector) => ({
+      // Existing switch cases start without a matching selected option; an old
+      // banner alone must still never authorize reuse.
+      locator: () => ({ textContent: async () => '' }),
       isVisible: async () => selector === '[data-google-sign-in]' ? true
         : selector === '[data-test-persona-select]' ? control
           : Boolean(banner) && (!flapBanner || ++bannerChecks % 2 === 1),
@@ -129,9 +132,19 @@ test('an old matching persona banner cannot mask a denied switch', async () => {
 
 test('persona recovery refuses to shorten a cooldown beyond its bounded budget', async () => {
   const state = harness([429], [200], '120');
-  await assert.rejects(state.run(), /exceeds the bounded setup budget/);
+  await assert.rejects(state.run(), /validated positive Retry-After within 60 seconds/);
   assert.deepEqual(state.delays, []);
   assert.equal(state.cleaned(), true);
+});
+
+test('persona recovery never invents a wait for unqualified throttling', async () => {
+  for (const header of [undefined, '', '0', '-1', 'not-a-date']) {
+    const state = harness([429], [200], header === undefined ? null : header);
+    await assert.rejects(state.run(), /validated positive Retry-After within 60 seconds/);
+    assert.deepEqual(state.delays, []);
+    assert.equal(state.reloads(), 1);
+    assert.equal(state.cleaned(), true);
+  }
 });
 
 test('persona throttle recovery is bounded and observers are removed on exhaustion', async () => {
