@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
 import { openQaResults, readQaResultsAccess } from './qa-results-access.js';
+import { observeAvailabilityThrottle, waitForObserved429 } from './fixture-throttle.js';
 
 const fixture = {
   seasonId: '18580000-1000-4000-8000-000000000000',
@@ -22,9 +23,12 @@ const fixture = {
 };
 
 async function setQaAvailability(page, value) {
+  const throttle = observeAvailabilityThrottle(page, fixture.seasonId);
+  try {
   const scheduledOn = process.env.PLAYWRIGHT_FIXTURE_DATE;
   expect(scheduledOn, 'Use the date read back by the trusted fixture reset').toMatch(/^\d{4}-\d{2}-\d{2}$/);
   for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (throttle.hasObservation()) await throttle.wait();
     await page.goto('/availability');
     const card = page.locator(`[data-group-key="${fixture.seasonId}|${scheduledOn}"]`);
     const button = card.locator(`[data-value="${value}"]`);
@@ -35,7 +39,8 @@ async function setQaAvailability(page, value) {
         && await page.locator('[data-recovery]').getByRole('button', { name: 'Try again' }).isVisible())).toBe(true);
     if (await page.locator('[data-status]').getAttribute('data-tone') !== 'ok') {
       await expect(page.locator('[data-status]')).toContainText('temporarily busy');
-      await page.waitForTimeout(16_000);
+      if (attempt === 3) break;
+      await throttle.wait();
       continue;
     }
     const [response] = await Promise.all([
@@ -46,14 +51,15 @@ async function setQaAvailability(page, value) {
     expect(response.request().postDataJSON()).toEqual({ date: scheduledOn, status: value });
     if (response.status() === 429) {
       await expect(button).toBeEnabled();
-      const seconds = Number(response.headers()['retry-after']);
-      await page.waitForTimeout(((Number.isFinite(seconds) && seconds > 0 ? seconds : 15) + 1) * 1000);
+      if (attempt === 3) break;
+      await waitForObserved429(page, { status: response.status(), retryAfter: response.headers()['retry-after'] });
       continue;
     }
     expect(response.status()).toBe(200);
     await expect(card).toHaveAttribute('data-state', value);
     await expect(button).toBeEnabled();
     await page.waitForTimeout(12_000);
+    if (throttle.hasObservation()) await throttle.wait();
     const savedRead = page.waitForResponse((result) => result.request().method() === 'GET'
       && new URL(result.url()).pathname === `/api/seasons/${fixture.seasonId}/availability/me`
       && new URL(result.url()).searchParams.get('date') === scheduledOn);
@@ -61,9 +67,11 @@ async function setQaAvailability(page, value) {
     expect((await savedRead).status()).toBe(200);
     await expect(button).toBeEnabled();
     await expect(card).toHaveAttribute('data-state', value);
+    if (throttle.hasObservation()) await throttle.wait();
     return;
   }
   throw new Error('QA player availability did not save after bounded UI retries');
+  } finally { throttle.dispose(); }
 }
 
 async function readLineupAsCaptain(page, teamId) {
@@ -82,8 +90,8 @@ async function readLineupAsCaptain(page, teamId) {
       };
     }, { teamId, roundId: fixture.roundId });
     if (result.status !== 429) return result;
-    const seconds = Number(result.retryAfter);
-    await page.waitForTimeout(((Number.isFinite(seconds) && seconds > 0 ? seconds : 15) + 1) * 1000);
+    if (attempt === 3) break;
+    await waitForObserved429(page, result);
   }
   throw new Error('Lineup access read remained throttled after bounded retries');
 }
