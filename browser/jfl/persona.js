@@ -15,8 +15,9 @@ export async function assumePersona(page, label) {
     if (path === '/api/test-persona' && response.request().method() === 'POST'
       && response.status() >= 200 && response.status() < 300) switchNavigation = navigationEpoch;
     if (response.status() === 429 && (path === '/api/test-persona' || path === '/profile')) {
-      const seconds = Number(response.headers()['retry-after']);
-      throttle = Number.isFinite(seconds) && seconds > 0 ? seconds : 15;
+      const header = response.headers()['retry-after'];
+      const numeric = header?.trim() ? Number(header) : NaN;
+      throttle = Math.ceil(Number.isFinite(numeric) ? numeric : (Date.parse(header) - Date.now()) / 1000);
     }
   };
   page.on('response', observe);
@@ -43,6 +44,12 @@ export async function assumePersona(page, label) {
         }).toBe(true);
       }
       if (controlReady) {
+        // The control and banner were populated by the current Profile GET.
+        // Cleanup need not reselect an already confirmed server-side persona.
+        if (await selector.locator('option:checked').textContent() === label
+          && await banner.isVisible() && (await banner.textContent()).includes(label)) {
+          return { retries };
+        }
         // An unrelated prior profile read may have throttled while this control
         // loaded successfully. Only a new switch failure triggers its retry.
         throttle = null;
@@ -63,7 +70,9 @@ export async function assumePersona(page, label) {
       expect(throttle, 'Only an observed HTTP429 permits persona setup recovery').not.toBeNull();
       if (attempt === 3) break;
       const seconds = throttle;
-      if (seconds > 60) throw new Error('Persona rate-limit cooldown exceeds the bounded setup budget');
+      if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 60) {
+        throw new Error('Persona recovery requires a validated positive Retry-After within 60 seconds');
+      }
       retries += 1;
       console.info(`Persona setup retry ${attempt + 1}/3 after HTTP429; cooldown=${seconds + 1}s.`);
       await page.waitForTimeout((seconds + 1) * 1000);
