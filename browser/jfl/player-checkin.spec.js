@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
+import { observeAvailabilityThrottle, waitForObserved429 } from './fixture-throttle.js';
 
 const qaSeason = '18580000-1000-4000-8000-000000000000';
 
 async function openCheckin(page) {
+  const throttle = observeAvailabilityThrottle(page, qaSeason);
+  try {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await page.goto('/availability');
     const card = page.locator(`[data-group-key^="${qaSeason}|"]`);
@@ -12,11 +15,16 @@ async function openCheckin(page) {
         && await card.locator('[data-value="available"]').isEnabled({ timeout: 1000 }).catch(() => false))
       || (await page.locator('[data-status]').getAttribute('data-tone') === 'error'
         && await page.locator('[data-recovery]').getByRole('button', { name: 'Try again' }).isVisible())).toBe(true);
-    if (await page.locator('[data-status]').getAttribute('data-tone') === 'ok') return card;
+    if (await page.locator('[data-status]').getAttribute('data-tone') === 'ok') {
+      if (throttle.hasObservation()) await throttle.wait();
+      return card;
+    }
     await expect(page.locator('[data-status]')).toContainText('temporarily busy');
-    await page.waitForTimeout(16_000);
+    if (attempt === 3) break;
+    await throttle.wait();
   }
   throw new Error('Player check-in did not load after bounded UI retries');
+  } finally { throttle.dispose(); }
 }
 
 test('phone player can retry a throttled date check-in and reopen the saved response', async ({ browser, request }) => {
@@ -36,16 +44,21 @@ test('phone player can retry a throttled date check-in and reopen the saved resp
     await page.route(endpoint, async (route) => {
       if (route.request().method() === 'PUT' && !injected) {
         injected = true;
-        await route.fulfill({ status: 429, contentType: 'application/json', body: '{"error":"Synthetic throttle"}' });
+        await route.fulfill({ status: 429, headers: { 'retry-after': '1' }, contentType: 'application/json', body: '{"error":"Synthetic throttle"}' });
       } else await route.continue();
     });
+    const rejected = page.waitForResponse(response => response.request().method() === 'PUT'
+      && new URL(response.url()).pathname === `/api/seasons/${qaSeason}/availability/me`);
     await card.locator('[data-value="available"]').click();
+    const injectedResponse = await rejected;
+    expect(injectedResponse.status()).toBe(429);
     await expect(page.locator('[data-status]')).toContainText('temporarily busy');
     expect(injected).toBe(true);
     await expect(card).toHaveAttribute('data-state', priorState);
     await expect(card.locator('[data-value="available"]')).toBeEnabled();
     await expect(card.locator('[data-row-status]')).toContainText('temporarily busy');
     await page.unroute(endpoint);
+    await waitForObserved429(page, { status: injectedResponse.status(), retryAfter: injectedResponse.headers()['retry-after'] });
     // Space the real save from the initial read; the injected request did not
     // touch the backend. Only this supported UI action mutates QA availability.
     await page.waitForTimeout(12_000);
