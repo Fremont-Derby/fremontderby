@@ -57,3 +57,26 @@ for (const kind of ['numeric', 'date', 'missing', 'invalid', 'zero', 'large', 'd
     }
   });
 }
+
+test('loaded Admin page still honors an advisory cooldown without retrying a successful load', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  let requests = 0;
+  let deadline;
+  await context.route('**/*', route => {
+    if (new URL(route.request().url()).pathname === '/') return route.fulfill({ contentType: 'text/html', body: `
+      <form data-season-setup-form data-loaded-season="qa"><p data-status>read only</p></form>
+      <script>fetch('/api/admin/seasons/qa/close-readiness')</script>` });
+    requests++;
+    deadline = Date.now() + 1000;
+    return route.fulfill({ status: 429, headers: { 'retry-after': '1' }, json: {} });
+  });
+  const reads = observeAdminReads(page, () => 'qa');
+  try {
+    await page.goto('https://admin-policy.test/');
+    await expect.poll(() => reads.hasPending()).toBe(true);
+    await loadAdminSeason(page, { id: 'qa' }, reads);
+    expect(Date.now()).toBeGreaterThanOrEqual(deadline);
+    expect(requests).toBe(1);
+  } finally { reads.dispose(); await context.close(); }
+});

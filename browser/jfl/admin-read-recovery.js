@@ -14,6 +14,8 @@ export function observeAdminReads(page, selectedSeason, clock = Date.now) {
       || [prefix + 'setup', prefix + 'team-registration'].includes(url.pathname);
     const advisory = [prefix + 'team-candidates', prefix + 'close-readiness'].includes(url.pathname);
     if ((!core && !advisory) || response.status() < 400) return;
+    console.info(JSON.stringify({ method: 'GET', path: url.pathname.replace(prefix, '/api/admin/seasons/:selected-season/'),
+      status: response.status(), retryAfter: response.headers()['retry-after'] || null }));
     if (response.status() !== 429) {
       if (core) failure = new Error(`Admin core read failed with HTTP${response.status()}; no recovery attempted`);
       return;
