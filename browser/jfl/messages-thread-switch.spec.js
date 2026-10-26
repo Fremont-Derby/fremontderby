@@ -24,7 +24,10 @@ async function openMessages(browser, request, mobile, failure = null, clock = fa
     isMobile: mobile, hasTouch: mobile });
   // This fake session is confined to intercepted requests. No private history or
   // mutation is sent to a server; only the deployed page HTML is read live.
-  await context.addInitScript(() => sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only'));
+  await context.addInitScript(() => {
+    if (window !== window.top) return;
+    sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only');
+  });
   const page = await context.newPage();
   if (clock) await page.clock.install({ time: new Date('2026-10-25T08:00:00Z') });
   const reads = [];
@@ -259,6 +262,19 @@ for (const mobile of [false, true]) {
       await expect(f.page.locator('[data-chat-layout]')).toBeHidden();
       await expect(f.page.locator('[data-signed-out] a[href="/profile"]')).toBeVisible();
       await expect(f.page.locator('body')).not.toContainText('PRIVATE_AUTH_DETAIL');
+      expect(f.sends).toHaveLength(0);
+      // A same-origin iframe shares this tab's sessionStorage. Test setup must
+      // not sign the page back in when a later child document initializes.
+      await f.page.route('**/synthetic-session-frame', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Synthetic child frame</title>' }));
+      await f.page.evaluate(() => new Promise(resolve => {
+        const frame = document.createElement('iframe');
+        frame.onload = resolve; frame.src = '/synthetic-session-frame'; document.body.append(frame);
+      }));
+      expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBeNull();
+      await f.page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await expect(f.page.locator('[data-signed-out]')).toBeVisible();
+      await expect(f.page.locator('[data-chat-layout]')).toBeHidden();
+      await expect(f.page.locator('[data-message-list]')).not.toContainText('A current');
       expect(f.sends).toHaveLength(0);
     } finally { await f.context.close(); }
   });
