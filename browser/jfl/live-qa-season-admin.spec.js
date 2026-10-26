@@ -30,7 +30,7 @@ test.beforeAll(async ({ request }) => {
 // #3573: recover only core read throttles through the same controls an operator
 // uses. Advisory readiness failures cannot authorize a retry or mask a bad load.
 async function ready(page, target, reads) {
-  await loadAdminSeason(page, target, reads);
+  await loadAdminSeason(page, target, reads, expect);
   await expect(page.locator('[data-season-selector]')).toHaveValue(target.id, { timeout: 45_000 });
   await expect(page.locator('[data-status]')).toContainText('read only', { timeout: 45_000 });
   await expect(page.locator('[data-team-count]')).toHaveText('8');

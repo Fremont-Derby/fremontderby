@@ -43,11 +43,11 @@ for (const kind of ['numeric', 'date', 'missing', 'invalid', 'zero', 'large', 'd
           document.querySelector('[data-retry-seasons]').hidden = true;
           document.querySelector('[data-load]').hidden = false;
         });
-        await loadAdminSeason(page, { id: 'qa' }, reads);
+        await loadAdminSeason(page, { id: 'qa' }, reads, expect);
         expect(retriedAt).toBeGreaterThanOrEqual(deadline);
         expect(requests).toBe(2);
       } else {
-        await expect(loadAdminSeason(page, { id: 'qa' }, reads)).rejects.toThrow(
+        await expect(loadAdminSeason(page, { id: 'qa' }, reads, expect)).rejects.toThrow(
           kind === 'denied' ? /HTTP403/ : /validated positive/);
         expect(requests).toBe(1);
       }
@@ -75,7 +75,7 @@ test('loaded Admin page still honors an advisory cooldown without retrying a suc
   try {
     await page.goto('https://admin-policy.test/');
     await expect.poll(() => reads.hasPending()).toBe(true);
-    await loadAdminSeason(page, { id: 'qa' }, reads);
+    await loadAdminSeason(page, { id: 'qa' }, reads, expect);
     expect(Date.now()).toBeGreaterThanOrEqual(deadline);
     expect(requests).toBe(1);
   } finally { reads.dispose(); await context.close(); }

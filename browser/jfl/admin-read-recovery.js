@@ -1,4 +1,3 @@
-import { expect } from '@playwright/test';
 import { retryAfterMilliseconds } from './fixture-throttle.js';
 
 // Observe only this page's selected-season reads. An advisory 429 shares the
@@ -48,7 +47,8 @@ export function observeAdminReads(page, selectedSeason, clock = Date.now) {
   };
 }
 
-export async function loadAdminSeason(page, target, reads) {
+// Inject browser assertions so observer unit tests need no browser dependency.
+export async function loadAdminSeason(page, target, reads, expect) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const loaded = async () => await page.locator('[data-season-setup-form]').getAttribute('data-loaded-season') === target.id
       && /read only/.test(await page.locator('[data-status]').textContent() || '');
