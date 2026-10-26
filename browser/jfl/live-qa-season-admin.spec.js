@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test, expect } from '@playwright/test';
 import { assumePersona } from './persona.js';
+import { observeAdminReads, loadAdminSeason } from './admin-read-recovery.js';
 
 // #3562: read back existing eight-team seasons already persisted in isolated
 // JFL staging. This is NOT season creation/scoring/closure automation.
@@ -28,27 +29,8 @@ test.beforeAll(async ({ request }) => {
 
 // #3573: recover only core read throttles through the same controls an operator
 // uses. Advisory readiness failures cannot authorize a retry or mask a bad load.
-async function ready(page, target, throttles) {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    await expect.poll(async () => {
-      const loaded = await page.locator('[data-season-setup-form]').getAttribute('data-loaded-season');
-      const status = await page.locator('[data-status]').textContent();
-      return (loaded === target.id && /read only/.test(status || '')) || throttles.length > 0;
-    }, { timeout: 45_000 }).toBe(true);
-    const failure = throttles.find(item => item.status !== 429);
-    if (failure) throw new Error(`Admin core read failed with HTTP${failure.status}; no recovery attempted.`);
-    if (await page.locator('[data-season-setup-form]').getAttribute('data-loaded-season') === target.id) break;
-    expect(attempt, 'Core read stayed throttled after three supported UI retries').toBeLessThan(3);
-    const observed = throttles.splice(0);
-    const seconds = Math.max(...observed.map(item => item.seconds));
-    expect(seconds, 'Retry-After exceeds bounded recovery budget').toBeLessThanOrEqual(60);
-    console.info(`Admin core read recovery after observed HTTP429; cooldown=${seconds + 1}s.`);
-    await page.waitForTimeout((seconds + 1) * 1000);
-    const retryList = page.locator('[data-retry-seasons]');
-    const control = await retryList.isVisible() ? retryList : page.locator('[data-load]');
-    await expect(control).toBeEnabled();
-    await control.click();
-  }
+async function ready(page, target, reads) {
+  await loadAdminSeason(page, target, reads, expect);
   await expect(page.locator('[data-season-selector]')).toHaveValue(target.id, { timeout: 45_000 });
   await expect(page.locator('[data-status]')).toContainText('read only', { timeout: 45_000 });
   await expect(page.locator('[data-team-count]')).toHaveText('8');
@@ -69,18 +51,8 @@ test(`admin reads both persisted QA schedules, changes season, and cannot accide
   });
   const page = await context.newPage();
   const unexpectedWrites = [];
-  const throttles = [];
   let selectedSeason = qa.regular.id;
-  page.on('response', response => {
-    if (response.status() < 400 || response.request().method() !== 'GET') return;
-    const path = new URL(response.url()).pathname;
-    if (path !== '/api/admin/seasons' && path !== `/api/admin/seasons/${selectedSeason}/setup`
-      && path !== `/api/admin/seasons/${selectedSeason}/team-registration`) return;
-    const seconds = Number(response.headers()['retry-after']);
-    console.info(JSON.stringify({ method: 'GET', path: path.replace(selectedSeason, ':selected-season'),
-      status: response.status(), retryAfter: response.headers()['retry-after'] || null }));
-    throttles.push({ status: response.status(), seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : 15 });
-  });
+  const reads = observeAdminReads(page, () => selectedSeason);
   try {
     await assumePersona(page, 'Admin Captain');
     await page.route('**/api/admin/**', route => {
@@ -92,7 +64,7 @@ test(`admin reads both persisted QA schedules, changes season, and cannot accide
     });
 
     await page.goto('/season-setup?season=' + qa.regular.id);
-    await ready(page, qa.regular, throttles);
+    await ready(page, qa.regular, reads);
 
     // Inspect real rendered rows: seven weeks, exactly four distinct matches
     // per week, each of eight teams appears once each week, 28 unique pairings.
@@ -125,16 +97,15 @@ test(`admin reads both persisted QA schedules, changes season, and cannot accide
     assert.equal(appearances.size, 8);
     assert.ok([...appearances.values()].every(count => count === 7));
 
-    throttles.length = 0;
     selectedSeason = qa.playoff.id;
     await page.locator('[data-season-selector]').selectOption(qa.playoff.id);
-    await ready(page, qa.playoff, throttles);
+    await ready(page, qa.playoff, reads);
     await expect(page).toHaveURL(new RegExp('season=' + qa.playoff.id));
-    throttles.length = 0;
     await page.reload();
-    await ready(page, qa.playoff, throttles);
+    await ready(page, qa.playoff, reads);
     assert.deepEqual(unexpectedWrites, [], 'QA season inspection must be GET-only');
   } finally {
+    reads.dispose();
     await context.close();
   }
 });
