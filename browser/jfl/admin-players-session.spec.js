@@ -240,6 +240,33 @@ for (const mobile of [false, true]) {
     } finally { await f.context.close(); }
   });
 
+  test(`Admin Players old write cannot release a newer pending write (${device})`, async ({ browser }) => {
+    const f = await open(browser, mobile);
+    try {
+      f.hold();
+      await f.page.locator('[data-create-name]').fill('Old request');
+      await f.page.locator('[data-create-button]').click();
+      await expect.poll(() => f.held.length).toBe(1);
+      await session(f.page, 'synthetic-B');
+      await f.page.locator('[data-retry]').click();
+      await expect(f.page.locator('[data-list]')).toContainText('B Private Player');
+      f.hold();
+      await f.page.locator('[data-create-name]').fill('New request');
+      await f.page.locator('[data-create-button]').click();
+      await expect.poll(() => f.held.length).toBe(2);
+      await release(f.held[0], f.page, { status: 401, json: { error: 'Old expired session' } });
+      await expect(f.page.locator('[data-create-button]')).toBeDisabled();
+      await expect(f.page.locator('[data-create-name]')).toHaveValue('New request');
+      expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBe('synthetic-B');
+      await f.page.evaluate(() => document.querySelector('[data-create-form]').dispatchEvent(new Event('submit', { cancelable: true })));
+      expect(f.writes).toHaveLength(2);
+      await release(f.held[1], f.page, { json: { player: player('New saved') } });
+      await expect(f.page.locator('[data-status]')).toContainText('New saved Private Player created as Unclaimed');
+      await expect(f.page.locator('[data-create-button]')).toBeEnabled();
+      expect(f.writes.map(row => row.token)).toEqual(['Bearer synthetic-A', 'Bearer synthetic-B']);
+    } finally { await f.context.close(); }
+  });
+
   test(`Admin Players pending create rejects a second submit and recovers once (${device})`, async ({ browser }) => {
     const f = await open(browser, mobile);
     try {
