@@ -92,7 +92,7 @@ for (const mobile of [false, true]) {
   test(`Admin Players eventless stale management card cannot grant under new token (${device})`, async ({ browser }) => {
     const f = await open(browser, mobile);
     try {
-      await f.page.locator('summary').click();
+      await f.page.locator('[data-list] summary').click();
       await f.page.evaluate(() => { window.__oldGrant = document.querySelector('.grant'); });
       await session(f.page, 'synthetic-B', null);
       f.page.on('dialog', dialog => dialog.accept());
@@ -175,7 +175,7 @@ for (const mobile of [false, true]) {
   test(`Admin Players signout and A-B-A invalidate old retained controls (${device})`, async ({ browser }) => {
     const f = await open(browser, mobile);
     try {
-      await f.page.locator('summary').click();
+      await f.page.locator('[data-list] summary').click();
       await f.page.evaluate(() => { window.__oldGrant = document.querySelector('.grant'); });
       await session(f.page, 'synthetic-B');
       await session(f.page, 'synthetic-A');
@@ -194,7 +194,7 @@ for (const mobile of [false, true]) {
   for (const action of ['create', 'roster', 'eligibility']) test(`Admin Players eventless stale ${action} action dispatches no write (${device})`, async ({ browser }) => {
     const f = await open(browser, mobile);
     try {
-      await f.page.locator('summary').click();
+      await f.page.locator('[data-list] summary').click();
       if (action === 'create') await f.page.locator('[data-create-name]').fill('Old draft');
       if (action === 'eligibility') await f.page.getByPlaceholder('Example: suspended pending league review', { exact: true }).fill('Synthetic reason');
       await session(f.page, 'synthetic-B', null);
@@ -217,7 +217,7 @@ for (const mobile of [false, true]) {
       expect(f.reads).toHaveLength(2);
       await release(f.held[0], f.page, { json: directory('B') });
       await expect(f.page.locator('[data-list]')).toContainText('B Private Player');
-      await f.page.locator('summary').click();
+      await f.page.locator('[data-list] summary').click();
       f.fail({ status: 403, json: { error: 'Not an admin' } });
       f.page.on('dialog', dialog => dialog.accept());
       await f.page.getByRole('button', { name: 'Grant admin', exact: true }).click();
@@ -260,7 +260,7 @@ for (const mobile of [false, true]) {
   for (const action of ['roster', 'eligibility', 'role']) test(`Admin Players current-session ${action} retains confirmation and exact command (${device})`, async ({ browser }) => {
     const f = await open(browser, mobile);
     try {
-      await f.page.locator('summary').click();
+      await f.page.locator('[data-list] summary').click();
       let confirmations = 0;
       f.page.on('dialog', dialog => { confirmations++; return dialog.accept(); });
       if (action === 'eligibility') await f.page.getByPlaceholder('Example: suspended pending league review', { exact: true }).fill('Synthetic reason');
@@ -273,7 +273,7 @@ for (const mobile of [false, true]) {
       expect(f.writes[0].body).toMatchObject(action === 'roster' ? { operation: 'roster-membership', seasonId: 'season-owned', teamId: 'team-owned', active: true } : action === 'eligibility' ? { operation: 'competition-eligibility', seasonId: 'season-owned', eligible: false, reason: 'Synthetic reason' } : { enabled: true });
       if (action === 'role') {
         await expect(f.page.locator('[data-status]')).toContainText('now has league-admin access');
-        await f.page.locator('summary').click();
+        await f.page.locator('[data-list] summary').click();
         await expect(f.page.getByRole('button', { name: 'Revoke admin', exact: true })).toBeVisible();
       }
       else await expect(f.page.locator('[data-status]')).toContainText(action === 'roster' ? 'added to' : 'eligible to compete');
