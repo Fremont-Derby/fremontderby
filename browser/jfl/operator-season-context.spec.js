@@ -110,6 +110,21 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  test(`confirmed setup cannot cross operator sessions (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      const reads = f.reads.length;
+      await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-replacement'));
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup)).toBeNull();
+      await f.page.evaluate(() => document.dispatchEvent(new Event('fd-season-setup-state')));
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      expect(f.reads).toHaveLength(reads);
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-publish]')).toBeEnabled();
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup?.seasonId)).toBe('season-a');
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
   test(`pending or failed registration cannot reuse the previous setup snapshot (${device})`, async ({ browser, request }) => {
     const f = await openOperator(browser, request, mobile);
     try {
