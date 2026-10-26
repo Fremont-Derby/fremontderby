@@ -5,7 +5,7 @@ import { injectAdminSurfaceTheme } from '../../src/adminSurfaceTheme.js';
 import { enhanceSeasonPublishReadiness } from '../../src/seasonPublishReadinessEnhancer.js';
 import { enhanceSeasonClose } from '../../src/seasonCloseEnhancer.js';
 
-const sourceMode = process.env.PLAYWRIGHT_OPERATOR_SOURCE === '1';
+const sourceMode = ['1', 'bundled'].includes(process.env.PLAYWRIGHT_OPERATOR_SOURCE);
 const seasons = [{ id: 'season-a', name: 'Synthetic Alpha', status: 'registration' },
   { id: 'season-b', name: 'Synthetic Beta', status: 'playoffs' }];
 const setup = id => ({ ...seasons.find(row => row.id === id), first_round_date: '2026-10-11',
@@ -74,7 +74,14 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     response = await enhanceSeasonClose(await enhanceSeasonPublishReadiness(response));
     response = await injectAdminSurfaceTheme(response, '/season-setup');
     const html = decorateHtmlWithShell(await response.text(), '/season-setup');
-    await page.route('https://operator.test/season-setup**', route => route.fulfill({ contentType: 'text/html', body: html }));
+    await page.route('https://operator.test/season-setup**', async route => {
+      if (process.env.PLAYWRIGHT_OPERATOR_SOURCE === 'bundled') {
+        const { default: worker } = await import('../../dist/routerEntry.js');
+        const response = await worker.fetch(new Request(route.request().url()), { ENVIRONMENT: 'jfl' }, {});
+        return route.fulfill({ status: response.status, contentType: 'text/html', body: await response.text() });
+      }
+      return route.fulfill({ contentType: 'text/html', body: html });
+    });
   }
   await page.goto(linkOptions ? '/season-setup?view=setup' +
     (linkOptions.requested ? '&season=' + linkOptions.requested : '') + '#configuration' : initiallyEmpty ? '/season-setup' : '/season-setup?season=season-a');
@@ -93,7 +100,7 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
   await expect(page.locator('[data-publish-readiness-state]')).toContainText('Publish blockers are clear');
   await expect(page.locator('[data-season-close-state]')).toHaveText('Alpha ready to close');
   if (mobile) expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  return { context, page, held, writes, hold: (id, kinds) => { hold = { id, kinds }; },
+  return { context, page, held, writes, reads, hold: (id, kinds) => { hold = { id, kinds }; },
     release: async (fail = false) => {
       hold = null;
       for (const pending of held.splice(0)) await pending.respond(fail ? { error: 'Delayed synthetic denial' } : pending.body, fail ? 403 : 200);
@@ -103,6 +110,96 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  test(`confirmed setup cannot cross operator sessions (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      const reads = f.reads.length;
+      await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-replacement'));
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup)).toBeNull();
+      await f.page.evaluate(() => document.dispatchEvent(new Event('fd-season-setup-state')));
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      expect(f.reads).toHaveLength(reads);
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-publish]')).toBeEnabled();
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup?.seasonId)).toBe('season-a');
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+  test(`pending or failed registration cannot reuse the previous setup snapshot (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      const before = f.reads.filter(path => path.endsWith('/team-candidates')).length;
+      f.hold('season-a', ['team-registration']);
+      await f.page.locator('[data-load]').click();
+      await expect.poll(() => f.held.length).toBe(1);
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup)).toBeNull();
+      expect(f.reads.filter(path => path.endsWith('/team-candidates'))).toHaveLength(before);
+      await f.release(true);
+      await expect(f.page.locator('[data-status]')).toContainText('Delayed synthetic denial');
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup)).toBeNull();
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-publish]')).toBeEnabled();
+    } finally { await f.context.close(); }
+  });
+  test(`an unconfirmed save requires a fresh snapshot before Publish (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.locator('[data-save]').click();
+      await expect.poll(() => f.writes.length).toBe(1);
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      await f.writes[0].route.fulfill({ status: 503, json: { error: 'Synthetic uncertain save' } });
+      await expect(f.page.locator('[data-status]')).toContainText('Synthetic uncertain save');
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      expect(await f.page.locator('[data-season-setup-form]').evaluate(form => form.confirmedSeasonSetup)).toBeNull();
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-publish]')).toBeEnabled();
+      expect(f.writes).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
+  test(`older same-season candidates cannot confirm a newer setup generation (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      f.hold('season-a', ['team-candidates']);
+      await f.page.locator('[data-load]').click();
+      await expect.poll(() => f.held.length).toBe(1);
+      await f.page.locator('[data-load]').click();
+      await expect.poll(() => f.held.length).toBe(2);
+      await f.held[0].respond(candidates);
+      await f.page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      await f.held[1].respond({ ...candidates, registration: { ...registration, counts: { confirmedTeams: 7 } } });
+      await expect(f.page.locator('[data-publish-readiness-state]')).toContainText('Resolve blocked');
+      await expect(f.page.locator('[data-publish]')).toBeDisabled();
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+  test(`readiness reuses the confirmed setup without a duplicate GET (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      expect(f.reads.filter(path => path.endsWith('/season-a/setup'))).toHaveLength(1);
+      await expect(f.page.locator('[data-publish]')).toBeEnabled();
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+  test(`readiness retry fetches fresh candidates without another setup read (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.route('**/api/admin/seasons/season-a/team-candidates', route => route.fulfill({ status: 503, json: { error: 'Synthetic candidates unavailable' } }), { times: 1 });
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-publish-readiness-retry]')).toBeVisible();
+      const setupReads = f.reads.filter(path => path.endsWith('/season-a/setup')).length;
+      const candidateReads = f.reads.filter(path => path.endsWith('/season-a/team-candidates')).length;
+      await f.page.locator('[data-first-round-date]').fill('');
+      await f.page.locator('[data-publish-readiness-retry]').click();
+      await expect(f.page.locator('[data-publish]')).toBeEnabled();
+      expect(f.reads.filter(path => path.endsWith('/season-a/setup'))).toHaveLength(setupReads);
+      expect(f.reads.filter(path => path.endsWith('/season-a/team-candidates'))).toHaveLength(candidateReads + 1);
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+
   test(`malformed default list cannot create until a genuine empty retry (${device})`, async ({ browser, request }) => {
     const f = await openOperator(browser, request, mobile, {}, false, { requested: '', bootstrap: { status: 200, body: {} } });
     try {
