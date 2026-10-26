@@ -24,19 +24,19 @@ async function open(browser, mobile, query, options = {}) {
     if (window === window.top) sessionStorage.setItem('fd.accessToken', 'synthetic-intercept-only');
   });
   const writes = [];
-  const applications = options.existing ? [{ proposedTeamName: 'Existing synthetic team', status: 'applied' }] : [];
+  const applications = { a: [], b: options.existing ? [{ proposedTeamName: 'Existing synthetic team', status: 'applied' }] : [] };
   await context.route('**/*', route => {
     const req = route.request(), path = new URL(req.url()).pathname;
     if (path === '/teams') return route.fulfill({ contentType: 'text/html', headers: { 'x-fremont-ui-mode': 'modern-teams-v1' }, body: html });
     if (req.method() !== 'GET') {
       writes.push({ path, body: req.postDataJSON() });
-      if (!options.denied) applications.push({ proposedTeamName: 'Synthetic team', status: 'applied' });
+      if (!options.denied) applications[path.split('/')[3]].push({ proposedTeamName: 'Synthetic team', status: 'applied' });
       return route.fulfill({ status: options.denied ? 403 : 202, json: options.denied ? { error: 'Application denied' } : {} });
     }
     if (path === '/api/me/teams') return route.fulfill({ json: { teamManagement: { captain_teams: [], invitations: [], players: [] } } });
     if (path === '/api/me/team-membership-requests') return route.fulfill({ json: { requests: {} } });
     if (path === '/api/seasons') return route.fulfill({ json: { seasons } });
-    if (path.endsWith('/team-registration/me')) return route.fulfill({ json: { registration: { applications: path.includes('/b/') ? applications : [] } } });
+    if (path.endsWith('/team-registration/me')) return route.fulfill({ json: { registration: { applications: applications[path.split('/')[3]] || [] } } });
     return route.fulfill({ json: { standings: [] } });
   });
   const page = await context.newPage();
@@ -44,6 +44,7 @@ async function open(browser, mobile, query, options = {}) {
   if (!options.signedOut) {
     await expect(page.locator('[data-teams-content]')).toBeVisible();
     await page.locator('.fd-teams__formation > summary').click();
+    if (mobile) expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   return { page, context, writes };
 }
@@ -74,6 +75,8 @@ for (const mobile of [false, true]) {
         await expect(f.page.locator('[data-team-formation-form] button')).toBeDisabled();
         await expect(f.page.locator('[data-team-season-help]')).toContainText('requested season');
         await expect(f.page.locator('[data-team-season-current]')).toHaveAttribute('href', '/teams');
+        expect(f.writes).toEqual([]);
+        await f.page.locator('[data-team-formation-form]').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
         expect(f.writes).toEqual([]);
         await f.page.locator('[data-team-season]').selectOption('b');
         await expect(f.page).toHaveURL(/season=b$/);
