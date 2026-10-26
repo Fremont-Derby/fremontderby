@@ -32,7 +32,7 @@ test('published seasons render as read-only instead of offering invalid mutation
   assert.match(html, /data-read-only-notice/);
   assert.match(html, /editableSeasonStatuses=new Set\(\['new','draft','registration'\]\)/);
   assert.match(html, /const locked=Boolean\(currentSeasonId\)&&!isEditableSeason\(\)/);
-  assert.match(html, /for\(const field of setupInputs\)field\.disabled=locked/);
+  assert.match(html, /for\(const field of setupInputs\)field\.disabled=!signedIn\|\|locked\|\|unavailable/);
   assert.match(html, /Setup and schedule are read-only after publication/);
   assert.match(html, /Viewing.*season.*read only/);
   assert.match(html, /Published seasons are read-only/);

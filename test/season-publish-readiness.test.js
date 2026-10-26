@@ -86,7 +86,8 @@ test('season setup receives accessible publish readiness with canonical recovery
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /min-height:44px/);
   assert.match(html, /@media\(max-width:620px\)/);
-  assert.match(html, /publish\.disabled=!readiness\.canPublish/);
+  assert.match(html, /readinessReady=readiness\.canPublish;syncAction\(\)/);
+  assert.match(html, /publish\.disabled=!readinessReady\|\|form\.dataset\.loadedSeason!==lastSeason/);
 });
 
 test('publish readiness enhancer ignores non-HTML responses', async () => {
