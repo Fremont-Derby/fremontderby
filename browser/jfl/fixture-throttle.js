@@ -1,7 +1,9 @@
 // Test recovery only: no default cooldown and no retry without an observed 429.
 export function retryAfterMilliseconds(header, now = Date.now()) {
   const value = typeof header === 'string' ? header.trim() : '';
-  const seconds = /^\d+$/.test(value) ? Number(value) : (Date.parse(value) - now) / 1000;
+  const timestamp = Date.parse(value);
+  const seconds = /^\d+$/.test(value) ? Number(value)
+    : Number.isFinite(timestamp) && new Date(timestamp).toUTCString() === value ? (timestamp - now) / 1000 : NaN;
   if (!value || !Number.isFinite(seconds) || seconds <= 0 || seconds > 60) {
     throw new Error('Fixture recovery requires a validated positive Retry-After within 60 seconds');
   }

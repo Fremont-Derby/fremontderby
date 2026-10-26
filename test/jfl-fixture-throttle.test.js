@@ -22,7 +22,7 @@ test('fixture retry accepts bounded numeric and absolute date waits', () => {
 });
 
 test('fixture retry rejects absent, zero, invalid, negative, expired and excessive waits', () => {
-  for (const header of [null, '', '0', '-1', '1e1', '2.5', 'invalid', '61', '1000000', new Date(now).toUTCString(), new Date(now + 61_000).toUTCString()]) {
+  for (const header of [null, '', '0', '-1', '1e1', '2.5', 'invalid', '61', '1000000', new Date(now).toUTCString(), new Date(now + 61_000).toUTCString(), new Date(now + 12_000).toISOString()]) {
     assert.throws(() => retryAfterMilliseconds(header, now), /validated positive Retry-After/);
   }
 });
