@@ -75,6 +75,25 @@ async function open(browser, target, mobile, delayedBody) {
 }
 
 for (const mobile of [false, true]) for (const target of ['setup', 'publish', 'close']) {
+  for (const signout of [false, true]) test(`${target} ${signout ? 'signout' : 'A-B-A'} rejects the original pending response (${mobile ? 'phone320' : 'desktop'})`, async ({ browser }) => {
+    const f = await open(browser, target, mobile, false);
+    try {
+      await f.page.evaluate(signout => {
+        sessionStorage.setItem('fd.accessToken', 'synthetic-intermediate');
+        window.dispatchEvent(new Event('fd:session-changed'));
+        if (signout) sessionStorage.removeItem('fd.accessToken');
+        else sessionStorage.setItem('fd.accessToken', 'synthetic-old');
+        window.dispatchEvent(new Event('fd:session-changed'));
+      }, signout);
+      await f.respond(200);
+      await expect(f.page.locator(states[target])).toContainText('sign-in changed');
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+      await expect(f.page.locator('[data-save]')).toBeDisabled();
+      await expect(f.page.locator('body')).not.toContainText('Prior private');
+      expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBe(signout ? null : 'synthetic-old');
+      expect(f.writes).toEqual([]);
+    } finally { await f.context.close(); }
+  });
   for (const delayedBody of [false, true]) for (const status of [200, 401]) {
     test(`${target} stale ${status} ${delayedBody ? 'body' : 'fetch'} preserves replacement session (${mobile ? 'phone320' : 'desktop'})`, async ({ browser }) => {
       const f = await open(browser, target, mobile, delayedBody);

@@ -110,6 +110,83 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
 
 for (const mobile of [false, true]) {
   const device = mobile ? '320px phone' : 'desktop';
+  for (const event of ['fd:session-changed', 'storage', 'focus']) test(`operator ${event} clears previous-session drafts and requires explicit reload (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.locator('[data-season-name]').fill('Prior private draft');
+      await f.page.evaluate(event => { sessionStorage.setItem('fd.accessToken', 'synthetic-replacement'); window.dispatchEvent(new Event(event)); }, event);
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+      for (const selector of ['[data-save]', '[data-publish]', '[data-season-close-button]']) await expect(f.page.locator(selector)).toBeDisabled();
+      await expect(f.page.locator('[data-season-selector]')).not.toContainText('Synthetic Alpha');
+      await f.page.locator('[data-season-setup-form]').dispatchEvent('submit');
+      expect(f.writes).toHaveLength(0);
+      await f.page.locator('[data-retry-seasons]').click();
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('Synthetic Alpha');
+      await expect(f.page.locator('[data-save]')).toBeEnabled();
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+  test(`same operator session events preserve the unsaved draft (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.locator('[data-season-name]').fill('Current draft');
+      const reads = f.reads.filter(path => path.startsWith('/api/admin/')).length;
+      for (const event of ['fd:session-changed', 'storage', 'focus']) await f.page.evaluate(event => window.dispatchEvent(new Event(event)), event);
+      await expect(f.page.locator('[data-season-name]')).toHaveValue('Current draft');
+      await expect(f.page.locator('[data-save]')).toBeEnabled();
+      expect(f.reads.filter(path => path.startsWith('/api/admin/'))).toHaveLength(reads);
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
+  for (const action of ['save', 'close']) {
+    test(`eventless session change blocks old ${action} action (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile);
+      try {
+        await f.page.evaluate(() => sessionStorage.setItem('fd.accessToken', 'synthetic-replacement'));
+        await f.page.locator(action === 'save' ? '[data-save]' : '[data-season-close-button]').click();
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+        await expect(f.page.locator('[data-save]')).toBeDisabled();
+        expect(f.writes).toHaveLength(0);
+      } finally { await f.context.close(); }
+    });
+    test(`old ${action} finalizer cannot unlock the replacement session reload (${device})`, async ({ browser, request }) => {
+      const f = await openOperator(browser, request, mobile);
+      try {
+        if (action === 'close') f.page.once('dialog', dialog => dialog.accept());
+        await f.page.locator(action === 'save' ? '[data-save]' : '[data-season-close-button]').click();
+        await expect.poll(() => f.writes.length).toBe(1);
+        await f.page.evaluate(() => { sessionStorage.setItem('fd.accessToken', 'synthetic-replacement'); window.dispatchEvent(new Event('fd:session-changed')); });
+        f.hold('season-a', ['setup', 'team-registration']);
+        await f.page.locator('[data-retry-seasons]').click();
+        await expect.poll(() => f.held.length).toBe(2);
+        await f.writes[0].route.fulfill({ json: { setup: { ...setup('season-a'), name: 'Prior private response' } } });
+        await f.page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await expect(f.page.locator('[data-save]')).toBeDisabled();
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('');
+        expect(f.writes).toHaveLength(1);
+        await f.release();
+        await expect(f.page.locator('[data-save]')).toBeEnabled();
+        await expect(f.page.locator('[data-season-name]')).toHaveValue('Synthetic Alpha');
+        expect(f.writes).toHaveLength(1);
+      } finally { await f.context.close(); }
+    });
+  }
+  test(`operator signout clears applicant and slot details (${device})`, async ({ browser, request }) => {
+    const f = await openOperator(browser, request, mobile);
+    try {
+      await f.page.route('**/api/admin/seasons/season-a/team-registration', route => route.fulfill({ json: { registration: { ...registration,
+        applications: [{ applicationId: 'prior-application', applicantDisplayName: 'Prior applicant', proposedTeamName: 'Prior applicant team', status: 'applied' }],
+        slots: [{ slotId: 'prior-slot', teamName: 'Prior slot team', captainDisplayName: 'Prior captain', status: 'ready' }] } } }));
+      await f.page.locator('[data-load]').click();
+      await expect(f.page.locator('[data-applications]')).toContainText('Prior applicant');
+      await expect(f.page.locator('[data-slots]')).toContainText('Prior captain');
+      await f.page.evaluate(() => { sessionStorage.removeItem('fd.accessToken'); window.dispatchEvent(new Event('fd:session-changed')); });
+      await expect(f.page.locator('body')).not.toContainText('Prior applicant');
+      await expect(f.page.locator('body')).not.toContainText('Prior captain');
+      await expect(f.page.locator('[data-save]')).toBeDisabled();
+      expect(f.writes).toHaveLength(0);
+    } finally { await f.context.close(); }
+  });
   test(`confirmed setup cannot cross operator sessions (${device})`, async ({ browser, request }) => {
     const f = await openOperator(browser, request, mobile);
     try {
@@ -490,7 +567,7 @@ for (const mobile of [false, true]) {
         await expect.poll(() => f.writes.length).toBe(1);
         await f.writes[0].route.fulfill({ status: denial, contentType: 'application/json', body: '{"error":"Actor is not a league admin"}' });
         await expect(f.page.locator('[data-status]')).toContainText(denial === 401 ? 'sign-in expired' : 'not a league admin');
-        await expect(f.page.locator('[data-season-name]')).toHaveValue('Denied draft');
+        await expect(f.page.locator('[data-season-name]')).toHaveValue(denial === 401 ? '' : 'Denied draft');
         await expect(f.page.locator('[data-new-season]'))[denial === 401 ? 'toBeDisabled' : 'toBeEnabled']();
         expect(f.writes).toHaveLength(1);
       } finally { await f.context.close(); }
