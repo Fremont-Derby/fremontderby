@@ -45,7 +45,9 @@ test/fixtures are local-only inputs and must never be applied to a hosted DB.
    the SQL file alone cannot identify a Supabase project.
 3. Capture current notification/approval definitions, grants and outside-JFL
    function/table fingerprints. Apply only the reviewed migration with the
-   established JFL migration path. It is a one-time, fail-closed migration;
+   established JFL migration path, using canonical UTF-8/LF SQL text (normalize
+   Windows CRLF before submitting so the exact function-source hash is stable).
+   It is a one-time, fail-closed migration;
    inspect migration history after uncertain outcomes instead of reapplying it.
 4. Run `scripts/inspect-jfl-approval-notice.sql`, verify exact installed hash,
    index, trigger, unchanged original RPCs/grants and outside-JFL fingerprints.

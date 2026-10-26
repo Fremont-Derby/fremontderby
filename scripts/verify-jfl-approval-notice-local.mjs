@@ -9,7 +9,7 @@ const runtime = process.env.JFL_SQL_TEST_RUNTIME_PACKAGE_JSON;
 assert(runtime && isAbsolute(runtime), 'Point JFL_SQL_TEST_RUNTIME_PACKAGE_JSON at a temporary PGlite0.5.12 runtime package.json');
 const { PGlite } = createRequire(runtime)('@electric-sql/pglite');
 const db = new PGlite();
-const sql = await readFile(new URL('../supabase/migrations/20261026180914_jfl_team_application_approval_notice.sql', import.meta.url), 'utf8');
+const sql = (await readFile(new URL('../supabase/migrations/20261026180914_jfl_team_application_approval_notice.sql', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
 const admin = '11111111-1111-4111-8111-111111111111';
 const recipient = '22222222-2222-4222-8222-222222222222';
 const outsider = '33333333-3333-4333-8333-333333333333';
@@ -32,7 +32,7 @@ async function review(id, decision = 'approve', actor = admin) {
 }
 try {
   await db.exec(await readFile(new URL('../test/fixtures/jfl-approval-schema.sql', import.meta.url), 'utf8'));
-  const entrypoints = await readFile(new URL('../test/fixtures/jfl-approval-entrypoints.sql', import.meta.url), 'utf8');
+  const entrypoints = (await readFile(new URL('../test/fixtures/jfl-approval-entrypoints.sql', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
   await db.exec(entrypoints);
   await db.exec('revoke all on function jfl.admin_review_team_application(uuid,uuid,text,text),jfl.list_my_notifications(uuid,integer) from public,anon,authenticated; grant execute on function jfl.admin_review_team_application(uuid,uuid,text,text),jfl.list_my_notifications(uuid,integer) to service_role');
   const peerBefore = JSON.stringify(await rows('select * from dru.approval_sentinel'));
@@ -61,6 +61,8 @@ try {
   assert.equal(producer.prosecdef, false);
   assert.deepEqual(producer.proconfig, ['search_path=""']);
   pass('installed producer preserves read/RPC privacy and peer schema');
+  await db.exec(await readFile(new URL('./inspect-jfl-approval-notice.sql', import.meta.url), 'utf8'));
+  pass('installed-object verifier accepts the exact producer/index/trigger');
   await db.query('insert into jfl_private.league_admins values($1)', [admin]);
   await db.query('insert into jfl.players(id,user_id,display_name) values($1,$2,$3),($4,null,$5)', [linked, recipient, 'Synthetic applicant', unlinked, 'Unlinked fixture']);
 
@@ -138,6 +140,12 @@ try {
   await db.exec('rollback');
   assert.equal(await count('select count(*) from jfl.user_notifications'), 2);
   pass('reapplication fails closed without replacing existing objects or data');
+  await db.exec(await readFile(new URL('./rollback-jfl-approval-notice.sql', import.meta.url), 'utf8'));
+  assert.equal(await count('select count(*) from jfl.user_notifications'), 2);
+  assert.equal((await rows('select read_at::text from jfl.user_notifications where id=$1', [notices[0].id]))[0].read_at, readAt);
+  assert.equal((await rows("select to_regprocedure('jfl_private.notify_approved_team_application()') as producer"))[0].producer, null);
+  assert.equal(JSON.stringify(await rows('select * from dru.approval_sentinel')), peerBefore);
+  pass('qualified rollback removes only producer objects and preserves Notices/read state/peer');
   console.log(JSON.stringify({ scope: 'LOCAL minimal PostgreSQL fixture, captured approval/read entrypoints; not hosted acceptance', checks,
     engine: (await rows('select version()'))[0].version, pglite: '0.5.12', producerSourceMd5: producer.source_md5 }));
 } finally { await db.close(); }
