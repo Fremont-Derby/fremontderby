@@ -51,7 +51,8 @@ test/fixtures are local-only inputs and must never be applied to a hosted DB.
    inspect migration history after uncertain outcomes instead of reapplying it.
 4. Run `scripts/inspect-jfl-approval-notice.sql`, verify exact installed hash,
    index, trigger, unchanged original RPCs/grants and outside-JFL fingerprints.
-   Complete rollback-only adversarial proof against hosted PostgreSQL17 before
+   Run `scripts/verify-jfl-approval-notice.sql` for rollback-only normal RPC
+   and adversarial proof against hosted PostgreSQL17 before
    representing the local proof as hosted acceptance.
 5. Through normal authenticated commands, use one owned private synthetic QA
    season, a known linked synthetic applicant and an Admin. Approve the actual
