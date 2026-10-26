@@ -10,7 +10,7 @@ test.beforeAll(async ({ request }) => {
     const response = await request.get('/teams');
     expect(response.headers()['x-fremont-ui-mode']).toBe('modern-teams-v1');
     html = await response.text();
-  } else if (process.env.PLAYWRIGHT_TEAMS_CONTEXT_HTML === 'built') {
+  } else if (process.env.PLAYWRIGHT_TEAMS_CONTEXT_HTML !== 'raw') {
     const { default: worker } = await import('../../dist/routerEntry.js');
     const response = await worker.fetch(new Request('https://jfl.fremontderby.com/teams'), { ENVIRONMENT: 'jfl' }, { waitUntil() {} });
     expect(response.headers.get('x-fremont-ui-mode')).toBe('modern-teams-v1');
