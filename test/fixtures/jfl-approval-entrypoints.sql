@@ -167,3 +167,27 @@ AS $function$
   limit greatest(1, least(coalesce(result_limit, 50), 100));
 $function$
 ;
+-- Captured unchanged JFL read-state RPC; hosted source MD5 ef239179a955693bef7717d33f991cbe.
+CREATE OR REPLACE FUNCTION jfl.mark_my_notification_read(actor_user_id uuid, target_notification_id uuid)
+ RETURNS TABLE(id uuid, read_at timestamp with time zone)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+#variable_conflict use_column
+begin
+  update jfl.user_notifications n
+  set read_at = coalesce(n.read_at, now())
+  where n.id = target_notification_id
+    and n.recipient_user_id = actor_user_id;
+
+  if not found then
+    raise exception 'Notification not found';
+  end if;
+
+  return query
+  select n.id, n.read_at
+  from jfl.user_notifications n
+  where n.id = target_notification_id;
+end;
+$function$;

@@ -11,6 +11,8 @@ declare
   owned_season uuid; application_id uuid; approved_team uuid; notice_id uuid;
   fixture_date date; changed integer; denied boolean;
 begin
+  if md5((select prosrc from pg_proc where oid='jfl.mark_my_notification_read(uuid,uuid)'::regprocedure))<>'ef239179a955693bef7717d33f991cbe'
+  then raise exception 'Qualified Notice read-state entrypoint changed'; end if;
   if not exists(select 1 from jfl_private.league_admins where user_id=admin_id)
     or exists(select 1 from jfl_private.league_admins where user_id=applicant_id)
     or (select count(*) from jfl.players where user_id=applicant_id)<>1
@@ -35,8 +37,10 @@ begin
   if not exists(select 1 from jfl.list_my_notifications(applicant_id,100) n where n.id=notice_id)
     or exists(select 1 from jfl.list_my_notifications(admin_id,100) n where n.id=notice_id)
   then raise exception 'Notice recipient list isolation failed'; end if;
-  select count(*) into changed from jfl.mark_my_notification_read(admin_id,notice_id);
-  if changed<>0 or exists(select 1 from jfl.user_notifications where id=notice_id and read_at is not null)
+  denied:=false;
+  begin perform jfl.mark_my_notification_read(admin_id,notice_id);
+  exception when others then if sqlerrm<>'Notification not found' then raise; end if; denied:=true; end;
+  if not denied or exists(select 1 from jfl.user_notifications where id=notice_id and read_at is not null)
   then raise exception 'Reviewer modified another recipient Notice'; end if;
   select count(*) into changed from jfl.mark_my_notification_read(applicant_id,notice_id);
   if changed<>1 or not exists(select 1 from jfl.user_notifications where id=notice_id and read_at is not null)

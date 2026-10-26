@@ -34,7 +34,8 @@ try {
   await db.exec(await readFile(new URL('../test/fixtures/jfl-approval-schema.sql', import.meta.url), 'utf8'));
   const entrypoints = (await readFile(new URL('../test/fixtures/jfl-approval-entrypoints.sql', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
   await db.exec(entrypoints);
-  await db.exec('revoke all on function jfl.admin_review_team_application(uuid,uuid,text,text),jfl.list_my_notifications(uuid,integer) from public,anon,authenticated; grant execute on function jfl.admin_review_team_application(uuid,uuid,text,text),jfl.list_my_notifications(uuid,integer) to service_role');
+  await db.exec('revoke all on function jfl.admin_review_team_application(uuid,uuid,text,text),jfl.list_my_notifications(uuid,integer),jfl.mark_my_notification_read(uuid,uuid) from public,anon,authenticated; grant execute on function jfl.admin_review_team_application(uuid,uuid,text,text),jfl.list_my_notifications(uuid,integer),jfl.mark_my_notification_read(uuid,uuid) to service_role');
+  assert.equal((await rows("select md5(prosrc) as hash from pg_proc where oid='jfl.mark_my_notification_read(uuid,uuid)'::regprocedure"))[0].hash, 'ef239179a955693bef7717d33f991cbe');
   const peerBefore = JSON.stringify(await rows('select * from dru.approval_sentinel'));
   await db.exec('begin; grant select on jfl.user_notifications to authenticated;');
   await assert.rejects(db.exec(sql), /notification read boundary changed/);
@@ -84,7 +85,17 @@ try {
   await assert.rejects(review(first.id), /no longer waiting for review/);
   assert.equal(await count('select count(*) from jfl.user_notifications'), 1);
   pass('duplicate approval cannot create another Notice');
-  await db.query('update jfl.user_notifications set read_at=now() where id=$1', [notices[0].id]);
+  await db.exec('set role service_role');
+  await assert.rejects(rows('select * from jfl.mark_my_notification_read($1,$2)', [outsider, notices[0].id]), /Notification not found/);
+  assert.equal((await rows('select * from jfl.list_my_notifications($1,100)', [recipient]))[0].read_at, null);
+  await assert.rejects(rows('select * from jfl.mark_my_notification_read($1,$2)', [recipient, randomUUID()]), /Notification not found/);
+  pass('captured read-state RPC rejects nonrecipient and absent Notice with exact not-found behavior');
+  const marked = (await rows('select * from jfl.mark_my_notification_read($1,$2)', [recipient, notices[0].id]))[0];
+  assert.equal(marked.id, notices[0].id);
+  assert(marked.read_at);
+  assert.equal((await rows('select * from jfl.mark_my_notification_read($1,$2)', [recipient, notices[0].id]))[0].read_at, marked.read_at);
+  await db.exec('reset role');
+  pass('recipient marks its Notice through the unchanged RPC; repeated read preserves timestamp');
   const readAt = (await rows('select read_at::text from jfl.user_notifications where id=$1', [notices[0].id]))[0].read_at;
   await db.query("update jfl_private.team_applications set status='applied' where id=$1", [first.id]);
   await db.query("update jfl_private.team_applications set status='approved_pending_roster' where id=$1", [first.id]);
