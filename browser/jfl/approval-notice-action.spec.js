@@ -36,15 +36,15 @@ test.beforeAll(async ({ request }) => {
 
 // UI/action contract, all API/session data intercepted. Actual producer and
 // recipient/transaction behavior have separate PostgreSQL and hosted proof.
-for (const mobile of [false, true]) for (const markup of [false, true]) {
-  test(`approval Notice opens recipient-owned teams and retains read state (${mobile ? '320px' : 'desktop'}, ${markup ? 'literal markup' : 'ordinary names'})`, async ({ browser }) => {
+for (const mobile of [false, true]) for (const nameStyle of ['ordinary', 'literal markup', '80 unbroken characters']) {
+  test(`approval Notice opens recipient-owned teams and retains read state (${mobile ? '320px' : 'desktop'}, ${nameStyle})`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: mobile ? 320 : 1280, height: 900 } });
     try {
       await context.addInitScript(() => {
         if (location.hostname === 'jfl.fremontderby.com') sessionStorage.setItem('fd.accessToken', 'synthetic-approval-recipient');
       });
-      const teamName = markup ? '<img src=x onerror="window.__approvalNoticeInjected=1">' : 'Approved synthetic team';
-      const seasonName = markup ? '<script>unsafe season</script>' : 'Synthetic registration season';
+      const teamName = nameStyle === 'literal markup' ? '<img src=x onerror="window.__approvalNoticeInjected=1">' : nameStyle === '80 unbroken characters' ? 'A'.repeat(80) : 'Approved synthetic team';
+      const seasonName = nameStyle === 'literal markup' ? '<script>unsafe season</script>' : 'Synthetic registration season';
       let readAt = null;
       const writes = [];
       const approved = { teamId, teamName, seasonId, seasonName, roster: [{ playerId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', displayName: 'Synthetic recipient captain', role: 'captain' }] };
@@ -90,6 +90,8 @@ for (const mobile of [false, true]) for (const markup of [false, true]) {
       await expect(card).toContainText('Synthetic recipient captain');
       expect(await card.locator('img, script').count()).toBe(0);
       expect(await page.evaluate(() => window.__approvalNoticeInjected)).toBeUndefined();
+      expect(await card.locator('h2').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      expect(await card.locator('.fd-team-card__head p').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       if (mobile && process.env.PLAYWRIGHT_APPROVAL_NOTICE_HTML !== 'raw') expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(writes).toEqual([{ path: '/api/me/notifications/' + noticeId + '/read', method: 'POST' }]);
     } finally { await context.close(); }
