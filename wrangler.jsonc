@@ -57,6 +57,7 @@
       },
       "vars": {
         "ENVIRONMENT": "jfl",
+        "TEST_FULL_SEASON_PERSONAS_ENABLED": "1",
         "BETA_AUTH_BYPASS": "1",
         "BETA_ACTOR_EMAIL": "jfl-actor@fremontderby.com",
         "BETA_ACTOR_USER_ID": "b22805b6-92ba-44bd-a92e-0c82f0be6613",
