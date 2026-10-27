@@ -33,7 +33,7 @@ test('absence is explicit and malformed results never become absence', async () 
   assert.deepEqual(await absent.json(), { operationId: id, found: false });
   for (const value of [{}, [], { setup: { id: 'season' } }, { setup: null, requestedInput: {} }]) {
     const response = await routeSeasonCreationOperation(request(), env, fixture(value));
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 502);
     assert.equal(Object.hasOwn(await response.json(), 'found'), false);
   }
 });

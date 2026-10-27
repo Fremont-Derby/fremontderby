@@ -427,7 +427,7 @@ for (const mobile of [false, true]) {
       await f.page.locator('[data-team-capacity]').fill('12');
       await f.page.locator('[data-save]').click();
       await expect.poll(() => f.writes.length).toBe(1);
-      await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+      await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: { ...saved, ...(f.writes[0].body.operationId ? { creationOperationId: f.writes[0].body.operationId, creationAcknowledged: false } : {}) } }) });
       await expect.poll(() => f.writes.length).toBe(2);
       await f.writes[1].route.fulfill({ status: 429, contentType: 'text/html', body: throttleHtml });
       await expect(f.page.locator('[data-status]')).toContainText('Setup saved');
@@ -457,7 +457,7 @@ for (const mobile of [false, true]) {
         await f.page.locator('[data-team-capacity]').fill('12');
         await f.page.locator('[data-save]').click();
         await expect.poll(() => f.writes.length).toBe(1);
-        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: { ...saved, ...(f.writes[0].body.operationId ? { creationOperationId: f.writes[0].body.operationId, creationAcknowledged: false } : {}) } }) });
         await expect.poll(() => f.writes.length).toBe(2);
         await f.writes[1].route.fulfill({ contentType: 'application/json', body: '{}' });
         await expect(f.page.locator('[data-status]')).toContainText('Setup and registration saved. Saved values could not be reloaded');
@@ -536,7 +536,7 @@ for (const mobile of [false, true]) {
       expect(f.writes[0].path).toBe('/api/admin/seasons');
       expect(f.writes[0].body.createNew).toBe(true);
       await expect(f.page.locator('[data-new-season]')).toBeDisabled();
-      await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+      await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: { ...saved, ...(f.writes[0].body.operationId ? { creationOperationId: f.writes[0].body.operationId, creationAcknowledged: false } : {}) } }) });
       await expect.poll(() => f.writes.length).toBe(2);
       await f.writes[1].route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Synthetic registration failure"}' });
       await expect(f.page.locator('[data-status]')).toContainText('Setup saved');
@@ -546,7 +546,7 @@ for (const mobile of [false, true]) {
       await expect.poll(() => f.writes.length).toBe(3);
       expect(f.writes[2].path).toBe('/api/admin/seasons/season-c/setup');
       expect(f.writes[2].body.createNew).toBeUndefined();
-      await f.writes[2].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+      await f.writes[2].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: { ...saved, ...(f.writes[0].body.operationId ? { creationOperationId: f.writes[0].body.operationId, creationAcknowledged: false } : {}) } }) });
       await expect.poll(() => f.writes.length).toBe(4);
       await f.writes[3].route.fulfill({ contentType: 'application/json', body: '{}' });
       await expect(f.page.locator('[data-status]')).toHaveText('Setup and registration saved');
@@ -568,7 +568,7 @@ for (const mobile of [false, true]) {
         await f.writes[0].route.fulfill({ status: denial, contentType: 'application/json', body: '{"error":"Actor is not a league admin"}' });
         await expect(f.page.locator('[data-status]')).toContainText(denial === 401 ? 'sign-in expired' : 'not a league admin');
         await expect(f.page.locator('[data-season-name]')).toHaveValue(denial === 401 ? '' : 'Denied draft');
-        await expect(f.page.locator('[data-new-season]'))[denial === 401 ? 'toBeDisabled' : 'toBeEnabled']();
+        await expect(f.page.locator('[data-new-season]')).toBeDisabled();
         expect(f.writes).toHaveLength(1);
       } finally { await f.context.close(); }
     });
@@ -589,7 +589,7 @@ for (const mobile of [false, true]) {
         await f.page.locator('[data-save]').click();
         await expect.poll(() => f.writes.length).toBe(1);
         expect(f.writes[0].route.request().method()).toBe(creating ? 'POST' : 'PUT');
-        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+        await f.writes[0].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: { ...saved, ...(f.writes[0].body.operationId ? { creationOperationId: f.writes[0].body.operationId, creationAcknowledged: false } : {}) } }) });
         await expect.poll(() => f.writes.length).toBe(2);
         await expect(f.page.locator('[data-season-selector]')).toHaveValue(id);
         expect(new URL(f.page.url()).searchParams.get('season')).toBe(id);
@@ -606,7 +606,7 @@ for (const mobile of [false, true]) {
         await expect.poll(() => f.writes.length).toBe(3);
         expect(f.writes[2].route.request().method()).toBe('PUT');
         expect(f.writes[2].path).toBe(`/api/admin/seasons/${id}/setup`);
-        await f.writes[2].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: saved }) });
+        await f.writes[2].route.fulfill({ contentType: 'application/json', body: JSON.stringify({ setup: { ...saved, ...(f.writes[0].body.operationId ? { creationOperationId: f.writes[0].body.operationId, creationAcknowledged: false } : {}) } }) });
         await expect.poll(() => f.writes.length).toBe(4);
         expect(f.writes[3].path).toBe(`/api/admin/seasons/${id}/team-registration`);
         expect(f.writes[3].body).toEqual(f.writes[1].body);
