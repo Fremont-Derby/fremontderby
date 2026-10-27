@@ -9,12 +9,12 @@ const request = (operation = id, method = 'GET', token = 'synthetic-session') =>
   'https://fixture.invalid/api/admin/season-creation-operations/' + operation,
   { method, headers: token ? { authorization: 'Bearer ' + token } : {} },
 );
-function fixture(result, status = 200) {
+function fixture(result, status = 200, retryAfter) {
   const calls = [];
   return { calls, fetch: async (url, options) => {
     if (url.endsWith('/auth/v1/user')) return Response.json({ id: 'current-actor' });
     calls.push({ url, body: JSON.parse(options.body), headers: options.headers });
-    return Response.json(result, { status });
+    return Response.json(result, { status, headers: retryAfter === undefined ? {} : { 'retry-after': retryAfter } });
   } };
 }
 test('owned result is noncacheable and read RPC binds validated current actor', async () => {
@@ -56,5 +56,15 @@ test('denied or failed read never invokes a creator or retries', async () => {
     assert.equal(response.status, status);
     assert.equal(f.calls.length, 1);
     assert.match(f.calls[0].url, /\/read_season_creation_operation$/);
+  }
+});
+test('429 preserves only validated bounded guidance and never exposes backend payloads', async () => {
+  for (const [value, expected] of [['10', '10'], ['invalid', null], ['9999999', null], ['-1', null]]) {
+    const f = fixture({ message: '<html>private backend payload</html>' }, 429, value);
+    const response = await routeSeasonCreationOperation(request(), env, f);
+    assert.equal(response.status, 429);
+    assert.equal(response.headers.get('retry-after'), expected);
+    assert.doesNotMatch(JSON.stringify(await response.json()), /private backend|html/);
+    assert.equal(f.calls.length, 1);
   }
 });
