@@ -86,6 +86,7 @@ export function createAdminSeasonTeamsHttpHandlers({
           actorUserId: actor.id,
           seasonId,
           teamName: body.teamName ?? body.team_name,
+          ...(Object.hasOwn(body, 'operationId') ? { operationId: body.operationId } : {}),
         }, repository);
         return Response.json({ team }, { status: 201 });
       });
