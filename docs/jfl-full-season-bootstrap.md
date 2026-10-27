@@ -3,6 +3,16 @@
 This is fixture preparation for #3643, not an eight-team season or gameplay
 proof. The full-season persona flag remains disabled.
 
+The optional bootstrap step runs only when repository variable
+`JFL_BOOTSTRAP_FULL_SEASON_ACTORS` is exactly `1`. Absent/off leaves the original
+mandatory two-captain reset/browser sequence intact. This is separate from the
+persona activation flag and never proves the eight actors exist. Refresh the
+authorized `SUPABASE_ACCESS_TOKEN` credential and qualify this setup path before
+opting in; an observed HTTP401 on run40451760075 created zero principals. Do not
+try alternate identities or apply the fixture through another control plane.
+With explicit opt-in, any bootstrap failure still stops reset and browser.
+No step uses `continue-on-error` or bypasses the original regression gates.
+
 The trusted `reset-fixture` job first verifies its exact permanent-JFL checkout,
 then waits for that SHA on the canonical JFL deployment. It runs the bootstrap
 before the existing two-captain reset. The browser job depends on successful
