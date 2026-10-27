@@ -41,6 +41,12 @@ contact collisions, cross-lane player binding, credentials, login activity,
 sessions and league-admin grants all stop qualification. Partial existing
 principal sets are not repaired automatically.
 
+Initial bootstrap captures and rechecks 17 original JFL table hashes within the
+same transaction, immediately around the eight inserts. Only the eight new
+global player/contact/rating rows are excluded. Any other change rolls back the
+entire bootstrap. This interval deliberately ends before the subsequent trusted
+reset, whose authorized fixture changes would invalidate an earlier baseline.
+
 Once all eight exact mappings already exist, replay only verifies them and
 returns without inserts, timestamp updates or changes to their legitimate
 subsequent QA season history. A separate read-only Management API query verifies

@@ -15,6 +15,17 @@ create table jfl.season_prize_configurations(season_id uuid,version integer,entr
 create table jfl_private.payment_status(season_id uuid,player_id uuid,status text,amount_due_cents integer,amount_paid_cents integer,primary key(season_id,player_id));
 create table jfl_private.player_contacts(player_id uuid primary key references jfl.players,phone text);
 create table jfl_private.league_admins(user_id uuid primary key);
+create table jfl.teams(id uuid primary key,payload text);
+create table jfl.team_memberships(id uuid primary key,payload text);
+create table jfl.rounds(id uuid primary key,payload text);
+create table jfl.team_matches(id uuid primary key,payload text);
+create table jfl_private.team_applications(id uuid primary key,payload text);
+create table jfl_private.season_team_slots(id uuid primary key,payload text);
+create table jfl.user_notifications(id uuid primary key,payload text);
+create table jfl_private.audit_events(id uuid primary key,payload text);
+create table jfl_private.audit_webhook_outbox(id uuid primary key,payload text);
+create table jfl.direct_message_consent(id uuid primary key,payload text);
+create table jfl.social_chat_consent(id uuid primary key,payload text);
 CREATE OR REPLACE FUNCTION jfl_private.auto_register_new_player_for_open_season()
  RETURNS trigger
  LANGUAGE plpgsql

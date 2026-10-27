@@ -15,6 +15,11 @@ declare
   lane text;
   collision boolean;
   existing_count integer;
+  fixture_players uuid[];
+  original_history jsonb := '{}'::jsonb;
+  history_table record;
+  original_hash text;
+  predicate text;
 begin
   if to_regnamespace('jfl') is null or to_regnamespace('jfl_private') is null then
     raise exception 'JFL isolated schemas are required';
@@ -105,6 +110,28 @@ begin
   -- Never fill in partially missing principals or rerun player insert triggers.
   if existing_count = 8 then return; end if;
 
+  select array_agg(('36430000-2000-4000-8000-' || lpad(i::text,12,'0'))::uuid)
+    into fixture_players from generate_series(1,8) i;
+  -- Capture immediately before bootstrap, not before the preceding browser run
+  -- or after the next intentional reset. Exclude only the eight new players'
+  -- global identity/contact/rating rows; all prior rows must remain identical.
+  for history_table in select * from (values
+    ('jfl','seasons',null),('jfl','teams',null),('jfl','team_memberships',null),
+    ('jfl','season_players',null),('jfl','rounds',null),('jfl','team_matches',null),
+    ('jfl','players','id'),('jfl_private','player_contacts','player_id'),
+    ('jfl','player_ratings','player_id'),('jfl_private','team_applications',null),
+    ('jfl_private','season_team_slots',null),('jfl','user_notifications',null),
+    ('jfl_private','audit_events',null),('jfl_private','audit_webhook_outbox',null),
+    ('jfl','direct_message_consent',null),('jfl','social_chat_consent',null),
+    ('jfl_private','payment_status',null)
+  ) as config(schema_name,table_name,excluded_player_column) loop
+    predicate := case when history_table.excluded_player_column is null then ''
+      else format('where not (s.%I=any($1))',history_table.excluded_player_column) end;
+    execute format('select md5(coalesce(string_agg(to_jsonb(s)::text,''|'' order by to_jsonb(s)::text),'''')) from %I.%I s %s',
+      history_table.schema_name,history_table.table_name,predicate) into original_hash using fixture_players;
+    original_history := original_history || jsonb_build_object(history_table.schema_name || '.' || history_table.table_name,original_hash);
+  end loop;
+
   -- No UPDATE or upsert replacement is allowed. A concurrent collision causes
   -- verification failure and rolls the entire eight-actor transaction back.
   for item in 1..8 loop
@@ -131,6 +158,24 @@ begin
       or exists (select 1 from auth.identities where user_id = actor_id)
       or exists (select 1 from auth.sessions where user_id = actor_id) then
       raise exception 'Full-season actor bootstrap verification failed';
+    end if;
+  end loop;
+  for history_table in select * from (values
+    ('jfl','seasons',null),('jfl','teams',null),('jfl','team_memberships',null),
+    ('jfl','season_players',null),('jfl','rounds',null),('jfl','team_matches',null),
+    ('jfl','players','id'),('jfl_private','player_contacts','player_id'),
+    ('jfl','player_ratings','player_id'),('jfl_private','team_applications',null),
+    ('jfl_private','season_team_slots',null),('jfl','user_notifications',null),
+    ('jfl_private','audit_events',null),('jfl_private','audit_webhook_outbox',null),
+    ('jfl','direct_message_consent',null),('jfl','social_chat_consent',null),
+    ('jfl_private','payment_status',null)
+  ) as config(schema_name,table_name,excluded_player_column) loop
+    predicate := case when history_table.excluded_player_column is null then ''
+      else format('where not (s.%I=any($1))',history_table.excluded_player_column) end;
+    execute format('select md5(coalesce(string_agg(to_jsonb(s)::text,''|'' order by to_jsonb(s)::text),'''')) from %I.%I s %s',
+      history_table.schema_name,history_table.table_name,predicate) into original_hash using fixture_players;
+    if original_hash is distinct from original_history->>(history_table.schema_name || '.' || history_table.table_name) then
+      raise exception 'Original JFL history changed during bootstrap; entire transaction rolled back';
     end if;
   end loop;
 end

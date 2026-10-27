@@ -5,7 +5,9 @@ import { pathToFileURL } from 'node:url';
 // Supply an externally installed, pinned @electric-sql/pglite module path.
 // This verifier never connects to Supabase or loads application credentials.
 const { PGlite } = await import(pathToFileURL(process.argv[2]).href);
-const schema = await readFile(new URL('../test/fixtures/jfl-full-season-actor-schema.sql', import.meta.url), 'utf8');
+// pg_get_functiondef captures LF bodies; Git may check the fixture out as CRLF.
+// Reconstruct those exact captured bodies before comparing their PG hashes.
+const schema = (await readFile(new URL('../test/fixtures/jfl-full-season-actor-schema.sql', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 const seed = await readFile(new URL('./seed-jfl-full-season-actors.sql', import.meta.url), 'utf8');
 const cleanup = await readFile(new URL('./rollback-jfl-full-season-actors.sql', import.meta.url), 'utf8');
 const actor = '36430000-0000-4000-8000-000000000001';
@@ -14,7 +16,9 @@ const existing = 'aaaaaaaa-0000-4000-8000-000000000001';
 const registration = `insert into jfl.seasons(id,purpose,status) values('${existing}','league','registration')`;
 
 async function snapshot(db) {
-  const tables = ['auth.users', 'jfl.players', 'jfl.player_ratings', 'jfl_private.player_contacts', 'jfl.seasons', 'jfl.season_players', 'jfl_private.payment_status', 'gamma.players'];
+  const tables = ['auth.users', 'jfl.players', 'jfl.player_ratings', 'jfl_private.player_contacts', 'jfl.seasons', 'jfl.season_players', 'jfl_private.payment_status', 'gamma.players',
+    'jfl.teams','jfl.team_memberships','jfl.rounds','jfl.team_matches','jfl_private.team_applications','jfl_private.season_team_slots',
+    'jfl.user_notifications','jfl_private.audit_events','jfl_private.audit_webhook_outbox','jfl.direct_message_consent','jfl.social_chat_consent'];
   const result = {};
   for (const table of tables) result[table] = (await db.query(`select to_jsonb(t) row from ${table} t order by to_jsonb(t)::text`)).rows;
   return result;
@@ -106,6 +110,15 @@ const cases = [
     await db.exec("alter table jfl_private.player_contacts add constraint reject_fifth_fixture check(phone <> '+12065550135')");
     const before = await snapshot(db);
     await assert.rejects(db.exec(seed), /reject_fifth_fixture/); await db.exec('rollback');
+    assert.deepEqual(await snapshot(db), before);
+  }],
+  ['original-history hash guard rolls back principals and an unexpected prior-row edit', async db => {
+    await db.exec(`insert into jfl.teams values('${existing}','original team history')`);
+    const before = await snapshot(db);
+    const hook = seed.lastIndexOf('  for history_table in select');
+    assert.ok(hook > 0);
+    const injected = seed.slice(0,hook) + `  update jfl.teams set payload='unexpected change' where id='${existing}';\n` + seed.slice(hook);
+    await assert.rejects(db.exec(injected), /Original JFL history changed/); await db.exec('rollback');
     assert.deepEqual(await snapshot(db), before);
   }],
 ];
