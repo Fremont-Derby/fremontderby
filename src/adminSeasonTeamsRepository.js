@@ -104,6 +104,15 @@ export function createAdminSeasonTeamsRepository(
       return Array.isArray(payload) ? payload[0] : payload;
     },
 
+    async readPreparedOperation({ actorUserId, seasonId, operationId }) {
+      const payload = await rpc(fetchImpl, url, headers, 'admin_read_prepared_team_operation', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        operation_id: operationId,
+      });
+      return (Array.isArray(payload) ? payload[0] : payload) ?? null;
+    },
+
     async add({ actorUserId, seasonId, teamId }) {
       const payload = await rpc(fetchImpl, url, headers, 'admin_add_team_to_season', {
         actor_user_id: actorUserId,

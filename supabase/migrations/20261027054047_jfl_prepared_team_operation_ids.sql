@@ -85,4 +85,36 @@ revoke all on function jfl.admin_create_prepared_team_once(uuid,uuid,text,uuid) 
 grant execute on function jfl.admin_create_prepared_team_once(uuid,uuid,text,uuid) to service_role;
 comment on table jfl_private.prepared_team_creation_operations is
   '#3649 exact actor/season/name-bound prepared-team creation intents; no automatic POST replay';
+
+-- A supported GET can confirm a lost response without replaying creation.
+create function jfl.admin_read_prepared_team_operation(
+  actor_user_id uuid,target_season_id uuid,operation_id uuid
+) returns table(id uuid,season_id uuid,name text,requested_name text)
+language plpgsql security definer set search_path=''
+as $read_operation$
+declare prior_operation jfl_private.prepared_team_creation_operations%rowtype;
+begin
+  perform 1 from jfl_private.league_admins a where a.user_id=actor_user_id for share;
+  if not found then raise exception using errcode='42501',message='Actor is not a league admin'; end if;
+  if operation_id is null or operation_id='00000000-0000-0000-0000-000000000000'::uuid
+    or target_season_id is null then
+    raise exception using errcode='22023',message='A valid operation and season are required';
+  end if;
+  select o.* into prior_operation from jfl_private.prepared_team_creation_operations o
+    where o.operation_id=admin_read_prepared_team_operation.operation_id;
+  if not found then return; end if;
+  if prior_operation.actor_user_id is distinct from actor_user_id
+    or prior_operation.season_id is distinct from target_season_id then
+    raise exception using errcode='42501',message='Actor is not authorized for this creation operation';
+  end if;
+  if prior_operation.team_id is null then
+    raise exception using errcode='23514',message='Creation result is no longer available';
+  end if;
+  return query select t.id,t.season_id,t.name,prior_operation.normalized_name from jfl.teams t
+    where t.id=prior_operation.team_id and t.season_id=target_season_id and t.created_by=actor_user_id;
+  if not found then raise exception using errcode='23514',message='Creation result is no longer available'; end if;
+end
+$read_operation$;
+revoke all on function jfl.admin_read_prepared_team_operation(uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function jfl.admin_read_prepared_team_operation(uuid,uuid,uuid) to service_role;
 commit;
