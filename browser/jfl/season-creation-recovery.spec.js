@@ -168,6 +168,17 @@ for (const mobile of [false, true]) {
         await expect(f.page.locator('[data-retry-creation]')).toBeEnabled();
       } finally { await f.context.close(); }
     });
+    test('an expired absent result requires another check and never repeats a POST', async ({ browser }) => {
+      const f = await open(browser, mobile);
+      try {
+        await lost(f); await f.page.clock.install(); await outcome(f, false);
+        await expect(f.page.locator('[data-retry-creation]')).toBeEnabled();
+        await f.page.clock.fastForward(31000);
+        await expect(f.page.locator('[data-retry-creation]')).toBeDisabled();
+        await expect(f.page.locator('[data-check-creation]')).toBeEnabled();
+        expect(f.writes).toHaveLength(1);
+      } finally { await f.context.close(); }
+    });
     test('session change removes unresolved private intent and ignores old response', async ({ browser }) => {
       const f = await open(browser, mobile);
       try {
