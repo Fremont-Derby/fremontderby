@@ -247,6 +247,7 @@ export async function handleCreateSeasonSetupRequest(
         actorUserId: actor.id,
         createNew: body.createNew ?? false,
         seasonPurpose: body.seasonPurpose ?? 'league',
+        ...(Object.hasOwn(body, 'operationId') ? { operationId: body.operationId } : {}),
         seasonName: body.seasonName ?? body.season_name,
         leagueNight: body.leagueNight ?? body.league_night,
         firstRoundDate: body.firstRoundDate ?? body.first_round_date,
