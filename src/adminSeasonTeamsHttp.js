@@ -4,13 +4,14 @@ import {
   createPreparedAdminSeasonTeamCommand,
   listAdminSeasonTeamsCommand,
   listAdminTeamCaptainCandidatesCommand,
+  readPreparedAdminSeasonTeamOperationCommand,
 } from './adminSeasonTeamsCommands.js';
 import { createAdminSeasonTeamsRepository } from './adminSeasonTeamsRepository.js';
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 
 function statusFor(error) {
   const message = error?.message || 'Request failed';
-  if (message.includes('Actor is not a league admin')) return 403;
+  if (message.includes('Actor is not a league admin') || message.includes('Actor is not authorized')) return 403;
   if (message.includes('Supabase request failed with 401')) return 401;
   if (message.includes('Supabase request failed with 403')) return 403;
   if (message.includes('Season not found') || message.includes('Team not found') || message.includes('Player not found')) return 404;
@@ -69,6 +70,14 @@ export function createAdminSeasonTeamsHttpHandlers({
   }
 
   return {
+    readPreparedOperation(request, env, seasonId, operationId, { fetch: fetchImpl = globalThis.fetch } = {}) {
+      return withActor(request, env, fetchImpl, async (actor, repository) => {
+        const operation = await readPreparedAdminSeasonTeamOperationCommand({
+          actorUserId: actor.id, seasonId, operationId,
+        }, repository);
+        return Response.json({ operation: operation ?? null }, { headers: { 'cache-control': 'no-store' } });
+      });
+    },
     list(request, env, seasonId, { fetch: fetchImpl = globalThis.fetch } = {}) {
       return withActor(request, env, fetchImpl, async (actor, repository) => {
         const state = await listAdminSeasonTeamsCommand({

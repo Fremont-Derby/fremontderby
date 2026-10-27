@@ -43,6 +43,18 @@ export async function createPreparedAdminSeasonTeamCommand(input, repository) {
   });
 }
 
+export async function readPreparedAdminSeasonTeamOperationCommand(input, repository) {
+  requireValue(input.actorUserId, 'actorUserId');
+  requireValue(input.seasonId, 'seasonId');
+  if (typeof input.operationId !== 'string'
+    || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(input.operationId)
+    || input.operationId === '00000000-0000-0000-0000-000000000000') {
+    throw new Error('operationId must be a non-nil UUID');
+  }
+  requireMethod(repository, 'readPreparedOperation');
+  return repository.readPreparedOperation(input);
+}
+
 export async function addAdminSeasonTeamCommand(input, repository) {
   requireValue(input.actorUserId, 'actorUserId');
   requireValue(input.seasonId, 'seasonId');

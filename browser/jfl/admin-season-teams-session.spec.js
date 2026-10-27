@@ -15,7 +15,7 @@ test.beforeAll(async ({ request }) => {
   } else if (mode === 'built') {
     const { default: worker } = await import('../../dist/routerEntry.js');
     html = await (await worker.fetch(new Request('https://jfl.fremontderby.com/admin/season-teams'), { ENVIRONMENT: 'jfl' }, { waitUntil() {} })).text();
-  } else html = renderAdminSeasonTeamsPage();
+  } else html = renderAdminSeasonTeamsPage({ creationOperations: true });
 });
 const season = 'synthetic-season';
 const candidates = label => ({ registration: { teamCapacity: 8, counts: { occupiedSlots: 2 } }, teams: [{ teamId: 'team-' + label, sourceSeasonId: season, teamName: label + ' Private Team', candidateKind: 'new', captainPlayerId: null, activeRosterCount: 4, canTakeSlot: true }] });
@@ -48,7 +48,7 @@ async function open(browser, mobile) {
       if (path === '/api/admin/seasons') body = { seasons: [{ id: season, name: label + ' Private Season', status: 'registration' }] };
       else if (path.endsWith('/team-candidates')) body = candidates(label);
       else if (path.endsWith('/captain-candidates')) body = { players: [{ playerId: 'player-' + label, displayName: label + ' Private Captain', hasLogin: false, hasPhone: true, captainTeamId: null }] };
-      else if (path.endsWith('/prepared-teams')) body = { team: { id: 'created-' + label } };
+      else if (path.endsWith('/prepared-teams')) body = { team: { id: 'created-' + label, season_id: season, name: req.postDataJSON().teamName } };
       else if (path.endsWith('/captain')) body = { captain: { displayName: label + ' Private Captain', hasPhone: true } };
       return route.fulfill({ json: body });
     }
@@ -79,7 +79,7 @@ for (const mobile of [false, true]) {
       await f.page.locator('[data-tab="new"]').scrollIntoViewIfNeeded();
       const reachable = await f.page.locator('[data-tab="new"]').evaluate(el => { const r = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); });
       expect(reachable).toBe(true);
-      await expect(f.page.locator('[data-state]')).toContainText('Teams are unavailable. Reload teams to try again.');
+      await expect(f.page.locator('[data-state]')).toContainText('Too many requests. Wait 10 seconds');
       await expect(f.page.locator('[data-state]')).not.toContainText('Synthetic provider diagnostic');
       await f.page.locator('[data-tab="new"]').click(); expect(f.writes).toHaveLength(1);
     } finally { await f.context.close(); }
@@ -191,8 +191,8 @@ for (const mobile of [false, true]) {
       if (action === 'create') { await f.page.locator('[data-create-name]').fill('A Prepared Team'); await f.page.locator('[data-create-button]').click(); }
       if (action === 'captain') await f.page.locator('.captain-picker button').click();
       if (action === 'slot') await f.page.getByRole('button', { name: 'Add to season', exact: true }).click();
-      await expect(f.page.locator('[data-state]')).toContainText('Synthetic write throttled'); await settle(f.page);
-      expect(f.writes).toHaveLength(1); await expect(f.page.locator('[data-create-button]')).toBeEnabled(); await expect(f.page.getByRole('button', { name: 'Add to season', exact: true })).toBeEnabled();
+      await expect(f.page.locator('[data-state]')).toContainText('Too many requests. Wait 10 seconds'); await settle(f.page);
+      expect(f.writes).toHaveLength(1); if(action==='create')await expect(f.page.locator('[data-create-button]')).toBeDisabled();else await expect(f.page.locator('[data-create-button]')).toBeEnabled(); await expect(f.page.getByRole('button', { name: 'Add to season', exact: true })).toBeEnabled();
       expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBe('synthetic-A');
     } finally { await f.context.close(); }
   });
