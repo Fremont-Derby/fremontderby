@@ -241,6 +241,7 @@ export async function handleCreateSeasonSetupRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if(Object.hasOwn(body,'operationId')&&!/^Bearer\s+\S+$/i.test(request.headers.get('authorization')||''))throw new AuthError('Sign in to create a season with recovery.',401);
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
     const setup = await saveSeasonSetupCommand(
       {
@@ -266,7 +267,9 @@ export async function handleCreateSeasonSetupRequest(
 
     return jsonResponse({ setup }, 201);
   } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+    const response=jsonResponse({ error: clientErrorMessage(error) }, error.status===429?429:statusForError(error));
+    if(error.status===429&&error.retryAfter)response.headers.set('retry-after',error.retryAfter);
+    return response;
   }
 }
 
@@ -2319,7 +2322,7 @@ if (url.pathname === "/standings") {
         return jsonResponse({ error: "Method not allowed" }, 405);
       }
 
-      return new Response(renderSeasonSetupPage(), {
+      return new Response(renderSeasonSetupPage({ allowCreate: env.ENVIRONMENT === 'jfl' }), {
         headers: {
           "content-type": "text/html; charset=utf-8",
           "cache-control": "no-store",

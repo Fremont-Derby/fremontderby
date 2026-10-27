@@ -31,4 +31,6 @@ test('authenticated season POST forwards a valid identity and rejects invalid id
  const request=value=>new Request('https://fixture.invalid/api/admin/seasons',{method:'POST',headers:{authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({...input,operationId:value})});
  const response=await handleCreateSeasonSetupRequest(request(operationId),env,{fetch});assert.equal(response.status,201);assert.equal((await response.json()).setup.creationOperationId,operationId);assert.match(calls[0].url,/\/create_season_setup_once$/);assert.equal(calls[0].body.actor_user_id,'authenticated-actor');
  assert.equal((await handleCreateSeasonSetupRequest(request(null),env,{fetch})).status,400);assert.equal(calls.length,1);
+ const signedOut=new Request('https://fixture.invalid/api/admin/seasons',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(input)});
+ assert.equal((await handleCreateSeasonSetupRequest(signedOut,env,{fetch})).status,401);assert.equal(calls.length,1);
 });

@@ -37,7 +37,15 @@ async function requestJson(fetchImpl, url, init) {
 
   if (!response.ok) {
     const message = typeof body === 'string' ? body : body?.message;
-    throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+    const error = new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+    error.status = response.status;
+    if (response.status === 429) {
+      const value = response.headers.get('retry-after');
+      const seconds = value && value.trim() !== '' && Number.isFinite(Number(value))
+        ? Number(value) : Math.ceil((Date.parse(value) - Date.now()) / 1000);
+      if (Number.isFinite(seconds) && seconds > 0 && seconds <= 300) error.retryAfter = String(Math.ceil(seconds));
+    }
+    throw error;
   }
 
   return body;
