@@ -121,7 +121,7 @@ export async function routeTestPersona(
 
     if (request.method === 'GET') {
       const currentKey = selectedTestPersonaKey(request, env);
-      const current = currentKey ? findTestPersona(currentKey) : null;
+      const current = currentKey ? findTestPersona(currentKey, env) : null;
       return noStore({
         environment: String(env.ENVIRONMENT || '').trim().toLowerCase(),
         current,
@@ -139,7 +139,7 @@ export async function routeTestPersona(
 
     const body = await request.json().catch(() => ({}));
     const key = typeof body?.persona === 'string' ? body.persona.trim() : '';
-    const persona = findTestPersona(key);
+    const persona = findTestPersona(key, env);
     if (!persona) return noStore({ error: 'Unknown test persona' }, 400);
     const cookie = testPersonaCookieHeader(key, env);
     if (!cookie) return notFound();

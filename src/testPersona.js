@@ -10,6 +10,17 @@ export const TEST_PERSONAS = Object.freeze([
 
 const PERSONA_BY_KEY = new Map(TEST_PERSONAS.map((persona) => [persona.key, persona]));
 
+// Dedicated full-season actors never reuse the fixed two-captain lab or real
+// players. Keep disabled until the trusted fixture bootstrap is qualified.
+export const FULL_SEASON_PERSONAS = Object.freeze(Array.from({ length: 8 }, (_, index) => Object.freeze({
+  key: `full-season-captain-${index + 1}`,
+  label: `Full-season Captain ${index + 1}`,
+})));
+const FULL_SEASON_BY_KEY = new Map(FULL_SEASON_PERSONAS.map(persona => [persona.key, persona]));
+const FULL_SEASON_ACTOR_IDS = Object.freeze(Object.fromEntries(FULL_SEASON_PERSONAS.map((persona, index) => [
+  persona.key, `36430000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+])));
+
 const PERSONA_ACTOR_IDS = Object.freeze({
   jfl: Object.freeze({
     'admin-no-team': '18580000-0000-4000-8000-000000000001',
@@ -38,11 +49,18 @@ export function testPersonaEnabled(env = {}) {
 }
 
 export function listTestPersonas(env = {}) {
-  return testPersonaEnabled(env) ? TEST_PERSONAS : [];
+  if (!testPersonaEnabled(env)) return [];
+  return fullSeasonPersonasEnabled(env) ? [...TEST_PERSONAS, ...FULL_SEASON_PERSONAS] : TEST_PERSONAS;
 }
 
-export function findTestPersona(key) {
-  return PERSONA_BY_KEY.get(String(key || '').trim()) || null;
+function fullSeasonPersonasEnabled(env) {
+  return environmentName(env) === 'jfl' && env.TEST_FULL_SEASON_PERSONAS_ENABLED === '1';
+}
+
+export function findTestPersona(key, env = {}) {
+  const normalized = String(key || '').trim();
+  return PERSONA_BY_KEY.get(normalized)
+    || (fullSeasonPersonasEnabled(env) ? FULL_SEASON_BY_KEY.get(normalized) : null) || null;
 }
 
 function configuredOperatorIds(env = {}) {
@@ -83,7 +101,7 @@ export function selectedTestPersonaKey(request, env = {}) {
   if (separator < 0) return null;
   const cookieEnvironment = value.slice(0, separator);
   const key = value.slice(separator + 1);
-  if (cookieEnvironment !== currentEnvironment || !findTestPersona(key)) return null;
+  if (cookieEnvironment !== currentEnvironment || !findTestPersona(key, env)) return null;
   return key;
 }
 
@@ -92,8 +110,8 @@ export function resolveTestPersonaActor(request, env = {}, operator) {
   const key = selectedTestPersonaKey(request, env);
   if (!key) return null;
   const currentEnvironment = environmentName(env);
-  const persona = findTestPersona(key);
-  const id = PERSONA_ACTOR_IDS[currentEnvironment]?.[key] || null;
+  const persona = findTestPersona(key, env);
+  const id = personaActorId(currentEnvironment, key);
   if (!id || !persona) return null;
   return {
     id,
@@ -109,7 +127,7 @@ export function resolveTestPersonaActor(request, env = {}, operator) {
 
 export function testPersonaCookieHeader(key, env = {}) {
   const currentEnvironment = environmentName(env);
-  if (!testPersonaEnabled(env) || !findTestPersona(key)) return null;
+  if (!testPersonaEnabled(env) || !findTestPersona(key, env)) return null;
   const value = encodeURIComponent(`${currentEnvironment}:${key}`);
   return `${TEST_PERSONA_COOKIE}=${value}; Path=/; Max-Age=28800; HttpOnly; Secure; SameSite=Strict`;
 }
@@ -119,5 +137,9 @@ export function clearTestPersonaCookieHeader() {
 }
 
 export function personaActorId(environment, key) {
-  return PERSONA_ACTOR_IDS[String(environment || '').trim().toLowerCase()]?.[key] || null;
+  const name = String(environment || '').trim().toLowerCase();
+  // Object.hasOwn also prevents prototype keys from becoming actor IDs.
+  const actors = PERSONA_ACTOR_IDS[name];
+  return (actors && Object.hasOwn(actors, key) ? actors[key] : null)
+    || (name === 'jfl' && Object.hasOwn(FULL_SEASON_ACTOR_IDS, key) ? FULL_SEASON_ACTOR_IDS[key] : null);
 }
