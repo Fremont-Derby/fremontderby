@@ -92,7 +92,7 @@ for(const mobile of [false,true]){
   test(`HTTP429 honors delay and never automatically repeats POST (${mobile})`,async({browser})=>{
     const f=await fixture(browser,mobile);try{
       f.fail({response:{status:429,headers:{'Retry-After':'10'},contentType:'text/html',body:'<html>'+('provider diagnostic '.repeat(500))+'</html>'}});
-      await create(f);await expect(state(f)).toContainText('Wait 10 seconds');await reload(f);await expect(state(f)).toContainText('requested delay');
+      await create(f);await expect(state(f)).toContainText('Wait 10 seconds');const reads=f.reads.length;await reload(f);await expect(state(f)).toContainText('requested delay');expect(f.reads).toHaveLength(reads);
       expect(f.reads.filter(p=>p.includes('/prepared-team-operations/'))).toHaveLength(0);expect(f.writes).toHaveLength(1);
       await f.page.evaluate(()=>{window.__offset=11_000;});await reload(f);await expect(state(f)).toContainText('No completed creation');expect(f.writes).toHaveLength(1);
     }finally{await f.context.close();}
@@ -101,6 +101,13 @@ for(const mobile of [false,true]){
     const f=await fixture(browser,mobile);try{
       f.fail({response:{status:429,json:{error:'Busy'}}});await create(f);await expect(state(f)).toContainText('valid Retry-After');await reload(f);await expect(state(f)).toContainText('valid Retry-After');
       await expect(f.page.locator('[data-create-button]')).toBeDisabled();expect(f.writes).toHaveLength(1);
+    }finally{await f.context.close();}
+  });
+  test(`refresh preserves HTTP429 deadline before any application read (${mobile})`,async({browser})=>{
+    const f=await fixture(browser,mobile);try{
+      f.fail({commit:true,response:{status:429,headers:{'Retry-After':'10'},json:{error:'Busy'}}});await create(f);await expect(state(f)).toContainText('Wait 10 seconds');
+      const reads=f.reads.length;await f.page.reload();await expect(state(f)).toContainText('requested delay');expect(f.reads).toHaveLength(reads);expect(f.writes).toHaveLength(1);
+      await f.page.evaluate(()=>{window.__offset=11_000;});await reload(f);await expect(state(f)).toContainText('creation confirmed');expect(f.writes).toHaveLength(1);
     }finally{await f.context.close();}
   });
   test(`failed lookup preserves draft and prevents another POST (${mobile})`,async({browser})=>{
