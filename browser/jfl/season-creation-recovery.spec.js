@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { renderSeasonSetupPage } from '../../src/seasonSetupPage.js';
 
@@ -26,7 +27,7 @@ async function open(browser, mobile) {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path === '/season-setup') {
       if (process.env.PLAYWRIGHT_OPERATOR_SOURCE === 'bundled') {
-        const { default: worker } = await import('../../dist/routerEntry.js');
+        const { default: worker } = await import(new URL('../../dist/'+((config)=>config.env?.jfl?.main||config.main)(JSON.parse(readFileSync(new URL('../../wrangler.jsonc',import.meta.url),'utf8'))).split('/').pop(),import.meta.url).href);
         const response = await worker.fetch(new Request(request.url()), { ENVIRONMENT: 'jfl' }, {});
         return route.fulfill({ contentType: 'text/html', body: await response.text() });
       }

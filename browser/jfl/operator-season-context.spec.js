@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { renderSeasonSetupPage } from '../../src/seasonSetupPage.js';
 import { decorateHtmlWithShell } from '../../src/appShell.js';
@@ -76,7 +77,7 @@ async function openOperator(browser, request, mobile, setupOverrides = {}, initi
     const html = decorateHtmlWithShell(await response.text(), '/season-setup');
     await page.route('https://operator.test/season-setup**', async route => {
       if (process.env.PLAYWRIGHT_OPERATOR_SOURCE === 'bundled') {
-        const { default: worker } = await import('../../dist/routerEntry.js');
+        const { default: worker } = await import(new URL('../../dist/'+((config)=>config.env?.jfl?.main||config.main)(JSON.parse(readFileSync(new URL('../../wrangler.jsonc',import.meta.url),'utf8'))).split('/').pop(),import.meta.url).href);
         const response = await worker.fetch(new Request(route.request().url()), { ENVIRONMENT: 'jfl' }, {});
         return route.fulfill({ status: response.status, contentType: 'text/html', body: await response.text() });
       }
