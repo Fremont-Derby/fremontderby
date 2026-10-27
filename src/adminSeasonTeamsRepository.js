@@ -94,13 +94,23 @@ export function createAdminSeasonTeamsRepository(
       };
     },
 
-    async createPrepared({ actorUserId, seasonId, teamName }) {
-      const payload = await rpc(fetchImpl, url, headers, 'admin_create_prepared_team', {
+    async createPrepared({ actorUserId, seasonId, teamName, operationId }) {
+      const payload = await rpc(fetchImpl, url, headers, operationId ? 'admin_create_prepared_team_once' : 'admin_create_prepared_team', {
         actor_user_id: actorUserId,
         target_season_id: seasonId,
         team_name: teamName,
+        ...(operationId ? { operation_id: operationId } : {}),
       });
       return Array.isArray(payload) ? payload[0] : payload;
+    },
+
+    async readPreparedOperation({ actorUserId, seasonId, operationId }) {
+      const payload = await rpc(fetchImpl, url, headers, 'admin_read_prepared_team_operation', {
+        actor_user_id: actorUserId,
+        target_season_id: seasonId,
+        operation_id: operationId,
+      });
+      return (Array.isArray(payload) ? payload[0] : payload) ?? null;
     },
 
     async add({ actorUserId, seasonId, teamId }) {

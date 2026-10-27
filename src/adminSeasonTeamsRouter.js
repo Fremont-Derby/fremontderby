@@ -19,7 +19,7 @@ export async function routeAdminSeasonTeams(request, env) {
   const url = new URL(request.url);
   if (url.pathname === '/admin/season-teams') {
     if (request.method !== 'GET') return methodNotAllowed();
-    return htmlResponse(renderAdminSeasonTeamsPage(), url.pathname);
+    return htmlResponse(renderAdminSeasonTeamsPage({ creationOperations: env?.ENVIRONMENT === 'jfl' }), url.pathname);
   }
 
   const candidates = url.pathname.match(
@@ -37,6 +37,16 @@ export async function routeAdminSeasonTeams(request, env) {
   const preparedTeams = url.pathname.match(
     /^\/api\/admin\/seasons\/([^/]+)\/prepared-teams$/,
   );
+  const preparedOperation = url.pathname.match(
+    /^\/api\/admin\/seasons\/([^/]+)\/prepared-team-operations\/([^/]+)$/,
+  );
+  if (preparedOperation) {
+    if (env?.ENVIRONMENT !== 'jfl') return Response.json({ error: 'Not found' }, { status: 404 });
+    if (request.method !== 'GET') return methodNotAllowed();
+    return adminSeasonTeamsHttpHandlers.readPreparedOperation(
+      request, env, decodeURIComponent(preparedOperation[1]), decodeURIComponent(preparedOperation[2]),
+    );
+  }
   if (preparedTeams) {
     if (request.method !== 'POST') return methodNotAllowed();
     return adminSeasonTeamsHttpHandlers.createPrepared(
