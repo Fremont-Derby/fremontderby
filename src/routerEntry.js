@@ -43,6 +43,7 @@ import { enhancePublicSeasonSelection } from './publicSeasonSelectionEnhancer.js
 import { injectPublicSurfaceTheme } from './publicSurfaceTheme.js';
 import { enhanceScheduleAvailability } from './scheduleAvailabilityEnhancer.js';
 import { routeSeasonClose } from './seasonCloseHttp.js';
+import { routeSeasonCreationOperation } from './seasonCreationOperationHttp.js';
 import { enhanceSeasonClose } from './seasonCloseEnhancer.js';
 import { enhanceSeasonPublishReadiness } from './seasonPublishReadinessEnhancer.js';
 import { injectSiteStyles } from './siteStyles.js';
@@ -188,6 +189,8 @@ const baseRouterEntry = {
     if (playerSeasonRegistrationResponse) return finalizeBrowserResponse(playerSeasonRegistrationResponse, url.pathname);
     const dateAvailabilityResponse = await routeDateAvailability(request, env);
     if (dateAvailabilityResponse) return finalizeBrowserResponse(dateAvailabilityResponse, url.pathname);
+    const seasonCreationResponse = await routeSeasonCreationOperation(request, env);
+    if (seasonCreationResponse) return seasonCreationResponse;
     const seasonCloseResponse = await routeSeasonClose(request, env);
     if (seasonCloseResponse) return finalizeBrowserResponse(seasonCloseResponse, url.pathname);
     const adminGatewayResponse = routeAdminGateway(request);

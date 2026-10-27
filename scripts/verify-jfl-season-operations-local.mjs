@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-const {PGlite}=await import(pathToFileURL(process.argv[2]).href);
-const db=new PGlite();let checks=0;
+const runtime=await import(pathToFileURL(process.argv[2]).href);
+const Client=runtime.Client||runtime.default?.Client;
+const nativeUrl=process.env.JFL_LOCAL_TEST_DATABASE_URL;
+let db;
+if(nativeUrl){
+ if(!['127.0.0.1','localhost','[::1]'].includes(new URL(nativeUrl).hostname))throw new Error('Only an owned local disposable database is allowed');
+ const client=new Client({connectionString:nativeUrl});await client.connect();
+ db={query:(sql,args)=>client.query(sql,args),exec:sql=>client.query(sql),close:()=>client.end()};
+}else db=new runtime.PGlite();
+let checks=0;
 const actor='36520000-0000-4000-8000-000000000001',other='36520000-0000-4000-8000-000000000002',outsider='36520000-0000-4000-8000-000000000003';
 const op='36520000-5000-4000-8000-000000000001',op2='36520000-5000-4000-8000-000000000002';
 const input={configured_season_name:'Operation season',configured_league_night:'Tuesday',configured_first_round_date:'2026-11-03',configured_roster_lock_round:3,configured_opening_block_length:3,configured_individual_min_matches:5,configured_round_interval_days:7,configured_table_numbers:[1,2,3,4],configured_race_chart_version:'season-1-default',configured_playoff_team_count:4,configured_playoff_anchor_tiebreaker:true,configured_purpose:'qa'};
@@ -30,6 +38,30 @@ try{
  const grants=(await db.query("select has_function_privilege('authenticated','jfl.create_season_setup_once(uuid,uuid,jsonb)','execute') auth_create,has_function_privilege('anon','jfl.read_season_creation_operation(uuid,uuid)','execute') anon_read,has_function_privilege('service_role','jfl.read_season_creation_operation(uuid,uuid)','execute') service_read,has_table_privilege('service_role','jfl_private.season_creation_operations','INSERT') direct_insert,(select relrowsecurity from pg_class where oid='jfl_private.season_creation_operations'::regclass) rls")).rows[0];assert.deepEqual(grants,{auth_create:false,anon_read:false,service_read:true,direct_insert:false,rls:true});check('private RLS store with service-only guarded functions');
  await assert.rejects(db.exec(migration),/already exists/);await db.exec('rollback');assert.deepEqual(await counts(),before);check('reapplication fails closed without data changes');
  await db.exec(`delete from jfl.seasons where id='${first.setup.id}'`);await assert.rejects(read(),/no longer available/);await assert.rejects(create(),/no longer available/);check('deleted season leaves a tombstone rather than permitting recreation');
- console.log(`PASS ${checks} local PostgreSQL cases; no concurrency, hosted apply or application wiring acceptance.`);
+ if(nativeUrl){
+  const a=new Client({connectionString:nativeUrl});const b=new Client({connectionString:nativeUrl});await a.connect();await b.connect();
+  try{
+   for(const mode of ['equivalent','conflicting','rollback']){
+    const key=mode==='equivalent'?op2:mode==='conflicting'?'36520000-5000-4000-8000-000000000003':'36520000-5000-4000-8000-000000000004';
+    const prior=await counts();await a.query('begin');
+    const first=(await a.query('select jfl.create_season_setup_once($1,$2,$3) result',[actor,key,JSON.stringify(input)])).rows[0].result;
+    const pid=(await b.query('select pg_backend_pid() pid')).rows[0].pid;
+    const second=b.query('select jfl.create_season_setup_once($1,$2,$3) result',[actor,key,JSON.stringify(mode==='conflicting'?{...input,configured_purpose:'league'}:input)]).then(value=>({value}),error=>({error}));
+    let blocked=false;for(let attempt=0;attempt<50;attempt++){
+     const row=(await db.query("select wait_event from pg_stat_activity where pid=$1",[pid])).rows[0];
+     if(row?.wait_event==='advisory'){blocked=true;break}await new Promise(resolve=>setTimeout(resolve,20));
+    }
+    assert.equal(blocked,true,'second native session must wait on the operation lock');
+    await a.query(mode==='rollback'?'rollback':'commit');const result=await second;
+    if(mode==='conflicting'){assert.equal(result.error?.code,'23514')}else{
+     assert.equal(result.error,undefined);assert.equal(result.value.rows[0].result.created,mode==='rollback');
+     if(mode==='equivalent')assert.equal(result.value.rows[0].result.setup.id,first.setup.id);
+    }
+    assert.deepEqual(await counts(),{seasons:prior.seasons+1,audits:prior.audits+1,operations:prior.operations+1});
+    check('native concurrent '+mode+' serializes to exactly one root and audit');
+   }
+  }finally{await a.query('rollback');await a.end();await b.end()}
+ }
+ console.log(`PASS ${checks} local PostgreSQL cases${nativeUrl?' including real two-session concurrency':''}; no hosted apply or live application acceptance.`);
 }catch(error){console.error('FAIL local-only: '+error.message+' '+(error.where||''));process.exitCode=1;}
 finally{await db.close();}
