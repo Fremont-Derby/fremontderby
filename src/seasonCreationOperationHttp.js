@@ -1,7 +1,5 @@
 import { authenticateSupabaseUser } from './supabaseAuth.js';
 import { createSupabaseSeasonRepository } from './supabaseSeasonRepository.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import { safeClientErrorMessage } from './requestSanitize.js';
 
 const operationPattern = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
@@ -30,7 +28,16 @@ export async function routeSeasonCreationOperation(request, env, { fetch: fetchI
       || Array.isArray(result.requestedInput)) throw new Error('Season creation result was not confirmed');
     return reply({ operationId, found: true, setup: result.setup, requestedInput: result.requestedInput });
   } catch (error) {
-    const response = reply({ error: safeClientErrorMessage(error) }, error.status || rpcErrorStatus(error));
+    const status = error.name === 'AuthError' ? 401
+      : [401, 403, 429].includes(error.status) ? error.status
+        : error.rpcCode === '23514' ? 409
+          : /not confirmed/.test(error.message) ? 502 : 503;
+    const message = status === 401 ? 'Open Profile and sign in again.'
+      : status === 403 ? 'Only the authorized league admin can check this creation.'
+        : status === 409 ? 'This creation is no longer available.'
+          : status === 429 ? 'Too many requests. Wait before checking creation again.'
+            : 'Season creation could not be confirmed. Check creation again before continuing.';
+    const response = reply({ error: message }, status);
     if (error.status === 429 && error.retryAfter) response.headers.set('retry-after', error.retryAfter);
     return response;
   }

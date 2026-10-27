@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { renderSeasonSetupPage } from '../../src/seasonSetupPage.js';
 
@@ -26,7 +27,7 @@ async function open(browser, mobile) {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path === '/season-setup') {
       if (process.env.PLAYWRIGHT_OPERATOR_SOURCE === 'bundled') {
-        const { default: worker } = await import('../../dist/routerEntry.js');
+        const { default: worker } = await import(new URL('../../dist/'+((config)=>config.env?.jfl?.main||config.main)(JSON.parse(readFileSync(new URL('../../wrangler.jsonc',import.meta.url),'utf8'))).split('/').pop(),import.meta.url).href);
         const response = await worker.fetch(new Request(request.url()), { ENVIRONMENT: 'jfl' }, {});
         return route.fulfill({ contentType: 'text/html', body: await response.text() });
       }
@@ -166,6 +167,17 @@ for (const mobile of [false, true]) {
         expect(f.pending).toHaveLength(0); expect(f.writes).toHaveLength(1);
         await outcome(f, false);
         await expect(f.page.locator('[data-retry-creation]')).toBeEnabled();
+      } finally { await f.context.close(); }
+    });
+    test('an expired absent result requires another check and never repeats a POST', async ({ browser }) => {
+      const f = await open(browser, mobile);
+      try {
+        await lost(f); await f.page.clock.install(); await outcome(f, false);
+        await expect(f.page.locator('[data-retry-creation]')).toBeEnabled();
+        await f.page.clock.fastForward(31000);
+        await expect(f.page.locator('[data-retry-creation]')).toBeDisabled();
+        await expect(f.page.locator('[data-check-creation]')).toBeEnabled();
+        expect(f.writes).toHaveLength(1);
       } finally { await f.context.close(); }
     });
     test('session change removes unresolved private intent and ignores old response', async ({ browser }) => {

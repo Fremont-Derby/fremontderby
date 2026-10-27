@@ -39,6 +39,7 @@ async function requestJson(fetchImpl, url, init) {
     const message = typeof body === 'string' ? body : body?.message;
     const error = new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
     error.status = response.status;
+    error.rpcCode = body?.code;
     if (response.status === 429) {
       const value = response.headers.get('retry-after');
       const seconds = value && value.trim() !== '' && Number.isFinite(Number(value))
