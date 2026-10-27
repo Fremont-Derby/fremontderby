@@ -121,6 +121,12 @@ const cases = [
     await assert.rejects(db.exec(injected), /Original JFL history changed/); await db.exec('rollback');
     assert.deepEqual(await snapshot(db), before);
   }],
+  ['cleanup refuses changed fixture contact or rating', async db => {
+    await db.exec(seed); await db.exec(`update jfl.player_ratings set fargo_rating=550 where player_id='${player}'`);
+    const before = await snapshot(db);
+    await assert.rejects(db.exec(cleanup), /Exact complete unused/); await db.exec('rollback');
+    assert.deepEqual(await snapshot(db), before);
+  }],
 ];
 
 for (const [name, run] of cases) {

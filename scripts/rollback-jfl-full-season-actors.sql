@@ -21,10 +21,14 @@ begin
   if (select count(*) from auth.users u join generate_series(1,8) i
       on u.id=('36430000-0000-4000-8000-' || lpad(i::text,12,'0'))::uuid
       join jfl.players p on p.id=('36430000-2000-4000-8000-' || lpad(i::text,12,'0'))::uuid and p.user_id=u.id
+      join jfl_private.player_contacts c on c.player_id=p.id
+      join jfl.player_ratings r on r.player_id=p.id
       where u.email='full-season-captain-' || i || '@jfl.persona.invalid'
         and u.raw_app_meta_data='{"persona_fixture":true,"issue":3645}'::jsonb
         and u.banned_until='infinity'::timestamptz and coalesce(u.encrypted_password,'')=''
-        and u.last_sign_in_at is null and p.display_name='TEST Full-season Captain ' || i) <> 8 then
+        and u.last_sign_in_at is null and p.display_name='TEST Full-season Captain ' || i
+        and c.phone='+120655501' || (30+i)::text
+        and r.fargo_rating=500 and r.rating_status='provisional') <> 8 then
     raise exception 'Exact complete unused actor fixture required for removal';
   end if;
   if exists(select 1 from pg_trigger where tgrelid in ('auth.users'::regclass,'jfl.players'::regclass)
