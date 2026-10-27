@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { renderAdminSeasonTeamsPage } from '../../src/adminSeasonTeamsPage.js';
+import { readFile } from 'node:fs/promises';
 
 test.setTimeout(30_000);
 let html;
 test.beforeAll(async ({ request }) => {
+  if (process.env.PLAYWRIGHT_ADMIN_SEASON_TEAMS_BASELINE_HTML) {
+    html = await readFile(process.env.PLAYWRIGHT_ADMIN_SEASON_TEAMS_BASELINE_HTML, 'utf8'); return;
+  }
   const mode = process.env.PLAYWRIGHT_ADMIN_SEASON_TEAMS_HTML;
   if (mode === 'deployed') {
     expect(await (await request.get('/health/environment')).json()).toMatchObject({ ok: true, environment: 'jfl', expectedSupabaseSchema: 'jfl', versionTag: process.env.PLAYWRIGHT_EXPECTED_SHA });
@@ -66,6 +70,20 @@ async function loadB(f) {
 }
 async function settle(page) { await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))); }
 for (const mobile of [false, true]) {
+  test(`Season Teams provider HTML error keeps recovery controls reachable (${mobile})`, async ({ browser }) => {
+    const f = await open(browser, mobile);
+    try {
+      await f.page.getByRole('button', { name: 'Assign captain', exact: true }).click(); await f.page.locator('.captain-picker select').selectOption('player-A');
+      f.fail({ status: 429, headers: { 'Retry-After': '10' }, contentType: 'text/html', body: '<!doctype html><html><body>' + 'Synthetic provider diagnostic '.repeat(500) + '</body></html>' });
+      await f.page.locator('.captain-picker button').click(); await expect.poll(() => f.writes.length).toBe(1); await settle(f.page);
+      await f.page.locator('[data-tab="new"]').scrollIntoViewIfNeeded();
+      const reachable = await f.page.locator('[data-tab="new"]').evaluate(el => { const r = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); });
+      expect(reachable).toBe(true);
+      await expect(f.page.locator('[data-state]')).toContainText('Teams are unavailable. Reload teams to try again.');
+      await expect(f.page.locator('[data-state]')).not.toContainText('Synthetic provider diagnostic');
+      await f.page.locator('[data-tab="new"]').click(); expect(f.writes).toHaveLength(1);
+    } finally { await f.context.close(); }
+  });
   test(`Season Teams clears private state on signout (${mobile})`, async ({ browser }) => {
     const f = await open(browser, mobile);
     try {
