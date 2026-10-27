@@ -87,6 +87,7 @@ export async function saveSeasonSetupCommand(
     seasonId = null,
     createNew = false,
     seasonPurpose = 'league',
+    operationId,
     seasonName,
     leagueNight,
     firstRoundDate,
@@ -108,12 +109,18 @@ export async function saveSeasonSetupCommand(
   if (createNew !== false && createNew !== true) throw new Error('createNew must be a boolean');
   if (createNew && seasonId) throw new Error('New season cannot target an existing season');
   if (createNew && !['league', 'qa'].includes(seasonPurpose)) throw new Error('Invalid season purpose');
+  if (operationId !== undefined && (!createNew || typeof operationId !== 'string'
+    || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(operationId)
+    || operationId === '00000000-0000-0000-0000-000000000000')) {
+    throw new Error('A non-nil operationId is available only for distinct season creation');
+  }
   assertRepository(repository, 'saveSeasonSetup');
 
   return repository.saveSeasonSetup({
     actorUserId,
     seasonId,
     ...(createNew ? { createNew, seasonPurpose } : {}),
+    ...(operationId !== undefined ? { operationId } : {}),
     seasonName: normalizeString(seasonName, 'seasonName', 80),
     leagueNight: normalizeString(leagueNight, 'leagueNight', 40),
     firstRoundDate: normalizeDate(firstRoundDate, 'firstRoundDate'),
