@@ -1,0 +1,79 @@
+name: Trusted JFL two-captain browser journey
+
+on:
+  push:
+    branches: [fremontderby-jfl]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-jfl-two-captain-browser
+  cancel-in-progress: true
+
+jobs:
+  reset-fixture:
+    if: github.repository == 'Fremont-Derby/fremontderby' && github.ref == 'refs/heads/fremontderby-jfl' && github.actor == 'subiki'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      scheduled_on: ${{ steps.prepare.outputs.scheduled_on }}
+      general_audience_digest: ${{ steps.prepare.outputs.general_audience_digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify trusted permanent JFL source
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/fremontderby-jfl | cut -f1)" = "$GITHUB_SHA"
+      - name: Wait for exact deployed JFL SHA, then reset the fixed QA fixture
+        id: prepare
+        env:
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/reset-jfl-two-captain.mjs
+
+  browser:
+    needs: reset-fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PLAYWRIGHT_BASE_URL: https://jfl.fremontderby.com
+      PLAYWRIGHT_EXPECTED_SHA: ${{ github.sha }}
+      PLAYWRIGHT_FIXTURE_DATE: ${{ needs.reset-fixture.outputs.scheduled_on }}
+      PLAYWRIGHT_GENERAL_AUDIENCE_DIGEST: ${{ needs.reset-fixture.outputs.general_audience_digest }}
+      PLAYWRIGHT_LIVE_SEASON_READBACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify trusted permanent JFL source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/fremontderby-jfl | cut -f1)" = "$GITHUB_SHA"
+      - name: Install pinned browser test dependency
+        run: npm ci
+      - name: Build the app bundle required by browser specs
+        run: npm run build
+      - name: Install pinned Chromium on ephemeral hosted runner
+        timeout-minutes: 15
+        run: npx playwright install --with-deps chromium
+      - name: Run two-captain JFL browser journey
+        timeout-minutes: 35
+        run: npm run test:browser:jfl
+      - name: Upload failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jfl-two-captain-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7
