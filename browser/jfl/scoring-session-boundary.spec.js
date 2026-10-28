@@ -42,6 +42,10 @@ async function open(browser, width, { holdInitial = false, holdBody = false } = 
   const page = await context.newPage(); const pending = []; const writes = []; const errors = [];
   let holdReads = holdInitial; let holdWrites = false;
   page.on('pageerror', error => errors.push(error.message));
+  page.on('dialog', async dialog => {
+    if (dialog.type() === 'confirm' && /^Undo .*rack/i.test(dialog.message())) await dialog.accept();
+    else { errors.push('Unexpected dialog: ' + dialog.message()); await dialog.dismiss(); }
+  });
   await context.route('https://score-session.test/**', async route => {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path === '/scorecard/live') return route.fulfill({ contentType: 'text/html', body: await html() });
@@ -122,7 +126,7 @@ for (const width of [1280, 320]) {
       const f = await open(browser, width);
       try {
         await expect(f.page.locator('[data-player-a-name]')).toHaveText('Old private player');
-        await f.page.locator('[data-edit-current]').click();
+        await f.page.locator('[data-edit-rack]').first().click();
         await expect(f.page.locator('[data-edit-panel]')).toBeVisible();
         await change(f.page); await unavailable(f);
         await expect(f.page.locator('[data-edit-panel]')).toBeHidden();
