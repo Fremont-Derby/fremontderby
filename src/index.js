@@ -237,12 +237,14 @@ export async function handleCreateSeasonSetupRequest(
   try {
     const actor = await authenticateSupabaseUser(request, env, { fetch: fetchImpl });
     const body = await readJsonBody(request);
+    if(Object.hasOwn(body,'operationId')&&!/^Bearer\s+\S+$/i.test(request.headers.get('authorization')||''))throw new AuthError('Sign in to create a season with recovery.',401);
     const repository = createSupabaseSeasonRepository(env, { fetch: fetchImpl });
     const setup = await saveSeasonSetupCommand(
       {
         actorUserId: actor.id,
         createNew: body.createNew ?? false,
         seasonPurpose: body.seasonPurpose ?? 'league',
+        ...(Object.hasOwn(body, 'operationId') ? { operationId: body.operationId } : {}),
         seasonName: body.seasonName ?? body.season_name,
         leagueNight: body.leagueNight ?? body.league_night,
         firstRoundDate: body.firstRoundDate ?? body.first_round_date,
@@ -261,7 +263,9 @@ export async function handleCreateSeasonSetupRequest(
 
     return jsonResponse({ setup }, 201);
   } catch (error) {
-    return jsonResponse({ error: clientErrorMessage(error) }, statusForError(error));
+    const response=jsonResponse({ error: clientErrorMessage(error) }, error.status===429?429:statusForError(error));
+    if(error.status===429&&error.retryAfter)response.headers.set('retry-after',error.retryAfter);
+    return response;
   }
 }
 
