@@ -27,7 +27,7 @@ function context(env) {
 
 function publisherState(body, sha) {
   if (!Array.isArray(body?.check_runs) || !Number.isSafeInteger(body.total_count)
-    || body.total_count < body.check_runs.length || body.total_count > 100) {
+    || body.total_count !== body.check_runs.length || body.total_count > 100) {
     throw new Error('Publisher check response is incomplete or ambiguous.');
   }
   if (!body.check_runs.length) return null;

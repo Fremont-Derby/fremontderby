@@ -56,6 +56,8 @@ test('failed, cancelled, skipped and malformed publisher records fail closed', a
     await assert.rejects(run([response([check({ conclusion })])]), /did not complete successfully/);
   }
   await assert.rejects(run([{ status: 200, json: async () => ({}) }]), /incomplete or ambiguous/);
+  await assert.rejects(run([{ status: 200,
+    json: async () => ({ total_count: 2, check_runs: [check()] }) }]), /incomplete or ambiguous/);
   await assert.rejects(run([{ status: 200, json: async () => { throw new Error('synthetic-secret'); } }]), /Invalid publisher check JSON/);
 });
 
