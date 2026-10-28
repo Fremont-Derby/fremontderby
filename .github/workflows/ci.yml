@@ -69,11 +69,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Wait for the competing JFL Workers Build publisher
+        if: github.ref == 'refs/heads/fremontderby-jfl'
+        timeout-minutes: 13
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/wait-jfl-workers-build.mjs
       - name: Deploy matching Cloudflare lane
         shell: bash
         env:
