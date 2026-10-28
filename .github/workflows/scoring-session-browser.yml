@@ -1,0 +1,37 @@
+name: Scoring session browser regression
+on:
+  pull_request:
+    paths:
+      - 'src/liveRackLedgerAdapter.js'
+      - 'src/rackLedgerScorecard.js'
+      - 'browser/jfl/scoring-session-boundary.spec.js'
+      - 'browser/scoring-session.config.mjs'
+      - '.github/workflows/scoring-session-browser.yml'
+  push:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'src/liveRackLedgerAdapter.js'
+      - 'src/rackLedgerScorecard.js'
+      - 'browser/jfl/scoring-session-boundary.spec.js'
+      - 'browser/scoring-session.config.mjs'
+      - '.github/workflows/scoring-session-browser.yml'
+permissions:
+  contents: read
+jobs:
+  scoring-session-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config browser/scoring-session.config.mjs
+      - run: npx wrangler deploy --dry-run --env=jfl --outdir dist
+      - run: npx playwright test --config browser/scoring-session.config.mjs
+        env:
+          SCORING_SESSION_SOURCE: bundled
