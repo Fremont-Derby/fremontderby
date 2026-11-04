@@ -90,6 +90,21 @@ try {
       passes++;
     }
   }
+  // Changing SECURITY DEFINER ownership changes whose authority executes the body.
+  for (const row of baseline) {
+    const signature=(await query("select p.oid::regprocedure::text signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='jfl' and p.proname=$1",[row.proname])).rows[0].signature;
+    const original=(await query('select pg_get_functiondef(to_regprocedure($1)) definition',[signature])).rows[0].definition;
+    await query('begin');
+    await query(`alter function ${signature} owner to service_role`);
+    const before=(await query('select pg_get_functiondef(to_regprocedure($1)) definition',[signature])).rows[0].definition;
+    await assert.rejects(query(candidate), /Unqualified #3288 baseline/);
+    await query('rollback');
+    assert.equal((await query("select to_regprocedure('jfl_private.require_current_scorekeeper(uuid,uuid,uuid)') p")).rows[0].p,null);
+    const after=(await query('select pg_get_functiondef(to_regprocedure($1)) definition',[signature])).rows[0].definition;
+    assert.equal(after, original);
+    assert.ok(before.includes('SECURITY DEFINER'));
+    passes++;
+  }
   // Preflight must reject ACL drift before installing even the guard.
   await query('begin');
   await query('grant execute on function jfl.confirm_player_match_score(uuid,uuid,uuid) to authenticated');
