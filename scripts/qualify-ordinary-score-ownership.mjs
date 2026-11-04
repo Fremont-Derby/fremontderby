@@ -243,7 +243,57 @@ try {
       passes++;
     }
   }
-  console.log(`${passes} native PostgreSQL cases PASS; actual eight RPCs + expiry resolver + repository membership resolver; claim eligibility is an isolated double; no hosted acceptance`);
+  await query(`create table jfl_private.player_competition_restrictions(
+    season_id uuid,player_id uuid,reason text,lifted_at timestamptz)`);
+  // Captured verbatim from release 5924e674, migration 20261004035418.
+  // This upgrades the final matrix from the helper double to real claim rules.
+  await query(await readFile(new URL('../test/fixtures/jfl-score-claim-eligibility.sql',import.meta.url),'utf8'));
+  for(const call of calls) {
+    for(const mode of ['eligible','restricted','lifted','other-season']) {
+      await reset(); await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+      await query('insert into jfl.team_memberships values($1,$2,$3,null)',[id(30),id(9),team]);
+      if(mode!=='eligible') await query('insert into jfl_private.player_competition_restrictions values($1,$2,$3,$4)',
+        [mode==='other-season'?id(90):id(9),id(30),'test competition restriction',mode==='lifted'?new Date():null]);
+      await query('insert into jfl_private.player_match_score_claims values($1,$2,$3)',[match,team,owner]);
+      const args=[...call.args];
+      if(call.name.startsWith('record')) await query("update jfl_private.player_match_score_submissions set racks='[]'");
+      if(call.name.endsWith('_checked')) args[args.length-1]=JSON.stringify(
+        (await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+      const before=await snapshot();
+      if(mode==='restricted') {
+        await assert.rejects(query(call.sql,args),/marked ineligible for competition/);
+        assert.deepEqual(await snapshot(),before);
+      } else assert.equal((await query(call.sql,args)).rows[0].tracker_player_id,tracker);
+      passes++;
+    }
+  }
+  // Repeat from the other authoritative side. An A claim cannot authorize B,
+  // even when the actor is otherwise an eligible B team member.
+  for(const call of calls) {
+    for(const mode of ['side-b-owner','side-a-claim','side-b-former']) {
+      await reset(); await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+      await query('insert into jfl.team_memberships values($1,$2,$3,null)',[id(30),id(9),id(88)]);
+      await query('update jfl_private.player_match_score_submissions set tracker_player_id=$1',[id(89)]);
+      await query('insert into jfl_private.player_match_score_claims values($1,$2,$3)',
+        [match,mode==='side-a-claim'?team:id(88),mode==='side-b-former'?stale:owner]);
+      const args=[...call.args]; args[2]=id(88);
+      if(call.name.startsWith('record')) await query("update jfl_private.player_match_score_submissions set racks='[]'");
+      if(call.name.endsWith('_checked')) args[args.length-1]=JSON.stringify(
+        (await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+      const before=await snapshot();
+      if(mode==='side-b-owner') {
+        assert.equal((await query(call.sql,args)).rows[0].tracker_player_id,id(89));
+        const audit=(await query('select after_state from jfl_private.audit_events')).rows[0].after_state;
+        assert.equal(audit.scoringTeamId,id(88));
+        assert.equal(audit.trackerPlayerId,id(89));
+      } else {
+        await assert.rejects(query(call.sql,args),/current scorekeeper/);
+        assert.deepEqual(await snapshot(),before);
+      }
+      passes++;
+    }
+  }
+  console.log(`${passes} native PostgreSQL cases PASS; eight RPCs, expiry resolver, repository membership and captured claim eligibility; minimal relations, no hosted acceptance`);
 } finally {
   await db.end();
   await admin.query(`drop database ${config.database}`);
