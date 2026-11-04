@@ -61,3 +61,11 @@ test('invalid takeover decision never reaches transport',async()=>{
   const {adapter}=client(()=>{throw new Error('transport must not run');});
   await assert.rejects(adapter.respondTakeover('anything'),/Release or Deny/);
 });
+for (const [name,,payload] of actions) test(name+' rejects a session switch at API return boundary', async()=>{
+  let c;
+  c=client(async()=>({status:200,ok:true,json:()=>{
+    queueMicrotask(()=>queueMicrotask(()=>c.switch()));
+    return Promise.resolve({claim:{owner:'old private name'}});
+  }}));
+  await assert.rejects(c.adapter[name](payload?.decision),e=>e.sessionChanged===true);
+});
