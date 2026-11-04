@@ -69,3 +69,8 @@ for (const [name,,payload] of actions) test(name+' rejects a session switch at A
   }}));
   await assert.rejects(c.adapter[name](payload?.decision),e=>e.sessionChanged===true);
 });
+
+test('claim clock comes from HTTP server Date rather than device wall clock',async()=>{
+ const {adapter}=client(async()=>Response.json({claim:{pending_expires_at:'2026-11-04T10:00:15Z'}},{headers:{date:'Wed, 04 Nov 2026 10:00:00 GMT'}}));
+ assert.equal((await adapter.loadClaim()).server_now,'Wed, 04 Nov 2026 10:00:00 GMT');
+});
