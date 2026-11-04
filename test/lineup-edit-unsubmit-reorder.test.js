@@ -8,9 +8,9 @@ test('editing a submitted lineup withdraws it before mutating slots', () => {
   assert.match(sharedBlindLineupControllerSource, /await adapter\.submit\(\[\]\)/);
   assert.match(sharedBlindLineupControllerSource, /ownSubmitted=false/);
   assert.match(sharedBlindLineupControllerSource, /notifyOwnUnsubmitted\(\)/);
-  assert.match(sharedBlindLineupControllerSource, /async function removeSlot\(index\)\{await beginEdit\(\);selectedSlots\[index\]=null/);
+  assert.match(sharedBlindLineupControllerSource, /async function removeSlot\(index\)\{const generation=contextGeneration;await beginEdit\(\);assertFresh\(generation\);selectedSlots\[index\]=null/);
   assert.match(sharedBlindLineupControllerSource, /async function moveSlot\(from,to\).*await beginEdit\(\)/);
-  assert.match(sharedBlindLineupControllerSource, /async function forfeitSlot\(index\)\{await beginEdit\(\)/);
+  assert.match(sharedBlindLineupControllerSource, /async function forfeitSlot\(index\)\{const generation=contextGeneration;await beginEdit\(\);assertFresh\(generation\)/);
 });
 
 test('submitted lineup requires a fresh submit after any change', () => {
