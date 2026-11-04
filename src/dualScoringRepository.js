@@ -58,6 +58,21 @@ export function createDualScoringRepository(env, { fetch: fetchImpl = globalThis
   const expectedBody = (expectedRacks) => ({ expected_racks: expectedRacks });
 
   return {
+    getPlayerMatchScoreClaim(input) {
+      return callRpc('get_player_match_score_claim', { ...scoringBody(input) });
+    },
+    claimPlayerMatchScore(input) {
+      return callRpc('claim_player_match_score', { ...scoringBody(input) });
+    },
+    requestPlayerMatchScoreTakeover(input) {
+      return callRpc('request_player_match_score_takeover', { ...scoringBody(input) });
+    },
+    respondPlayerMatchScoreTakeover(input) {
+      return callRpc('respond_player_match_score_takeover', { ...scoringBody(input), decision: input.decision });
+    },
+    releasePlayerMatchScoreClaim(input) {
+      return callRpc('release_player_match_score_claim', { ...scoringBody(input) });
+    },
     getPlayerMatchScoreComparison(input) {
       return callRpc('get_player_match_score_comparison', scoringBody(input));
     },
