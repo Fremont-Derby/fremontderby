@@ -6,6 +6,7 @@ on:
       - 'scripts/qualify-ordinary-score-ownership.mjs'
       - 'test/fixtures/jfl-ordinary-score-baseline.json'
       - 'test/fixtures/jfl-score-takeover-resolver.sql'
+      - 'test/fixtures/jfl-score-claim-eligibility.sql'
       - '.github/workflows/scoring-ownership-sql.yml'
   workflow_dispatch:
 permissions:
