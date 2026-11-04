@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import { readdirSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { livePageRefreshScript } from '../src/livePageRefresh.js';
 
 const env = {
@@ -25,12 +26,13 @@ function inlineScripts(html) {
 }
 
 function assertParses(label, source) {
-  const path = `/tmp/syntax-${label.replace(/[^a-z0-9]+/gi, '_')}.js`;
-  writeFileSync(path, source);
+  const directory = mkdtempSync(join(tmpdir(), 'fremont-syntax-'));
+  const path = join(directory, `${label.replace(/[^a-z0-9]+/gi, '_')}.js`);
   try {
-    execFileSync('node', ['--check', path], { stdio: 'pipe' });
+    writeFileSync(path, source);
+    execFileSync(process.execPath, ['--check', path], { stdio: 'pipe' });
   } finally {
-    try { unlinkSync(path); } catch {}
+    rmSync(directory, { recursive: true, force: true });
   }
 }
 
@@ -38,7 +40,7 @@ test('rendered page client scripts parse', async () => {
   const files = readdirSync(new URL('../src/', import.meta.url)).filter((f) => f.endsWith('Page.js'));
   let checked = 0;
   for (const file of files) {
-    const mod = await import(pathToFileURL(new URL(`../src/${file}`, import.meta.url).pathname).href);
+    const mod = await import(new URL(`../src/${file}`, import.meta.url).href);
     for (const name of Object.keys(mod).filter((k) => typeof mod[k] === 'function' && /^render/i.test(k))) {
       let html;
       try {
