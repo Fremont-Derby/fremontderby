@@ -12,6 +12,12 @@ The [current migration API reference](https://supabase.com/docs/reference/api/v1
 
 Select the connected migration service only after the following qualification succeeds. Direct psql would require a separately reviewed credential, endpoint, TLS and transaction plan; it is not an automatic fallback. Do not provision credentials or broaden tooling as part of this document.
 
+## Source payloads
+
+The source-only generator `scripts/build-score-ownership-recovery.mjs` now emits two recovery forms from the same canonical executable body. `scripts/sql/jfl-ordinary-score-ownership.recovery.sql` owns its BEGIN/COMMIT. `scripts/sql/jfl-ordinary-score-ownership.recovery-body.sql` requires the qualified caller/service to own the transaction. Select exactly one framing after actual service qualification; never strip transaction statements from SQL or submit the unframed body as separate statements.
+
+`scripts/sql/jfl-ordinary-score-ownership.artifacts.json` inventories exact on-disk byte lengths and SHA-256 digests for the candidate, both recovery forms, baseline and captured dependencies. Narrow LF attributes preserve those bytes across Windows and Linux. The disposable native harness validates the inventory before connecting and exercises both transaction forms, including committed compensation and refusal cases. This inventory is static source provenance only: it has no execution owner, review agreement, fresh hosted identity, exclusion interval or history plan, and grants no hosted execution authority. The runtime manifest below remains required.
+
 ## Release and exclusion manifest
 
 Before any hosted qualification, record a private manifest with:
