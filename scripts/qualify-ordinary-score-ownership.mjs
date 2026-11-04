@@ -267,6 +267,47 @@ try {
       passes++;
     }
   }
+  // Eligibility can change during the 15-second warning. Use the real
+  // membership and captured restriction helpers, not the initial test doubles.
+  await query('insert into jfl.players values($1,$2)',[id(31),stale]);
+  for(const call of calls) {
+    for(const mode of ['eligible','restricted','ended','dual','opposing','other-season','no-roster']) {
+      for(const actor of [owner,stale]) {
+        await reset();
+        await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+        await query('insert into jfl.team_memberships values($1,$2,$3,null)',[id(30),id(9),team]);
+        if(mode!=='no-roster') await query('insert into jfl.team_memberships values($1,$2,$3,$4)',
+          [id(31),mode==='other-season'?id(90):id(9),mode==='opposing'?id(88):team,mode==='ended'?new Date():null]);
+        if(mode==='dual') await query('insert into jfl.team_memberships values($1,$2,$3,null)',[id(31),id(9),id(88)]);
+        if(mode==='restricted') await query('insert into jfl_private.player_competition_restrictions values($1,$2,$3,null)',[id(9),id(31),'new restriction']);
+        await query(`insert into jfl_private.player_match_score_claims
+          (player_match_id,scoring_team_id,owner_user_id,pending_requester_user_id,pending_requested_at,pending_expires_at)
+          values($1,$2,$3,$4,now()-interval '16 seconds',now()-interval '1 second')`,[match,team,owner,stale]);
+        const args=[...call.args]; args[0]=actor;
+        if(call.name.startsWith('record')) await query("update jfl_private.player_match_score_submissions set racks='[]'");
+        if(call.name.endsWith('_checked')) args[args.length-1]=JSON.stringify(
+          (await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+        const before=await snapshot();
+        const nextOwner=mode==='eligible'?stale:owner;
+        if(actor!==nextOwner) {
+          await assert.rejects(query(call.sql,args),/current scorekeeper|active member|both teams|ineligible for competition/);
+          assert.deepEqual(await snapshot(),before,'Rejected scoring rolls back lazy transfer/clear and audit');
+        } else {
+          assert.equal((await query(call.sql,args)).rows[0].tracker_player_id,tracker);
+          const claim=(await query('select * from jfl_private.player_match_score_claims')).rows[0];
+          assert.equal(claim.owner_user_id,nextOwner);
+          assert.equal(claim.pending_requester_user_id,null);
+          assert.equal(claim.pending_expires_at,null);
+          const transitions=(await query("select * from jfl_private.audit_events where action like 'player_match.scorekeeper_takeover_%'")).rows;
+          assert.equal(transitions.length,1,'Exactly one expiry transition, including checked wrappers');
+          assert.equal(transitions[0].action,mode==='eligible'?'player_match.scorekeeper_takeover_auto_transfer':'player_match.scorekeeper_takeover_ineligible');
+          assert.equal(transitions[0].after_state.ownerUserId,nextOwner);
+          assert.equal(transitions[0].after_state.scoringTeamId,team);
+        }
+        passes++;
+      }
+    }
+  }
   // Repeat from the other authoritative side. An A claim cannot authorize B,
   // even when the actor is otherwise an eligible B team member.
   for(const call of calls) {
