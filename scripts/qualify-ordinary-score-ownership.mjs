@@ -48,6 +48,14 @@ try {
       exception when raise_exception then return false; end; $$;
     create function jfl_private.assert_expected_score_history(target_player_match_id uuid,target_tracker_id uuid,expected_racks jsonb) returns void language plpgsql as $$ begin
       if (select racks from jfl_private.player_match_score_submissions where player_match_id=target_player_match_id and tracker_player_id=target_tracker_id) is distinct from expected_racks then raise exception 'History changed'; end if; end; $$;`);
+  const helperSignatures = [
+    'jfl_private.require_score_claim_actor(uuid,jfl.player_matches,uuid)',
+    'jfl_private.score_claim_actor_is_eligible(uuid,jfl.player_matches,uuid)',
+    'jfl_private.match_tracker_for_scoring_team(uuid,jfl.player_matches,uuid)',
+    'jfl_private.assert_expected_score_history(uuid,uuid,jsonb)',
+  ];
+  // Doubles retain the real privilege boundary; their bodies remain test doubles.
+  for (const signature of helperSignatures) await query(`alter function ${signature} security definer; alter function ${signature} set search_path=''; revoke all on function ${signature} from public,anon,authenticated; grant execute on function ${signature} to service_role`);
   const resolver=await readFile(new URL('../test/fixtures/jfl-score-takeover-resolver.sql',import.meta.url),'utf8');
   await query(resolver.slice(resolver.indexOf('create or replace function')));
   for (const row of baseline) {
@@ -65,6 +73,23 @@ try {
   const edit=calls.find(c=>c.name==='update_player_match_score_rack');
   await query(edit.sql,[stale,match,team,1,'B']);
   assert.equal((await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks[0].winnerSide,'B'); passes++;
+  // Each dependency drift must fail before creating any ownership enforcement DDL.
+  for (const signature of [...helperSignatures, 'jfl_private.resolve_expired_score_takeover(uuid,uuid)']) {
+    for (const drift of [
+      `grant execute on function ${signature} to public`,
+      `grant execute on function ${signature} to authenticated`,
+      `alter function ${signature} security invoker`,
+      `alter function ${signature} owner to service_role`,
+      `alter function ${signature} set search_path='public'`,
+      `drop function ${signature}`,
+    ]) {
+      await query('begin'); await query(drift);
+      await assert.rejects(query(candidate), /private scoring helper security boundary/);
+      await query('rollback');
+      assert.equal((await query("select to_regprocedure('jfl_private.require_current_scorekeeper(uuid,uuid,uuid)') p")).rows[0].p, null);
+      passes++;
+    }
+  }
   // Preflight must reject ACL drift before installing even the guard.
   await query('begin');
   await query('grant execute on function jfl.confirm_player_match_score(uuid,uuid,uuid) to authenticated');

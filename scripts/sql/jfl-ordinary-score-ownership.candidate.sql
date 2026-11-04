@@ -1,5 +1,21 @@
 do $baseline$
 begin
+ -- Direct privileged dependencies must retain their qualified execution boundary.
+ if exists (
+   select 1 from (values
+     ('jfl_private.resolve_expired_score_takeover(uuid,uuid)'),
+     ('jfl_private.require_score_claim_actor(uuid,jfl.player_matches,uuid)'),
+     ('jfl_private.score_claim_actor_is_eligible(uuid,jfl.player_matches,uuid)'),
+     ('jfl_private.match_tracker_for_scoring_team(uuid,jfl.player_matches,uuid)'),
+     ('jfl_private.assert_expected_score_history(uuid,uuid,jsonb)')
+   ) expected(signature)
+   left join pg_proc p on p.oid=to_regprocedure(expected.signature)
+   where p.oid is null or not p.prosecdef
+     or p.proowner <> 'postgres'::regrole
+     or p.proconfig is distinct from array['search_path=""']::text[]
+     or exists (select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+       where a.privilege_type='EXECUTE' and a.grantee not in ('postgres'::regrole,'service_role'::regrole))
+ ) then raise exception 'Unqualified private scoring helper security boundary'; end if;
  if not exists (select 1 from pg_proc p where p.oid=to_regprocedure('jfl_private.resolve_expired_score_takeover(uuid,uuid)') and md5(replace(p.prosrc,chr(13),''))='57080809c003adffbb9b95a815d5e02d' and p.prosecdef and p.proconfig=array['search_path=""']::text[]) then raise exception 'Unqualified match-first expiry resolver'; end if;
  if exists (
    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace,
