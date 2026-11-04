@@ -79,7 +79,7 @@ test('builds a current, marker-owned failure status without exposing raw fences'
 });
 
 test('CI upserts the status comment and still fails the release gate', () => {
-  const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+  const workflow = readFileSync('.github/workflows/ci.yml', 'utf8').replace(/\r\n/g, '\n');
 
   assert.match(workflow, /group: production-smoke-main/);
   assert.match(workflow, /github\.paginate\(github\.rest\.issues\.listComments/);
