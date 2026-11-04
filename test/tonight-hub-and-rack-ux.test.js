@@ -6,9 +6,9 @@ import {
   sharedRackLedgerScorecardControllerSource,
 } from '../src/rackLedgerScorecard.js';
 
-test('live rack adapter retries offline and network failures', () => {
+test('live rack adapter reports offline without automatic mutation replay', () => {
   assert.match(liveRackLedgerAdapterSource, /navigator\.onLine/);
-  assert.match(liveRackLedgerAdapterSource, /attempt<1/);
+  assert.doesNotMatch(liveRackLedgerAdapterSource, /attempt<1/);
   assert.match(liveRackLedgerAdapterSource, /offline/i);
   assert.match(liveRackLedgerAdapterSource, /addEventListener\('offline'/);
 });
