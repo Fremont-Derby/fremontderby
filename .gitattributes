@@ -1,0 +1,9 @@
+# Exact UTF-8 payload bytes for source-only JFL SQL qualification.
+/scripts/sql/jfl-ordinary-score-ownership.candidate.sql text eol=lf
+/scripts/sql/jfl-ordinary-score-ownership.recovery.sql text eol=lf
+/scripts/sql/jfl-ordinary-score-ownership.recovery-body.sql text eol=lf
+/test/fixtures/jfl-ordinary-score-baseline.json text eol=lf
+/test/fixtures/jfl-score-takeover-resolver.sql text eol=lf
+/test/fixtures/jfl-score-claim-eligibility.sql text eol=lf
+/test/fixtures/jfl-score-claim-transitions.sql text eol=lf
+/scripts/sql/jfl-ordinary-score-ownership.artifacts.json text eol=lf
