@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { prepareJflSqlExperiment as prepare, classifyJflSqlRunOutcome as classify } from '../scripts/lib/jfl-sql-manifest.mjs';
+import { prepareJflSqlExperiment as prepare, classifyJflSqlRunOutcome as classify, jflSqlApprovalDigest } from '../scripts/lib/jfl-sql-manifest.mjs';
+import { collectJflSqlReviewContext } from '../scripts/lib/jfl-sql-review-context.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const inventoryBytes = await readFile(new URL('../scripts/sql/jfl-ordinary-score-ownership.artifacts.json', import.meta.url));
@@ -15,7 +16,7 @@ const agreement = n => `https://github.com/Fremont-Derby/fremontderby/issues/368
 const settings = "SET LOCAL lock_timeout = '2000ms';\nSET LOCAL statement_timeout = '30000ms';\nSET LOCAL idle_in_transaction_session_timeout = '40000ms';\n";
 function fixture() {
   const m = {
-    schemaVersion: 1, card: 3686, runId: '11111111-2222-4333-8444-555555555555',
+    schemaVersion: 1, card: 3686, purpose: 'candidate-recovery', runId: '11111111-2222-4333-8444-555555555555',
     ownerLane: 'jfl', owner: 'test-owner-only', project: 'oqkkvqkerusepyokzbmt', environment: 'jfl',
     healthUrl: 'https://jfl.fremontderby.com/health/environment', schemas: ['jfl','jfl_private'],
     sourceSha: 'a'.repeat(40), expectedDeployedSha: 'b'.repeat(40),
@@ -30,7 +31,7 @@ function fixture() {
       recover: hash(settings + originalArtifacts.get('scripts/sql/jfl-ordinary-score-ownership.recovery-body.sql').toString('utf8')),
     },
   };
-  const context = { now, reviewedSourceSha: m.sourceSha, reviewedInventorySha256: m.inventorySha256,
+  const context = { now, approvalSha256: jflSqlApprovalDigest(m), reviewedSourceSha: m.sourceSha, reviewedInventorySha256: m.inventorySha256,
     jflAgreement: m.review.jfl, druAgreement: m.review.dru, exclusionId: m.exclusion.id,
     transportQualification: m.transport.qualification, qualifiedFraming: 'service-owned',
     unusedMigrationNames: [m.history.installName,m.history.recoveryName],
@@ -70,6 +71,7 @@ const bad = {
   'unknown URL': f => { f.m.healthUrl += '?alternate=1'; },
   'peer schema': f => { f.m.schemas.push('dru'); },
   'missing source review': f => { delete f.context.reviewedSourceSha; },
+  'wrong experiment purpose': f => { f.m.purpose = 'transport-qualification'; },
   'source moved': f => { f.m.sourceSha = 'c'.repeat(40); },
   'missing DRU agreement': f => { delete f.context.druAgreement; },
   'same reviewer evidence': f => { f.m.review.dru = f.m.review.jfl; },
@@ -109,6 +111,8 @@ const bad = {
 for (const [name, mutate] of Object.entries(bad)) {
   test(`preflight refuses ${name}`, () => {
     const f = fixture(); mutate(f);
+    // A review cannot make an invalid target, window or payload valid.
+    f.context.approvalSha256 = jflSqlApprovalDigest(f.m);
     assert.throws(() => run(f), /^Error: JFL_SQL_PREFLIGHT_[A-Z]+$/);
   });
 }
@@ -119,6 +123,37 @@ test('invalid UTF8/JSON, oversize manifests and altered inventory produce fixed 
   }
   const changed = Buffer.from(inventoryBytes); changed[0] ^= 1;
   assert.throws(() => prepare({ ...f, manifestBytes: Buffer.from(JSON.stringify(f.m)), inventoryBytes: changed }), /JFL_SQL_PREFLIGHT_INVENTORY/);
+});
+test('approval core binds all proposal content while review references remain separate', () => {
+  const f = fixture(), approved = jflSqlApprovalDigest(f.m);
+  const changedReferences = structuredClone(f.m);
+  changedReferences.review = { jfl: agreement(11),dru: agreement(12) };
+  changedReferences.exclusion.jfl = agreement(11); changedReferences.exclusion.dru = agreement(12);
+  assert.equal(jflSqlApprovalDigest(changedReferences),approved);
+  assert.throws(() => jflSqlApprovalDigest({ ...f.m,review: { ...f.m.review,unreviewedPayload: 'other' } }),/JFL_SQL_PREFLIGHT_MANIFEST/);
+  f.m.history.installName += '_different';
+  assert.notEqual(jflSqlApprovalDigest(f.m),approved);
+  assert.throws(() => run(f),/JFL_SQL_PREFLIGHT_REVIEW/);
+});
+test('collected approvals cannot substitute for current exclusion, service qualification or history proof', async () => {
+  const f = fixture();
+  const reviews = await collectJflSqlReviewContext({ manifestBytes: Buffer.from(JSON.stringify(f.m)),
+    expectedSourceSha: f.m.sourceSha,clock: () => now,
+    readComment: async id => ({ id: Number(id),
+      issue_url: 'https://api.github.com/repos/Fremont-Derby/fremontderby/issues/3686',
+      user: { login: 'subiki' },author_association: 'MEMBER',
+      created_at: '2026-11-04T19:29:00Z',updated_at: '2026-11-04T19:29:01Z',
+      body: '```jfl-sql-review\n'+JSON.stringify({ schemaVersion: 1,lane: id === '1' ? 'JFL' : 'DRU',decision: 'AGREE',
+        card: 3686,project: f.m.project,purpose: f.m.purpose,sourceSha: f.m.sourceSha,
+        runId: f.m.runId,approvalSha256: jflSqlApprovalDigest(f.m) })+'\n```',
+    }),readHealth: async () => f.context.health.body });
+  const attempt = context => prepare({ manifestBytes: Buffer.from(JSON.stringify(f.m)),inventoryBytes,artifacts: f.artifacts,context });
+  assert.throws(() => attempt(reviews),/JFL_SQL_PREFLIGHT_EXCLUSION/);
+  const exclusive = { ...reviews,exclusionId: f.m.exclusion.id };
+  assert.throws(() => attempt(exclusive),/JFL_SQL_PREFLIGHT_TRANSPORT/);
+  const qualified = { ...exclusive,transportQualification: f.m.transport.qualification,qualifiedFraming: 'service-owned' };
+  assert.throws(() => attempt(qualified),/JFL_SQL_PREFLIGHT_HISTORY/);
+  assert.equal(attempt({ ...qualified,unusedMigrationNames: f.context.unusedMigrationNames }).executionAuthorized,false);
 });
 
 test('bound independent outcomes retain the existing no-replay and exact restoration rules', () => {

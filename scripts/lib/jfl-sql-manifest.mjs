@@ -38,6 +38,36 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const agreement = value => typeof value === 'string'
   && /^https:\/\/github\.com\/Fremont-Derby\/fremontderby\/issues\/3686#issuecomment-\d+$/.test(value);
 
+export function isQualifiedJflSqlHealth(body, expectedSha) {
+  return sha(expectedSha) && object(body) && body.ok === true && body.environment === 'jfl'
+    && body.expectedSupabaseSchema === 'jfl' && body.versionTag === expectedSha
+    && Array.isArray(body.checks) && body.checks.length > 0
+    && body.checks.every(check => check?.ok === true)
+    && isolationChecks.every(name => body.checks.filter(check => check.name === name).length === 1);
+}
+
+// Attest the complete execution proposal, excluding only approval references.
+// Keeping those references outside the signed core avoids circular approvals.
+export function jflSqlApprovalDigest(manifest) {
+  requireThat(object(manifest), 'MANIFEST');
+  if (Object.hasOwn(manifest,'review')) {
+    requireThat(object(manifest.review) && Object.keys(manifest.review).every(key => ['jfl','dru'].includes(key)), 'MANIFEST');
+  }
+  const core = Object.fromEntries(Object.entries(manifest).filter(([key]) => key !== 'review'));
+  if (object(core.exclusion)) {
+    core.exclusion = Object.fromEntries(Object.entries(core.exclusion).filter(([key]) => !['jfl','dru'].includes(key)));
+  }
+  const canonical = (value,depth = 0) => {
+    requireThat(depth <= 32, 'MANIFEST');
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+    if (typeof value === 'number') { requireThat(Number.isFinite(value), 'MANIFEST'); return value; }
+    if (Array.isArray(value)) return value.map(item => canonical(item,depth+1));
+    requireThat(object(value), 'MANIFEST');
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key,canonical(value[key],depth+1)]));
+  };
+  return sha256(Buffer.from(JSON.stringify(canonical(core)),'utf8'));
+}
+
 function checkTimeouts(t) {
   requireThat(object(t) && ['lockMs','statementMs','idleMs','clientMs'].every(key => Number.isSafeInteger(t[key]) && t[key] > 0)
     && t.lockMs <= 5000 && t.lockMs < t.statementMs && t.statementMs <= 60000
@@ -61,7 +91,7 @@ export function compileJflSqlPayloads({ candidateBytes, recoveryBodyBytes, timeo
 export function prepareJflSqlExperiment({ manifestBytes, inventoryBytes, artifacts, context }) {
   requireThat(object(context) && Number.isFinite(context.now), 'CONTEXT');
   const m = decode(manifestBytes, 'MANIFEST');
-  requireThat(object(m) && m.schemaVersion === 1 && m.card === 3686, 'MANIFEST');
+  requireThat(object(m) && m.schemaVersion === 1 && m.card === 3686 && m.purpose === 'candidate-recovery', 'MANIFEST');
   requireThat(typeof m.runId === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(m.runId), 'RUN');
   requireThat(m.ownerLane === 'jfl' && typeof m.owner === 'string' && /^[a-z0-9-]{8,80}$/.test(m.owner), 'OWNER');
   requireThat(m.project === project && m.environment === 'jfl' && m.healthUrl === healthUrl
@@ -70,7 +100,8 @@ export function prepareJflSqlExperiment({ manifestBytes, inventoryBytes, artifac
     && sha(m.expectedDeployedSha), 'SOURCE');
   requireThat(object(m.review) && agreement(m.review.jfl) && agreement(m.review.dru)
     && m.review.jfl !== m.review.dru && m.review.jfl === context.jflAgreement
-    && m.review.dru === context.druAgreement, 'REVIEW');
+    && m.review.dru === context.druAgreement && digest(context.approvalSha256)
+    && context.approvalSha256 === jflSqlApprovalDigest(m), 'REVIEW');
   const start = timestamp(m.exclusion?.startsAt), end = timestamp(m.exclusion?.endsAt);
   requireThat(Number.isFinite(start) && Number.isFinite(end) && start <= context.now
     && end > context.now && end - start <= 3600000 && m.exclusion.id === context.exclusionId
@@ -80,12 +111,7 @@ export function prepareJflSqlExperiment({ manifestBytes, inventoryBytes, artifac
   const observedAt = timestamp(health?.observedAt);
   requireThat(object(health) && Number.isFinite(observedAt) && observedAt >= start
     && observedAt <= context.now && context.now - observedAt <= 120000
-    && health.url === healthUrl && health.body?.ok === true && health.body.environment === 'jfl'
-    && health.body.expectedSupabaseSchema === 'jfl'
-    && health.body.versionTag === m.expectedDeployedSha
-    && Array.isArray(health.body.checks) && health.body.checks.length > 0
-    && health.body.checks.every(check => check?.ok === true)
-    && isolationChecks.every(name => health.body.checks.filter(check => check.name === name).length === 1), 'HEALTH');
+    && health.url === healthUrl && isQualifiedJflSqlHealth(health.body,m.expectedDeployedSha), 'HEALTH');
   const t = m.timeouts;
   checkTimeouts(t);
   requireThat(context.now + t.clientMs < end, 'TIMEOUTS');
