@@ -65,7 +65,20 @@ try {
   const edit=calls.find(c=>c.name==='update_player_match_score_rack');
   await query(edit.sql,[stale,match,team,1,'B']);
   assert.equal((await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks[0].winnerSide,'B'); passes++;
+  // Preflight must reject ACL drift before installing even the guard.
+  await query('begin');
+  await query('grant execute on function jfl.confirm_player_match_score(uuid,uuid,uuid) to authenticated');
+  await assert.rejects(query(candidate),/EXECUTE permissions/);
+  await query('rollback');
+  assert.equal((await query("select to_regprocedure('jfl_private.require_current_scorekeeper(uuid,uuid,uuid)') p")).rows[0].p,null); passes++;
+  await query('begin');
+  await query("alter function jfl.confirm_player_match_score(uuid,uuid,uuid) set search_path='public'");
+  await assert.rejects(query(candidate),/Unqualified/);
+  await query('rollback'); passes++;
   await query('begin'); await query(candidate); await query('commit');
+  for (const role of ['anon','authenticated']) {
+    assert.equal((await query("select has_function_privilege($1,'jfl_private.require_current_scorekeeper(uuid,uuid,uuid)','EXECUTE') p",[role])).rows[0].p,false); passes++;
+  }
   // A repeat must refuse atomically rather than patch already-modified bodies.
   await query('begin'); await assert.rejects(query(candidate),/Unqualified/); await query('rollback'); passes++;
   for (const call of calls) {
@@ -109,6 +122,27 @@ try {
     await transfer.query('commit');
     assert.match((await writing).error?.message || '',/current scorekeeper/); passes++;
   } finally { await transfer.query('rollback'); await transfer.end(); await writer.end(); }
+  // Reverse ordering: an authorized write commits before transfer gets the lock.
+  await reset(); await query('insert into jfl_private.player_match_score_claims values($1,$2,$3)',[match,team,owner]);
+  const first=new Client(config), next=new Client(config);
+  await first.connect(); await next.connect();
+  try {
+    await first.query('begin');
+    await first.query(checked.sql,checked.args);
+    const pid=(await next.query('select pg_backend_pid() pid')).rows[0].pid;
+    const transferring=next.query('begin').then(()=>next.query('select * from jfl.player_matches where id=$1 for update',[match]));
+    let waiting=false;
+    for(let i=0;i<100;i++) {
+      if((await query('select wait_event_type from pg_stat_activity where pid=$1',[pid])).rows[0].wait_event_type==='Lock'){waiting=true;break;}
+      await new Promise(resolve=>setTimeout(resolve,10));
+    }
+    assert.ok(waiting,'Transfer must wait behind authorized score transaction');
+    await first.query('commit'); await transferring;
+    await next.query('update jfl_private.player_match_score_claims set owner_user_id=$1',[stale]);
+    await next.query('commit');
+    assert.equal((await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks[0].winnerSide,'B');
+    await assert.rejects(query(edit.sql,edit.args),/current scorekeeper/); passes++;
+  } finally { await first.query('rollback'); await next.query('rollback'); await first.end(); await next.end(); }
   // Actual qualified resolver: pending requester denied; expired requester wins;
   // rejected former-owner write rolls lazy expiry back along with score changes.
   for(const expired of [false,true]) {
