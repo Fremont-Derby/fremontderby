@@ -151,6 +151,30 @@ try {
       passes++;
     }
   }
+  // The five transition entrypoints are also privileged dependencies. Refuse
+  // drift before installing enforcement, without repairing another object's ACL.
+  for (const signature of transitionSignatures) {
+    for (const drift of [
+      `grant execute on function ${signature} to public`,
+      `grant execute on function ${signature} to authenticated`,
+      `alter function ${signature} security invoker`,
+      `alter function ${signature} owner to service_role`,
+      `alter function ${signature} set search_path='public'`,
+      `drop function ${signature}`,
+    ]) {
+      await query('begin');
+      const original=await catalogSnapshot();
+      await query(drift);
+      const drifted=await catalogSnapshot();
+      await query('savepoint transition_refusal');
+      await assert.rejects(query(candidate), /Unqualified scoring dependency body or security boundary/);
+      await query('rollback to savepoint transition_refusal');
+      assert.deepEqual(await catalogSnapshot(),drifted);
+      await query('rollback');
+      assert.deepEqual(await catalogSnapshot(),original);
+      passes++;
+    }
+  }
   // Body drift must fail before installing any enforcement DDL, preserving the
   // exact drifted function definitions, owners and ACLs after the refusal.
   const pinnedDependencies = [...helperSignatures,
