@@ -36,7 +36,7 @@ Before any hosted qualification, record a private manifest with:
 
 - Card, JFL execution owner, explicit DRU agreement for shared migration-history effects, and reviewed source SHA.
 - Exact project `oqkkvqkerusepyokzbmt`, environment `jfl`, schemas `jfl` / `jfl_private`, and canonical health URL `https://jfl.fremontderby.com/health/environment`.
-- Expected deployed SHA, currently `5924e674f9fb0464fbe314e8e02839ca7b3bbf8b`. A different healthy SHA requires fresh reconciliation, never automatic substitution.
+- Expected deployed SHA pinned to the freshly reconciled release. A different healthy SHA requires fresh reconciliation, never automatic substitution.
 - SHA-256 of the exact UTF-8 payload bytes, candidate and recovery files, dependency fixtures and baseline catalog. Do not use Git blob IDs as payload SHA-256 or hash PowerShell-rendered output.
 - One unique migration name per approved probe; intended history delta and cleanup treatment for every name. Names must not collide with source migrations or earlier runs.
 - Exclusive fixture interval covering SQL/reset/browser/deploy activity; both lanes acknowledge the shared-project interval. Process absence alone is not ownership.
