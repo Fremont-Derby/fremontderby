@@ -1,0 +1,35 @@
+name: Score picker session browser regression
+on:
+  pull_request:
+    paths:
+      - 'src/scorePickerPage.js'
+      - 'browser/jfl/score-picker-session.spec.js'
+      - 'browser/score-picker-session.config.mjs'
+      - '.github/workflows/score-picker-session-browser.yml'
+  push:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'src/scorePickerPage.js'
+      - 'browser/jfl/score-picker-session.spec.js'
+      - 'browser/score-picker-session.config.mjs'
+      - '.github/workflows/score-picker-session-browser.yml'
+permissions:
+  contents: read
+jobs:
+  score-picker-session-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config browser/score-picker-session.config.mjs
+      - run: npx wrangler deploy --dry-run --env=jfl --outdir dist
+      - run: npx playwright test --config browser/score-picker-session.config.mjs
+        env:
+          SCORE_PICKER_SOURCE: bundled

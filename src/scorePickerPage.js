@@ -36,6 +36,20 @@ export function renderScorePickerPage() {
   <script>
     const statusEl=document.querySelector('[data-status]');const listEl=document.querySelector('[data-list]');const filtersEl=document.querySelector('[data-filters]');const dateSelect=document.querySelector('[data-date]');const teamSelect=document.querySelector('[data-team]');const matchupSelect=document.querySelector('[data-matchup]');const raceSelect=document.querySelector('[data-race]');const requestedMatch=new URLSearchParams(location.search).get('match')||'';let matches=[];let captainContexts=[];
     function token(){return sessionStorage.getItem('fd.accessToken')||''}
+    let pageToken=token();let sessionGeneration=0;let choicesReady=false;
+    function observeSession(force=false){
+      const next=token();if(next===pageToken&&!force)return true;
+      pageToken=next;sessionGeneration++;choicesReady=false;matches=[];captainContexts=[];
+      filtersEl.hidden=true;for(const select of [dateSelect,teamSelect,matchupSelect,raceSelect]){select.replaceChildren();select.disabled=true}
+      setStatus('Your sign-in changed. Reload scoring options to continue.','error');
+      emptyState('Your sign-in changed','Previous scoring and lineup choices were cleared. Reload for your current sign-in.',[actionLink('Reload scoring options','/scorecard'+location.search),actionLink('Open Profile','/profile',true)]);
+      return false;
+    }
+    function choicesCurrent(){return observeSession()&&choicesReady}
+    if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
+      window.addEventListener('fd:session-changed',()=>observeSession(true));
+      for(const event of ['storage','focus'])window.addEventListener(event,()=>observeSession());
+    }
     function setStatus(message,tone){statusEl.textContent=message;statusEl.dataset.tone=tone||'muted'}
     function text(value){return value==null?'':String(value)}
     function localDateKey(){const now=new Date();const year=now.getFullYear();const month=String(now.getMonth()+1).padStart(2,'0');const day=String(now.getDate()).padStart(2,'0');return year+'-'+month+'-'+day}
@@ -52,19 +66,21 @@ export function renderScorePickerPage() {
     function captainMatchupLabel(context){return text(context.teamName)+' vs '+text(context.opponentName)+' · Round '+text(context.roundNumber)}
     function raceLabel(match){return'Pairing '+text(match.slot_number)+' · '+text(match.player_a_name)+' vs '+text(match.player_b_name)}
     function selectedCaptainContext(){const matchupId=matchupSelect.value;return baseCaptainContexts().find(context=>text(context.teamMatchId)===matchupId)||null}
-    function populateMatchups(){const previous=matchupSelect.value;matchupSelect.replaceChildren();const seen=new Set();for(const match of baseMatches()){const id=text(match.team_match_id);if(!id||seen.has(id))continue;seen.add(id);addOption(matchupSelect,id,matchupLabel(match))}for(const context of baseCaptainContexts()){const id=text(context.teamMatchId);if(!id||seen.has(id))continue;seen.add(id);addOption(matchupSelect,id,captainMatchupLabel(context))}if(previous&&seen.has(previous))matchupSelect.value=previous;populateRaces()}
-    function populateRaces(){const previous=raceSelect.value;raceSelect.replaceChildren();const matchupId=matchupSelect.value;const races=baseMatches().filter(match=>text(match.team_match_id)===matchupId);for(const match of races)addOption(raceSelect,text(match.player_match_id),raceLabel(match));if(previous&&races.some(match=>text(match.player_match_id)===previous))raceSelect.value=previous;renderSelection()}
+    function populateMatchups(){if(!choicesCurrent())return;const previous=matchupSelect.value;matchupSelect.replaceChildren();const seen=new Set();for(const match of baseMatches()){const id=text(match.team_match_id);if(!id||seen.has(id))continue;seen.add(id);addOption(matchupSelect,id,matchupLabel(match))}for(const context of baseCaptainContexts()){const id=text(context.teamMatchId);if(!id||seen.has(id))continue;seen.add(id);addOption(matchupSelect,id,captainMatchupLabel(context))}if(previous&&seen.has(previous))matchupSelect.value=previous;populateRaces()}
+    function populateRaces(){if(!choicesCurrent())return;const previous=raceSelect.value;raceSelect.replaceChildren();const matchupId=matchupSelect.value;const races=baseMatches().filter(match=>text(match.team_match_id)===matchupId);for(const match of races)addOption(raceSelect,text(match.player_match_id),raceLabel(match));if(previous&&races.some(match=>text(match.player_match_id)===previous))raceSelect.value=previous;renderSelection()}
     function addDateKey(keys,key,today){if(key&&key!==today&&!keys.includes(key))keys.push(key)}
     function addTeamChoice(seen,id,name){if(!id||seen.has(id))return;seen.add(id);addOption(teamSelect,id,name||'My team')}
     function requestedContext(){const match=matches.find(item=>text(item.team_match_id)===requestedMatch);if(match)return{date:match.scheduled_on||'tbd',teamId:text(match.scoring_team_id)};const context=captainContexts.find(item=>text(item.teamMatchId)===requestedMatch);if(context)return{date:context.scheduledOn||'tbd',teamId:text(context.teamId)};return null}
     function selectRequestedMatch(){if(!requestedMatch)return;const target=requestedContext();if(!target)return;if(Array.from(dateSelect.options).some(option=>option.value===target.date))dateSelect.value=target.date;if(Array.from(teamSelect.options).some(option=>option.value===target.teamId))teamSelect.value=target.teamId;populateMatchups();if(Array.from(matchupSelect.options).some(option=>option.value===requestedMatch)){matchupSelect.value=requestedMatch;populateRaces()}}
     function populateFilters(){const today=localDateKey();dateSelect.replaceChildren();addOption(dateSelect,today,'Today · '+dateLabel(today));const dates=[];for(const match of matches)addDateKey(dates,match.scheduled_on||'tbd',today);for(const context of captainContexts)addDateKey(dates,context.scheduledOn||'tbd',today);for(const key of dates)addOption(dateSelect,key,dateLabel(key));teamSelect.replaceChildren();addOption(teamSelect,'all','All my teams');const seen=new Set();for(const match of matches)addTeamChoice(seen,text(match.scoring_team_id),text(match.scoring_team_name));for(const context of captainContexts)addTeamChoice(seen,text(context.teamId),text(context.teamName));filtersEl.hidden=false;populateMatchups();selectRequestedMatch()}
     function renderCaptainPrep(context){raceSelect.disabled=true;setStatus('This matchup is not ready to score yet. You can prepare the blind three now.');emptyState('Prepare your lineup',captainMatchupLabel(context)+' is scheduled. Open the existing lineup workflow to see dated availability, find substitutes, and lock your three. Opponent order stays hidden until both teams submit.',[actionLink('Prepare lineup',lineupHref(context)),actionLink('Open Schedule','/schedule',true)])}
-    function renderSelection(){const visible=baseMatches();const captainVisible=baseCaptainContexts();listEl.replaceChildren();if(!visible.length&&!captainVisible.length){setStatus('No scoring options for '+dateLabel(dateSelect.value)+'.');emptyState('Nothing ready for this selection','Choose another date or team above. If you are waiting on a lineup reveal, check Schedule.',[actionLink('Open Schedule','/schedule'),actionLink('Check my team','/teams',true)]);matchupSelect.disabled=true;raceSelect.disabled=true;return}matchupSelect.disabled=false;const matchupId=matchupSelect.value;const races=visible.filter(match=>text(match.team_match_id)===matchupId);if(!races.length){const captainContext=selectedCaptainContext();if(captainContext){renderCaptainPrep(captainContext);return}raceSelect.disabled=true;setStatus('No revealed races for this matchup yet.');emptyState('Waiting on lineup reveal','The matchup is scheduled, but there is no revealed race available to score for this selection.',[actionLink('Open Schedule','/schedule')]);return}raceSelect.disabled=false;const selected=races.find(match=>text(match.player_match_id)===raceSelect.value)||races[0];if(!selected)return;raceSelect.value=text(selected.player_match_id);listEl.append(matchCard(selected));setStatus(races.length+' fixed pairing'+(races.length===1?'':'s')+' revealed. Choose any pairing to score next.','ready')}
+    function renderSelection(){if(!choicesCurrent())return;const visible=baseMatches();const captainVisible=baseCaptainContexts();listEl.replaceChildren();if(!visible.length&&!captainVisible.length){setStatus('No scoring options for '+dateLabel(dateSelect.value)+'.');emptyState('Nothing ready for this selection','Choose another date or team above. If you are waiting on a lineup reveal, check Schedule.',[actionLink('Open Schedule','/schedule'),actionLink('Check my team','/teams',true)]);matchupSelect.disabled=true;raceSelect.disabled=true;return}matchupSelect.disabled=false;const matchupId=matchupSelect.value;const races=visible.filter(match=>text(match.team_match_id)===matchupId);if(!races.length){const captainContext=selectedCaptainContext();if(captainContext){renderCaptainPrep(captainContext);return}raceSelect.disabled=true;setStatus('No revealed races for this matchup yet.');emptyState('Waiting on lineup reveal','The matchup is scheduled, but there is no revealed race available to score for this selection.',[actionLink('Open Schedule','/schedule')]);return}raceSelect.disabled=false;const selected=races.find(match=>text(match.player_match_id)===raceSelect.value)||races[0];if(!selected)return;raceSelect.value=text(selected.player_match_id);listEl.append(matchCard(selected));setStatus(races.length+' fixed pairing'+(races.length===1?'':'s')+' revealed. Choose any pairing to score next.','ready')}
     function flattenCaptainContexts(body){const teams=body?.teamManagement?.captain_teams||[];const contexts=[];for(const team of teams){for(const round of team.lineupRounds||[]){contexts.push({...round,teamId:team.teamId,teamName:team.teamName,seasonId:team.seasonId,seasonName:team.seasonName})}}return contexts}
     ${scorePickerRetryAfterSeconds.toString()}
     async function load(){
       const accessToken=token();
+      const requestGeneration=sessionGeneration;
+      const current=()=>{observeSession();return token()===accessToken&&sessionGeneration===requestGeneration};
       if(!accessToken){setStatus('Sign in to see matches your team can score.');emptyState('Ready when your team is','Sign in with Google and we will show only the matches your team is allowed to score.',[actionLink('Sign in to score','/profile'),actionLink('Open Schedule','/schedule',true)]);return}
       try{
         const headers={authorization:'Bearer '+accessToken};
@@ -72,16 +88,20 @@ export function renderScorePickerPage() {
           fetch('/api/me/scorable-matches',{headers}),
           fetch('/api/me/teams',{headers}).catch(()=>null),
         ]);
-        if(response.status===401){sessionStorage.removeItem('fd.accessToken');setStatus('Your sign-in expired. Sign in again to continue.','error');emptyState('Sign in again','Your session ended before we could load your scoring options. No score was changed.',[actionLink('Open Profile to sign in','/profile'),actionLink('Open Schedule','/schedule',true)]);return}
+        if(!current())return;
+        if(response.status===401||teamResponse?.status===401){sessionStorage.removeItem('fd.accessToken');observeSession();setStatus('Your sign-in expired. Sign in again to continue.','error');emptyState('Sign in again','Your session ended before we could load your scoring options. No score was changed.',[actionLink('Open Profile to sign in','/profile'),actionLink('Open Schedule','/schedule',true)]);return}
         const throttled=response.status===429?response:teamResponse?.status===429?teamResponse:null;
         if(throttled){const failure=new Error('Score options are temporarily busy');failure.status=429;failure.retryAfterSeconds=scorePickerRetryAfterSeconds(throttled.headers.get('retry-after'));throw failure}
         let body={};try{body=await response.json()}catch{}
+        if(!current())return;
         if(!response.ok)throw new Error(body.error||'Could not load matches');
         let teamBody=null;if(teamResponse?.ok){try{teamBody=await teamResponse.json()}catch{}}
-        matches=body.matches||[];captainContexts=flattenCaptainContexts(teamBody);listEl.replaceChildren();
+        if(!current())return;
+        matches=body.matches||[];captainContexts=flattenCaptainContexts(teamBody);choicesReady=true;dateSelect.disabled=false;teamSelect.disabled=false;listEl.replaceChildren();
         if(!matches.length&&!captainContexts.length){setStatus('No match is ready to score yet.');emptyState('Nothing ready to score','Your team may still be waiting on lineups or matchup reveal. Check Schedule first; if your team is missing, review your team status.',[actionLink('Open Schedule','/schedule'),actionLink('Check my team','/teams',true)]);return}
         populateFilters();
       }catch(error){
+        if(!current())return;
         if(error.status===429){const wait=error.retryAfterSeconds;setStatus('Too many requests. Wait '+wait+' seconds before trying again.','error');emptyState('Score is temporarily busy','Your matches are safe. Wait '+wait+' seconds, then use Try again.',[actionLink('Try again','/scorecard'),actionLink('Open Schedule','/schedule',true)]);return}
         setStatus('We could not load your scoring options.','error');emptyState('Could not load matches','Nothing was changed. Try again, or open Profile if you need to refresh your sign-in.',[actionLink('Try again','/scorecard'),actionLink('Open Profile','/profile',true)]);
       }
