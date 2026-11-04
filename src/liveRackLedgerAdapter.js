@@ -8,6 +8,7 @@ export const liveRackLedgerAdapterSource = String.raw`
     let sessionToken=accessToken();
     let sessionGeneration=0;
     let sessionInvalidated=false;
+    let cooldownUntil=0;
     const sessionListeners=new Set();
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
@@ -38,15 +39,27 @@ export const liveRackLedgerAdapterSource = String.raw`
       return{matchId,scoringTeamId,token,generation:sessionGeneration};
     }
     function retryAfterSeconds(response){
-      const value=response.headers?.get('retry-after');
-      const numeric=Number(value);
-      if(value&&Number.isFinite(numeric)&&numeric>0)return Math.min(Math.ceil(numeric),120);
-      const date=value&&Date.parse(value);
-      if(date&&Number.isFinite(date))return Math.min(Math.max(Math.ceil((date-Date.now())/1000),1),120);
+      const value=String(response.headers?.get('retry-after')||'').trim();
+      if(/^[0-9]+$/.test(value)){
+        const seconds=Number(value);
+        if(Number.isSafeInteger(seconds))return seconds;
+        return Number.MAX_SAFE_INTEGER;
+      }
+      // Date.parse also accepts strings such as "-1"; only HTTP dates belong here.
+      const httpDate=/^[A-Za-z]{3}, [0-9]{2} [A-Za-z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
+        ||/^[A-Za-z]+, [0-9]{2}-[A-Za-z]{3}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
+        ||/^[A-Za-z]{3} [A-Za-z]{3} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}$/.test(value);
+      const date=httpDate?Date.parse(value.endsWith('GMT')?value:value+' GMT'):NaN;
+      if(Number.isFinite(date))return Math.max(Math.ceil((date-Date.now())/1000),0);
       return 15;
+    }
+    function throttleFailure(seconds){
+      const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
+      failure.status=429;failure.retryAfterSeconds=seconds;return failure;
     }
     async function api(path,options={}){
       const inputs=requireContext();
+      if(Date.now()<cooldownUntil)throw throttleFailure(Math.ceil((cooldownUntil-Date.now())/1000));
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
       const separator=base.includes('?')?'&':'?';
       const contextualPath=base+separator+'scoringTeamId='+encodeURIComponent(inputs.scoringTeamId);
@@ -59,10 +72,8 @@ export const liveRackLedgerAdapterSource = String.raw`
       if(response.status===401){sessionStorage.removeItem('fd.accessToken');observeSession();showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
       if(response.status===429){
         const seconds=retryAfterSeconds(response);
-        const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
-        failure.status=429;
-        failure.retryAfterSeconds=seconds;
-        throw failure;
+        cooldownUntil=Math.max(cooldownUntil,Date.now()+seconds*1000);
+        throw throttleFailure(seconds);
       }
       if(!response.ok){
         const message=body.error||'Request failed';
