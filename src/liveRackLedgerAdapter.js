@@ -38,11 +38,18 @@ export const liveRackLedgerAdapterSource = String.raw`
       return{matchId,scoringTeamId,token,generation:sessionGeneration};
     }
     function retryAfterSeconds(response){
-      const value=response.headers?.get('retry-after');
-      const numeric=Number(value);
-      if(value&&Number.isFinite(numeric)&&numeric>0)return Math.min(Math.ceil(numeric),120);
-      const date=value&&Date.parse(value);
-      if(date&&Number.isFinite(date))return Math.min(Math.max(Math.ceil((date-Date.now())/1000),1),120);
+      const value=String(response.headers?.get('retry-after')||'').trim();
+      if(/^[0-9]+$/.test(value)){
+        const seconds=Number(value);
+        if(Number.isSafeInteger(seconds))return seconds;
+        return Number.MAX_SAFE_INTEGER;
+      }
+      // Date.parse also accepts strings such as "-1"; only HTTP dates belong here.
+      const httpDate=/^[A-Za-z]{3}, [0-9]{2} [A-Za-z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
+        ||/^[A-Za-z]+, [0-9]{2}-[A-Za-z]{3}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
+        ||/^[A-Za-z]{3} [A-Za-z]{3} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}$/.test(value);
+      const date=httpDate?Date.parse(value):NaN;
+      if(Number.isFinite(date))return Math.max(Math.ceil((date-Date.now())/1000),0);
       return 15;
     }
     async function api(path,options={}){

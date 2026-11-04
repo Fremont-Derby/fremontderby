@@ -97,3 +97,24 @@ test('background refresh is paced, avoids overlap, and backs off without replayi
   assert.match(source, /setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'/);
   assert.doesNotMatch(source, /setInterval\([^\n]*,3000\)/);
 });
+
+test('long server cooldowns are never shortened and malformed numeric headers use fallback', async () => {
+  for (const [value, expected] of [['600',600], ['0010',10], ['1e3',15], ['0x10',15], ['1.5',15], ['-1',15], ['Infinity',15], ['',15]]) {
+    const { adapter, calls } = adapterWithResponse({status:429,ok:false,headers:{get:()=>value},json:async()=>({})});
+    await assert.rejects(adapter.saveRack({winnerSide:'A'}), error => {
+      assert.equal(error.retryAfterSeconds, expected, value);
+      return true;
+    });
+    assert.equal(calls(), 1, value);
+  }
+});
+
+test('future HTTP-date cooldown longer than two minutes is preserved', async () => {
+  const retryAt = new Date(Date.now()+600_000).toUTCString();
+  const { adapter, calls } = adapterWithResponse({status:429,ok:false,headers:{get:()=>retryAt},json:async()=>({})});
+  await assert.rejects(adapter.confirm(), error => {
+    assert.ok(error.retryAfterSeconds>=598 && error.retryAfterSeconds<=600);
+    return true;
+  });
+  assert.equal(calls(),1);
+});
