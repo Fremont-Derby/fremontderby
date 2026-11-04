@@ -43,3 +43,10 @@ test('initial forbidden load offers supported picker recovery and no score edito
  assert.equal(h.node('[data-shared-rack-ledger-scorecard]').dataset.loadState,'unavailable');
  assert.equal(h.node('[data-load-recovery]').hidden,false);
 });
+
+test('repeated rack taps cannot submit overlapping writes',async()=>{
+ const h=harness(async()=>result());await flush();let writes=0,finish;
+ h.adapter.saveRack=()=>{writes++;return new Promise(r=>{finish=r})};
+ h.node('[data-rack-a]').listeners.click();h.node('[data-rack-a]').listeners.click();
+ assert.equal(writes,1);finish();await flush();
+});
