@@ -30,6 +30,14 @@ test('claim transport preserves upstream authorization status without disclosing
     }
   }
 });
+
+test('authorization status text inside a database diagnostic cannot masquerade as transport status', async () => {
+  const handler = createScoreClaimHttpHandler({ authenticate: async () => ({ id: 'actor' }) });
+  const response = await handler(request('claim'), env, match, 'claim', { fetch: async () =>
+    Response.json({ message: 'diagnostic: Supabase request failed with 401: private detail' }, { status: 500 }) });
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: 'Scorekeeping request failed' });
+});
 function request(action, body = {}) {
   return new Request(`https://jfl.invalid/api/player-matches/${match}/score-claim?scoringTeamId=${team}`, {
     method: action === 'read' ? 'GET' : 'POST',
