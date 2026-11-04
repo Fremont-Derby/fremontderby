@@ -4,61 +4,88 @@ export const liveRackLedgerAdapterSource = String.raw`
     const matchId=params.get('match')||'';
     const scoringTeamId=params.get('team')||'';
     const scoringTeamName=params.get('teamName')||'your team';
+    let expectedOwnRacks=[];
+    let sessionToken=accessToken();
+    let sessionGeneration=0;
+    let sessionInvalidated=false;
+    let cooldownUntil=0;
+    const sessionListeners=new Set();
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
-    function isOpenAuthLane(){const h=String(location.hostname||'');return h.startsWith('dru.')||h.startsWith('jfl.')||h.startsWith('gamma.');}
+    function sessionError(){const error=new Error('Your sign-in changed. Load this scorecard again before scoring.');error.sessionChanged=true;return error}
+    function observeSession(force=false){
+      const next=accessToken();
+      if(next===sessionToken&&!force)return;
+      sessionToken=next;sessionGeneration++;sessionInvalidated=true;
+      expectedOwnRacks=[];window.fdRackLedgerState=null;
+      for(const listener of sessionListeners)listener();
+    }
+    if(typeof window.addEventListener==='function'){
+      window.addEventListener('fd:session-changed',()=>observeSession(true));
+      for(const event of ['storage','focus'])window.addEventListener(event,()=>observeSession());
+    }
+    function assertCurrent(inputs){observeSession();if(inputs.token!==sessionToken||inputs.generation!==sessionGeneration)throw sessionError()}
+    function requireFreshScore(){observeSession();if(sessionInvalidated)throw sessionError()}
     function showSignInRecovery(){
       const context=document.querySelector('[data-match-context]');
       if(context)context.innerHTML='<a href="/profile">Open Profile to sign in</a>';
     }
-    function setTransportHint(message){
-      const status=document.querySelector('[data-status]');
-      if(!status||!message)return;
-      status.textContent=message;
-      status.dataset.tone='error';
-    }
     function requireContext(){
+      observeSession();
       const token=accessToken();
       if(!matchId)throw new Error('Choose a match from the scorecard list.');
       if(!scoringTeamId)throw new Error('Choose which team you are scoring for.');
-      if(!token&&!isOpenAuthLane()){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
-      return{matchId,scoringTeamId,token};
+      if(!token){showSignInRecovery();throw new Error('Sign in with Google to score this match.')}
+      return{matchId,scoringTeamId,token,generation:sessionGeneration};
     }
-    async function api(path,options={},attempt=0){
-      if(typeof navigator!=='undefined'&&navigator.onLine===false){
-        setTransportHint('You are offline. Reconnect, then try again — the last saved racks are still on the server.');
-        throw new Error('You are offline. Check your connection and try again.');
+    function retryAfterSeconds(response){
+      const value=String(response.headers?.get('retry-after')||'').trim();
+      if(/^[0-9]+$/.test(value)){
+        const seconds=Number(value);
+        if(Number.isSafeInteger(seconds))return seconds;
+        return Number.MAX_SAFE_INTEGER;
       }
+      // Date.parse also accepts strings such as "-1"; only HTTP dates belong here.
+      const httpDate=/^[A-Za-z]{3}, [0-9]{2} [A-Za-z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
+        ||/^[A-Za-z]+, [0-9]{2}-[A-Za-z]{3}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
+        ||/^[A-Za-z]{3} [A-Za-z]{3} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}$/.test(value);
+      const date=httpDate?Date.parse(value.endsWith('GMT')?value:value+' GMT'):NaN;
+      if(Number.isFinite(date))return Math.max(Math.ceil((date-Date.now())/1000),0);
+      return 15;
+    }
+    function throttleFailure(seconds){
+      const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
+      failure.status=429;failure.retryAfterSeconds=seconds;return failure;
+    }
+    async function api(path,options={}){
       const inputs=requireContext();
+      if(Date.now()<cooldownUntil)throw throttleFailure(Math.ceil((cooldownUntil-Date.now())/1000));
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
       const separator=base.includes('?')?'&':'?';
       const contextualPath=base+separator+'scoringTeamId='+encodeURIComponent(inputs.scoringTeamId);
       let response;
-      try{
-        response=await fetch(contextualPath,{...options,headers:{...(inputs.token?{authorization:'Bearer '+inputs.token}:{}), 'content-type':'application/json',...(options.headers||{})}});
-      }catch(error){
-        if(attempt<1){
-          await new Promise((resolve)=>setTimeout(resolve,450));
-          return api(path,options,attempt+1);
-        }
-        setTransportHint('Network error scoring this match. Your last successful save is on the server — retry when the signal is back.');
-        throw new Error('Network error. Retry in a moment.');
-      }
+      try{response=await fetch(contextualPath,{...options,headers:{authorization:'Bearer '+inputs.token,'content-type':'application/json',...(options.headers||{})}})}catch(error){assertCurrent(inputs);throw error}
+      assertCurrent(inputs);
       let body={};
       try{body=await response.json()}catch{}
-      if(response.status===401){sessionStorage.removeItem('fd.accessToken');showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
-      if(!response.ok)throw new Error(body.error||'Request failed');
+      assertCurrent(inputs);
+      if(response.status===401){sessionStorage.removeItem('fd.accessToken');observeSession();showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
+      if(response.status===429){
+        const seconds=retryAfterSeconds(response);
+        cooldownUntil=Math.max(cooldownUntil,Date.now()+seconds*1000);
+        throw throttleFailure(seconds);
+      }
+      if(!response.ok){
+        const message=body.error||'Request failed';
+        if(message==='Score record is already complete'){
+          throw new Error('Your side already reached the race target. Submit it now, or edit/undo a rack if your score is wrong.');
+        }
+        const failure=new Error(message);
+        failure.status=response.status;
+        throw failure;
+      }
       return body;
     }
-
-    window.addEventListener('offline',()=>setTransportHint('Offline — rack taps will not save until you reconnect.'));
-    window.addEventListener('online',()=>{
-      const status=document.querySelector('[data-status]');
-      if(status&&/offline|network error/i.test(status.textContent||'')){
-        status.textContent='Back online. Refreshing scorecard…';
-        status.dataset.tone='ok';
-      }
-    });
 
     window.fdRackLedgerAdapter={
       mode:'live',
@@ -67,25 +94,66 @@ export const liveRackLedgerAdapterSource = String.raw`
       switchLabel:'Switch match',
       scoringTeamId(){return scoringTeamId},
       scoringTeamName(){return scoringTeamName},
+      onSessionChanged(listener){sessionListeners.add(listener);return()=>sessionListeners.delete(listener)},
+      isSessionCurrent(){observeSession();return !sessionInvalidated},
       async load(){
-        requireContext();
+        const inputs=requireContext();
         const[scoreBody,comparisonBody]=await Promise.all([
           api('/api/player-matches/:id/scorecard',{method:'GET'}),
           api('/api/player-matches/:id/score-comparison',{method:'GET'}),
         ]);
-        return{scorecard:scoreBody.scorecard,context:comparisonBody.context,comparison:comparisonBody.comparison};
+        const scorecard=scoreBody.scorecard;
+        const comparison=comparisonBody.comparison;
+        assertCurrent(inputs);
+        expectedOwnRacks=Array.isArray(comparison?.own_racks)?comparison.own_racks:[];
+        const opponentRacks=Array.isArray(comparison?.opponent_racks)?comparison.opponent_racks:[];
+        const ownSide=comparison?.tracker_player_id===scorecard?.player_a_id?'A':comparison?.tracker_player_id===scorecard?.player_b_id?'B':null;
+        window.fdRackLedgerState={
+          ownSide,
+          ownConfirmed:Boolean(comparison?.own_confirmed_at),
+          ownRackCount:expectedOwnRacks.length,
+          opponentRackCount:opponentRacks.length,
+          historiesMatch:Boolean(comparison?.histories_match),
+          mismatchRackNumber:Number(comparison?.mismatch_rack_number||0)||null,
+          locked:['finalized','corrected'].includes(scorecard?.status),
+        };
+        sessionInvalidated=false;
+        return{scorecard,context:comparisonBody.context,comparison};
+      },
+      async loadClaim(){
+        const body=await api('/api/player-matches/:id/score-claim',{method:'GET',cache:'no-store'});
+        return body.claim;
+      },
+      async claimScore(){
+        const body=await api('/api/player-matches/:id/score-claim/claim',{method:'POST',body:JSON.stringify({scoringTeamId})});
+        return body.claim;
+      },
+      async requestTakeover(){
+        const body=await api('/api/player-matches/:id/score-claim/request',{method:'POST',body:JSON.stringify({scoringTeamId})});
+        return body.claim;
+      },
+      async respondTakeover(decision){
+        if(!['release','deny'].includes(decision))throw new Error('Choose Release or Deny.');
+        const body=await api('/api/player-matches/:id/score-claim/respond',{method:'POST',body:JSON.stringify({scoringTeamId,decision})});
+        return body.claim;
+      },
+      async releaseScore(){
+        const body=await api('/api/player-matches/:id/score-claim/release',{method:'POST',body:JSON.stringify({scoringTeamId})});
+        return body.claim;
       },
       async setOpeningDiscipline({openingDiscipline}){
+        requireFreshScore();
         return api('/api/player-matches/:id/score-racks',{method:'POST',body:JSON.stringify({openingDiscipline,scoringTeamId})});
       },
       async saveRack(input){
-        const body={scoringTeamId,winnerSide:input.winnerSide};
+        requireFreshScore();
+        const body={scoringTeamId,winnerSide:input.winnerSide,expectedRacks:expectedOwnRacks};
         if(input.rackNumber!=null)body.rackNumber=input.rackNumber;
         return api('/api/player-matches/:id/score-racks',{method:'POST',body:JSON.stringify(body)});
       },
-      async undo(){return api('/api/player-matches/:id/score-racks/undo',{method:'POST',body:JSON.stringify({scoringTeamId})})},
-      async confirm(){return api('/api/player-matches/:id/score-confirm',{method:'POST',body:JSON.stringify({scoringTeamId})})},
-      async finalize(){return api('/api/player-matches/:id/finalize-reconciled',{method:'POST',body:JSON.stringify({scoringTeamId})})},
+      async undo(){requireFreshScore();return api('/api/player-matches/:id/score-racks/undo',{method:'POST',body:JSON.stringify({scoringTeamId,expectedRacks:expectedOwnRacks})})},
+      async confirm(){requireFreshScore();return api('/api/player-matches/:id/score-confirm',{method:'POST',body:JSON.stringify({scoringTeamId,expectedRacks:expectedOwnRacks})})},
+      async finalize(){requireFreshScore();return api('/api/player-matches/:id/finalize-reconciled',{method:'POST',body:JSON.stringify({scoringTeamId})})},
     };
   })();
 `;
