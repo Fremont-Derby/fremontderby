@@ -480,6 +480,25 @@ try {
       passes++;
     }
   }
+  // Captured forward repair: Release revalidates the recipient at transfer time.
+  for (const mode of ['ended','restricted','opposing']) {
+    await reset(); await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+    await query('insert into jfl.team_memberships values($1,$3,$4,null),($2,$3,$4,null)',[id(30),id(31),id(9),team]);
+    await query('select * from jfl.claim_player_match_score($1,$2,$3)',[owner,match,team]);
+    await query('select * from jfl.request_player_match_score_takeover($1,$2,$3)',[stale,match,team]);
+    if(mode==='ended') await query('update jfl.team_memberships set ends_at=now() where player_id=$1',[id(31)]);
+    if(mode==='opposing') await query('update jfl.team_memberships set team_id=$1 where player_id=$2',[id(88),id(31)]);
+    if(mode==='restricted') await query('insert into jfl_private.player_competition_restrictions values($1,$2,$3,null)',[id(9),id(31),'restricted during warning']);
+    const scores=(await snapshot()).scores;
+    await query("select * from jfl.respond_player_match_score_takeover($1,$2,$3,'release')",[owner,match,team]);
+    const state=await snapshot();
+    assert.equal(state.claims[0].owner_user_id,owner);
+    assert.equal(state.claims[0].pending_requester_user_id,null);
+    assert.equal(state.claims[0].pending_expires_at,null);
+    assert.deepEqual(state.scores,scores);
+    assert.equal(state.audit.at(-1).action,'player_match.scorekeeper_takeover_ineligible');
+    passes++;
+  }
   // Real concurrent requests: the second connection waits, then loses to the
   // committed pending requester. Exercise both arrival orders deterministically.
   await query('insert into jfl.players(id,user_id) values($1,$2)',[id(32),id(40)]);

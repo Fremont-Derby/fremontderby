@@ -36,12 +36,12 @@ begin
    select 1 from (values
      ('jfl_private.match_tracker_for_scoring_team(uuid,jfl.player_matches,uuid)','0b8d640c8aeaa7606ee32e8e154abc41'),
      ('jfl_private.require_score_claim_actor(uuid,jfl.player_matches,uuid)','e5f9af68962d02c59747017e6e3eb196'),
-     ('jfl_private.score_claim_actor_is_eligible(uuid,jfl.player_matches,uuid)','72778bb909879523c675ed189021a4b5'),
+     ('jfl_private.score_claim_actor_is_eligible(uuid,jfl.player_matches,uuid)','ff7d9df43305682d0fabf5393cf8aab7'),
      ('jfl_private.assert_expected_score_history(uuid,uuid,jsonb)','7a91ed6218311a8082ade0a3a3fcfe7b'),
      ('jfl.get_player_match_score_claim(uuid,uuid,uuid)','b020c4da05b39c5570598c24d4e258f0'),
      ('jfl.claim_player_match_score(uuid,uuid,uuid)','e25e471b3fe13849e3c0e29ef8fb6c64'),
      ('jfl.request_player_match_score_takeover(uuid,uuid,uuid)','cf60ddd6f0d8792a0cf10794694f565c'),
-     ('jfl.respond_player_match_score_takeover(uuid,uuid,uuid,text)','c9827bec1eb756eb5ed3648a2130cdbb'),
+     ('jfl.respond_player_match_score_takeover(uuid,uuid,uuid,text)','90ab6bd66d9d23873eb3d293db0ff059'),
      ('jfl.release_player_match_score_claim(uuid,uuid,uuid)','f184b66bb916f93170ca573506e34cc9')
    ) expected(signature,body_md5)
    left join pg_proc p on p.oid=to_regprocedure(expected.signature)

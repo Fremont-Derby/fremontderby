@@ -10,13 +10,23 @@ begin
   return actor_player_id;
 end; $$;
 
-create or replace function jfl_private.score_claim_actor_is_eligible(actor_user_id uuid,target_match jfl.player_matches,target_scoring_team_id uuid)
-returns boolean language plpgsql stable security definer set search_path='' as $$
+CREATE OR REPLACE FUNCTION jfl_private.score_claim_actor_is_eligible(actor_user_id uuid, target_match jfl.player_matches, target_scoring_team_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
 begin
-  perform jfl_private.require_score_claim_actor(actor_user_id,target_match,target_scoring_team_id);
+  perform jfl_private.require_score_claim_actor(
+    actor_user_id,
+    target_match,
+    target_scoring_team_id
+  );
   return true;
 exception when raise_exception then
   return false;
-end; $$;
+end;
+$function$
+;
 
 
