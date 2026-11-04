@@ -94,4 +94,4 @@ A nonzero exit, process signal or missing exit code is not success. Sanitization
 
 ## Implementation acceptance still outstanding
 
-This document is reviewable design evidence only. #3686 stays open until a dedicated source/local implementation and failure tests pass, both lanes explicitly agree on shared effects, the supported hosted service semantics above are independently proven, and restoration is verified. No scheduler, deploy workflow, endpoint caller or new secret is introduced here.
+Source/local preparation, digest binding and native recovery/refusal tests now exist. They are not an authenticated evidence collector or transport executor. #3686 stays open until both lanes explicitly agree on shared effects, the supported hosted service semantics above are independently proven, and restoration is verified. The remaining implementation must collect and authenticate review, exclusion, health, history and writer evidence rather than manufacturing context from the manifest. No scheduler, deploy workflow, endpoint caller or new secret is introduced here.
