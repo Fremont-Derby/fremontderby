@@ -93,6 +93,7 @@ export const liveRackLedgerAdapterSource = String.raw`
         failure.status=response.status;
         throw failure;
       }
+      if(base.includes('/score-claim')&&body.claim)body.claim={...body.claim,server_now:response.headers?.get('date')||null};
       return body;
     }
 
