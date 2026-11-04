@@ -3,21 +3,27 @@ on:
   pull_request:
     paths:
       - 'src/seasonSetupPage.js'
+      - 'src/lineupPage.js'
+      - 'src/adminPlayersPage.js'
       - 'src/seasonPublishReadinessEnhancer.js'
       - 'src/seasonCloseEnhancer.js'
       - 'browser/jfl/operator-season-context.spec.js'
       - 'browser/jfl/operator-session-response.spec.js'
       - 'browser/jfl/season-creation-recovery.spec.js'
+      - 'browser/jfl/requested-season-context.spec.js'
       - '.github/workflows/operator-browser-regression.yml'
   push:
     branches: [fremontderby-jfl]
     paths:
       - 'src/seasonSetupPage.js'
+      - 'src/lineupPage.js'
+      - 'src/adminPlayersPage.js'
       - 'src/seasonPublishReadinessEnhancer.js'
       - 'src/seasonCloseEnhancer.js'
       - 'browser/jfl/operator-season-context.spec.js'
       - 'browser/jfl/operator-session-response.spec.js'
       - 'browser/jfl/season-creation-recovery.spec.js'
+      - 'browser/jfl/requested-season-context.spec.js'
       - '.github/workflows/operator-browser-regression.yml'
 permissions:
   contents: read
@@ -36,11 +42,14 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test browser/jfl/operator-season-context.spec.js browser/jfl/operator-session-response.spec.js browser/jfl/season-creation-recovery.spec.js
+      - run: npx playwright test browser/jfl/operator-season-context.spec.js browser/jfl/operator-session-response.spec.js browser/jfl/season-creation-recovery.spec.js browser/jfl/requested-season-context.spec.js
       - run: npx wrangler deploy --dry-run --env=jfl --outdir dist
       - run: npx playwright test browser/jfl/season-creation-recovery.spec.js
         env:
           PLAYWRIGHT_OPERATOR_SOURCE: bundled
+      - run: npx playwright test browser/jfl/requested-season-context.spec.js
+        env:
+          PLAYWRIGHT_CONTEXT_SOURCE: bundled
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
