@@ -1,0 +1,44 @@
+name: Scoring ownership SQL qualification
+on:
+  pull_request:
+    paths:
+      - 'scripts/sql/jfl-ordinary-score-ownership.candidate.sql'
+      - 'scripts/sql/jfl-ordinary-score-ownership.recovery.sql'
+      - 'scripts/sql/jfl-ordinary-score-ownership.recovery-body.sql'
+      - 'scripts/sql/jfl-ordinary-score-ownership.artifacts.json'
+      - 'scripts/build-score-ownership-recovery.mjs'
+      - 'scripts/qualify-ordinary-score-ownership.mjs'
+      - 'test/fixtures/jfl-ordinary-score-baseline.json'
+      - 'test/fixtures/jfl-score-takeover-resolver.sql'
+      - 'test/fixtures/jfl-score-claim-eligibility.sql'
+      - 'test/fixtures/jfl-score-claim-transitions.sql'
+      - '.github/workflows/scoring-ownership-sql.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 55468:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false --ignore-scripts pg@8.16.3
+      - run: node scripts/build-score-ownership-recovery.mjs && git diff --exit-code -- scripts/sql/jfl-ordinary-score-ownership.recovery.sql scripts/sql/jfl-ordinary-score-ownership.recovery-body.sql scripts/sql/jfl-ordinary-score-ownership.artifacts.json
+      - run: node scripts/qualify-ordinary-score-ownership.mjs
+        env:
+          OWNERSHIP_TEST_PORT: '55468'

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "executionAuthorized": false,
+  "artifacts": {
+    "scripts/sql/jfl-ordinary-score-ownership.candidate.sql": {
+      "bytes": 27910,
+      "sha256": "cdf4bf68f25808125bf7d3d2da8796e122631d336e3b63c5e9c4dd28fc8a12da"
+    },
+    "scripts/sql/jfl-ordinary-score-ownership.recovery.sql": {
+      "bytes": 19847,
+      "sha256": "4b7ed41b804f6ef70b5c55e9b0f5bcd953e1084c01237876116491decf643849"
+    },
+    "scripts/sql/jfl-ordinary-score-ownership.recovery-body.sql": {
+      "bytes": 19832,
+      "sha256": "2ae0657be8c294e1c51c05d0f0521b8098e0f54559e6138f182636bc95f9fe78"
+    },
+    "test/fixtures/jfl-ordinary-score-baseline.json": {
+      "bytes": 18884,
+      "sha256": "c26bfc9769f196614c21086ea35065fd3f9ea6f41f805533ab8133d70eeac3f5"
+    },
+    "test/fixtures/jfl-score-takeover-resolver.sql": {
+      "bytes": 3939,
+      "sha256": "dfac86ccc77eaa2f9220a2cc6807060e636d3c19bfae0d871f1b10e743d0275c"
+    },
+    "test/fixtures/jfl-score-claim-eligibility.sql": {
+      "bytes": 1393,
+      "sha256": "83aa77693657eae914b1e18a75981c608185b5e40c44eb509ce5e15214812fd9"
+    },
+    "test/fixtures/jfl-score-claim-transitions.sql": {
+      "bytes": 12125,
+      "sha256": "11ab2c1fae865d9333808da9cf68d5497df74b5c97935dc256b38d172200ecee"
+    }
+  }
+}
