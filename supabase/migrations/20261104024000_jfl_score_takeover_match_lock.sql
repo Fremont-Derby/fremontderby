@@ -1,6 +1,19 @@
 -- #3660 / #3288: serialize lazy expiry with claim/release and scoring writes.
 -- JFL only. Preserve recipient eligibility, transition audit and private ACL.
 -- Match must be locked BEFORE claim, including when reached through a state read.
+do $$
+begin
+  if not exists (
+    select 1 from pg_proc p
+    where p.oid=to_regprocedure('jfl_private.resolve_expired_score_takeover(uuid,uuid)')
+      and md5(replace(p.prosrc,chr(13),''))='df408ea1d4833ee8545c4412fd9e6738'
+      and p.prosecdef
+      and p.proconfig=array['search_path=""']::text[]
+  ) then
+    raise exception 'JFL score takeover resolver differs from qualified #3660 baseline';
+  end if;
+end;
+$$;
 create or replace function jfl_private.resolve_expired_score_takeover(
   target_player_match_id uuid,
   target_scoring_team_id uuid

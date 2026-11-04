@@ -17,7 +17,7 @@ const match = '00000000-0000-4000-8000-000000000001';
 const team = '00000000-0000-4000-8000-000000000002';
 const owner = '00000000-0000-4000-8000-000000000003';
 const incoming = '00000000-0000-4000-8000-000000000004';
-const candidate = readFileSync(new URL('../supabase/migrations/20261104024000_jfl_score_takeover_match_lock.sql', import.meta.url), 'utf8');
+const candidate = readFileSync(new URL('../supabase/migrations/20261104024000_jfl_score_takeover_match_lock.sql', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 let databaseCreated = false;
 try {
   const admin = await connect('postgres');
@@ -57,7 +57,7 @@ try {
     return resolver.query('select jfl_private.resolve_expired_score_takeover($1,$2)', [match, team]);
   }
   // Negative control: execute the exact candidate with only the match lock removed.
-  await setup.query(candidate.replace('where pm.id=target_player_match_id\n  for update;', 'where pm.id=target_player_match_id;'));
+  await setup.query(candidate.slice(candidate.indexOf('create or replace function')).replace('where pm.id=target_player_match_id\n  for update;', 'where pm.id=target_player_match_id;'));
   await seed();
   await writer.query('begin');
   await writer.query('select * from jfl.player_matches where id=$1 for update', [match]);
@@ -68,6 +68,8 @@ try {
   console.log('PASS negative control: old resolver transfers while match writer holds lock');
 
   await setup.query(candidate);
+  await assert.rejects(setup.query(candidate), /differs from qualified/);
+  console.log('PASS migration refuses an unqualified resolver body');
   await seed();
   await writer.query('begin');
   await writer.query('select * from jfl.player_matches where id=$1 for update', [match]);
