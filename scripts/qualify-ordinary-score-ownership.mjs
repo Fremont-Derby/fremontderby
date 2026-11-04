@@ -73,6 +73,32 @@ try {
   const edit=calls.find(c=>c.name==='update_player_match_score_rack');
   await query(edit.sql,[stale,match,team,1,'B']);
   assert.equal((await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks[0].winnerSide,'B'); passes++;
+  // An unknown existing guard must never be adopted by CREATE OR REPLACE.
+  const guardSignature = 'jfl_private.require_current_scorekeeper(uuid,uuid,uuid)';
+  const catalogSnapshot = async () => (await query(`select p.oid::regprocedure::text signature,
+    pg_get_functiondef(p.oid) definition, p.proowner::regrole::text owner, p.proacl::text acl
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname in ('jfl','jfl_private') order by p.oid`)).rows;
+  for (const drift of ['owner', 'extra-grant']) {
+    await query('begin');
+    const before = await catalogSnapshot();
+    await query(`create function ${guardSignature} returns void language plpgsql as $$ begin null; end $$;
+      revoke all on function ${guardSignature} from public,anon,authenticated;
+      grant execute on function ${guardSignature} to service_role`);
+    if (drift === 'owner') await query(`alter function ${guardSignature} owner to service_role`);
+    else {
+      await query('create role ownership_guard_unrelated');
+      await query(`grant execute on function ${guardSignature} to ownership_guard_unrelated`);
+    }
+    await query('savepoint guard_refusal');
+    const drifted = await catalogSnapshot();
+    await assert.rejects(query(candidate), /ownership guard already exists/);
+    await query('rollback to savepoint guard_refusal');
+    assert.deepEqual(await catalogSnapshot(), drifted, 'Refusal preserves existing owner, ACL and bodies');
+    await query('rollback');
+    assert.deepEqual(await catalogSnapshot(), before, 'Rollback restores exact baseline catalogs');
+    passes++;
+  }
   // Each dependency drift must fail before creating any ownership enforcement DDL.
   for (const signature of [...helperSignatures, 'jfl_private.resolve_expired_score_takeover(uuid,uuid)']) {
     for (const drift of [

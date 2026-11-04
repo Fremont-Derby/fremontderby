@@ -1,5 +1,9 @@
 do $baseline$
 begin
+ -- One-shot candidate: never preserve an unqualified existing guard owner or ACL.
+ if to_regprocedure('jfl_private.require_current_scorekeeper(uuid,uuid,uuid)') is not null then
+   raise exception 'Unqualified #3288 baseline: ownership guard already exists';
+ end if;
  -- Direct privileged dependencies must retain their qualified execution boundary.
  if exists (
    select 1 from (values
