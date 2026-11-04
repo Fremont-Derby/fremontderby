@@ -13,6 +13,23 @@ const operations = [
   ['respond', 'respond_player_match_score_takeover'],
   ['release', 'release_player_match_score_claim'],
 ];
+
+test('claim transport preserves upstream authorization status without disclosing diagnostics or replay', async () => {
+  for (const [action] of operations) {
+    for (const status of [401, 403]) {
+      let calls = 0;
+      const handler = createScoreClaimHttpHandler({ authenticate: async () => ({ id: 'actor' }) });
+      const response = await handler(request(action), env, match, action, { fetch: async () => {
+        calls++;
+        return Response.json({ code: '42501', message: 'private database diagnostic' }, { status });
+      } });
+      assert.equal(response.status, status);
+      assert.equal(calls, 1);
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      assert.equal(JSON.stringify(await response.json()).includes('private database diagnostic'), false);
+    }
+  }
+});
 function request(action, body = {}) {
   return new Request(`https://jfl.invalid/api/player-matches/${match}/score-claim?scoringTeamId=${team}`, {
     method: action === 'read' ? 'GET' : 'POST',
