@@ -26,6 +26,9 @@ async function open(browser, mobile) {
   await context.route('https://operator.test/**', async route => {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path === '/season-setup') {
+      if (process.env.PLAYWRIGHT_OPERATOR_HTML_FILE) {
+        return route.fulfill({ contentType: 'text/html', body: readFileSync(process.env.PLAYWRIGHT_OPERATOR_HTML_FILE,'utf8') });
+      }
       if (process.env.PLAYWRIGHT_OPERATOR_SOURCE === 'bundled') {
         const { default: worker } = await import(new URL('../../dist/'+((config)=>config.env?.jfl?.main||config.main)(JSON.parse(readFileSync(new URL('../../wrangler.jsonc',import.meta.url),'utf8'))).split('/').pop(),import.meta.url).href);
         const response = await worker.fetch(new Request(request.url()), { ENVIRONMENT: 'jfl' }, {});
