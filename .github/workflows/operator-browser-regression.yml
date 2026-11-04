@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/seasonSetupPage.js'
       - 'src/lineupPage.js'
+      - 'src/blindLineupComponent.js'
       - 'src/adminPlayersPage.js'
       - 'src/seasonPublishReadinessEnhancer.js'
       - 'src/seasonCloseEnhancer.js'
@@ -11,12 +12,14 @@ on:
       - 'browser/jfl/operator-session-response.spec.js'
       - 'browser/jfl/season-creation-recovery.spec.js'
       - 'browser/jfl/requested-season-context.spec.js'
+      - 'browser/jfl/lineup-session-context.spec.js'
       - '.github/workflows/operator-browser-regression.yml'
   push:
     branches: [fremontderby-jfl]
     paths:
       - 'src/seasonSetupPage.js'
       - 'src/lineupPage.js'
+      - 'src/blindLineupComponent.js'
       - 'src/adminPlayersPage.js'
       - 'src/seasonPublishReadinessEnhancer.js'
       - 'src/seasonCloseEnhancer.js'
@@ -24,6 +27,7 @@ on:
       - 'browser/jfl/operator-session-response.spec.js'
       - 'browser/jfl/season-creation-recovery.spec.js'
       - 'browser/jfl/requested-season-context.spec.js'
+      - 'browser/jfl/lineup-session-context.spec.js'
       - '.github/workflows/operator-browser-regression.yml'
 permissions:
   contents: read
