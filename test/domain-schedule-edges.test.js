@@ -1,3 +1,5 @@
+// Ported from DRU's verified regression inventory (PR #3552) for JFL #3560.
+// This is an independent JFL test; no DRU-only runtime/auth/DB behavior is imported.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { generateRoundRobin } from '../domain/schedule.js';
@@ -13,6 +15,13 @@ test('generateRoundRobin rejects non-8 rosters and duplicates', () => {
     () => generateRoundRobin(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'A']),
     /unique/,
   );
+});
+
+test('schedule calculation does not mutate the selected team list', () => {
+  const selectedTeams = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const priorSelection = [...selectedTeams];
+  generateRoundRobin(selectedTeams);
+  assert.deepEqual(selectedTeams, priorSelection);
 });
 
 const chart = [

@@ -1,4 +1,4 @@
-import { assignTablesForRound, generateRoundRobin } from './schedule.js';
+import { generateRoundRobin } from './schedule.js';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -56,24 +56,20 @@ export function publishRegularSeasonSchedule({
   validateTableNumbers(tableNumbers);
 
   const startDate = parseDateOnly(firstRoundDate);
-  const rounds = generateRoundRobin(teamIds).map((round, roundIndex) => {
-    // WHY: rotate physical tables each week so no slot is stuck on one table all season.
-    const tables = assignTablesForRound(tableNumbers, roundIndex);
-    return {
+  const rounds = generateRoundRobin(teamIds).map((round, roundIndex) => ({
+    seasonId,
+    roundNumber: round.round,
+    stage: 'regular',
+    scheduledOn: formatDateOnly(addDays(startDate, roundIndex * intervalDays)),
+    matches: round.matches.map((match, matchIndex) => ({
       seasonId,
       roundNumber: round.round,
       stage: 'regular',
-      scheduledOn: formatDateOnly(addDays(startDate, roundIndex * intervalDays)),
-      matches: round.matches.map((match, matchIndex) => ({
-        seasonId,
-        roundNumber: round.round,
-        stage: 'regular',
-        tableNumber: tables[matchIndex],
-        teamAId: match.teamA,
-        teamBId: match.teamB,
-      })),
-    };
-  });
+      tableNumber: tableNumbers[matchIndex],
+      teamAId: match.teamA,
+      teamBId: match.teamB,
+    })),
+  }));
 
   return {
     seasonId,

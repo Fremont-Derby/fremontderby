@@ -16,19 +16,23 @@ test('player surface theme codifies the four P0 light-theme sign-off routes', ()
   assert.match(playerSurfaceThemeStyles, /var\(--fd-bg-page\)/);
   assert.match(playerSurfaceThemeStyles, /var\(--fd-bg-surface\)/);
   assert.match(playerSurfaceThemeStyles, /var\(--fd-primary-strong\)/);
-  // control sizing remains owned by designSystemStyles
+  assert.match(playerSurfaceThemeStyles, /var\(--fd-control-min\)/);
   assert.match(playerSurfaceThemeStyles, /prefers-reduced-motion: reduce/);
   assert.match(playerSurfaceThemeStyles, /forced-colors: active/);
 });
 
 test('score picker residual dark cards are explicitly converged to shared surfaces', () => {
-  assert.match(playerSurfaceThemeStyles, /data-fd-player-surface="score-picker"/);
-  assert.match(playerSurfaceThemeStyles, /\.filters/);
-  assert.match(playerSurfaceThemeStyles, /\.match/);
-  assert.match(playerSurfaceThemeStyles, /var\(--fd-bg-surface\) !important/);
+  assert.match(
+    playerSurfaceThemeStyles,
+    /data-fd-player-surface="score-picker"\] \.filters,[\s\S]*\.status,[\s\S]*\.empty,[\s\S]*\.match[\s\S]*var\(--fd-bg-surface\) !important/,
+  );
+  assert.match(
+    playerSurfaceThemeStyles,
+    /data-fd-player-surface="score-picker"\] \.filters select[\s\S]*var\(--fd-bg-surface\) !important/,
+  );
 });
 
-test('player surface injection is HTML-only and covers expanded player routes', async () => {
+test('player surface injection is HTML-only and limited to the four sign-off routes', async () => {
   const response = new Response('<!doctype html><html><head></head><body><main>ok</main></body></html>', {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   });
@@ -37,18 +41,11 @@ test('player surface injection is HTML-only and covers expanded player routes', 
   assert.match(html, /data-fd-player-surface="schedule"/);
   assert.match(html, /data-fd-player-surface-theme/);
 
-  const teams = new Response('<!doctype html><html><head></head><body>teams</body></html>', {
+  const other = new Response('<!doctype html><html><head></head><body>teams</body></html>', {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   });
-  const teamsHtml = await (await injectPlayerSurfaceTheme(teams, '/teams')).text();
-  assert.match(teamsHtml, /data-fd-player-surface="teams"/);
-  assert.match(teamsHtml, /data-fd-player-surface-theme/);
-
-  const admin = new Response('<!doctype html><html><head></head><body>admin</body></html>', {
-    headers: { 'content-type': 'text/html; charset=utf-8' },
-  });
-  const adminHtml = await (await injectPlayerSurfaceTheme(admin, '/admin/players')).text();
-  assert.doesNotMatch(adminHtml, /data-fd-player-surface-theme/);
+  const untouched = await injectPlayerSurfaceTheme(other, '/teams');
+  assert.doesNotMatch(await untouched.text(), /data-fd-player-surface-theme/);
 
   const json = new Response('{"ok":true}', { headers: { 'content-type': 'application/json' } });
   const jsonUntouched = await injectPlayerSurfaceTheme(json, '/profile');

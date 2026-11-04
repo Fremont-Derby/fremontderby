@@ -1,0 +1,41 @@
+name: Standings season browser regression
+on:
+  pull_request:
+    paths:
+      - 'src/jflModernStandings.js'
+      - 'src/publicSeasonSelectionEnhancer.js'
+      - 'browser/jfl/standings-season.spec.js'
+      - '.github/workflows/standings-season-browser.yml'
+  push:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'src/jflModernStandings.js'
+      - 'src/publicSeasonSelectionEnhancer.js'
+      - 'browser/jfl/standings-season.spec.js'
+      - '.github/workflows/standings-season-browser.yml'
+permissions:
+  contents: read
+jobs:
+  standings-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PLAYWRIGHT_STANDINGS_SOURCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test browser/jfl/standings-season.spec.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: standings-browser-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -56,31 +56,7 @@ export const designSystemStyles = `
     --fd-shadow-soft: 0 3px 10px rgba(25, 31, 27, .08);
     --fd-radius: 16px;
     --fd-radius-sm: 11px;
-    --fd-radius-control: 10px;
     --fd-radius-pill: 999px;
-    /* WCAG-oriented status chip pairs (bg + text). */
-    --fd-pill-neutral-bg: #eef1ef;
-    --fd-pill-neutral-text: #1f2923;
-    --fd-pill-success-bg: #d8f0e2;
-    --fd-pill-success-text: #0b4d2c;
-    --fd-pill-warning-bg: #f7e7a8;
-    --fd-pill-warning-text: #4a3b00;
-    --fd-pill-danger-bg: #f8d7d4;
-    --fd-pill-danger-text: #7a221c;
-    --fd-pill-info-bg: #d9e8fc;
-    --fd-pill-info-text: #0b3a6e;
-    --fd-touch-min: 44px;
-  }
-
-
-  /* UX: clearer focus and denser readable status chips when pages opt in. */
-  :focus-visible {
-    outline: 3px solid var(--fd-focus) !important;
-    outline-offset: 2px !important;
-  }
-  ::selection {
-    background: #cfe8d8;
-    color: var(--fd-ink);
   }
 
   /* Universal primitives. */
@@ -199,63 +175,19 @@ export const designSystemStyles = `
   }
   button:disabled { opacity: .45 !important; }
 
-  /* Controls = soft rectangles. Status = short pills. See docs/ux-controls-and-status.md */
   input, select, textarea {
-    min-height: max(var(--fd-control-min), var(--fd-touch-min));
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px !important;
+    min-height: var(--fd-control-min);
     background: var(--fd-bg-surface) !important;
     color: var(--fd-text) !important;
     border: 1px solid var(--fd-border-control) !important;
-    border-radius: var(--fd-radius-control) !important;
-    font-size: 16px !important; /* iOS: avoid focus zoom */
-    line-height: 1.25 !important;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-  select {
-    padding-right: 36px !important;
-    background-image:
-      linear-gradient(45deg, transparent 50%, var(--fd-text-muted) 50%),
-      linear-gradient(135deg, var(--fd-text-muted) 50%, transparent 50%);
-    background-position:
-      calc(100% - 18px) calc(50% - 3px),
-      calc(100% - 12px) calc(50% - 3px);
-    background-size: 6px 6px, 6px 6px;
-    background-repeat: no-repeat;
+    border-radius: 10px !important;
   }
   input::placeholder, textarea::placeholder { color: #929894 !important; }
 
-  button, .button, a.button, .score-link, .action, .state-action, [role="button"] {
-    min-height: max(var(--fd-control-min), var(--fd-touch-min));
-    min-width: var(--fd-touch-min);
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Shared state language — long status copy is rectangular, not a stadium pill. */
-  .status {
-    display: inline-flex !important;
-    align-items: center !important;
-    max-width: 100%;
-    min-height: 34px;
-    padding: 6px 12px !important;
-    border-radius: var(--fd-radius-control) !important;
-    border: 1px solid var(--fd-border) !important;
-    background: var(--fd-bg-surface) !important;
-    color: var(--fd-text-muted) !important;
-    font-weight: 700 !important;
-  }
-  .status[data-tone="ok"], .status[data-tone="ready"], [data-state="success"] {
-    color: var(--fd-pill-success-text) !important;
-    background: var(--fd-pill-success-bg) !important;
-    border-color: #b7dfc5 !important;
-  }
-  .status[data-tone="error"], [data-state="error"], .error, .error-popup, .fd-error-popup {
-    color: var(--fd-danger-text) !important;
-  }
+  /* Shared state language. */
+  .status { color: var(--fd-text-muted) !important; }
+  .status[data-tone="ok"], .status[data-tone="ready"], [data-state="success"] { color: var(--fd-success) !important; }
+  .status[data-tone="error"], [data-state="error"], .error, .error-popup, .fd-error-popup { color: var(--fd-danger-text) !important; }
   .error-popup, .fd-error-popup, .state-card[data-tone="error"] {
     background: var(--fd-danger-bg) !important;
     border-color: var(--fd-danger) !important;
@@ -269,70 +201,15 @@ export const designSystemStyles = `
     border-color: var(--fd-accent) !important;
     box-shadow: var(--fd-shadow-soft) !important;
   }
-
-  /* Short tokens only — not long filter labels or team names. */
-  .chip, .step-status, .tag, .badge, .side, .status-pill {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 4px;
-    min-height: 28px;
-    max-width: 100%;
-    padding: 4px 10px !important;
-    border: 1px solid transparent !important;
+  .chip, .step-status, .tag, .badge, .side, .hub-team {
+    background: var(--fd-green-100) !important;
+    border-color: #b6d4c1 !important;
+    color: var(--fd-primary-strong) !important;
     border-radius: var(--fd-radius-pill) !important;
-    background: var(--fd-pill-neutral-bg) !important;
-    color: var(--fd-pill-neutral-text) !important;
-    font-weight: 800 !important;
-    font-size: .78rem !important;
-    line-height: 1.2 !important;
-    letter-spacing: .01em;
-  }
-  .chip[data-tone="ok"], .badge.ok, .badge.ready, .status-pill[data-tone="live"] {
-    background: var(--fd-pill-success-bg) !important;
-    color: var(--fd-pill-success-text) !important;
-    border-color: #b7dfc5 !important;
-  }
-  .chip[data-tone="warn"], .badge.warn, .status-pill[data-tone="tonight"] {
-    background: var(--fd-pill-warning-bg) !important;
-    color: var(--fd-pill-warning-text) !important;
-    border-color: #e2c86a !important;
-  }
-  .chip[data-tone="danger"], .badge.blocked, .badge.unclaimed {
-    background: var(--fd-pill-danger-bg) !important;
-    color: var(--fd-pill-danger-text) !important;
-    border-color: #efb4ae !important;
-  }
-  .chip[data-tone="info"], .badge.admin, .status-pill[data-tone="done"] {
-    background: var(--fd-pill-info-bg) !important;
-    color: var(--fd-pill-info-text) !important;
-    border-color: #b4ccee !important;
-  }
-  /* Team/filter chrome is a control row, not a pill. */
-  .hub-team {
-    border-radius: var(--fd-radius-control) !important;
-    background: var(--fd-bg-subtle) !important;
-    color: var(--fd-text) !important;
-    border: 1px solid var(--fd-border) !important;
-    min-height: var(--fd-touch-min);
-    padding: 8px 12px !important;
   }
   .unread {
     background: var(--fd-accent) !important;
     color: #241e0c !important;
-  }
-
-  @media (max-width: 720px) {
-    label:has(select),
-    label:has(input),
-    .filters select,
-    .controls select,
-    .topbar select {
-      display: block;
-      width: 100%;
-    }
-    select, input[type="text"], input[type="search"], input[type="tel"] {
-      width: 100% !important;
-    }
   }
 
   /* Legacy adapters: normalize repeated page-local vocab without rewriting markup or behavior. */
@@ -471,144 +348,6 @@ export const designSystemStyles = `
     .card, .panel, .hero, .scoreboard, .race, .team-score, .ledger-panel, .match, .state, .state-card {
       border-radius: 14px !important;
     }
-  }
-
-
-  /* ——— Professional polish (chrome only; product copy unchanged) ——— */
-  body {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-  }
-
-  /* Quieter default type hierarchy */
-  h1 { font-weight: 800 !important; letter-spacing: -0.02em !important; line-height: 1.15 !important; }
-  h2 { font-weight: 700 !important; letter-spacing: -0.015em !important; }
-  h3, h4 { font-weight: 700 !important; }
-
-  /* Soften ultra-black weights used in page-local CSS */
-  button, .button, a.button, .action, .tab, .badge, .chip, .status-pill, .match-actions a {
-    font-weight: 700 !important;
-  }
-
-  /* Status strip: calm, professional, no “system boot” energy */
-  .status {
-    font-size: 0.84rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0 !important;
-    text-transform: none !important;
-  }
-  .status:empty {
-    display: none !important;
-    padding: 0 !important;
-    border: 0 !important;
-    min-height: 0 !important;
-  }
-
-  /* Empty states: left-aligned readable blocks, not floating alarm text */
-  .empty, .page-state, .state-card {
-    text-align: left !important;
-    border-radius: var(--fd-radius) !important;
-    border: 1px solid var(--fd-border) !important;
-    background: var(--fd-bg-surface) !important;
-    padding: 20px 18px !important;
-    color: var(--fd-text-muted) !important;
-    box-shadow: var(--fd-shadow-soft) !important;
-  }
-  .empty a, .page-state a, .state-card a {
-    font-weight: 700 !important;
-    text-decoration: underline !important;
-    text-underline-offset: 2px;
-  }
-
-  /* Panels / cards: consistent elevation */
-  .panel, .card, .match, .action-card, .ledger-panel, .edit-panel {
-    border: 1px solid var(--fd-border) !important;
-    box-shadow: var(--fd-shadow-soft) !important;
-  }
-
-  /* Tables: cleaner league-ops look */
-  table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    overflow: hidden;
-    border: 1px solid var(--fd-border) !important;
-    border-radius: var(--fd-radius-sm) !important;
-  }
-  th, td {
-    padding: 12px 14px !important;
-    border-bottom: 1px solid var(--fd-border) !important;
-  }
-  tr:last-child td { border-bottom: 0 !important; }
-  th {
-    font-size: 0.75rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.04em !important;
-    text-transform: uppercase !important;
-  }
-
-  /* Interactive transitions without flashy motion */
-  button, .button, a.button, .action, select, input, textarea, .tab, .match-actions a, .action-card {
-    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease !important;
-  }
-
-  /* Native select: professional closed state */
-  select:disabled {
-    opacity: 0.65 !important;
-    cursor: not-allowed;
-  }
-
-  /* Reduce harsh uppercase micro-labels where page CSS forced them on chrome */
-  .status-pill {
-    letter-spacing: 0.02em !important;
-    text-transform: none !important;
-    font-weight: 700 !important;
-  }
-
-  /* Loading placeholders in selects stay muted, not bold alarm */
-  select:disabled option {
-    color: var(--fd-text-muted) !important;
-  }
-
-  /* Mobile denser rhythm */
-  @media (max-width: 720px) {
-    h1 { font-size: 1.55rem !important; }
-    .panel, .card, .match { border-radius: 14px !important; }
-    th, td { padding: 11px 12px !important; }
-  }
-
-
-  /* ——— Status tone cohesion (multi-agent vocabulary → one language) ———
-     Pages historically used ok/error/warning PLUS healthy/critical/ready/live.
-     Map aliases so chrome stays consistent without rewriting every setStatus call. */
-  .status[data-tone="healthy"],
-  .status[data-tone="ready"],
-  .status[data-tone="success"],
-  [data-state="success"],
-  [data-state="healthy"] {
-    color: var(--fd-pill-success-text) !important;
-    background: var(--fd-pill-success-bg) !important;
-    border-color: #b7dfc5 !important;
-  }
-  .status[data-tone="critical"],
-  .status[data-tone="danger"],
-  [data-state="critical"] {
-    color: var(--fd-danger-text) !important;
-    background: var(--fd-danger-bg) !important;
-    border-color: var(--fd-danger) !important;
-  }
-  .status[data-tone="warning"],
-  .status[data-tone="warn"],
-  [data-state="warning"] {
-    color: var(--fd-accent-text) !important;
-    background: var(--fd-warning-bg) !important;
-    border-color: var(--fd-accent) !important;
-  }
-  .status[data-tone="muted"],
-  .status[data-tone="info"] {
-    color: var(--fd-text-muted) !important;
-    background: var(--fd-bg-subtle) !important;
-    border-color: var(--fd-border) !important;
   }
 `;
 

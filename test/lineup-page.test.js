@@ -7,49 +7,118 @@ test('lineup page renders a signed-in human-readable three-player captain flow',
 
   assert.match(html, /Fremont Derby Lineup/);
   assert.match(html, /Pick your three/);
-  assert.doesNotMatch(html, /Pick tonight's players/);
   assert.match(html, /data-team-select/);
   assert.match(html, /data-round-select/);
   assert.doesNotMatch(html, /data-team-id/);
   assert.doesNotMatch(html, /data-round-id/);
   assert.doesNotMatch(html, /data-token/);
-  assert.doesNotMatch(html, />Team ID</i);
-  assert.doesNotMatch(html, />Round ID</i);
-  assert.doesNotMatch(html, />Access token</i);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/teams/);
-  assert.match(html, /Matchup/);
-  assert.match(html, /Round '/);
+  assert.match(html, /Week '/);
   assert.match(html, / · vs /);
   assert.match(html, /round\.opponentName/);
   assert.match(html, /Table '/);
-  assert.match(html, /data-status-close/);
   assert.match(html, /role="status"/);
+  assert.doesNotMatch(html, /data-status-close/);
   assert.match(html, /data-availability-body/);
   assert.match(html, /data-slots/);
   assert.match(html, /data-submit/);
-  assert.match(html, /Lock lineup/);
+  assert.match(html, /Submit lineup/);
   assert.match(html, /Opponent order stays hidden until both teams submit/);
+  assert.match(html, /data-opponent-status/);
   assert.match(html, /index<3/);
   assert.doesNotMatch(html, /4 slots/);
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/availability/);
   assert.match(html, /\/api\/teams\/:teamId\/rounds\/:roundId\/lineup/);
 });
 
-test('lineup page keeps the three selected slots and lock action visible on mobile', () => {
+test('rendered lineup browser script is syntactically valid', () => {
+  const html = renderLineupPage();
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+
+  assert.ok(scripts.length > 0);
+  assert.doesNotThrow(() => new Function(scripts.at(-1)[1]));
+});
+
+test('week selection auto-loads and shows completion or lineup readiness', () => {
+  const html = renderLineupPage();
+
+  assert.doesNotMatch(html, />Open lineup</);
+  assert.match(html, /Choose the week you are setting a lineup for/);
+  assert.match(html, /✓ Complete/);
+  assert.match(html, /✓ Lineup set/);
+  assert.match(html, /○ Needs lineup/);
+  assert.match(html, /function hydrateRoundStates\(team\)/);
+  assert.match(html, /roundSelect\.addEventListener\('change'.*run\(loadPage\)/s);
+  assert.match(html, /teamSelect\.addEventListener\('change'.*run\(loadPage\)/s);
+});
+
+test('lineup provides an explicit substitute finder and live name search', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /Find a sub/);
+  assert.match(html, /Paid \+ available substitutes/);
+  assert.match(html, /Search names/);
+  assert.match(html, /searchInput\.addEventListener\('input',renderCandidates\)/);
+  assert.match(html, /row\.eligible&&row\.availability_status==='available'/);
+  assert.match(html, /data-candidate-tab="subs"/);
+});
+
+test('lineup does not render a second committed-lineups copy', () => {
+  const html = renderLineupPage();
+
+  assert.doesNotMatch(html, /Committed lineups/);
+  assert.doesNotMatch(html, /data-lineup-body/);
+  assert.match(html, /Opponent lineup/);
+  assert.match(html, /data-opponent-body/);
+});
+
+test('mobile selections scroll normally and support direct reorder', () => {
   const html = renderLineupPage();
 
   assert.match(html, /data-mobile-lineup-summary/);
   assert.match(html, /data-mobile-lineup-slots aria-live="polite"/);
   assert.match(html, /data-mobile-slot-count/);
   assert.match(html, /data-mobile-submit/);
-  assert.match(html, /\.mobile-lineup-summary\{position:sticky;top:70px/);
+  assert.match(html, /data-mobile-opponent-status/);
+  assert.match(html, /\.mobile-lineup-summary\{display:grid/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{position:sticky/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*top:70px/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*z-index:20/);
+  assert.doesNotMatch(html, /\.mobile-lineup-summary\{[^}]*backdrop-filter/);
+  assert.match(html, /\.lineup-panel \.slots,\.lineup-panel \.panel-head,\.lineup-panel \.hint,\.lineup-panel \.actions\{display:none\}/);
   assert.match(html, /function renderMobileSummary\(\)/);
   assert.match(html, /label\.textContent='Slot '\+\(index\+1\)/);
-  assert.match(html, /value\.textContent=slot\?\(slot\.forfeit\?'Forfeit':slot\.name\):'Empty'/);
-  assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|filled!==3/);
-  assert.match(html, /renderMobileSummary\(\)/);
+  assert.match(html, /data-mobile-forfeit-slot/);
+  assert.match(html, /data-mobile-move-up|mobileMoveUp/);
+  assert.match(html, /data-mobile-move-down|mobileMoveDown/);
+  assert.match(html, /forfeit\.textContent='Forfeit'/);
+  assert.match(html, /button\.dataset\.mobileForfeitSlot!=null/);
+  assert.match(html, /mobileSubmitButton\.disabled=lineupLocked\|\|ownSubmitted\|\|filled!==3/);
   assert.match(html, /mobileSubmitButton\.addEventListener\('click',\(\)=>run\(submitLineup\)\)/);
+});
+
+test('opponent state and lineup mark stay clear on narrow screens', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /Opponent submitted\. Your submission will lock and reveal both lineups/);
+  assert.match(html, /submitted\?'Submitted':'Not submitted'/);
+  assert.match(html, /data-mobile-opponent-status>Not submitted</);
+  assert.match(html, /\.topbar \.mark\{flex:0 0 34px;min-width:34px\}/);
+});
+
+test('editing a submitted lineup automatically withdraws it while opponent is waiting', () => {
+  const html = renderLineupPage();
+
+  assert.match(html, /data-unlock/);
+  assert.match(html, /data-mobile-unlock/);
+  assert.match(html, /async function beginEdit\(\)/);
+  assert.match(html, /await adapter\.submit\(\[\]\)/);
+  assert.match(html, /ownSubmitted=false/);
+  assert.match(html, /mobileUnlockButton\.hidden=true;mobileUnlockButton\.disabled=true/);
+  assert.match(html, /unlockButton\.hidden=true;unlockButton\.disabled=true/);
+  assert.match(html, /Changing any slot will withdraw it and require you to submit again/);
+  assert.match(html, /Lineup changed to not submitted\. Submit again when your order is ready/);
 });
 
 test('lineup correction controls meet the phone touch and focus contract', () => {

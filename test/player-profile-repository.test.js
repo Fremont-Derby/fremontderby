@@ -83,7 +83,6 @@ test('player profile repository upserts through the profile RPC', async () => {
   assert.deepEqual(JSON.parse(calls[0].init.body), {
     actor_user_id: 'user-1',
     profile_display_name: 'Kai B',
-    profile_fargo_external_id: null,
   });
 });
 

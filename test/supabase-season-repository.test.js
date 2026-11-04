@@ -228,3 +228,20 @@ test('Supabase season repository lists seasons only after verifying league-admin
     target_season_id: 'season-live',
   });
 });
+
+test('JFL explicit creation uses a distinct RPC and never sends an existing target', async () => {
+  const { fetch, calls } = createFetch([{ body: [{ id: 'new-season' }] }]);
+  const repo = createSupabaseSeasonRepository({ ...env, ENVIRONMENT: 'jfl' }, { fetch });
+  const result = await repo.saveSeasonSetup({ actorUserId: 'admin', createNew: true, seasonPurpose: 'qa', seasonName: 'New season' });
+  assert.equal(result.id, 'new-season');
+  assert.ok(calls[0].url.endsWith('/rpc/create_season_setup'));
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.configured_purpose, 'qa');
+  assert.equal('target_season_id' in body, false);
+  assert.equal(calls[0].init.headers['content-profile'], 'jfl');
+  await assert.rejects(() => repo.saveSeasonSetup({ createNew: true, seasonId: 'existing' }));
+  for (const environment of ['production', 'gamma', 'dru']) {
+    await assert.rejects(() => createSupabaseSeasonRepository({ ...env, ENVIRONMENT: environment }, { fetch }).saveSeasonSetup({ createNew: true }));
+  }
+  assert.equal(calls.length, 1);
+});

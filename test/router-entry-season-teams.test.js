@@ -29,6 +29,23 @@ test('shared product shell uses the canonical Test Drive the App label', async (
   assert.doesNotMatch(html, />Demo<\/a>/);
 });
 
+test('practice destination leads to the existing no-sign-in drills without accepting writes', async () => {
+  const redirect = await routerEntry.fetch(new Request('https://example.test/practice'), {}, {});
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get('location'), '/demo');
+  assert.equal(redirect.headers.get('cache-control'), 'no-store');
+
+  const destination = await routerEntry.fetch(new Request('https://example.test/demo'), {}, {});
+  const html = await destination.text();
+  assert.equal(destination.status, 200);
+  assert.match(html, /href="\/sandbox\/captain"/);
+  assert.match(html, /href="\/sandbox\/player"/);
+  assert.match(html, /practice state stays separate from competitive records/i);
+
+  const write = await routerEntry.fetch(new Request('https://example.test/practice', { method: 'POST' }), {}, {});
+  assert.equal(write.status, 405);
+});
+
 test('directly decorated admin season-team route inherits the canonical shared-shell label', async () => {
   const response = await routerEntry.fetch(
     new Request('https://example.test/admin/season-teams'),
@@ -49,6 +66,5 @@ test('authorized Profile admin grouping exposes season-team management within tw
   assert.equal(response.status, 200);
   assert.match(html, /<nav class="admin-actions" aria-label="League admin tools">/);
   assert.match(html, /href="\/admin\/season-teams">Season teams<\/a>/);
-  assert.match(html, /href="\/admin\/operations"[^>]*>Operations<\/a>/);
-  assert.doesNotMatch(html, /href="\/season-setup">Season setup<\/a>/);
+  assert.match(html, /href="\/season-setup">Season setup<\/a>/);
 });

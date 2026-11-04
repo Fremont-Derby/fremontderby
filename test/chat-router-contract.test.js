@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const router = fs.readFileSync('src/router.js', 'utf8');
-const pathMatch = fs.readFileSync('src/pathMatch.js', 'utf8');
 const shell = fs.readFileSync('src/appShell.js', 'utf8');
 
 test('Worker routes the messages page and authenticated team chat APIs', () => {
@@ -11,8 +10,7 @@ test('Worker routes the messages page and authenticated team chat APIs', () => {
   assert.match(router, /url\.pathname === '\/messages\/moderation'/);
   assert.match(router, /url\.pathname === '\/api\/me\/chat-threads'/);
   assert.match(router, /url\.pathname === '\/api\/me\/message-notification-summary'/);
-  assert.match(router, /matchApiTeamsPath/);
-  assert.match(pathMatch, /a === 'messages' \|\| a === 'chat' \|\| a === 'team-messages'/);
+  assert.match(router, /api\\\/teams\\\/\(\[\^\/\]\+\)\\\/messages\$/);
   assert.match(router, /chatHttpHandlers\.listTeamMessages/);
   assert.match(router, /chatHttpHandlers\.sendTeamMessage/);
   assert.match(router, /chatHttpHandlers\.markTeamChatRead/);
@@ -31,7 +29,8 @@ test('Worker routes authenticated direct messages, reads, and player blocks', ()
 
 test('Worker routes league rooms, message reports, and admin moderation', () => {
   assert.match(router, /url\.pathname === '\/api\/me\/league-chat-threads'/);
-  assert.match(router, /matchApiSeasonMessagesPath|seasonMessagesPath/);
+  assert.match(router, /leagueMessagesMatch/);
+  assert.match(router, /leagueReadMatch/);
   assert.match(router, /url\.pathname === '\/api\/chat-reports'/);
   assert.match(router, /url\.pathname === '\/api\/admin\/chat-reports'/);
   assert.match(router, /moderateChatReportMatch/);
@@ -39,8 +38,8 @@ test('Worker routes league rooms, message reports, and admin moderation', () => 
 
 test('Worker routes authenticated matchup chat threads', () => {
   assert.match(router, /url\.pathname === '\/api\/me\/matchup-chat-threads'/);
-  assert.match(router, /matchApiTeamMatchesPath|teamMatchPath/);
-  assert.match(pathMatch, /a === 'messages' \|\| a === 'chat'/);
+  assert.match(router, /matchupMessagesMatch/);
+  assert.match(router, /matchupReadMatch/);
   assert.match(router, /chatHttpHandlers\.sendMatchupMessage/);
 });
 

@@ -31,8 +31,6 @@ Agents should improve these instruction files when they discover a **durable** l
 
 ## Fast contributor start
 
-Public contributors: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
 1. Read `AGENTS.md`.
 2. Reconcile latest `main`, open/recent PRs, current issues/milestones, and CI.
 3. Read the issue you intend to work and check for overlapping implementation.
@@ -199,7 +197,7 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/` — concise cash-league introduction and primary Join / sign in action; PR #379/#377 shipped the current above-the-fold shape, while #252 still owns deeper current-season practical details
 - `/rules` — authoritative public rules; PR #441/#436 completed the postseason-rule copy reconciliation and the current source is converged on the shared visual system; remaining visual proof belongs to parent #382
 - `/profile` — Google sign-in, player identity/profile, own current-season registration/payment status, prepared-player self-claim, and private self-service league contact phone. PR #401/#335 adds the private phone foundation; PR #404 enforces contact readiness when captaincy/team activation requires it. PR #391/#341 ships `Claim existing player`, PR #385/#343 adds Join this season plus Registered / Payment due / Paid / Waived state, Fargo self-service #365 belongs here, and PR #380/#378 keeps the login across normal browser restarts while the underlying Supabase refresh session remains valid
-- `/teams` — canonical public/player/captain team directory and team-management surface. Team creation, requests/invitations, roster management, and recruiting belong here. Signed-out visitors get a public team directory from season standings plus sign-in CTAs (#131 progress). Participant-facing Forming / Qualified / Accepted / Waitlisted status and four-player opening-night depth belong here under #410.
+- `/teams` — canonical public/player/captain team directory and team-management surface. Team creation, requests/invitations, roster management, and recruiting belong here. #131 is open because current signed-out runtime still needs to restore the safe public directory promised by the story. Participant-facing Forming / Qualified / Accepted / Waitlisted status and four-player opening-night depth belong here under #410 rather than on a second registration page
 - `/schedule` — league dates, matchup context, and canonical personal dated Available / Unsure / Unavailable check-in after PR #376/#370; captain lineup/sub discovery consumes the same dated source after PR #389
 - `/availability` — **transitional duplicate availability surface** pending final #370 parity/recovery proof and retirement
 - `/lineup` — authoritative captain blind-lineup workflow. PR #431 lets Score hand an unrevealed selected captain matchup here through **Prepare lineup**; dated availability, available-sub discovery, three-slot ordering, validation, lock/reveal, and persistence remain owned here. Production and Captain War Games consume the same shared blind-lineup component/controller; source-theme convergence is complete and final browser proof remains under #382
@@ -208,7 +206,6 @@ The platform should continue beyond any one season or release. Current GitHub is
 - `/messages` — league, team, direct, and planned admin-support communication; matchup-specific chat is deprecated under #78
 - `/messages/moderation` — moderator/admin message-report review; separate from Admin Support
 - `/standings` — canonical team / individual standings and historical result selection; source-theme convergence is complete and final browser proof remains under #382
-- `/players` — canonical public player directory for recruiting and substitutes (#330); sortable/searchable from individual standings; Message when signed in; no phone numbers
 - `/admin` — shipped partial role-aware Admin gateway. Shared navigation is defined canonically in `src/appShell.js`; remaining destination/ownership work is #366/#372/#361
 - `/admin/seasons` — league-admin directory for finding existing seasons by human-readable name/status and continuing to the correct canonical surface. It owns lookup only; configuration/lifecycle stays `/season-setup`, team entry stays `/admin/season-teams`, and public results stay `/standings`
 - `/season-setup` — league-director selected-season lifecycle management under Admin → League Management, including explicit audited **Close season** after PR #412/#337 and authoritative Publish/Close readiness checklists after PRs #417/#419/#338. Distinct Cancel/Archive/safe-delete actions stay #414
@@ -269,19 +266,3 @@ For affected behavior, aim to leave:
 - navigation/discoverability gaps captured when the affected function is not reachable as intended;
 - issue/parent state reconciled accurately;
 - durable discoveries captured so the next low-context agent can continue from the repository alone.
-
-## Testing
-
-Season 1 push confidence contract: [`docs/SEASON1_TEST_CONTRACT.md`](docs/SEASON1_TEST_CONTRACT.md).
-
-## License
-
-Copyright 2026 Fremont Derby contributors.
-
-Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE) for the full text and [`NOTICE`](NOTICE) for attribution.
-
-Third-party services used at runtime (for example Cloudflare and Supabase) remain subject to their own terms; secrets and proprietary account credentials are not licensed under this repository license.
-
-## API reference
-
-Agent-oriented HTTP inventory: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (#363).
