@@ -7,6 +7,7 @@ on:
       - 'test/fixtures/jfl-ordinary-score-baseline.json'
       - 'test/fixtures/jfl-score-takeover-resolver.sql'
       - 'test/fixtures/jfl-score-claim-eligibility.sql'
+      - 'test/fixtures/jfl-score-claim-transitions.sql'
       - '.github/workflows/scoring-ownership-sql.yml'
   workflow_dispatch:
 permissions:
