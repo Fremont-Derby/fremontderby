@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { sharedRackLedgerScorecardControllerSource as source } from '../src/rackLedgerScorecard.js';
 
-function harness(load) {
+function harness(load, extra={}) {
   const nodes=new Map(), intervals=[]; let sessionChanged, now=0, current=true;
   function element(){return {dataset:{},hidden:true,disabled:false,textContent:'',children:[],listeners:{},setAttribute(){},append(...items){this.children.push(...items)},replaceChildren(){this.children=[]},addEventListener(name,fn){this.listeners[name]=fn},querySelector:node,querySelectorAll(){return []},scrollIntoView(){}};}
   function node(selector){if(!nodes.has(selector))nodes.set(selector,element());return nodes.get(selector);}
   const buttons=['[data-rack-a]','[data-rack-b]','[data-add-rack]','[data-undo]','[data-confirm]','[data-finalize]'].map(node);
   node('[data-shared-rack-ledger-scorecard]').querySelectorAll=()=>buttons;
-  const adapter={mode:'live',load,scoringTeamId:()=> 'team',scoringTeamName:()=> 'Team',onSessionChanged(fn){sessionChanged=fn},isSessionCurrent:()=>current};
-  vm.runInNewContext(source,{window:{fdRackLedgerAdapter:adapter},document:{querySelector:node,querySelectorAll:()=>[],createElement:element,visibilityState:'visible'},setTimeout:()=>1,clearTimeout(){},setInterval(fn,ms){intervals.push({fn,ms});return 1},clearInterval(){},requestAnimationFrame:fn=>fn(),Date:{now:()=>now}});
+  const claimButtons=['claimScore','requestTakeover','releaseScore','release','deny'].map(action=>{const b=node('[data-claim-'+action+']');b.dataset.claimAction=action;return b});
+  const adapter={mode:'live',load,scoringTeamId:()=> 'team',scoringTeamName:()=> 'Team',onSessionChanged(fn){sessionChanged=fn},isSessionCurrent:()=>current,...extra};
+  vm.runInNewContext(source,{window:{fdRackLedgerAdapter:adapter},document:{querySelector:node,querySelectorAll:selector=>selector==='[data-claim-action]'?claimButtons:[],createElement:element,visibilityState:'visible'},setTimeout:()=>1,clearTimeout(){},setInterval(fn,ms){intervals.push({fn,ms});return 1},clearInterval(){},requestAnimationFrame:fn=>fn(),Date:{now:()=>now}});
   return {node,buttons,intervals,adapter,invalidate(){current=false;sessionChanged()},tick(ms){now+=ms;intervals[0].fn()}};
 }
 const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
@@ -77,4 +78,40 @@ test('429 while editing preserves selection, serializes refresh and waits for Re
  const h=harness(async()=>{calls++;if(calls===2)throw Object.assign(new Error('Wait'),{status:429,retryAfterSeconds:60});return structuredClone(state)});await flush();
  h.node('[data-edit-current]').listeners.click();h.tick(15000);await flush();assert.equal(calls,2);assert.equal(h.node('[data-edit-panel]').hidden,false);
  h.tick(15000);await flush();assert.equal(calls,2);h.tick(45000);await flush();assert.equal(calls,3);assert.equal(h.node('[data-edit-panel]').hidden,false);
+});
+
+for(const side of ['a','b'])test(`ownership-only loss closes ${side} editor and gates all ordinary writes`,async()=>{
+ let claim={viewer_is_owner:true,owner_user_id:'me'},writes=0;
+ const state=result();state.comparison.tracker_player_id=side;state.comparison.own_racks=[{winnerSide:'A'}];
+ const h=harness(async()=>structuredClone(state),{loadClaim:async()=>claim});await flush();
+ h.adapter.saveRack=async()=>{writes++};h.adapter.undo=async()=>{writes++};h.adapter.confirm=async()=>{writes++};
+ h.node('[data-edit-current]').listeners.click();assert.equal(h.node('[data-edit-panel]').hidden,false);
+ h.node('[data-winner-picker]').dataset.open='true';claim={viewer_is_owner:false,owner_user_id:'teammate',owner_display_name:'Teammate'};
+ h.tick(15000);await flush();
+ assert.equal(h.node('[data-edit-panel]').hidden,true);assert.equal(h.node('[data-winner-picker]').dataset.open,'false');
+ assert.ok(h.buttons.slice(0,5).every(b=>b.disabled));
+ for(const selector of ['[data-rack-a]','[data-undo]','[data-confirm]']){h.node(selector).listeners.click();await flush()}
+ h.node('[data-edit-current]').listeners.click();assert.equal(h.node('[data-edit-panel]').hidden,true);assert.equal(writes,0);
+});
+test('ownership loss remains read-only when subsequent score readback fails',async()=>{
+ let lost=false;const h=harness(async()=>{if(lost)throw new Error('Unavailable');return result()},{loadClaim:async()=>({viewer_is_owner:!lost,owner_user_id:lost?'other':'me'})});await flush();
+ lost=true;h.tick(15000);await flush();assert.ok(h.buttons.slice(0,5).every(b=>b.disabled));
+});
+test('unavailable initial claim fails closed without scoring',async()=>{
+ const h=harness(async()=>result(),{loadClaim:async()=>null});await flush();assert.ok(h.buttons.slice(0,5).every(b=>b.disabled));
+});
+
+for(const action of ['claimScore','requestTakeover','releaseScore','release','deny'])test(`score control ${action} sends one explicit action then refreshes`,async()=>{
+ let calls=0,reads=0;const claim={owner_user_id:'me',viewer_is_owner:true,pending_requester_user_id:'other'};
+ const h=harness(async()=>{reads++;return result()},{loadClaim:async()=>claim});await flush();
+ h.adapter[action]=async()=>{calls++;return claim};h.adapter.respondTakeover=async decision=>{assert.equal(decision,action);calls++;return claim};
+ h.node('[data-claim-'+action+']').listeners.click();await flush();assert.equal(calls,1);assert.equal(reads,2);
+});
+test('claim response cannot restore private owner after session changes',async()=>{
+ let finish;const h=harness(async()=>result(),{loadClaim:()=>new Promise(r=>{finish=r})});h.invalidate();finish({viewer_is_owner:true,owner_display_name:'Private Owner'});await flush();
+ assert.equal(h.node('[data-score-control]').hidden,true);assert.equal(h.node('[data-score-owner]').textContent,'\u2013');assert.ok(h.buttons.every(b=>b.disabled));
+});
+test('claim read blocks overlapping foreground write until score readback completes',async()=>{
+ let reads=0,finish,writes=0;const h=harness(()=>{reads++;return reads===1?Promise.resolve(result()):new Promise(r=>{finish=r})},{loadClaim:async()=>({viewer_is_owner:true})});await flush();
+ h.adapter.saveRack=async()=>{writes++};h.tick(15000);await flush();h.node('[data-rack-a]').listeners.click();await flush();assert.equal(writes,0);finish(result());await flush();
 });
