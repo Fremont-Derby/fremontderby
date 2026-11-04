@@ -13,6 +13,8 @@ const methods = Object.freeze({
 function statusForError(error) {
   if ([400, 401, 403, 413, 415].includes(error?.status)) return error.status;
   const message = error?.message || '';
+  const upstreamAuthorization = message.match(/^Supabase request failed with (401|403)(?::|$)/);
+  if (upstreamAuthorization) return Number(upstreamAuthorization[1]);
   if (/not an active member|not part|Only the current scorekeeper|ineligible|active on both teams/i.test(message)) return 403;
   if (/Player match not found/.test(message)) return 404;
   if (/already pending|No scorekeeping takeover request|already claimed|finalized/i.test(message)) return 409;
@@ -51,7 +53,11 @@ export function createScoreClaimHttpHandler({
       return Response.json({ claim }, { headers });
     } catch (error) {
       const status = statusForError(error);
-      return Response.json({ error: status === 500 ? 'Scorekeeping request failed' : error.message }, { status, headers });
+      const upstreamAuthorization = /^Supabase request failed with (401|403)(?::|$)/.test(error?.message || '');
+      const message = upstreamAuthorization
+        ? (status === 401 ? 'Authentication required' : 'Scoring access denied')
+        : (status === 500 ? 'Scorekeeping request failed' : error.message);
+      return Response.json({ error: message }, { status, headers });
     }
   };
 }
