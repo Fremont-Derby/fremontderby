@@ -494,7 +494,57 @@ try {
       passes++;
     } finally { await a.query('rollback'); if(pending) await pending; await a.end(); await b.end(); }
   }
-  console.log(`${passes} native PostgreSQL cases PASS; eight RPCs, expiry resolver, repository membership and captured claim eligibility; minimal relations, no hosted acceptance`);
+  // Pristine installation with real dependencies, isolated from earlier doubles.
+  // Roll back to the exact exercised catalog after qualifying this installation.
+  await query('begin');
+  const qualifiedCatalog = await catalogSnapshot();
+  try {
+    await query(`drop function ${guardSignature}`);
+    for (const row of baseline) await query(row.definition);
+    const historySource = await readFile(new URL('../supabase/migrations/20260812001000_collision_safe_shared_scoring.sql', import.meta.url), 'utf8');
+    await query('drop function jfl_private.assert_expected_score_history(uuid,uuid,jsonb)');
+    await query(historySource.slice(0, historySource.indexOf('create or replace function public.record_player_match_score_rack_checked'))
+      .replaceAll('private.', 'jfl_private.').replaceAll('public.', 'jfl.'));
+    const pristineCatalog = await catalogSnapshot();
+    await query(candidate);
+    // Installing enforcement must preserve every dependency body, owner and ACL.
+    const dependencies = rows => rows.filter(row => row.signature.startsWith('jfl_private.') && !row.signature.startsWith('jfl_private.require_current_scorekeeper('));
+    assert.deepEqual(dependencies(await catalogSnapshot()), dependencies(pristineCatalog));
+    passes++;
+    for (const call of calls) {
+      await reset();
+      await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+      await query('insert into jfl.team_memberships values($1,$3,$4,null),($2,$3,$4,null)', [id(30),id(31),id(9),team]);
+      await query('select * from jfl.claim_player_match_score($1,$2,$3)', [owner,match,team]);
+      const args = [...call.args];
+      if (call.name.startsWith('record')) await query("update jfl_private.player_match_score_submissions set racks='[]'");
+      if (call.name.endsWith('_checked')) args[args.length-1] = JSON.stringify((await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+      const before = await snapshot();
+      const staleArgs = [...args]; staleArgs[0] = stale;
+      await query('savepoint stale_denial');
+      await assert.rejects(query(call.sql,staleArgs), /current scorekeeper/);
+      await query('rollback to savepoint stale_denial');
+      assert.deepEqual(await snapshot(),before);
+      await query(call.sql,args);
+      passes++;
+    }
+    // Real history helper rejects stale optimistic snapshots without data/audit writes.
+    await reset();
+    await query('select * from jfl.claim_player_match_score($1,$2,$3)', [owner,match,team]);
+    const before = await snapshot();
+    const checked = calls.find(call => call.name === 'update_player_match_score_rack_checked');
+    const args = [...checked.args]; args[args.length-1] = '[]';
+    await query('savepoint history_denial');
+    await assert.rejects(query(checked.sql,args), /Score changed on another device/);
+    await query('rollback to savepoint history_denial');
+    assert.deepEqual(await snapshot(),before);
+    passes++;
+  } finally {
+    await query('rollback');
+  }
+  assert.deepEqual(await catalogSnapshot(),qualifiedCatalog,'Pristine qualification restores the exact prior catalog');
+  passes++;
+  console.log(`${passes} native PostgreSQL cases PASS; eight RPCs, real dependency installation and rollback; minimal relations, no hosted acceptance`);
 } finally {
   await db.end();
   await admin.query(`drop database ${config.database}`);
