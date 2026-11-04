@@ -636,6 +636,18 @@ try {
       await query('rollback'); passes++;
     }
   }
+  // A newly dependent SQL routine must block guard removal without CASCADE,
+  // rolling back all eight restorations rather than silently deleting consumers.
+  await query(`create function jfl_private.recovery_guard_consumer() returns void
+    language sql begin atomic
+      select jfl_private.require_current_scorekeeper(null::uuid,null::uuid,null::uuid);
+    end`);
+  const dependentCatalog = await catalogSnapshot();
+  await assert.rejects(query(recovery), /depend on it/);
+  await query('rollback');
+  assert.deepEqual(await catalogSnapshot(),dependentCatalog);
+  assert.deepEqual(await snapshot(),recoveryData); passes++;
+  await query('drop function jfl_private.recovery_guard_consumer() restrict');
   await query(recovery);
   assert.deepEqual(await catalogSnapshot(),recoveryBaseline,'Committed recovery restores exact original catalog');
   assert.deepEqual(await snapshot(),recoveryData,'Committed recovery preserves every score/claim/audit row'); passes++;
