@@ -1,5 +1,4 @@
 import { fileURLToPath } from 'node:url';
-import { stripTrailingSlashes } from '../src/stripTrailingSlashes.js';
 
 const defaultAttempts = 30;
 const defaultDelayMs = 10_000;
@@ -7,7 +6,7 @@ const smokeHeaderName = 'x-fremont-release-smoke';
 
 function normalizeBaseUrl(value) {
   if (!value || typeof value !== 'string') throw new Error('baseUrl is required');
-  return stripTrailingSlashes(value.trim());
+  return value.trim().replace(/\/+$/, '');
 }
 
 function compactBodyPreview(text, limit = 180) {

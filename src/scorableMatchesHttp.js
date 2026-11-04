@@ -1,8 +1,5 @@
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
-import { conditionalJsonResponse } from './httpConditional.js';
 import { createScorableMatchesRepository } from './scorableMatchesRepository.js';
-import { rpcErrorStatus } from './rpcErrorStatus.js';
-import { safeClientErrorMessage } from './requestSanitize.js';
 
 function jsonResponse(body, status = 200) {
   return Response.json(body, {
@@ -11,8 +8,12 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-export function scorableMatchesStatusForError(error) {
-  return rpcErrorStatus(error);
+function statusForError(error) {
+  if (error instanceof AuthError) return error.status;
+  const message = error?.message || 'Request failed';
+  if (message.includes('Supabase request failed with 401')) return 401;
+  if (message.includes('Supabase request failed with 403')) return 403;
+  return 400;
 }
 
 export function createScorableMatchesHttpHandlers({
@@ -25,9 +26,9 @@ export function createScorableMatchesHttpHandlers({
         const actor = await authenticate(request, env, { fetch: fetchImpl });
         const repository = createRepository(env, { fetch: fetchImpl });
         const matches = await repository.listScorableMatches({ actorUserId: actor.id });
-        return conditionalJsonResponse(request, { matches }, { cacheControl: 'private, no-store' });
+        return jsonResponse({ matches });
       } catch (error) {
-        return jsonResponse({ error: safeClientErrorMessage(error) }, scorableMatchesStatusForError(error));
+        return jsonResponse({ error: error.message }, statusForError(error));
       }
     },
   };

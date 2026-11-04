@@ -6,7 +6,7 @@ import routerEntry from '../src/routerEntry.js';
 
 test('Admin gateway starts with one truthful access-check state', () => {
   const html = renderAdminGatewayPage();
-  assert.match(html, /Loading…|Loading/);
+  assert.match(html, /Checking your access/);
   assert.match(html, /data-admin-content hidden/);
   assert.match(html, /data-player-content hidden/);
   assert.match(html, /data-signed-out hidden/);
@@ -44,7 +44,7 @@ test('Admin access failure has direct accessible recovery without exposing privi
   assert.match(html, /data-access-error[^>]*role="alert"[^>]*aria-live="assertive"/);
   assert.match(html, /data-retry[^>]*>Try again<\/button>/);
   assert.match(html, /retryButton\.addEventListener\('click',resolveAccess\)/);
-  assert.match(html, /showLoading\(/);
+  assert.match(html, /showLoading\(\)/);
   assert.match(html, /href="\/profile">Open Profile<\/a>/);
   assert.match(html, /\.action\{min-height:48px/);
   assert.match(html, /\.recovery-actions\{display:flex/);

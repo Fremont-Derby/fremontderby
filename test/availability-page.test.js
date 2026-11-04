@@ -1,12 +1,61 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { renderAvailabilityPage } from '../src/availabilityPage.js';
 
-test('availability page uses signed-in human-readable league-night selection', () => {
+function saveHarness(api) {
+  const html = renderAvailabilityPage();
+  const source = html.slice(html.indexOf('async function saveAvailability('), html.indexOf('function choiceTeamName('));
+  const card = { enabled: true, state: 'unsure', message: '', tone: '' };
+  const context = vm.createContext({
+    signedApi: api,
+    accessToken: () => context.token,
+    token: 'synthetic-session',
+    setRowEnabled: (row, enabled) => { row.enabled = enabled; },
+    setRowState: (row, state) => { row.state = state; },
+    setRowMessage: (row, message, tone) => { row.message = message; row.tone = tone; },
+    updateNeedsResponseStatus: () => {},
+  });
+  vm.runInContext(source, context);
+  return { context, card, save: () => context.saveAvailability({ seasonId: 'qa', scheduledOn: '2026-10-08' }, card, 'available') };
+}
+
+test('failed check-in save retains prior state and permits an in-place retry', async () => {
+  for (const message of ['Check-in is temporarily busy. Wait a moment and try again.', 'Network unavailable']) {
+    let fail = true;
+    const harness = saveHarness(async () => {
+      if (fail) throw new Error(message);
+      return { availability: { availability_status: 'available' } };
+    });
+    await assert.rejects(harness.save(), { message });
+    assert.equal(harness.card.enabled, true);
+    assert.equal(harness.card.state, 'unsure');
+    assert.equal(harness.card.message, message);
+    assert.equal(harness.card.tone, 'error');
+    fail = false;
+    await harness.save();
+    assert.equal(harness.card.enabled, true);
+    assert.equal(harness.card.state, 'available');
+    assert.equal(harness.card.tone, 'ok');
+  }
+});
+
+test('expired sign-in keeps check-in mutation disabled after a failed save', async () => {
+  const harness = saveHarness(async () => {
+    harness.context.token = '';
+    throw new Error('Your sign-in expired. Open Profile and sign in again.');
+  });
+  await assert.rejects(harness.save(), /Your sign-in expired/);
+  assert.equal(harness.card.enabled, false);
+  assert.equal(harness.card.state, 'unsure');
+});
+
+test('availability page uses signed-in human-readable league-night list', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /Fremont Derby · League night check-in/);
-  assert.match(html, /data-context-select/);
+  assert.match(html, /Check in/);
+  assert.match(html, /data-date-list/);
+  assert.doesNotMatch(html, /data-context-select/);
   assert.doesNotMatch(html, /data-season-id/);
   assert.doesNotMatch(html, /data-round-id/);
   assert.doesNotMatch(html, /data-token/);
@@ -15,26 +64,88 @@ test('availability page uses signed-in human-readable league-night selection', (
   assert.doesNotMatch(html, />Access token</i);
   assert.match(html, /sessionStorage\.getItem\('fd\.accessToken'\)/);
   assert.match(html, /\/api\/me\/teams/);
-  assert.match(html, /data-availability-status="available"/);
-  assert.match(html, /data-availability-status="unsure"/);
-  assert.match(html, /data-availability-status="unavailable"/);
-  assert.match(html, /\/availability\/me/);
-  assert.match(html, /No published league nights are ready for check-in yet/);
+  assert.match(html, /button\.dataset\.value=item\.value/);
+  assert.match(html, /value:'available'/);
+  assert.match(html, /value:'unsure'/);
+  assert.match(html, /value:'unavailable'/);
+  assert.match(html, /No upcoming published regular-season rounds/);
 });
 
-test('availability choices stay compact and expose selected state accessibly', () => {
+test('check-in hides past weeks before rendering or loading saved state', () => {
   const html = renderAvailabilityPage();
 
-  assert.match(html, /class="actions" role="group" aria-label="League night check-in"/);
-  assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
-  assert.match(html, /\.actions\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.doesNotMatch(html, /\.actions,.choice-actions\{grid-template-columns:1fr\}/);
-  assert.match(html, /button:focus-visible,select:focus-visible,\.signin:focus-visible,\.retry:focus-visible/);
-  assert.match(html, /button\[aria-pressed="true"\]::after\{content:' ✓'/);
-  assert.match(html, /function setAvailabilityState\(value\)/);
-  assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.availabilityStatus===value\)\)/);
-  assert.match(html, /renderContext\(\)\{const context=selectedContext\(\);setAvailabilityState\(null\)/);
-  assert.match(html, /setAvailabilityState\(value\);setStatus\('Availability saved for '/);
+  assert.match(html, /function localDateKey\(date=new Date\(\)\)/);
+  assert.match(html, /const today=localDateKey\(\)/);
+  assert.match(html, /if\(context\.scheduledOn&&context\.scheduledOn<today\)continue/);
+  assert.match(html, /const groups=groupContexts\(contexts\)/);
+  assert.match(html, /for\(const group of groups\).*await loadSavedAvailability\(group,card\)/);
+  assert.doesNotMatch(html, /Promise\.all\(groups\.map/);
+});
+
+test('one-tap check-in restores saved date availability with fixed color bands', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /data-response/);
+  assert.match(html, /Needs response/);
+  assert.match(html, /\/api\/seasons\/.*\/availability\/me\?date=/);
+  assert.match(html, /method:'PUT'/);
+  assert.match(html, /availability_status/);
+  assert.match(html, /setRowState\(card,availability\.availability_status\|\|null\)/);
+  assert.match(html, /setRowState\(card,body\.availability\?\.availability_status\|\|value\)/);
+  assert.match(html, /card\.dataset\.state=state/);
+  assert.match(html, /\.date-card\[data-state="available"\]\{background:linear-gradient/);
+  assert.match(html, /\.date-card\[data-state="unsure"\]\{background:linear-gradient/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\]\{background:linear-gradient/);
+  assert.match(html, /\.date-card\[data-state="unmarked"\]\{background:repeating-linear-gradient/);
+  assert.match(html, /height:72px;min-height:72px;max-height:72px/);
+  assert.match(html, /\.quick-actions button\[data-value="available"\]\{background:linear-gradient/);
+  assert.match(html, /\.quick-actions button\[data-value="unsure"\]\{background:linear-gradient/);
+  assert.match(html, /\.quick-actions button\[data-value="unavailable"\]\{background:linear-gradient/);
+  assert.match(html, /label:'Maybe'/);
+  assert.match(html, /\.row-status\{position:absolute;width:1px;height:1px/);
+  assert.doesNotMatch(html, /transition:/);
+});
+
+test('unanswered upcoming weeks are explicitly called out', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /'Needs response'/);
+  assert.match(html, /function updateNeedsResponseStatus\(\)/);
+  assert.match(html, /querySelectorAll\('\.date-card\[data-state="unmarked"\]'\)/);
+  assert.match(html, /upcoming week/);
+  assert.match(html, /All upcoming weeks are checked in/);
+  assert.match(html, /updateNeedsResponseStatus\(\)/);
+});
+
+test('availability uses compact accessible one-tap controls per date', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /data-date-list[^>]*role="table"/);
+  assert.match(html, /card\.setAttribute\('role','row'\)/);
+  assert.match(html, /actions\.setAttribute\('role','group'\)/);
+  assert.match(html, /actions\.setAttribute\('aria-label','Availability for '/);
+  assert.match(html, /button\.setAttribute\('aria-label',item\.ariaLabel\+' for '/);
+  assert.match(html, /button\.setAttribute\('aria-pressed','false'\)/);
+  assert.match(html, /\.date-card\{position:relative;display:grid;grid-template-columns:/);
+  assert.match(html, /\.quick-actions button\{height:48px;min-height:48px/);
+  assert.match(html, /@media\(max-width:560px\).*\.quick-actions button\{height:44px;min-height:44px/);
+  assert.match(html, /\.quick-actions button\[aria-pressed="true"\]/);
+  assert.match(html, /button:focus-visible,.signin:focus-visible,.retry:focus-visible/);
+  assert.match(html, /function setRowState\(card,value\)/);
+  assert.match(html, /button\.setAttribute\('aria-pressed',String\(button\.dataset\.value===value\)\)/);
+});
+
+test('match date and team context appear before each check-in action', () => {
+  const html = renderAvailabilityPage();
+
+  const contextIndex = html.indexOf("copy.append(title,detail)");
+  const actionsIndex = html.indexOf("actions.setAttribute('role','group')");
+  assert.ok(contextIndex > -1 && actionsIndex > contextIndex);
+  assert.match(html, /contextSummary\(group\)/);
+  assert.match(html, /Round '\+context\.roundNumber/);
+  assert.match(html, /context\.teamName\|\|'Your team'/);
+  assert.match(html, /Free agent \/ substitute/);
+  assert.match(html, /white-space:nowrap;overflow:hidden;text-overflow:ellipsis/);
 });
 
 test('dual-team player chooses one matchup team before captains build lineups', () => {
@@ -54,14 +165,27 @@ test('availability first render and recovery states are task-oriented', () => {
 
   assert.match(html, /data-recovery aria-live="polite"/);
   assert.match(html, /data-workspace hidden/);
-  assert.match(html, /Loading check-in…/);
-  assert.match(html, /Sign in to mark availability/);
+  assert.match(html, /Loading your league nights…/);
+  assert.match(html, /Sign in to check in/);
   assert.match(html, /Open Profile and sign in again/);
-  assert.match(html, /Availability could not be loaded/);
+  assert.match(html, /Check-in could not be loaded/);
   assert.match(html, /Try again/);
+  assert.match(html, /action===loadPage\|\|recovery\.hidden===false/);
   assert.match(html, /function showWorkspace\(\)\{recovery\.hidden=true;workspace\.hidden=false\}/);
-  assert.match(html, /if\(!accessToken\(\)\)\{if\(quiet\)return;setStatus\('Sign in to check in for league night\.'/);
-  assert.match(html, /if\(message\.startsWith\('Your sign-in expired'\)\)showRecovery/);
-  assert.match(html, /else showRecovery\('Availability could not be loaded'/);
-  assert.match(html, /\.recovery-actions\{display:grid;grid-template-columns:1fr\}/);
+});
+
+test('JFL check-in theme uses readable light surfaces without blur or glow', () => {
+  const html = renderAvailabilityPage();
+
+  assert.match(html, /data-checkin-readable-theme/);
+  assert.match(html, /body \{[\s\S]*background: #f7f7f4 !important/);
+  assert.match(html, /\.intro h1 \{[\s\S]*color: #0a4f31 !important/);
+  assert.match(html, /\.intro p \{[\s\S]*color: #171b18 !important/);
+  assert.match(html, /\.date-card\[data-state="available"\][\s\S]*background: #b9e5ad !important/);
+  assert.match(html, /\.date-card\[data-state="unsure"\][\s\S]*background: #ffe7a0 !important/);
+  assert.match(html, /\.date-card\[data-state="unavailable"\][\s\S]*background: #f6ada6 !important/);
+  assert.match(html, /\.quick-actions button\[aria-pressed="true"\][\s\S]*box-shadow: 0 0 0 4px #111713 !important/);
+  assert.doesNotMatch(html, /data-checkin-trippy-theme/);
+  assert.doesNotMatch(html, /drop-shadow/);
+  assert.doesNotMatch(html, /backdrop-filter: blur\(3px\)/);
 });

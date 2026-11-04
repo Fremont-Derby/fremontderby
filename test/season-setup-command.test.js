@@ -114,3 +114,17 @@ test('season setup save command validates dates and table numbers before writing
     /unique/,
   );
 });
+
+test('explicit creation validates intent and cannot target an existing identity', async () => {
+  const calls = [];
+  const repo = { saveSeasonSetup: async input => { calls.push(input); return { id: 'new-id' }; } };
+  const result = await saveSeasonSetupCommand({ ...setupInput, seasonId: null, createNew: true, seasonPurpose: 'qa' }, repo);
+  assert.equal(result.id, 'new-id');
+  assert.equal(calls[0].createNew, true);
+  assert.equal(calls[0].seasonPurpose, 'qa');
+  for (const input of [{ createNew: true }, { seasonId: null, createNew: 'true' },
+    { seasonId: null, createNew: true, seasonPurpose: 'private' }]) {
+    await assert.rejects(() => saveSeasonSetupCommand({ ...setupInput, ...input }, repo));
+  }
+  assert.equal(calls.length, 1);
+});

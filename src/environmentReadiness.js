@@ -1,7 +1,3 @@
-import { expectedEnvironmentForHost, hostMatchesEnvironment, normalizeRequestHost } from './hostEnvironment.js';
-import { TEST_LANE_DEFAULT_ACTORS } from './supabaseAuth.js';
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
-
 const fixedExpectedSupabaseProjectRefs = {
   production: 'cpiucsxlkicmlbvdvhww',
   staging: 'oqkkvqkerusepyokzbmt',
@@ -19,12 +15,12 @@ const expectedSchemas = {
 };
 
 const isolatedRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
-const testAuthRuntimeEnvironments = new Set(['jfl', 'dru', 'gamma']);
+const testAuthRuntimeEnvironments = new Set(['jfl', 'dru']);
 const knownRuntimeEnvironments = new Set(Object.keys(fixedExpectedSupabaseProjectRefs));
 
 function normalizeSupabaseUrl(value) {
   if (!value || typeof value !== 'string') return '';
-  return stripTrailingSlashes(value.trim());
+  return value.trim().replace(/\/+$/, '');
 }
 
 export function supabaseProjectRefFromUrl(value) {
@@ -48,7 +44,11 @@ function check(name, ok, details = {}) {
   return { name, ok: Boolean(ok), ...details };
 }
 
-export function environmentReadiness(env = {}, options = {}) {
+function publicChecks(checks) {
+  return checks.map(({ name, ok }) => ({ name, ok }));
+}
+
+export function environmentReadiness(env = {}) {
   const environment = String(env.ENVIRONMENT || 'production').trim() || 'production';
   const supabaseUrl = normalizeSupabaseUrl(env.SUPABASE_URL);
   const projectRef = supabaseProjectRefFromUrl(supabaseUrl);
@@ -63,8 +63,7 @@ export function environmentReadiness(env = {}, options = {}) {
   const isIsolatedRuntime = isolatedRuntimeEnvironments.has(environment);
   const isTestAuthRuntime = testAuthRuntimeEnvironments.has(environment);
   const authBypassAllowed = isTestAuthRuntime;
-  const bypassRaw = String(env.BETA_AUTH_BYPASS || '').trim().toLowerCase();
-  const authBypassEnabled = isTestAuthRuntime && bypassRaw !== '0' && bypassRaw !== 'false' && bypassRaw !== 'off';
+  const authBypassEnabled = String(env.BETA_AUTH_BYPASS || '').trim() === '1';
   const projectMatches = Boolean(expectedProjectRef && projectRef === expectedProjectRef);
   const schemaMatches = Boolean(expectedSchema && schema === expectedSchema);
   const actualProjectIsolated = !isIsolatedRuntime
@@ -81,10 +80,9 @@ export function environmentReadiness(env = {}, options = {}) {
     check('supabasePublishableKeyConfigured', hasPublishableKey),
     check('supabaseServiceRoleKeyConfigured', hasServiceRoleKey),
     check('supabaseKeysAreDistinct', keysAreDistinct === true, { evaluated: keysAreDistinct !== null }),
-    check('authBypassRestrictedToTestLane', !(bypassRaw === '1' || bypassRaw === 'true' || bypassRaw === 'on') || authBypassAllowed, {
+    check('authBypassRestrictedToTestLane', !authBypassEnabled || authBypassAllowed, {
       authBypassAllowed,
       authBypassEnabled,
-      bypassRaw,
     }),
   ];
 
@@ -97,36 +95,27 @@ export function environmentReadiness(env = {}, options = {}) {
   if (isTestAuthRuntime) {
     checks.push(
       check('testAuthBypassFlag', authBypassEnabled),
-      check('testActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID) || Boolean(TEST_LANE_DEFAULT_ACTORS[environment])),
+      check('testActorUserIdConfigured', configured(env.BETA_ACTOR_USER_ID)),
     );
   }
 
-  const host = normalizeRequestHost(options.host || env.REQUEST_HOST || '');
-  const expectedHostEnvironment = host ? expectedEnvironmentForHost(host) : null;
-  const hostMatch = host ? hostMatchesEnvironment(host, environment) : null;
-  if (expectedHostEnvironment) {
-    checks.push(
-      check('requestHostMatchesWorkerEnvironment', hostMatch === true, {
-        host,
-        expectedHostEnvironment,
-        environment,
-      }),
-    );
-  }
+  const ok = checks.every((item) => item.ok);
+  const isBoundWorkerRuntime = Boolean(env.CF_VERSION_METADATA);
 
-  const expectedPrivateSchema = expectedSchema
-    ? (expectedSchema === 'public' ? 'private' : `${expectedSchema}_private`)
-    : null;
+  if (isBoundWorkerRuntime) {
+    return {
+      ok,
+      environment,
+      expectedSupabaseSchema: expectedSchema,
+      checks: publicChecks(checks),
+    };
+  }
 
   return {
-    ok: checks.every((item) => item.ok),
+    ok,
     environment,
-    host: host || null,
-    expectedHostEnvironment,
-    hostMatchesEnvironment: hostMatch,
     expectedSupabaseProjectRef: expectedProjectRef,
     expectedSupabaseSchema: expectedSchema,
-    expectedPrivateSupabaseSchema: expectedPrivateSchema,
     supabase: {
       url: supabaseUrl || null,
       projectRef,

@@ -1,0 +1,57 @@
+name: JFL full-season synthetic browser audit
+
+# #3562 Phase 1 only: real JFL page components with strictly intercepted
+# synthetic GET responses. No staging credentials, browser secrets, or writes.
+# The full live 8-team season acceptance remains on #3562/#2800.
+on:
+  pull_request:
+    branches: [fremontderby-jfl]
+    paths:
+      - 'browser/jfl/full-season-snapshot.spec.js'
+      - 'domain/schedule.js'
+      - 'domain/playoffs.js'
+      - 'src/jflModernSchedule.js'
+      - 'src/jflModernStandings.js'
+      - 'src/jflPublicPlayoffs.js'
+      - 'src/publicSeasonSelectionEnhancer.js'
+      - 'playwright.config.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/jfl-full-season-snapshot-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jfl-full-season-snapshot-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-browser:
+    name: synthetic full-season desktop + phone
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_FULL_SEASON_SOURCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned Playwright and Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Audit generated complete season via actual browser-rendered JFL pages
+        run: npx playwright test browser/jfl/full-season-snapshot.spec.js --workers=1
+      - name: Preserve browser trace and report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jfl-synthetic-full-season-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7

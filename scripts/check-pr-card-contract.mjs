@@ -11,20 +11,9 @@ const REQUIRED_SECTIONS = [
 
 const TRACKING_REFERENCE = /\b(?:Tracks|Refs)\s+(?:#(\d+)|https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/issues\/(\d+))\b/gi;
 const AUTO_CLOSE_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+(?:#\d+|https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/issues\/\d+)\b/i;
-const DRU_JOURNAL_ISSUE = 2883;
-const DRU_JOURNAL_ENFORCEMENT_MIN_PR = 3014;
-const DRU_PROGRAM_CONTRACT_MIN_PR = 3193;
-const DRU_JOURNAL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const ISSUE_COMMENT_URL = /https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/issues\/(\d+)#issuecomment-(\d+)/i;
 
 function withoutComments(value) {
-  let out = String(value || '');
-  let prev;
-  do {
-    prev = out;
-    out = out.replace(/<!--[\s\S]*?-->/g, '');
-  } while (out !== prev);
-  return out.trim();
+  return value.replace(/<!--[\s\S]*?-->/g, '').trim();
 }
 
 function sectionContent(body, heading) {
@@ -54,112 +43,6 @@ export function extractTrackingCardNumbers(body = '', repositoryFullName = '') {
   }
 
   return [...numbers];
-}
-
-
-export function validateDruSessionJournalReference(
-  body = '',
-  repositoryFullName = '',
-  pullRequestNumber = 0,
-) {
-  const owner = sectionContent(body, 'Owner lane / agent');
-  if (!/\bDRU\b/i.test(owner) || Number(pullRequestNumber) < DRU_JOURNAL_ENFORCEMENT_MIN_PR) {
-    return { errors: [], commentId: null };
-  }
-
-  const journal = sectionContent(body, 'DRU session journal');
-  if (!journal) {
-    return {
-      errors: ['DRU PRs must include a "DRU session journal" section linking the current #2883 Session contract.'],
-      commentId: null,
-    };
-  }
-
-  const match = journal.match(ISSUE_COMMENT_URL);
-  if (!match) {
-    return {
-      errors: ['DRU session journal must link directly to a GitHub issue comment on #2883.'],
-      commentId: null,
-    };
-  }
-
-  const referencedRepository = `${match[1]}/${match[2]}`.toLowerCase();
-  if (
-    referencedRepository !== repositoryFullName.toLowerCase()
-    || Number(match[3]) !== DRU_JOURNAL_ISSUE
-  ) {
-    return {
-      errors: [`DRU session journal must link to issue #${DRU_JOURNAL_ISSUE} in this repository.`],
-      commentId: null,
-    };
-  }
-
-  return { errors: [], commentId: Number(match[4]) };
-}
-
-export function validateDruSessionJournalComment({
-  comment = {},
-  pullRequestAuthor = '',
-  pullRequestUpdatedAt = '',
-  requireProgramFields = false,
-} = {}) {
-  const errors = [];
-  const issueNumber = Number(String(comment.issue_url || '').split('/').pop());
-  if (issueNumber !== DRU_JOURNAL_ISSUE) {
-    errors.push(`Linked DRU journal comment must belong to issue #${DRU_JOURNAL_ISSUE}.`);
-  }
-
-  const commentAuthor = String(comment.user?.login || '').toLowerCase();
-  if (!pullRequestAuthor || commentAuthor !== String(pullRequestAuthor).toLowerCase()) {
-    errors.push('Linked DRU journal comment must be authored by the same GitHub identity as the pull request.');
-  }
-
-  if (!/^###\s+Session contract\s*$/im.test(String(comment.body || ''))) {
-    errors.push('Linked DRU journal comment must contain a "### Session contract" heading.');
-  }
-
-  if (requireProgramFields) {
-    const journalBody = String(comment.body || '');
-    const requiredFields = [
-      ['Shared objective', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?Shared objective(?:\*\*)?\s*:/i],
-      ['DRU contribution', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?DRU contribution(?:\*\*)?\s*:/i],
-      ['JFL handoff', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?JFL handoff(?:\*\*)?\s*:/i],
-      ['Done when', /(?:^|\n)\s*[-*]?\s*(?:\*\*)?Done when(?:\*\*)?\s*:/i],
-    ];
-    for (const [field, pattern] of requiredFields) {
-      if (!pattern.test(journalBody)) {
-        errors.push(`Linked DRU Session contract must contain "${field}:" for the shared JFL program objective.`);
-      }
-    }
-  }
-
-  const commentCreated = Date.parse(comment.created_at || '');
-  const pullRequestUpdated = Date.parse(pullRequestUpdatedAt || '');
-  if (!Number.isFinite(commentCreated) || !Number.isFinite(pullRequestUpdated)) {
-    errors.push('DRU journal freshness could not be verified from GitHub timestamps.');
-  } else if (pullRequestUpdated - commentCreated > DRU_JOURNAL_MAX_AGE_MS) {
-    errors.push('Linked DRU Session contract is older than 24 hours; post a fresh #2883 session contract for the current work session.');
-  }
-
-  return errors;
-}
-
-
-export function validateCurrentProgramTarget({
-  body = '',
-  baseRef = '',
-  pullRequestNumber = 0,
-  enforceProgramContract = Number(pullRequestNumber) >= DRU_PROGRAM_CONTRACT_MIN_PR,
-} = {}) {
-  if (!enforceProgramContract) return [];
-
-  const owner = sectionContent(body, 'Owner lane / agent');
-  if (/\bDRU\b/i.test(owner) && baseRef === 'fremontderby-gamma') {
-    return [
-      'Gamma is dormant during the #2800 JFL product-completion phase. DRU should hand portable evidence/fixes to JFL instead of opening a Gamma promotion PR.',
-    ];
-  }
-  return [];
 }
 
 
@@ -291,33 +174,6 @@ export function validatePullRequestBody(body = '', repositoryFullName = '', head
   return errors;
 }
 
-async function fetchIssueComment(repositoryFullName, commentId, token, apiUrl = 'https://api.github.com') {
-  if (!token) {
-    throw new Error('GITHUB_TOKEN is required to verify the DRU mentoring journal.');
-  }
-
-  const [owner, repository] = repositoryFullName.split('/');
-  if (!owner || !repository) {
-    throw new Error(`Invalid repository full name: "${repositoryFullName}".`);
-  }
-
-  const url = new URL(
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/issues/comments/${encodeURIComponent(commentId)}`,
-    apiUrl,
-  );
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`GitHub DRU journal lookup failed with HTTP ${response.status}.`);
-  }
-  return response.json();
-}
-
 async function fetchOpenPullRequests(repositoryFullName, token, apiUrl = 'https://api.github.com') {
   if (!token) {
     throw new Error('GITHUB_TOKEN is required to check exclusive tracking-card ownership.');
@@ -361,28 +217,6 @@ async function validateEventFile(eventPath) {
   const body = event.pull_request?.body ?? '';
   const cardNumbers = extractTrackingCardNumbers(sectionContent(body, 'Tracking card'), repositoryFullName);
   const errors = validatePullRequestBody(body, repositoryFullName, event.pull_request?.head?.ref ?? '');
-  errors.push(...validateCurrentProgramTarget({
-    body,
-    baseRef: event.pull_request?.base?.ref ?? '',
-    pullRequestNumber,
-  }));
-  const journalReference = validateDruSessionJournalReference(body, repositoryFullName, pullRequestNumber);
-  errors.push(...journalReference.errors);
-
-  if (errors.length === 0 && journalReference.commentId) {
-    const journalComment = await fetchIssueComment(
-      repositoryFullName,
-      journalReference.commentId,
-      process.env.GITHUB_TOKEN,
-      process.env.GITHUB_API_URL,
-    );
-    errors.push(...validateDruSessionJournalComment({
-      comment: journalComment,
-      pullRequestAuthor: event.pull_request?.user?.login ?? '',
-      pullRequestUpdatedAt: event.pull_request?.updated_at ?? '',
-      requireProgramFields: Number(pullRequestNumber) >= DRU_PROGRAM_CONTRACT_MIN_PR,
-    }));
-  }
 
   if (errors.length === 0) {
     const openPullRequests = await fetchOpenPullRequests(

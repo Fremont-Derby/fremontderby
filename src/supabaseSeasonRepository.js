@@ -1,5 +1,4 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
-import { stripTrailingSlashes } from './stripTrailingSlashes.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -9,7 +8,7 @@ function requireEnvValue(env, name) {
 }
 
 function normalizeSupabaseUrl(value) {
-  return stripTrailingSlashes(value);
+  return value.replace(/\/+$/, '');
 }
 
 function jsonHeaders(serviceRoleKey) {
@@ -38,7 +37,16 @@ async function requestJson(fetchImpl, url, init) {
 
   if (!response.ok) {
     const message = typeof body === 'string' ? body : body?.message;
-    throw new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+    const error = new Error(`Supabase request failed with ${response.status}${message ? `: ${message}` : ''}`);
+    error.status = response.status;
+    error.rpcCode = body?.code;
+    if (response.status === 429) {
+      const value = response.headers.get('retry-after');
+      const seconds = value && value.trim() !== '' && Number.isFinite(Number(value))
+        ? Number(value) : Math.ceil((Date.parse(value) - Date.now()) / 1000);
+      if (Number.isFinite(seconds) && seconds > 0 && seconds <= 300) error.retryAfter = String(Math.ceil(seconds));
+    }
+    throw error;
   }
 
   return body;
@@ -106,9 +114,20 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
       return Array.isArray(result) ? (result[0] ?? null) : result;
     },
 
+    async readSeasonCreationOperation({ actorUserId, operationId }) {
+      if (env.ENVIRONMENT !== 'jfl') throw new Error('Season creation recovery is available only in JFL');
+      return requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/read_season_creation_operation`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ actor_user_id: actorUserId, operation_id: operationId }),
+      });
+    },
+
     async saveSeasonSetup({
       actorUserId,
       seasonId,
+      createNew = false,
+      seasonPurpose = 'league',
+      operationId,
       seasonName,
       leagueNight,
       firstRoundDate,
@@ -121,26 +140,36 @@ export function createSupabaseSeasonRepository(env, { fetch: fetchImpl = globalT
       playoffTeamCount,
       playoffAnchorTiebreaker,
     }) {
-      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/configure_season_setup`, {
+      if (createNew && (env.ENVIRONMENT !== 'jfl' || seasonId)) throw new Error('Distinct season creation is available only in JFL without an existing target');
+      if (operationId !== undefined && !createNew) throw new Error('Creation operations cannot target an existing season');
+      const configuredBody = {
+        actor_user_id: actorUserId,
+        ...(createNew ? { configured_purpose: seasonPurpose } : { target_season_id: seasonId }),
+        configured_season_name: seasonName,
+        configured_league_night: leagueNight,
+        configured_first_round_date: firstRoundDate,
+        configured_roster_lock_round: rosterLockRound,
+        configured_opening_block_length: openingBlockLength,
+        configured_individual_min_matches: individualMinMatches,
+        configured_round_interval_days: roundIntervalDays,
+        configured_table_numbers: tableNumbers,
+        configured_race_chart_version: raceChartVersion,
+        configured_playoff_team_count: playoffTeamCount,
+        configured_playoff_anchor_tiebreaker: playoffAnchorTiebreaker,
+      };
+      const { actor_user_id: actorId, ...creationInput } = configuredBody;
+      const rpc = operationId !== undefined ? 'create_season_setup_once' : createNew ? 'create_season_setup' : 'configure_season_setup';
+      const result = await requestJson(fetchImpl, `${supabaseUrl}/rest/v1/rpc/${rpc}`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          actor_user_id: actorUserId,
-          target_season_id: seasonId,
-          configured_season_name: seasonName,
-          configured_league_night: leagueNight,
-          configured_first_round_date: firstRoundDate,
-          configured_roster_lock_round: rosterLockRound,
-          configured_opening_block_length: openingBlockLength,
-          configured_individual_min_matches: individualMinMatches,
-          configured_round_interval_days: roundIntervalDays,
-          configured_table_numbers: tableNumbers,
-          configured_race_chart_version: raceChartVersion,
-          configured_playoff_team_count: playoffTeamCount,
-          configured_playoff_anchor_tiebreaker: playoffAnchorTiebreaker,
-        }),
+        body: JSON.stringify(operationId !== undefined
+          ? { actor_user_id: actorId, operation_id: operationId, creation_input: creationInput }
+          : configuredBody),
       });
-
+      if (operationId !== undefined) {
+        if (!result?.setup?.id || typeof result.created !== 'boolean') throw new Error('Season creation result was not confirmed');
+        return { ...result.setup, creationOperationId: operationId, creationAcknowledged: !result.created };
+      }
       return Array.isArray(result) ? result[0] : result;
     },
 

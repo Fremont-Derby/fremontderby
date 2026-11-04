@@ -109,7 +109,6 @@ export const lineupThemeStyles = `
       background: rgba(255,255,255,.97) !important;
       border-top: 3px solid var(--fd-wood) !important;
       box-shadow: var(--fd-shadow) !important;
-      backdrop-filter: blur(10px);
     }
     body[data-fd-lineup-theme] .player { grid-template-columns: minmax(0,1fr) auto !important; }
   }

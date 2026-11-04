@@ -2,14 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
-const ignored = new Set([
-  '.git',
-  '.playwright',
-  'node_modules',
-  'dist',
-  'playwright-report',
-  'test-results',
-]);
+const ignored = new Set(['.git', 'node_modules', 'dist', 'playwright-report', 'test-results', '.temp']);
 const checkedExtensions = new Set(['.js', '.mjs', '.md', '.json', '.jsonc', '.yml', '.yaml']);
 const errors = [];
 

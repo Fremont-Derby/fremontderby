@@ -122,16 +122,3 @@ test('rejects ineligible or wrong-team anchors', () => {
     openingDiscipline: '9-ball',
   }), /Team A anchor/);
 });
-
-test('seedSemifinals rejects wrong roster size or duplicate teams', () => {
-  assert.throws(() => seedSemifinals(['t1', 't2', 't3']), /exactly four seeded teams/);
-  assert.throws(() => seedSemifinals(['t1', 't2', 't3', 't1']), /must be unique/);
-});
-
-test('createChampionship rejects missing or identical winners', () => {
-  assert.throws(() => createChampionship([{ winnerTeamId: 't1' }]), /two semifinal results/);
-  assert.throws(
-    () => createChampionship([{ winnerTeamId: 't1' }, { winnerTeamId: 't1' }]),
-    /different teams/,
-  );
-});

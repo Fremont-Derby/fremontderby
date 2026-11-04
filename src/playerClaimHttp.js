@@ -1,7 +1,7 @@
 import { createPlayerClaimRepository } from './playerClaimRepository.js';
 import { AuthError, authenticateSupabaseUser } from './supabaseAuth.js';
 
-export function playerClaimErrorMessage(error) {
+function errorMessage(error) {
   const message = String(error?.message || error || '');
   if (/already claimed/i.test(message)) {
     return 'Already claimed — this player is already linked to an account.';
@@ -17,7 +17,7 @@ export function playerClaimErrorMessage(error) {
   return 'We could not complete that claim. Nothing was changed. Please try again.';
 }
 
-export function playerClaimStatusFor(error) {
+function statusFor(error) {
   if (error instanceof AuthError) return error.status;
   if (/already claimed|game history|already have a player profile/i.test(error.message)) return 409;
   if (/not found/i.test(error.message)) return 404;
@@ -59,6 +59,6 @@ export async function routePlayerClaim(
     const player = await repository.claim({ actorUserId: actor.id, playerId });
     return noStore({ player });
   } catch (error) {
-    return noStore({ error: playerClaimErrorMessage(error) }, playerClaimStatusFor(error));
+    return noStore({ error: errorMessage(error) }, statusFor(error));
   }
 }
