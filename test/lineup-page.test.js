@@ -49,8 +49,9 @@ test('week selection auto-loads and shows completion or lineup readiness', () =>
   assert.match(html, /✓ Lineup set/);
   assert.match(html, /○ Needs lineup/);
   assert.match(html, /function hydrateRoundStates\(team\)/);
-  assert.match(html, /roundSelect\.addEventListener\('change'.*run\(loadPage\)/s);
-  assert.match(html, /teamSelect\.addEventListener\('change'.*run\(loadPage\)/s);
+  assert.match(html, /function loadSelectedContext\(\).*run\(loadPage\)/s);
+  assert.match(html, /roundSelect\.addEventListener\('change'.*loadSelectedContext\(\)/s);
+  assert.match(html, /teamSelect\.addEventListener\('change'.*loadSelectedContext\(\)/s);
 });
 
 test('lineup provides an explicit substitute finder and live name search', () => {
