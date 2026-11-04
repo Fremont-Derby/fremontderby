@@ -4,6 +4,17 @@ begin
  if to_regprocedure('jfl_private.require_current_scorekeeper(uuid,uuid,uuid)') is not null then
    raise exception 'Unqualified #3288 baseline: ownership guard already exists';
  end if;
+ -- Qualify the future guard ACL without changing global/schema defaults.
+ -- The named REVOKEs below remove only PUBLIC/anon/authenticated grants.
+ if current_user <> 'postgres' or exists (
+   select 1 from pg_default_acl d,
+     lateral aclexplode(d.defaclacl) a
+   where d.defaclrole='postgres'::regrole and d.defaclobjtype='f'
+     and d.defaclnamespace in (0, 'jfl_private'::regnamespace)
+     and a.privilege_type='EXECUTE'
+     and a.grantee not in (0, 'postgres'::regrole, 'service_role'::regrole,
+       'anon'::regrole, 'authenticated'::regrole)
+ ) then raise exception 'Unqualified ownership guard creation privileges'; end if;
  -- Direct privileged dependencies must retain their qualified execution boundary.
  if exists (
    select 1 from (values

@@ -99,6 +99,33 @@ try {
     assert.deepEqual(await catalogSnapshot(), before, 'Rollback restores exact baseline catalogs');
     passes++;
   }
+  // New objects inherit both global and schema defaults, even with no old guard.
+  const defaultsSnapshot = async () => (await query(`select defaclrole::text owner,
+    defaclnamespace::text namespace, defaclobjtype, defaclacl::text acl
+    from pg_default_acl order by oid`)).rows;
+  for (const scope of ['', 'in schema jfl_private']) {
+    await query('begin');
+    const before = await catalogSnapshot(), defaultsBefore = await defaultsSnapshot();
+    await query('create role ownership_guard_default_grantee');
+    await query(`alter default privileges for role postgres ${scope}
+      grant execute on functions to ownership_guard_default_grantee`);
+    // Reproduce why the existing three named revokes are insufficient.
+    await query(`create function ${guardSignature} returns void language plpgsql as $$ begin null; end $$;
+      revoke all on function ${guardSignature} from public,anon,authenticated;
+      grant execute on function ${guardSignature} to service_role`);
+    assert.equal((await query("select has_function_privilege('ownership_guard_default_grantee',$1,'EXECUTE') allowed", [guardSignature])).rows[0].allowed, true);
+    await query(`drop function ${guardSignature}`);
+    const drifted = await catalogSnapshot(), defaultsDrifted = await defaultsSnapshot();
+    await query('savepoint default_refusal');
+    await assert.rejects(query(candidate), /ownership guard creation privileges/);
+    await query('rollback to savepoint default_refusal');
+    assert.deepEqual(await catalogSnapshot(), drifted, 'Refusal preserves all functions');
+    assert.deepEqual(await defaultsSnapshot(), defaultsDrifted, 'Refusal never rewrites database defaults');
+    await query('rollback');
+    assert.deepEqual(await catalogSnapshot(), before);
+    assert.deepEqual(await defaultsSnapshot(), defaultsBefore);
+    passes++;
+  }
   // Each dependency drift must fail before creating any ownership enforcement DDL.
   for (const signature of [...helperSignatures, 'jfl_private.resolve_expired_score_takeover(uuid,uuid)']) {
     for (const drift of [
