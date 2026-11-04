@@ -1,5 +1,5 @@
 // Disposable LOCAL PostgreSQL only. Real eight RPC bodies, minimal relations;
-// Membership/eligibility are test doubles, not hosted acceptance.
+// Real repository/captured dependencies; minimal local relations, not hosted acceptance.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -39,23 +39,29 @@ try {
     create table jfl_private.player_match_score_submissions(id uuid default gen_random_uuid(),season_id uuid,player_match_id uuid,tracker_player_id uuid,racks jsonb,confirmed_at timestamptz,updated_at timestamptz,
       constraint player_match_score_submission_player_match_id_tracker_playe_key unique(player_match_id,tracker_player_id));
     create table jfl_private.audit_events(actor_user_id uuid,action text,entity_type text,entity_id uuid,reason text,before_state jsonb,after_state jsonb);
-    create function jfl_private.match_tracker_for_scoring_team(actor_user_id uuid,target_match jfl.player_matches,target_scoring_team_id uuid) returns uuid language plpgsql as $$ begin
-      if target_scoring_team_id <> '${team}' or actor_user_id is null or actor_user_id not in ('${owner}','${stale}') then raise exception 'Not eligible'; end if;
-      return '${tracker}'::uuid; end; $$;
-    create function jfl_private.require_score_claim_actor(actor_user_id uuid,target_match jfl.player_matches,target_scoring_team_id uuid) returns uuid language sql as $$ select jfl_private.match_tracker_for_scoring_team(actor_user_id,target_match,target_scoring_team_id) $$;
-    create function jfl_private.score_claim_actor_is_eligible(actor_user_id uuid,target_match jfl.player_matches,target_scoring_team_id uuid) returns boolean language plpgsql as $$ begin
-      perform jfl_private.require_score_claim_actor(actor_user_id,target_match,target_scoring_team_id); return true;
-      exception when raise_exception then return false; end; $$;
-    create function jfl_private.assert_expected_score_history(target_player_match_id uuid,target_tracker_id uuid,expected_racks jsonb) returns void language plpgsql as $$ begin
-      if (select racks from jfl_private.player_match_score_submissions where player_match_id=target_player_match_id and tracker_player_id=target_tracker_id) is distinct from expected_racks then raise exception 'History changed'; end if; end; $$;`);
+    alter table jfl.player_matches add column team_a_id uuid,
+      add column team_b_id uuid, add column player_a_id uuid, add column player_b_id uuid;
+    create table jfl.players(id uuid primary key,user_id uuid,display_name text);
+    create table jfl.team_memberships(player_id uuid,season_id uuid,team_id uuid,ends_at timestamptz);
+    create table jfl_private.player_competition_restrictions(season_id uuid,player_id uuid,reason text,lifted_at timestamptz)`);
+  const rosterSource=await readFile(new URL('../supabase/migrations/20260816213000_reject_dual_team_scoring.sql',import.meta.url),'utf8');
+  await query(rosterSource.replaceAll('private.','jfl_private.').replaceAll('public.','jfl.'));
+  await query(await readFile(new URL('../test/fixtures/jfl-score-claim-eligibility.sql',import.meta.url),'utf8'));
+  const historySource = await readFile(new URL('../supabase/migrations/20260812001000_collision_safe_shared_scoring.sql', import.meta.url), 'utf8');
+  const realHistory = historySource.slice(0, historySource.indexOf('create or replace function public.record_player_match_score_rack_checked'))
+    .replaceAll('private.', 'jfl_private.').replaceAll('public.', 'jfl.');
+  await query(realHistory);
+  await query(await readFile(new URL('../test/fixtures/jfl-score-claim-transitions.sql',import.meta.url),'utf8'));
   const helperSignatures = [
     'jfl_private.require_score_claim_actor(uuid,jfl.player_matches,uuid)',
     'jfl_private.score_claim_actor_is_eligible(uuid,jfl.player_matches,uuid)',
     'jfl_private.match_tracker_for_scoring_team(uuid,jfl.player_matches,uuid)',
     'jfl_private.assert_expected_score_history(uuid,uuid,jsonb)',
   ];
-  // Doubles retain the real privilege boundary; their bodies remain test doubles.
-  for (const signature of helperSignatures) await query(`alter function ${signature} security definer; alter function ${signature} set search_path=''; revoke all on function ${signature} from public,anon,authenticated; grant execute on function ${signature} to service_role`);
+  const transitionSignatures = ['get_player_match_score_claim','claim_player_match_score','request_player_match_score_takeover','release_player_match_score_claim'].map(name => `jfl.${name}(uuid,uuid,uuid)`);
+  transitionSignatures.push('jfl.respond_player_match_score_takeover(uuid,uuid,uuid,text)');
+  // Retain the qualified service-only privilege boundary.
+  for (const signature of [...helperSignatures,...transitionSignatures]) await query(`alter function ${signature} security definer; alter function ${signature} set search_path=''; revoke all on function ${signature} from public,anon,authenticated; grant execute on function ${signature} to service_role`);
   const resolver=await readFile(new URL('../test/fixtures/jfl-score-takeover-resolver.sql',import.meta.url),'utf8');
   await query(resolver.slice(resolver.indexOf('create or replace function')));
   for (const row of baseline) {
@@ -63,7 +69,9 @@ try {
     const signature=row.definition.match(/FUNCTION ([^(]+\([^\n]+\))/)[1];
     await query(`revoke all on function ${signature} from public,anon,authenticated; grant execute on function ${signature} to service_role`);
   }
-  await query('insert into jfl.player_matches values($1,$2,\'playing\',1,1,2,\'8-ball\')',[match,id(9)]);
+  await query("insert into jfl.player_matches(id,season_id,status,race_to_a,race_to_b,opening_block_length,opening_discipline,team_a_id,team_b_id,player_a_id,player_b_id) values($1,$2,'playing',1,1,2,'8-ball',$3,$4,$5,$6)",[match,id(9),team,id(88),tracker,id(89)]);
+  await query('insert into jfl.players(id,user_id) values($1,$2),($3,$4)',[id(30),owner,id(31),stale]);
+  await query('insert into jfl.team_memberships values($1,$3,$4,null),($2,$3,$4,null)',[id(30),id(31),id(9),team]);
   const reset = async () => {
     await query('truncate jfl_private.player_match_score_claims,jfl_private.player_match_score_submissions,jfl_private.audit_events');
     await query("insert into jfl_private.player_match_score_submissions(season_id,player_match_id,tracker_player_id,racks) values($1,$2,$3,$4)",[id(9),match,tracker,JSON.stringify([{rackNumber:1,discipline:'8-ball',winnerSide:'A'}])]);
@@ -143,6 +151,29 @@ try {
       passes++;
     }
   }
+  // Body drift must fail before installing any enforcement DDL, preserving the
+  // exact drifted function definitions, owners and ACLs after the refusal.
+  const pinnedDependencies = [...helperSignatures,
+    'jfl.get_player_match_score_claim(uuid,uuid,uuid)',
+    'jfl.claim_player_match_score(uuid,uuid,uuid)',
+    'jfl.request_player_match_score_takeover(uuid,uuid,uuid)',
+    'jfl.respond_player_match_score_takeover(uuid,uuid,uuid,text)',
+    'jfl.release_player_match_score_claim(uuid,uuid,uuid)'];
+  for (const signature of pinnedDependencies) {
+    await query('begin');
+    const original = await catalogSnapshot();
+    const definition = (await query('select pg_get_functiondef(to_regprocedure($1)) definition',[signature])).rows[0].definition;
+    await query(definition.replace(/AS (\$\w*\$)/, '$&\n-- deliberate dependency body drift'));
+    const drifted = await catalogSnapshot();
+    assert.notDeepEqual(drifted,original);
+    await query('savepoint body_refusal');
+    await assert.rejects(query(candidate), /Unqualified scoring dependency body/);
+    await query('rollback to savepoint body_refusal');
+    assert.deepEqual(await catalogSnapshot(),drifted);
+    await query('rollback');
+    assert.deepEqual(await catalogSnapshot(),original);
+    passes++;
+  }
   // Changing SECURITY DEFINER ownership changes whose authority executes the body.
   for (const row of baseline) {
     const signature=(await query("select p.oid::regprocedure::text signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='jfl' and p.proname=$1",[row.proname])).rows[0].signature;
@@ -180,7 +211,7 @@ try {
       if(mode!=='absent') await query('insert into jfl_private.player_match_score_claims values($1,$2,$3)',[match,team,mode==='null'?null:owner]);
       const args=[...call.args]; args[0]=mode==='ineligible'?id(99):stale; if(mode==='opposite')args[2]=id(88);
       const before=(await query('select row_to_json(s) v from jfl_private.player_match_score_submissions s')).rows;
-      await assert.rejects(query(call.sql,args),/current scorekeeper|Not eligible/);
+      await assert.rejects(query(call.sql,args),/current scorekeeper|not an active member|not a member/);
       assert.deepEqual((await query('select row_to_json(s) v from jfl_private.player_match_score_submissions s')).rows,before);
       assert.equal((await query('select count(*)::int n from jfl_private.audit_events')).rows[0].n,0); passes++;
     }
@@ -196,7 +227,7 @@ try {
   }
   const checked=calls.find(c=>c.name==='update_player_match_score_rack_checked');
   await reset(); await query('insert into jfl_private.player_match_score_claims values($1,$2,$3)',[match,team,owner]);
-  await assert.rejects(query(checked.sql,[owner,match,team,1,'B','[]']),/History changed/); passes++;
+  await assert.rejects(query(checked.sql,[owner,match,team,1,'B','[]']),/Score changed on another device/); passes++;
   // Transfer commits while holding match lock; stale writer must actually wait,
   // then see the new owner even with identical expected history.
   const transfer=new Client(config), writer=new Client(config);
@@ -298,23 +329,13 @@ try {
         const args=[...call.args]; args[0]=requester===stale?stale:owner;
         args[args.length-1]='[]';
         const before=await snapshot();
-        await assert.rejects(query(call.sql,args),/History changed/);
+        await assert.rejects(query(call.sql,args),/Score changed on another device/);
         assert.deepEqual(await snapshot(),before,'History conflict rolls expiry and its audit back');
         passes++;
       }
     }
   }
-  // Replace the tracker double with the repository's real membership resolver.
-  // Schema substitution only; claim-specific eligibility remains a double and
-  // this is deliberately NOT a qualification of the hosted roster definition.
-  await query(`alter table jfl.player_matches add column team_a_id uuid,
-    add column team_b_id uuid, add column player_a_id uuid, add column player_b_id uuid;
-    create table jfl.players(id uuid primary key,user_id uuid);
-    create table jfl.team_memberships(player_id uuid,season_id uuid,team_id uuid,ends_at timestamptz)`);
-  const rosterSource=await readFile(new URL('../supabase/migrations/20260816213000_reject_dual_team_scoring.sql',import.meta.url),'utf8');
-  await query(rosterSource.replaceAll('private.','jfl_private.').replaceAll('public.','jfl.'));
-  await query('update jfl.player_matches set team_a_id=$1,team_b_id=$2,player_a_id=$3,player_b_id=$4',[team,id(88),tracker,id(89)]);
-  await query('insert into jfl.players values($1,$2)',[id(30),owner]);
+  // Real membership boundary matrix.
   for(const call of calls) {
     for(const mode of ['eligible','ended','other-season','opposing','dual','unrelated','no-roster']) {
       await reset(); await query('truncate jfl.team_memberships');
@@ -336,11 +357,6 @@ try {
       passes++;
     }
   }
-  await query(`create table jfl_private.player_competition_restrictions(
-    season_id uuid,player_id uuid,reason text,lifted_at timestamptz)`);
-  // Captured verbatim from release 5924e674, migration 20261004035418.
-  // This upgrades the final matrix from the helper double to real claim rules.
-  await query(await readFile(new URL('../test/fixtures/jfl-score-claim-eligibility.sql',import.meta.url),'utf8'));
   for(const call of calls) {
     for(const mode of ['eligible','restricted','lifted','other-season']) {
       await reset(); await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
@@ -362,7 +378,7 @@ try {
   }
   // Eligibility can change during the 15-second warning. Use the real
   // membership and captured restriction helpers, not the initial test doubles.
-  await query('insert into jfl.players values($1,$2)',[id(31),stale]);
+
   for(const call of calls) {
     for(const mode of ['eligible','restricted','ended','dual','opposing','other-season','no-roster']) {
       for(const actor of [owner,stale]) {
@@ -428,8 +444,7 @@ try {
     }
   }
   // Connect the ordinary guards to real claim/request/respond/pass entrypoints.
-  await query('alter table jfl.players add column display_name text');
-  await query(await readFile(new URL('../test/fixtures/jfl-score-claim-transitions.sql',import.meta.url),'utf8'));
+
   for(const call of calls) {
     for(const mode of ['release','deny','pass']) {
       await reset();
@@ -494,17 +509,14 @@ try {
       passes++;
     } finally { await a.query('rollback'); if(pending) await pending; await a.end(); await b.end(); }
   }
-  // Pristine installation with real dependencies, isolated from earlier doubles.
+  // Pristine reinstallation verifies exact catalog rollback with real dependencies.
   // Roll back to the exact exercised catalog after qualifying this installation.
   await query('begin');
   const qualifiedCatalog = await catalogSnapshot();
   try {
     await query(`drop function ${guardSignature}`);
     for (const row of baseline) await query(row.definition);
-    const historySource = await readFile(new URL('../supabase/migrations/20260812001000_collision_safe_shared_scoring.sql', import.meta.url), 'utf8');
-    await query('drop function jfl_private.assert_expected_score_history(uuid,uuid,jsonb)');
-    await query(historySource.slice(0, historySource.indexOf('create or replace function public.record_player_match_score_rack_checked'))
-      .replaceAll('private.', 'jfl_private.').replaceAll('public.', 'jfl.'));
+    await query(realHistory);
     const pristineCatalog = await catalogSnapshot();
     await query(candidate);
     // Installing enforcement must preserve every dependency body, owner and ACL.

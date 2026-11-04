@@ -31,6 +31,26 @@ begin
      or exists (select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
        where a.privilege_type='EXECUTE' and a.grantee not in ('postgres'::regrole,'service_role'::regrole))
  ) then raise exception 'Unqualified private scoring helper security boundary'; end if;
+ -- Qualified repository/captured dependencies; no permissive test-double path.
+ if exists (
+   select 1 from (values
+     ('jfl_private.match_tracker_for_scoring_team(uuid,jfl.player_matches,uuid)','0b8d640c8aeaa7606ee32e8e154abc41'),
+     ('jfl_private.require_score_claim_actor(uuid,jfl.player_matches,uuid)','e5f9af68962d02c59747017e6e3eb196'),
+     ('jfl_private.score_claim_actor_is_eligible(uuid,jfl.player_matches,uuid)','72778bb909879523c675ed189021a4b5'),
+     ('jfl_private.assert_expected_score_history(uuid,uuid,jsonb)','7a91ed6218311a8082ade0a3a3fcfe7b'),
+     ('jfl.get_player_match_score_claim(uuid,uuid,uuid)','b020c4da05b39c5570598c24d4e258f0'),
+     ('jfl.claim_player_match_score(uuid,uuid,uuid)','e25e471b3fe13849e3c0e29ef8fb6c64'),
+     ('jfl.request_player_match_score_takeover(uuid,uuid,uuid)','cf60ddd6f0d8792a0cf10794694f565c'),
+     ('jfl.respond_player_match_score_takeover(uuid,uuid,uuid,text)','c9827bec1eb756eb5ed3648a2130cdbb'),
+     ('jfl.release_player_match_score_claim(uuid,uuid,uuid)','f184b66bb916f93170ca573506e34cc9')
+   ) expected(signature,body_md5)
+   left join pg_proc p on p.oid=to_regprocedure(expected.signature)
+   where p.oid is null or md5(replace(p.prosrc,chr(13),'')) <> expected.body_md5
+     or not p.prosecdef or p.proowner <> 'postgres'::regrole
+     or p.proconfig is distinct from array['search_path=""']::text[]
+     or exists (select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+       where a.privilege_type='EXECUTE' and a.grantee not in ('postgres'::regrole,'service_role'::regrole))
+ ) then raise exception 'Unqualified scoring dependency body or security boundary'; end if;
  if not exists (select 1 from pg_proc p where p.oid=to_regprocedure('jfl_private.resolve_expired_score_takeover(uuid,uuid)') and md5(replace(p.prosrc,chr(13),''))='57080809c003adffbb9b95a815d5e02d' and p.prosecdef and p.proconfig=array['search_path=""']::text[]) then raise exception 'Unqualified match-first expiry resolver'; end if;
  if exists (
    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace,
