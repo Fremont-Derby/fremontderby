@@ -14,9 +14,9 @@ async function html() {
   }
   return renderLineupPage();
 }
-async function open(browser,mobile,{ target = '/api/me/teams',phase = 'headers',status = 200,method = 'GET',hold = true } = {}) {
+async function open(browser,mobile,{ target = '/api/me/teams',phase = 'headers',status = 200,method = 'GET',hold = true,reject = false } = {}) {
   const context = await browser.newContext({ baseURL: 'https://session.test',viewport: { width: mobile?320:1280,height: 900 } });
-  await context.addInitScript(({ target,phase,method,hold }) => {
+  await context.addInitScript(({ target,phase,method,hold,reject }) => {
     if (location.origin !== 'https://session.test') return;
     sessionStorage.setItem('fd.accessToken','session-A');
     window.__wire = { held: null };
@@ -30,12 +30,12 @@ async function open(browser,mobile,{ target = '/api/me/teams',phase = 'headers',
       if (!chosen) return next;
       let release; const gate = new Promise(resolve => { release=resolve; });
       const state = { phase,path,drained:false,release:()=>release() }; window.__wire.held=state;
-      if (phase==='headers') { await gate;setTimeout(()=>{state.drained=true},0); }
+      if (phase==='headers') { await gate;setTimeout(()=>{state.drained=true},0);if(reject)throw new Error('Synthetic stale transport failure'); }
       const nativeText=next.text.bind(next);
-      next.text=async()=>{if(phase==='body'){state.bodyEntered=true;await gate}const value=await nativeText();setTimeout(()=>{state.drained=true},0);return value};
+      next.text=async()=>{if(phase==='body'){state.bodyEntered=true;await gate;if(reject){setTimeout(()=>{state.drained=true},0);throw new Error('Synthetic stale body failure')}}const value=await nativeText();setTimeout(()=>{state.drained=true},0);return value};
       return next;
     };
-  },{ target,phase,method,hold });
+  },{ target,phase,method,hold,reject });
   const page = await context.newPage(),requests=[],errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   let altered=false;
@@ -81,6 +81,13 @@ for(const mobile of [false,true])test.describe(mobile?'phone lineup session':'de
       }finally{await f.context.close()}
     });
   }
+  for(const target of ['/api/me/teams','/availability'])for(const phase of ['headers','body'])test(`stale rejected ${target} ${phase} cannot replace current recovery`,async({browser})=>{
+    const f=await open(browser,mobile,{target,phase,reject:true});
+    try{await held(f);await switchSession(f);await release(f);
+      await expect(f.page.locator('[data-gate-title]')).toHaveText('Your sign-in changed');
+      await expect(f.page.locator('body')).not.toContainText('Synthetic stale');await reloadCurrent(f);expect(f.errors).toEqual([]);
+    }finally{await f.context.close()}
+  });
   for(const event of ['fd:session-changed','storage','focus'])test(`loaded private state is cleared on ${event}`,async({browser})=>{
     const f=await open(browser,mobile,{hold:false});
     try{await ready(f);await expect(f.page.locator('body')).toContainText('Old private team player');await switchSession(f,'session-B',event);
