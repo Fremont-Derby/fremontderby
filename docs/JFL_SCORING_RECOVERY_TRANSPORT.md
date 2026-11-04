@@ -8,6 +8,8 @@ Source #3685 at `375f38e92426a7a60060201b305f8680c3f026fa` proves local native P
 
 The public [Supabase MCP implementation](https://github.com/supabase/mcp/blob/main/packages/mcp-server-supabase/src/platform/api-platform.ts) forwards migration name/query to the management API and discards successful query results. Client forwarding establishes neither server atomicity nor history semantics. A locally simulated endpoint cannot establish those facts either.
 
+The [current migration API reference](https://supabase.com/docs/reference/api/v1-apply-a-migration) documents query, optional name and optional rollback strings, returning an empty success object. It does not document transaction framing. The separate rollback-migrations endpoint is not authority to roll back shared history; do not substitute it for exact candidate-pinned compensation. A rollback string is not evidence that compensation ran or is atomic.
+
 Select the connected migration service only after the following qualification succeeds. Direct psql would require a separately reviewed credential, endpoint, TLS and transaction plan; it is not an automatic fallback. Do not provision credentials or broaden tooling as part of this document.
 
 ## Release and exclusion manifest
@@ -48,7 +50,7 @@ The two #3685 source artifacts have different framing:
 - `scripts/sql/jfl-ordinary-score-ownership.candidate.sql` has no outer transaction; the local harness supplies one.
 - `scripts/sql/jfl-ordinary-score-ownership.recovery.sql` already contains `BEGIN` and `COMMIT`.
 
-Do not wrap recovery blindly. PostgreSQL does not nest transactions: its inner `COMMIT` can end an outer transaction before transport bookkeeping. Similarly, do not inject timeout settings before the candidate and assume they survive a separate request or pooled session.
+Do not wrap recovery blindly. [PostgreSQL does not nest BEGIN blocks](https://www.postgresql.org/docs/current/sql-begin.html): its inner `COMMIT` can end an outer transaction before transport bookkeeping. Similarly, do not inject timeout settings before the candidate and assume they survive a separate request or pooled session.
 
 The implementation must qualify whether the service owns the transaction and writes migration history inside it. Produce a reviewed, digest-pinned payload for that exact framing. Do not strip `BEGIN` / `COMMIT` with a regex. Any generated unframed recovery variant needs an explicit source contract and the same native committed-recovery/negative-control tests as the original. Until then, do not submit the existing recovery file to a possibly transaction-wrapping migration service.
 
