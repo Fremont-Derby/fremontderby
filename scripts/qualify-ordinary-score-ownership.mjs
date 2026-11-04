@@ -334,6 +334,73 @@ try {
       passes++;
     }
   }
+  // Connect the ordinary guards to real claim/request/respond/pass entrypoints.
+  await query('alter table jfl.players add column display_name text');
+  await query(await readFile(new URL('../test/fixtures/jfl-score-claim-transitions.sql',import.meta.url),'utf8'));
+  for(const call of calls) {
+    for(const mode of ['release','deny','pass']) {
+      await reset();
+      await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+      await query('insert into jfl.team_memberships values($1,$3,$4,null),($2,$3,$4,null)',[id(30),id(31),id(9),team]);
+      await query('select * from jfl.claim_player_match_score($1,$2,$3)',[owner,match,team]);
+      if(mode==='pass') {
+        await query('select * from jfl.release_player_match_score_claim($1,$2,$3)',[owner,match,team]);
+        const before=await snapshot();
+        await assert.rejects(query(call.sql,call.args),/current scorekeeper/);
+        assert.deepEqual(await snapshot(),before);
+        await query('select * from jfl.claim_player_match_score($1,$2,$3)',[stale,match,team]);
+      } else {
+        const pending=(await query('select * from jfl.request_player_match_score_takeover($1,$2,$3)',[stale,match,team])).rows[0];
+        assert.equal(pending.owner_user_id,owner);
+        assert.equal(pending.pending_requester_user_id,stale);
+        const before=await snapshot(); const requestArgs=[...call.args]; requestArgs[0]=stale;
+        await assert.rejects(query(call.sql,requestArgs),/current scorekeeper/);
+        assert.deepEqual(await snapshot(),before);
+        await query('select * from jfl.respond_player_match_score_takeover($1,$2,$3,$4)',[owner,match,team,mode]);
+      }
+      const winner=mode==='deny'?owner:stale, loser=winner===owner?stale:owner;
+      const args=[...call.args]; args[0]=loser;
+      const before=await snapshot();
+      await assert.rejects(query(call.sql,args),/current scorekeeper/);
+      assert.deepEqual(await snapshot(),before);
+      if(call.name.startsWith('record')) await query("update jfl_private.player_match_score_submissions set racks='[]'");
+      if(call.name.endsWith('_checked')) args[args.length-1]=JSON.stringify(
+        (await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+      args[0]=winner;
+      assert.equal((await query(call.sql,args)).rows[0].tracker_player_id,tracker);
+      assert.equal((await query('select owner_user_id from jfl_private.player_match_score_claims')).rows[0].owner_user_id,winner);
+      passes++;
+    }
+  }
+  // Real concurrent requests: the second connection waits, then loses to the
+  // committed pending requester. Exercise both arrival orders deterministically.
+  await query('insert into jfl.players(id,user_id) values($1,$2)',[id(32),id(40)]);
+  for(const [firstActor,secondActor] of [[stale,id(40)],[id(40),stale]]) {
+    await reset(); await query('truncate jfl.team_memberships,jfl_private.player_competition_restrictions');
+    for(const player of [id(30),id(31),id(32)]) await query('insert into jfl.team_memberships values($1,$2,$3,null)',[player,id(9),team]);
+    await query('select * from jfl.claim_player_match_score($1,$2,$3)',[owner,match,team]);
+    const a=new Client(config), b=new Client(config);
+    await a.connect(); await b.connect();
+    let pending;
+    try {
+      await a.query('begin');
+      await a.query('select * from jfl.request_player_match_score_takeover($1,$2,$3)',[firstActor,match,team]);
+      const pid=(await b.query('select pg_backend_pid() pid')).rows[0].pid;
+      pending=b.query('select * from jfl.request_player_match_score_takeover($1,$2,$3)',[secondActor,match,team]).then(()=>({ok:true}),error=>({error}));
+      let waiting=false;
+      for(let i=0;i<100;i++) {
+        if((await query('select wait_event_type from pg_stat_activity where pid=$1',[pid])).rows[0].wait_event_type==='Lock'){waiting=true;break;}
+        await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      assert.ok(waiting,'Second real takeover request must wait for match lock');
+      await a.query('commit');
+      assert.match((await pending).error?.message||'',/already pending/);
+      const claim=(await query('select * from jfl_private.player_match_score_claims')).rows[0];
+      assert.equal(claim.owner_user_id,owner); assert.equal(claim.pending_requester_user_id,firstActor);
+      assert.equal((await query("select count(*)::int n from jfl_private.audit_events where action='player_match.scorekeeper_takeover_request'")).rows[0].n,1);
+      passes++;
+    } finally { await a.query('rollback'); if(pending) await pending; await a.end(); await b.end(); }
+  }
   console.log(`${passes} native PostgreSQL cases PASS; eight RPCs, expiry resolver, repository membership and captured claim eligibility; minimal relations, no hosted acceptance`);
 } finally {
   await db.end();
