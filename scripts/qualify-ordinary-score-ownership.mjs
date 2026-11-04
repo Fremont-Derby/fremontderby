@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { compileJflSqlPayloads } from './lib/jfl-sql-manifest.mjs';
 const require = createRequire(import.meta.url);
 const { Client } = require(process.env.PG_MODULE_PATH || 'pg');
 const port = Number(process.env.OWNERSHIP_TEST_PORT);
@@ -610,17 +611,21 @@ try {
   assert.deepEqual(await catalogSnapshot(),qualifiedCatalog,'Pristine qualification restores the exact prior catalog');
   passes++;
   // Separate experiment: committed installation, compensating COMMIT recovery.
-  for (const framing of ['explicit', 'service-owned']) {
+  for (const framing of ['explicit', 'service-owned', 'prepared-service']) {
   const recoveryBody = await readFile(new URL('./sql/jfl-ordinary-score-ownership.recovery-body.sql',import.meta.url),'utf8');
   const artifact = await readFile(new URL('./sql/jfl-ordinary-score-ownership.recovery.sql',import.meta.url),'utf8');
-  const recovery = framing === 'explicit' ? artifact : `begin;\n${recoveryBody}commit;`;
+  const prepared = compileJflSqlPayloads({ candidateBytes: Buffer.from(candidate), recoveryBodyBytes: Buffer.from(recoveryBody),
+    timeouts: { lockMs: 2000, statementMs: 30000, idleMs: 40000, clientMs: 60000 } });
+  const install = framing === 'prepared-service' ? prepared.install : candidate;
+  const refusalBody = framing === 'prepared-service' ? prepared.recover : recoveryBody;
+  const recovery = framing === 'explicit' ? artifact : `begin;\n${refusalBody}commit;`;
   await query('begin');
   for (const row of baseline) await query(row.definition);
   await query(`drop function ${guardSignature} restrict`);
   await query(realHistory);
   await query('commit');
   const recoveryBaseline = await catalogSnapshot(), recoveryData = await snapshot();
-  await query(`begin; ${candidate}; commit;`);
+  await query(`begin; ${install}; commit;`);
   const installedCatalog = await catalogSnapshot();
   // Midway failure after real restoration must leave committed enforcement intact.
   const restoreStart = recovery.indexOf('CREATE OR REPLACE FUNCTION');
@@ -641,7 +646,7 @@ try {
       if(drift === 'search_path') await query(`alter function ${signature} set search_path=public`);
       const drifted = await catalogSnapshot();
       await query('savepoint refusal');
-      await assert.rejects(query(recoveryBody), /Unqualified committed ownership recovery baseline/);
+      await assert.rejects(query(refusalBody), /Unqualified committed ownership recovery baseline/);
       await query('rollback to savepoint refusal');
       assert.deepEqual(await catalogSnapshot(),drifted);
       assert.deepEqual(await snapshot(),recoveryData);
