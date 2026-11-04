@@ -130,24 +130,34 @@ export const liveRackLedgerAdapterSource = String.raw`
         return{scorecard,context:comparisonBody.context,comparison};
       },
       async loadClaim(){
+        const inputs=requireContext();
         const body=await api('/api/player-matches/:id/score-claim',{method:'GET',cache:'no-store'});
+        assertCurrent(inputs);
         return body.claim;
       },
       async claimScore(){
+        const inputs=requireContext();
         const body=await api('/api/player-matches/:id/score-claim/claim',{method:'POST',body:JSON.stringify({scoringTeamId})});
+        assertCurrent(inputs);
         return body.claim;
       },
       async requestTakeover(){
+        const inputs=requireContext();
         const body=await api('/api/player-matches/:id/score-claim/request',{method:'POST',body:JSON.stringify({scoringTeamId})});
+        assertCurrent(inputs);
         return body.claim;
       },
       async respondTakeover(decision){
         if(!['release','deny'].includes(decision))throw new Error('Choose Release or Deny.');
+        const inputs=requireContext();
         const body=await api('/api/player-matches/:id/score-claim/respond',{method:'POST',body:JSON.stringify({scoringTeamId,decision})});
+        assertCurrent(inputs);
         return body.claim;
       },
       async releaseScore(){
+        const inputs=requireContext();
         const body=await api('/api/player-matches/:id/score-claim/release',{method:'POST',body:JSON.stringify({scoringTeamId})});
+        assertCurrent(inputs);
         return body.claim;
       },
       async setOpeningDiscipline({openingDiscipline}){
