@@ -1,3 +1,4 @@
+import { scoreClaimHttpHandler } from './scoreClaimHttp.js';
 import { createRequestNonce, htmlSecurityHeaders, apiSecurityHeaders } from './securityHeaders.js';
 import app from './index.js';
 import { renderPlayersDirectoryPage } from './playersDirectoryPage.js';
@@ -526,6 +527,11 @@ export default {
         env,
         decodeURIComponent(adminDualScoreOverrideMatch[1]),
       );
+    }
+
+    const scoreClaimMatch = url.pathname.match(/^\/api\/player-matches\/([^/]+)\/score-claim(?:\/(claim|request|respond|release))?$/);
+    if (scoreClaimMatch) {
+      return scoreClaimHttpHandler(request, env, decodeURIComponent(scoreClaimMatch[1]), scoreClaimMatch[2] || 'read');
     }
 
     if (dualScoreCompareMatch) {
