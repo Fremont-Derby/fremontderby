@@ -401,7 +401,7 @@ try {
     }
   }
   // Eligibility can change during the 15-second warning. Use the real
-  // membership and captured restriction helpers, not the initial test doubles.
+  // membership and captured restriction helpers throughout the matrix.
 
   for(const call of calls) {
     for(const mode of ['eligible','restricted','ended','dual','opposing','other-season','no-roster']) {

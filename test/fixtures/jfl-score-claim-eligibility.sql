@@ -1,3 +1,4 @@
+-- Hosted catalog 2026-11-04 / release 5924e674, including 20261023164000 repair.
 create or replace function jfl_private.require_score_claim_actor(actor_user_id uuid,target_match jfl.player_matches,target_scoring_team_id uuid)
 returns uuid language plpgsql stable security definer set search_path='' as $$
 declare actor_player_id uuid; restriction_reason text;

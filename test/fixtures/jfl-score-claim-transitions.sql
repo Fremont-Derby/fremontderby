@@ -1,4 +1,5 @@
--- Captured from release 5924e674 / migration 20261004035418. Local proof only.
+-- Captured from release 5924e674; includes 20261023164000 Release repair.
+-- Bodies qualified by read-only hosted catalog on 2026-11-04. Local proof only.
 create type jfl_private.player_match_score_claim_state as (
   player_match_id uuid,
   scoring_team_id uuid,
