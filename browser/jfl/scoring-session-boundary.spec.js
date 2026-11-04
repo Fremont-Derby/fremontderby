@@ -20,7 +20,7 @@ async function html() {
   expect(response.status).toBe(200);
   return response.text();
 }
-async function open(browser, width, { holdInitial = false, holdBody = false } = {}) {
+async function open(browser, width, { holdInitial = false, holdBody = false, clock = false } = {}) {
   const context = await browser.newContext({ viewport: { width, height: 900 }, baseURL: 'https://score-session.test' });
   await context.addInitScript(({ holdBody }) => {
     sessionStorage.setItem('fd.accessToken', 'session-a');
@@ -60,6 +60,7 @@ async function open(browser, width, { holdInitial = false, holdBody = false } = 
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(path.endsWith('/scorecard')
       ? { scorecard: score(name) } : { comparison }) });
   });
+  if(clock)await page.clock.install();
   await page.goto('/scorecard/live?match=' + match + '&team=' + team);
   return { context, page, pending, writes, errors, releaseReads() { holdReads = false; }, holdWrites() { holdWrites = true; } };
 }
@@ -106,6 +107,27 @@ for (const width of [1280, 320]) {
         await unavailable(f);
         expect(await f.page.evaluate(() => sessionStorage.getItem('fd.accessToken'))).toBe('session-b');
         expect(f.writes).toHaveLength(0); expect(f.errors).toEqual([]);
+      } finally { await f.context.close(); }
+    });
+    test('long server cooldown pauses actual scorecard polling without replaying undo', async ({ browser }) => {
+      const f = await open(browser, width, {clock:true});
+      try {
+        await expect(f.page.locator('[data-player-a-name]')).toHaveText('Old private player');
+        let reads=0; let writes=0;
+        f.page.on('request', request => {
+          if(request.url().includes('/api/player-matches/') && request.method()==='GET')reads++;
+        });
+        await f.page.route('**/api/player-matches/**/score-racks/undo*', async route => {
+          writes++;
+          await route.fulfill({status:429,headers:{'retry-after':'600'},contentType:'application/json',body:'{}'});
+        });
+        await f.page.locator('[data-undo]').click();
+        await expect(f.page.locator('body')).toContainText('Wait 600 seconds');
+        await f.page.clock.fastForward(121_000);
+        expect(reads).toBe(0); expect(writes).toBe(1);
+        await f.page.clock.fastForward(480_000);
+        await expect.poll(()=>reads).toBe(2);
+        expect(writes).toBe(1); expect(f.errors).toEqual([]);
       } finally { await f.context.close(); }
     });
     test('sign-out and same-token return discard an old mutation without replay', async ({ browser }) => {
