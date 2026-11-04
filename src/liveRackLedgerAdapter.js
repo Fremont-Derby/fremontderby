@@ -8,6 +8,7 @@ export const liveRackLedgerAdapterSource = String.raw`
     let sessionToken=accessToken();
     let sessionGeneration=0;
     let sessionInvalidated=false;
+    let cooldownUntil=0;
     const sessionListeners=new Set();
 
     function accessToken(){return sessionStorage.getItem('fd.accessToken')||''}
@@ -52,8 +53,13 @@ export const liveRackLedgerAdapterSource = String.raw`
       if(Number.isFinite(date))return Math.max(Math.ceil((date-Date.now())/1000),0);
       return 15;
     }
+    function throttleFailure(seconds){
+      const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
+      failure.status=429;failure.retryAfterSeconds=seconds;return failure;
+    }
     async function api(path,options={}){
       const inputs=requireContext();
+      if(Date.now()<cooldownUntil)throw throttleFailure(Math.ceil((cooldownUntil-Date.now())/1000));
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
       const separator=base.includes('?')?'&':'?';
       const contextualPath=base+separator+'scoringTeamId='+encodeURIComponent(inputs.scoringTeamId);
@@ -66,10 +72,8 @@ export const liveRackLedgerAdapterSource = String.raw`
       if(response.status===401){sessionStorage.removeItem('fd.accessToken');observeSession();showSignInRecovery();throw new Error('Your sign-in expired. Open Profile and sign in again.')}
       if(response.status===429){
         const seconds=retryAfterSeconds(response);
-        const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
-        failure.status=429;
-        failure.retryAfterSeconds=seconds;
-        throw failure;
+        cooldownUntil=Math.max(cooldownUntil,Date.now()+seconds*1000);
+        throw throttleFailure(seconds);
       }
       if(!response.ok){
         const message=body.error||'Request failed';

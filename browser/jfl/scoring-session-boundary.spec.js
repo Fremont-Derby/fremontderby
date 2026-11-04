@@ -125,6 +125,8 @@ for (const width of [1280, 320]) {
         await expect(f.page.locator('body')).toContainText('Wait 600 seconds');
         await f.page.clock.fastForward(121_000);
         expect(reads).toBe(0); expect(writes).toBe(1);
+        await f.page.locator('[data-undo]').click();
+        expect(writes).toBe(1);
         await f.page.clock.fastForward(480_000);
         await expect.poll(()=>reads).toBe(2);
         expect(writes).toBe(1); expect(f.errors).toEqual([]);

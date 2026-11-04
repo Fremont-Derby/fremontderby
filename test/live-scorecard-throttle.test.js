@@ -118,3 +118,11 @@ test('future HTTP-date cooldown longer than two minutes is preserved', async () 
   });
   assert.equal(calls(),1);
 });
+
+test('manual scoring retries and reads cannot dispatch before server cooldown', async () => {
+  const {adapter,calls}=adapterWithResponse({status:429,ok:false,headers:{get:()=> '600'},json:async()=>({})});
+  for(const action of [()=>adapter.undo(),()=>adapter.confirm(),()=>adapter.load()]) {
+    await assert.rejects(action(),error=>error.status===429 && error.retryAfterSeconds>=599);
+  }
+  assert.equal(calls(),1);
+});
