@@ -57,7 +57,16 @@ export const liveRackLedgerAdapterSource = String.raw`
       const failure=new Error('Too many requests. Wait '+seconds+' seconds, then check the latest rack before retrying.');
       failure.status=429;failure.retryAfterSeconds=seconds;return failure;
     }
+    function setTransportHint(message){
+      const status=document.querySelector('[data-status]');
+      if(status){status.textContent=message;status.dataset.tone='error'}
+    }
+    window.addEventListener('offline',()=>setTransportHint('Offline — reconnect before saving a rack or changing score control.'));
     async function api(path,options={}){
+      if(typeof navigator!=='undefined'&&navigator.onLine===false){
+        setTransportHint('You are offline. Reconnect, then reload the latest score and scorekeeper.');
+        throw new Error('You are offline. Check your connection and try again.');
+      }
       const inputs=requireContext();
       if(Date.now()<cooldownUntil)throw throttleFailure(Math.ceil((cooldownUntil-Date.now())/1000));
       const base=path.replace(':id',encodeURIComponent(inputs.matchId));
