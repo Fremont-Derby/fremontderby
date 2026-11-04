@@ -1,4 +1,5 @@
 import { withSupabaseSchema } from './supabaseSchema.js';
+import { boundedRetryAfterSeconds } from './boundedRetryAfter.js';
 function requireEnvValue(env, name) {
   const value = env?.[name];
   if (!value) {
@@ -42,9 +43,8 @@ async function requestJson(fetchImpl, url, init) {
     error.rpcCode = body?.code;
     if (response.status === 429) {
       const value = response.headers.get('retry-after');
-      const seconds = value && value.trim() !== '' && Number.isFinite(Number(value))
-        ? Number(value) : Math.ceil((Date.parse(value) - Date.now()) / 1000);
-      if (Number.isFinite(seconds) && seconds > 0 && seconds <= 300) error.retryAfter = String(Math.ceil(seconds));
+      const seconds = boundedRetryAfterSeconds(value);
+      if (seconds !== null) error.retryAfter = String(seconds);
     }
     throw error;
   }

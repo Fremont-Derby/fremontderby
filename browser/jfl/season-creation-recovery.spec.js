@@ -70,6 +70,72 @@ async function outcome(f, found = true, extras = {}) {
 }
 for (const mobile of [false, true]) {
   test.describe(mobile ? 'phone creation recovery' : 'desktop creation recovery', () => {
+    for (const header of [null,'bad','0x10','1e2','301','-1','2026-11-04T19:30:00Z']) {
+      test(`unusable Retry-After ${header ?? 'missing'} stays blocked across refresh`, async ({ browser }) => {
+        const f = await open(browser, mobile);
+        try {
+          await f.writes[0].route.fulfill({ status: 429, headers: header === null ? {} : { 'retry-after': header },
+            contentType: 'application/json', body: '{}' });
+          await expect(f.page.locator('[data-status]')).toContainText('Too many requests');
+          await expect(f.page.locator('[data-check-creation]')).toBeDisabled({ timeout: 1000 });
+          const operation = f.writes[0].body.operationId;
+          await f.page.reload();
+          await expect(f.page.locator('[data-check-creation]')).toBeVisible();
+          await expect(f.page.locator('[data-check-creation]')).toBeDisabled();
+          await expect(f.page.locator('[data-status]')).toContainText('wait time');
+          await expect(f.page.locator('[data-retry-creation]')).toBeHidden();
+          const saved = await f.page.evaluate(() => JSON.parse(sessionStorage.getItem('fd.seasonCreation.v1')));
+          expect(saved.operationId).toBe(operation);
+          expect(saved.retryAfterRequired).toBe(true);
+          expect(f.pending).toHaveLength(0); expect(f.writes).toHaveLength(1);
+        } finally { await f.context.close(); }
+      });
+    }
+    test('valid zero wait permits only an explicit creation check', async ({ browser }) => {
+      const f = await open(browser, mobile);
+      try {
+        await f.writes[0].route.fulfill({ status: 429, headers: { 'retry-after': '0' }, body: '{}' });
+        await expect(f.page.locator('[data-status]')).toContainText('Wait 0 seconds');
+        await expect(f.page.locator('[data-check-creation]')).toBeEnabled();
+        expect(f.pending).toHaveLength(0); expect(f.writes).toHaveLength(1);
+        await outcome(f, false);
+        await expect(f.page.locator('[data-retry-creation]')).toBeEnabled();
+      } finally { await f.context.close(); }
+    });
+    for (const header of ['10','Wed, 04 Nov 2026 19:30:10 GMT']) {
+      test(`valid wait ${header} survives refresh without background recovery`, async ({ browser }) => {
+        const f = await open(browser, mobile);
+        try {
+          await f.page.clock.install({ time: new Date('2026-11-04T19:30:00.000Z') });
+          await f.writes[0].route.fulfill({ status: 429, headers: { 'retry-after': header }, body: '{}' });
+          await expect(f.page.locator('[data-status]')).toContainText('Wait 10 seconds');
+          await expect(f.page.locator('[data-check-creation]')).toBeDisabled();
+          await f.page.clock.fastForward(5000);
+          await f.page.reload();
+          await expect(f.page.locator('[data-check-creation]')).toBeDisabled();
+          await f.page.clock.fastForward(5001);
+          await expect(f.page.locator('[data-check-creation]')).toBeEnabled();
+          expect(f.pending).toHaveLength(0); expect(f.writes).toHaveLength(1);
+          await outcome(f, false);
+          await expect(f.page.locator('[data-retry-creation]')).toBeEnabled();
+        } finally { await f.context.close(); }
+      });
+    }
+    test('unusable wait on creation read also retains the pending intent', async ({ browser }) => {
+      const f = await open(browser, mobile);
+      try {
+        await lost(f);
+        await f.page.locator('[data-check-creation]').click();
+        await expect.poll(() => f.pending.length).toBe(1);
+        await f.pending.shift().fulfill({ status: 429, headers: { 'retry-after': 'bad' }, body: '{}' });
+        await expect(f.page.locator('[data-status]')).toContainText('Too many requests');
+        await expect(f.page.locator('[data-check-creation]')).toBeDisabled();
+        await f.page.reload();
+        await expect(f.page.locator('[data-check-creation]')).toBeDisabled();
+        expect(f.reads.filter(path => path.includes('/season-creation-operations/'))).toHaveLength(1);
+        expect(f.writes).toHaveLength(1);
+      } finally { await f.context.close(); }
+    });
     test('lost response recovers by GET and never reapplies registration or a later edit', async ({ browser }) => {
       const f = await open(browser, mobile);
       try {
