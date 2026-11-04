@@ -156,7 +156,94 @@ try {
     }
     passes++;
   }
-  console.log(`${passes} native PostgreSQL cases PASS; actual eight RPCs + expiry resolver; eligibility is an isolated double; no hosted acceptance`);
+  // Exercise expiry through EVERY entrypoint, including the checked wrappers.
+  // Compare the entire claim/submission/audit state on rejection: checking only
+  // the score would miss a transfer or audit event committed by a failed write.
+  const snapshot = async () => (await query(`select jsonb_build_object(
+    'claims',(select jsonb_agg(to_jsonb(c)) from jfl_private.player_match_score_claims c),
+    'scores',(select jsonb_agg(to_jsonb(s)) from jfl_private.player_match_score_submissions s),
+    'audit',(select jsonb_agg(to_jsonb(a)) from jfl_private.audit_events a)) state`)).rows[0].state;
+  for (const call of calls) {
+    for (const mode of ['pending','expired-former','expired-new','expired-ineligible']) {
+      await reset();
+      const args=[...call.args];
+      if(call.name.startsWith('record')) {
+        await query("update jfl_private.player_match_score_submissions set racks='[]'");
+      }
+      if(call.name.endsWith('_checked')) args[args.length-1]=JSON.stringify(
+        (await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+      const requester=mode==='expired-ineligible'?id(99):stale;
+      await query(`insert into jfl_private.player_match_score_claims
+        (player_match_id,scoring_team_id,owner_user_id,pending_requester_user_id,pending_requested_at,pending_expires_at)
+        values($1,$2,$3,$4,now()-interval '20 seconds',now()+$5::interval)`,
+      [match,team,owner,requester,mode==='pending'?'15 seconds':'-1 second']);
+      args[0]=mode==='pending'||mode==='expired-new'?stale:owner;
+      const before=await snapshot();
+      if(mode==='pending'||mode==='expired-former') {
+        await assert.rejects(query(call.sql,args),/current scorekeeper/);
+        assert.deepEqual(await snapshot(),before);
+      } else {
+        const result=await query(call.sql,args);
+        assert.equal(result.rows[0].tracker_player_id,tracker);
+        const state=await snapshot();
+        assert.equal(state.claims[0].owner_user_id,mode==='expired-new'?stale:owner);
+        assert.equal(state.claims[0].pending_requester_user_id,null);
+        assert.equal(state.claims[0].pending_expires_at,null);
+        assert.equal(state.audit.length,2,'Exactly one transition and one scoring audit');
+        assert.equal(state.audit[0].action,mode==='expired-new'?
+          'player_match.scorekeeper_takeover_auto_transfer':'player_match.scorekeeper_takeover_ineligible');
+        assert.equal(state.audit[1].actor_user_id,args[0]);
+      }
+      passes++;
+    }
+    if(call.name.endsWith('_checked')) {
+      for(const requester of [stale,id(99)]) {
+        await reset();
+        await query(`insert into jfl_private.player_match_score_claims
+          (player_match_id,scoring_team_id,owner_user_id,pending_requester_user_id,pending_expires_at)
+          values($1,$2,$3,$4,now()-interval '1 second')`,[match,team,owner,requester]);
+        const args=[...call.args]; args[0]=requester===stale?stale:owner;
+        args[args.length-1]='[]';
+        const before=await snapshot();
+        await assert.rejects(query(call.sql,args),/History changed/);
+        assert.deepEqual(await snapshot(),before,'History conflict rolls expiry and its audit back');
+        passes++;
+      }
+    }
+  }
+  // Replace the tracker double with the repository's real membership resolver.
+  // Schema substitution only; claim-specific eligibility remains a double and
+  // this is deliberately NOT a qualification of the hosted roster definition.
+  await query(`alter table jfl.player_matches add column team_a_id uuid,
+    add column team_b_id uuid, add column player_a_id uuid, add column player_b_id uuid;
+    create table jfl.players(id uuid primary key,user_id uuid);
+    create table jfl.team_memberships(player_id uuid,season_id uuid,team_id uuid,ends_at timestamptz)`);
+  const rosterSource=await readFile(new URL('../supabase/migrations/20260816213000_reject_dual_team_scoring.sql',import.meta.url),'utf8');
+  await query(rosterSource.replaceAll('private.','jfl_private.').replaceAll('public.','jfl.'));
+  await query('update jfl.player_matches set team_a_id=$1,team_b_id=$2,player_a_id=$3,player_b_id=$4',[team,id(88),tracker,id(89)]);
+  await query('insert into jfl.players values($1,$2)',[id(30),owner]);
+  for(const call of calls) {
+    for(const mode of ['eligible','ended','other-season','opposing','dual','unrelated','no-roster']) {
+      await reset(); await query('truncate jfl.team_memberships');
+      if(mode!=='no-roster') await query('insert into jfl.team_memberships values($1,$2,$3,$4)',
+        [id(30),mode==='other-season'?id(90):id(9),mode==='opposing'?id(88):mode==='unrelated'?id(91):team,mode==='ended'?new Date():null]);
+      if(mode==='dual') await query('insert into jfl.team_memberships values($1,$2,$3,null)',[id(30),id(9),id(88)]);
+      await query('insert into jfl_private.player_match_score_claims values($1,$2,$3)',[match,team,owner]);
+      const args=[...call.args];
+      if(call.name.startsWith('record')) await query("update jfl_private.player_match_score_submissions set racks='[]'");
+      if(call.name.endsWith('_checked')) args[args.length-1]=JSON.stringify(
+        (await query('select racks from jfl_private.player_match_score_submissions')).rows[0].racks);
+      const before=await snapshot();
+      if(mode==='eligible') {
+        assert.equal((await query(call.sql,args)).rows[0].tracker_player_id,tracker);
+      } else {
+        await assert.rejects(query(call.sql,args),/not an active member|active on both teams/);
+        assert.deepEqual(await snapshot(),before,'Ownership cannot override roster eligibility');
+      }
+      passes++;
+    }
+  }
+  console.log(`${passes} native PostgreSQL cases PASS; actual eight RPCs + expiry resolver + repository membership resolver; claim eligibility is an isolated double; no hosted acceptance`);
 } finally {
   await db.end();
   await admin.query(`drop database ${config.database}`);
