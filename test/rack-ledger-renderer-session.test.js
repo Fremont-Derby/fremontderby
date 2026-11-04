@@ -50,3 +50,31 @@ test('repeated rack taps cannot submit overlapping writes',async()=>{
  h.node('[data-rack-a]').listeners.click();h.node('[data-rack-a]').listeners.click();
  assert.equal(writes,1);finish();await flush();
 });
+for (const side of ['a','b']) {
+ test(`open ${side} editor keeps polling and closes after authoritative rack change`,async()=>{
+  let state=result(), calls=0;state.comparison.tracker_player_id=side;state.comparison.own_racks=[{winnerSide:'A'}];
+  const h=harness(async()=>{calls++;return structuredClone(state)});await flush();
+  h.node('[data-edit-current]').listeners.click();assert.equal(h.node('[data-edit-panel]').hidden,false);
+  h.tick(15000);await flush();assert.equal(calls,2);assert.equal(h.node('[data-edit-panel]').hidden,false);
+  h.node('[data-winner-picker]').dataset.open='true';state.comparison.own_racks=[{winnerSide:'B'}];
+  h.tick(15000);await flush();assert.equal(calls,3);assert.equal(h.node('[data-edit-panel]').hidden,true);assert.equal(h.node('[data-winner-picker]').dataset.open,'false');
+ });
+}
+test('confirmation closes an open editor even when rack contents are unchanged',async()=>{
+ let state=result();state.comparison.own_racks=[{winnerSide:'A'}];
+ const h=harness(async()=>structuredClone(state));await flush();h.node('[data-edit-current]').listeners.click();
+ state.comparison.own_confirmed_at='2026-11-04T09:00:00Z';h.tick(15000);await flush();
+ assert.equal(h.node('[data-edit-panel]').hidden,true);
+});
+for(const change of ['opponent','finalized'])test(`${change} readback invalidates open scoring selection`,async()=>{
+ let state=result();state.comparison.own_racks=[{winnerSide:'A'}];
+ const h=harness(async()=>structuredClone(state));await flush();h.node('[data-edit-current]').listeners.click();h.node('[data-winner-picker]').dataset.open='true';
+ if(change==='opponent')state.comparison.opponent_racks=[{winnerSide:'B'}];else state.scorecard.status='finalized';
+ h.tick(15000);await flush();assert.equal(h.node('[data-edit-panel]').hidden,true);assert.equal(h.node('[data-winner-picker]').dataset.open,'false');
+});
+test('429 while editing preserves selection, serializes refresh and waits for Retry-After',async()=>{
+ let calls=0;const state=result();state.comparison.own_racks=[{winnerSide:'A'}];
+ const h=harness(async()=>{calls++;if(calls===2)throw Object.assign(new Error('Wait'),{status:429,retryAfterSeconds:60});return structuredClone(state)});await flush();
+ h.node('[data-edit-current]').listeners.click();h.tick(15000);await flush();assert.equal(calls,2);assert.equal(h.node('[data-edit-panel]').hidden,false);
+ h.tick(15000);await flush();assert.equal(calls,2);h.tick(45000);await flush();assert.equal(calls,3);assert.equal(h.node('[data-edit-panel]').hidden,false);
+});
