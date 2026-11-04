@@ -1,5 +1,6 @@
 // Destructive ONLY to a dedicated disposable local database named fd_takeover_test.
 // PG_CLIENT_MODULE points to an installed pg package (no production credentials).
+// Start an isolated local server first; this driver never connects to a hosted lane.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
