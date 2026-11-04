@@ -126,3 +126,11 @@ test('manual scoring retries and reads cannot dispatch before server cooldown', 
   }
   assert.equal(calls(),1);
 });
+
+test('obsolete asctime HTTP date is interpreted as GMT in every browser timezone', async () => {
+  const future=new Date(Date.now()+600_000);
+  const [weekday,day,month,year,time]=future.toUTCString().split(' ');
+  const value=weekday.slice(0,3)+' '+month+' '+day.padStart(2,' ')+' '+time+' '+year;
+  const {adapter}=adapterWithResponse({status:429,ok:false,headers:{get:()=>value},json:async()=>({})});
+  await assert.rejects(adapter.undo(),error=>error.retryAfterSeconds>=598 && error.retryAfterSeconds<=600);
+});

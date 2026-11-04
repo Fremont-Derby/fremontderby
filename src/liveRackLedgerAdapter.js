@@ -49,7 +49,7 @@ export const liveRackLedgerAdapterSource = String.raw`
       const httpDate=/^[A-Za-z]{3}, [0-9]{2} [A-Za-z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
         ||/^[A-Za-z]+, [0-9]{2}-[A-Za-z]{3}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT$/.test(value)
         ||/^[A-Za-z]{3} [A-Za-z]{3} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}$/.test(value);
-      const date=httpDate?Date.parse(value):NaN;
+      const date=httpDate?Date.parse(value.endsWith('GMT')?value:value+' GMT'):NaN;
       if(Number.isFinite(date))return Math.max(Math.ceil((date-Date.now())/1000),0);
       return 15;
     }
