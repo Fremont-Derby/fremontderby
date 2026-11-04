@@ -11,8 +11,8 @@ function harness(load, extra={}) {
   node('[data-shared-rack-ledger-scorecard]').querySelectorAll=()=>buttons;
   const claimButtons=['claimScore','requestTakeover','releaseScore','release','deny'].map(action=>{const b=node('[data-claim-'+action+']');b.dataset.claimAction=action;return b});
   const adapter={mode:'live',load,scoringTeamId:()=> 'team',scoringTeamName:()=> 'Team',onSessionChanged(fn){sessionChanged=fn},isSessionCurrent:()=>current,...extra};
-  vm.runInNewContext(source,{window:{fdRackLedgerAdapter:adapter},document:{querySelector:node,querySelectorAll:selector=>selector==='[data-claim-action]'?claimButtons:[],createElement:element,visibilityState:'visible'},setTimeout:()=>1,clearTimeout(){},setInterval(fn,ms){intervals.push({fn,ms});return 1},clearInterval(){},requestAnimationFrame:fn=>fn(),Date:{now:()=>now}});
-  return {node,buttons,intervals,adapter,invalidate(){current=false;sessionChanged()},tick(ms){now+=ms;intervals[0].fn()}};
+  vm.runInNewContext(source,{window:{fdRackLedgerAdapter:adapter},document:{querySelector:node,querySelectorAll:selector=>selector==='[data-claim-action]'?claimButtons:[],createElement:element,visibilityState:'visible'},setTimeout:()=>1,clearTimeout(){},setInterval(fn,ms){intervals.push({fn,ms});return 1},clearInterval(){},requestAnimationFrame:fn=>fn(),Date:{now:()=>now,parse:Date.parse}});
+  return {node,buttons,intervals,adapter,advance(ms){now+=ms},invalidate(){current=false;sessionChanged()},tick(ms){now+=ms;intervals[0].fn()}};
 }
 const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve()};
 const result=()=>({scorecard:{player_a_id:'a',player_b_id:'b',player_a_display_name:'Private Alice',player_b_display_name:'Private Bob',status:'playing'},comparison:{own_racks:[],opponent_racks:[],tracker_player_id:'a',histories_match:true},context:null});
@@ -114,4 +114,10 @@ test('claim response cannot restore private owner after session changes',async()
 test('claim read blocks overlapping foreground write until score readback completes',async()=>{
  let reads=0,finish,writes=0;const h=harness(()=>{reads++;return reads===1?Promise.resolve(result()):new Promise(r=>{finish=r})},{loadClaim:async()=>({viewer_is_owner:true})});await flush();
  h.adapter.saveRack=async()=>{writes++};h.tick(15000);await flush();h.node('[data-rack-a]').listeners.click();await flush();assert.equal(writes,0);finish(result());await flush();
+});
+
+test('countdown uses server timestamp and elapsed time; zero never grants ownership',async()=>{
+ const h=harness(async()=>result(),{loadClaim:async()=>({viewer_is_owner:false,owner_user_id:'other',pending_requester_user_id:'me',server_now:'2026-11-04T10:00:00Z',pending_expires_at:'2026-11-04T10:00:15Z'})});await flush();
+ assert.match(h.node('[data-score-pending]').textContent,/15 seconds/);h.tick(10000);h.intervals[1].fn();assert.match(h.node('[data-score-pending]').textContent,/5 seconds/);
+ h.advance(6000);h.intervals[1].fn();assert.match(h.node('[data-score-pending]').textContent,/Waiting for server confirmation/);assert.ok(h.buttons.slice(0,5).every(b=>b.disabled));
 });
