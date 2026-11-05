@@ -142,23 +142,45 @@ export function renderAdminGatewayPage() {
       setStatus(quiet?'':'Opening admin tools…','muted');
     }
 
+    let sessionToken=token(),generation=0,requestGeneration=0;
+    function observeSession(force=false){
+      const next=token();
+      if(next===sessionToken&&!force)return;
+      sessionToken=next;generation++;requestGeneration++;
+      show(next?accessError:signedOut);
+      setStatus(next?'Your sign-in changed. Try again to check access.':'Sign in to continue.','muted');
+    }
+    function owns(owner){
+      observeSession();
+      return owner.token===sessionToken&&owner.generation===generation&&owner.request===requestGeneration;
+    }
+
     async function resolveAccess(opts){
       const quiet=Boolean(opts&&opts.quiet);
+      observeSession();
       const accessToken=token();
+      const owner={token:accessToken,generation,request:++requestGeneration};
       if(!accessToken){show(signedOut);setStatus('');return;}
       showLoading(quiet);
       try{
         const response=await fetch('/api/admin/players',{headers:{authorization:'Bearer '+accessToken}});
+        if(!owns(owner))return;
         if(response.ok){show(adminContent);setStatus('Admin tools ready','ok');return;}
         if(response.status===401){sessionStorage.removeItem('fd.accessToken');show(signedOut);setStatus((window.fdFriendlyError?window.fdFriendlyError(new Error('sign-in expired')):'Your sign-in may have expired.'),'error');return;}
         if(response.status===403){show(playerContent);setStatus('Player account — use Messages for admin help','muted');return;}
         throw new Error('access check failed');
       }catch(error){
+        if(!owns(owner))return;
         show(accessError);
         setStatus((window.fdFriendlyError?window.fdFriendlyError(error):'Could not verify admin access'),'error');
       }
     }
 
+    window.addEventListener('fd:session-changed',()=>observeSession(true));
+    window.addEventListener('storage',event=>{if(event.key==='fd.accessToken'||event.key===null)observeSession(true);});
+    window.addEventListener('focus',()=>observeSession());
+    window.addEventListener('pageshow',()=>observeSession());
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')observeSession();});
     retryButton.addEventListener('click',resolveAccess);
     resolveAccess();
   </script>

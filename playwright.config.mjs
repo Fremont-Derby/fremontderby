@@ -21,6 +21,7 @@ export default defineConfig({
     video: 'off',
   },
   projects: [
+    { name: 'admin-gateway-session', testMatch: '**/session/admin-gateway-session.spec.js' },
     {
       name: 'desktop-chromium',
       testMatch: '**/desktop-smoke.spec.js',
