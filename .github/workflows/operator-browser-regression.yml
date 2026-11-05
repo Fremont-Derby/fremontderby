@@ -61,6 +61,9 @@ jobs:
       - run: npx playwright test browser/jfl/lineup-session-context.spec.js
         env:
           PLAYWRIGHT_LINEUP_SOURCE: bundled
+      - run: npx playwright test browser/jfl/admin-gateway-session.spec.js
+        env:
+          PLAYWRIGHT_GATEWAY_SOURCE: bundled
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
