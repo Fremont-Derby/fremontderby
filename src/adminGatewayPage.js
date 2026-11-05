@@ -94,21 +94,44 @@ export function renderAdminGatewayPage() {
       delete status.dataset.tone;
     }
 
+    let sessionToken=token(),generation=0,requestGeneration=0;
+    function observeSession(force=false){
+      const next=token();
+      if(next===sessionToken&&!force)return;
+      sessionToken=next;generation++;requestGeneration++;
+      show(next?accessError:signedOut);
+      status.textContent=next?'Your sign-in changed. Try again to check access.':'Sign in to continue.';
+      delete status.dataset.tone;
+    }
+    function owns(owner){
+      observeSession();
+      return owner.token===sessionToken&&owner.generation===generation&&owner.request===requestGeneration;
+    }
+
     async function resolveAccess(){
+      observeSession();
       const accessToken=token();
+      const owner={token:accessToken,generation,request:++requestGeneration};
       if(!accessToken){show(signedOut);return;}
       showLoading();
       try{
         const response=await fetch('/api/admin/players',{headers:{authorization:'Bearer '+accessToken}});
+        if(!owns(owner))return;
         if(response.ok){show(adminContent);return;}
         if(response.status===401){sessionStorage.removeItem('fd.accessToken');show(signedOut);status.textContent='Your sign-in may have expired.';return;}
         if(response.status===403){show(playerContent);return;}
         throw new Error('access check failed');
       }catch{
+        if(!owns(owner))return;
         show(accessError);
       }
     }
 
+    window.addEventListener('fd:session-changed',()=>observeSession(true));
+    window.addEventListener('storage',event=>{if(event.key==='fd.accessToken'||event.key===null)observeSession(true);});
+    window.addEventListener('focus',()=>observeSession());
+    window.addEventListener('pageshow',()=>observeSession());
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')observeSession();});
     retryButton.addEventListener('click',resolveAccess);
     resolveAccess();
   </script>
