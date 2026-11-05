@@ -21,6 +21,7 @@ export default defineConfig({
     video: 'off',
   },
   projects: [
+    {name:'moderation-session-chromium',testMatch:'**/chat-moderation-session.spec.js',use:{...devices['Desktop Chrome']}},
     {
       name: 'desktop-chromium',
       testMatch: '**/desktop-smoke.spec.js',
