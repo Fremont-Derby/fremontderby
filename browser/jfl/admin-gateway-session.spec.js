@@ -13,7 +13,7 @@ async function html(){
 for(const width of [320,1280])for(const outcome of [200,401,403,500,'error'])test(`gateway ${width} stale ${outcome}`,async({browser})=>{
   const context=await browser.newContext({viewport:{width,height:900}});
   try{
-    await context.addInitScript(()=>{sessionStorage.setItem('fd.accessToken','A');window.pending=[];window.fetch=()=>new Promise((resolve,reject)=>window.pending.push({resolve,reject}));});
+    await context.addInitScript(()=>{sessionStorage.setItem('fd.accessToken','A');window.pending=[];window.fetch=(input)=>{const path=new URL(typeof input==='string'?input:input.url,location.href).pathname;if(path==='/api/admin/players')return new Promise((resolve,reject)=>window.pending.push({resolve,reject}));return Promise.resolve(new Response('{}',{status:200,headers:{'content-type':'application/json'}}));};});
     const page=await context.newPage();
     await page.route('https://gateway.test/**',async route=>route.fulfill({contentType:'text/html',body:await html()}));
     await page.goto('https://gateway.test/admin');
