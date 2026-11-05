@@ -21,6 +21,7 @@ export default defineConfig({
     video: 'off',
   },
   projects: [
+    { name: 'operations-session-chromium', testMatch: '**/admin-operations-session.spec.js', use: { ...devices['Desktop Chrome'] } },
     {
       name: 'desktop-chromium',
       testMatch: '**/desktop-smoke.spec.js',
